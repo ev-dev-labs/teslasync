@@ -841,6 +841,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteMapSection\RouteMapSection.Model.cs" Link="FeatureViews\RouteMapSection\RouteMapSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.Model.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.Source.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.ViewModel.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Model.cs" Link="FeatureViews\SavingsCalculator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.Source.cs" Link="FeatureViews\SavingsCalculator.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SavingsCalculator.ViewModel.cs" Link="FeatureViews\SavingsCalculator.ViewModel.cs" />

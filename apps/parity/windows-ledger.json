@@ -142,5 +142,14 @@
     "requiredCount": 42,
     "promptId": "p2-windows/W7/windows-page-trips-TripReplayPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-trips-TripReplayPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/SafetySettings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "p2-windows/W7/windows-page-vehicle-systems-SafetySettingsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-SafetySettingsPage.log"
   }
 ]

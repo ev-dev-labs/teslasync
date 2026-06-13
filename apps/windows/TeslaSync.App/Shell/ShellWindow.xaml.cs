@@ -170,6 +170,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
         _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
+        // Vehicle Systems / Safety Settings page (P2/W7) — parity port of web SafetySettingsPage at route /safety-settings.
+        _viewModel.PageFactory.Register("SafetySettings", static () => new FeatureViews.VehicleSystems.SafetySettingsPage());
         // Battery / Projected Range page (P2/W7) — parity port of web ProjectedRangePage at route /analytics/range
         // (visible nav item /projected-range; /analytics/range is the hidden deep-link alias). Both resolve to the
         // "ProjectedRange" route name.

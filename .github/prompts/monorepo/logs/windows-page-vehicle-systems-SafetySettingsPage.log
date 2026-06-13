@@ -1,0 +1,206 @@
+=== p2-windows · W7 · page:vehicle-systems/SafetySettings (WinUI 3 / Fluent) ===
+Parity unit : page:vehicle-systems/SafetySettings   kind=page   web route=/safety-settings
+Web source  : web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --info: 10.0.300, win-x64) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no per-page .xaml files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  BatteryDegradationPage / SchemaDriftPage do. The generated prompt's idealized "SafetySettingsPage.xaml +
+  SafetySettingsPageViewModel.cs under TeslaSync/Features/VehicleSystems" is mapped onto these real conventions; the
+  surface registers itself with the W4 ShellPageFactory by route name ("SafetySettings", already in RouteTable.cs ->
+  /safety-settings, group VehicleSystems).
+- Data binding (ADR-004): the manifest data source is useSecurityLatest (GET /security/latest); the web page also
+  reads /safety/latest (the primary query whose absence is the empty surface) and /safety?limit=100 (the chart +
+  table history). The view-model reads through an injected ISafetySettingsFeed; the default EmptySafetySettingsFeed
+  resolves the empty state (matching the BatteryDegradationPage host-injection precedent), and the
+  generated-client-backed SafetySettingsClientFeed (SafetySettingsPage.Source.cs) binds the three generated OpenAPI
+  operations get_api_v1_safety_latest (primary), get_api_v1_safety (history, +limit=100) and
+  get_api_v1_security_latest (live signals), each scoped by the snake_case vehicle_id query param and asserted via
+  the FakeApiClient. No HTTP touches the view. The primary /safety/latest failure surfaces as ApiException -> the
+  error state; the history + security reads degrade gracefully (empty history / null security) per the web's three
+  independent queries.
+- The web page renders all four data states INSIDE the PageContainer body, so the native port reproduces them as
+  visible Fluent regions per ADR-006: loading -> shimmer skeleton (4 stat + 9 card + 1 chart TsSkeleton blocks);
+  error -> TsQueryError (InfoBar-equivalent) + Retry via ActionInvoked -> RefreshAsync; empty -> TsEmptyState
+  ("No safety data available for this vehicle."); success -> the gauge/metrics + live-signals + driving-stats + ADAS
+  + chart + history panels, each with its own empty fallback (chart "No safety state history to chart yet.", table
+  "No history records found."). Never a blank region. A >2 min staleness / error freshness chip rides the header
+  (TsDataFreshness; ADR-013).
+- The safety-enum choke point (web/src/lib/safetyEnum.ts) is ported verbatim as SafetyEnumClassifier over a
+  runtime-shape-preserving SafetyRawValue (bool / number / string / none): AEB uses inverted off-logic
+  (off==false => enabled), the four prefixed enum fields (ForwardCollisionSensitivity / LaneAssistLevel /
+  SpeedAssistLevel / FollowDistance) are stripped, SpeedAssistLevelNone -> Off, and a boolean is never String()-
+  coerced (asserted by Boolean_enum_is_never_string_coerced). TOTAL_FEATURES=9.
+- SI units (ADR-004 / P1-S5): the two driving-stat distances arrive as SI metres on the legacy miles_since_reset /
+  self_driving_miles_since_reset JSON fields and are converted at the display boundary only, through
+  UnitConverters.DistanceFromSi + ScalarFormatters.FormatNumber + UnitLabels.Label(units.Distance) (web
+  convertDistanceFromSI + fmtNumber); asserted metric=16 km / imperial=10 mi by Distance_since_reset_formats_in_active_units.
+- i18n (ADR-014): every visible literal flows through the ILocalizer facade with the web key names verbatim
+  (SafetyStrings.Resolve, called unconditionally so all 59 keys resolve in every state). 31 of the 59 keys were
+  already present in Strings/{en,he,ar}/Resources.resw (AEB/BSC/.../Off/On/Enabled/Disabled/safety.*); the 28
+  missing feature labels/descriptions/headers were added verbatim (web key -> English value, alphabetically placed;
+  ar/he are placeholder catalogs that fall back to English by design until translated).
+- Pre-existing build blocker repaired (minimal, in-scope to make the gate green): feature-views/MQTTInspectorPage/
+  MQTTInspectorPage.cs had two private instance methods (BuildConnectionContent, BuildThroughputContent) that the
+  analyzer flags CA1822 ("can be static"); under the App project's TreatWarningsAsErrors this failed the whole-
+  solution Release build at baseline (the worktree was clean at HEAD 565046d78). Marked both static (they use only
+  their parameter + static helpers) — the only edit outside the feature dir besides the nav registration and the
+  test-project Compile-link list.
+- Tests host (the headless net10.0 TeslaSync.App.Tests has no WinUI TFM and cannot project-reference the App; it
+  Compile-links each Microsoft.UI-free source): added the three UI-free links
+  SafetySettingsPage.Model/Source/ViewModel.cs to the single path-sorted Compile item group (the bare WinUI view
+  SafetySettingsPage.cs is excluded — it uses Microsoft.UI).
+
+=== PARITY ===
+PARITY_REQUIRED=79
+
+# Panels (14) — every named region implemented; every anonymous web GlassPanel reproduced as a Fluent Card/Mica region
+[x] panel  - GlassPanel1            -> safety-score gauge panel: SafetySettingsPage.cs#BuildGaugePanel (TsGlassPanel hosting
+             TsRadialGauge + enabled/total TsBadge); gated by SafetySettingsDisplay.ShowContent; test All_nine_features_enabled_scores_full
+[x] panel  - GlassPanel2            -> Live Safety Signals wrapper panel: SafetySettingsPage.cs#BuildLiveSignals (TsGlassPanel +
+             PanelTitle LiveSignalsTitle); web GlassPanel "Live Safety Signals"; test Live_signals_reflect_security_polarity
+[x] panel  - GlassPanel3            -> Driving Statistics wrapper panel: SafetySettingsPage.cs#BuildDrivingStats (TsGlassPanel +
+             PanelTitle DrivingStatsTitle); web GlassPanel "Driving Statistics"; test Distance_since_reset_formats_in_active_units
+[x] panel  - Safety-Score          -> Safety Score metric card: SafetySettingsProjection.BuildSummary -> SummaryMetrics[0]
+             (TsMetricCard, score% + ScoreBrush); test All_nine_features_enabled_scores_full (SummaryMetrics[0]=="100%")
+[x] panel  - Total-Features        -> Total Features metric card: SummaryMetrics[1] (TsMetricCard, TotalFeatures=9, accent);
+             test All_nine_features_enabled_scores_full (SummaryMetrics[1]=="9")
+[x] panel  - Enabled               -> Enabled metric card: SummaryMetrics[2] (TsMetricCard, EnabledCount, success tone); test
+             Aeb_uses_inverted_off_flag (SummaryMetrics[2]=="8")
+[x] panel  - Disabled              -> Disabled metric card: SummaryMetrics[3] (TsMetricCard, 9-enabled, danger when >0); test
+             Aeb_uses_inverted_off_flag (SummaryMetrics[3]=="1")
+[x] panel  - GlassPanel8           -> ADAS Features wrapper panel: SafetySettingsPage.cs#BuildFeatureCards (TsGlassPanel +
+             TitleRow shield/AdasTitle); web GlassPanel "ADAS Features"; test Builds_all_nine_feature_cards_in_web_order
+[x] panel  - GlassPanel9           -> Safety States chart wrapper panel: SafetySettingsPage.cs#BuildChart (TsGlassPanel +
+             PanelTitle ChartTitle); web GlassPanel "Safety States Over Time"; test Chart_builds_three_step_series_sorted_ascending
+[x] panel  - Distance-Since-Reset  -> Distance Since Reset stat card: SafetySettingsProjection.BuildStats -> DrivingStats[0]
+             (TsStatCard, SI->display distance + unit sublabel, NavigationGlyph); test Distance_since_reset_formats_in_active_units
+[x] panel  - Self-Driving-Distance -> Self-Driving Distance stat card: DrivingStats[1] (TsStatCard, SI->display distance,
+             "{unit} (autopilot)" sublabel, CpuGlyph); test Distance_since_reset_formats_in_active_units (imperial "mi")
+[x] panel  - GlassPanel12          -> Safety Settings History wrapper panel: SafetySettingsPage.cs#BuildHistory (TsGlassPanel +
+             PanelTitle HistoryTitle); web GlassPanel "Safety Settings History"; test History_table_has_ten_columns_and_newest_first_rows
+[x] panel  - GlassPanel13          -> the four Live-Signal tiles (web SignalCard GlassPanels): SafetySettingsPage.cs#BuildSignalCard
+             over SafetySettingsDisplay.SignalCards (Border + polarity-tinted FontIcon/value/Caption); test Live_signals_reflect_security_polarity
+[x] panel  - GlassPanel14          -> the nine ADAS feature tiles (web SafetyCard GlassPanels): SafetySettingsPage.cs#BuildFeatureCard
+             over SafetySettingsDisplay.FeatureCards (TsGlassPanel + icon chip + status dot + value text); test Builds_all_nine_feature_cards_in_web_order
+
+# Charts (2) — native W3 chart wrappers (never a web canvas)
+[x] chart  - RadialGauge           -> SafetySettingsPage.cs#BuildGaugePanel TsRadialGauge (Value=score%, Max=100, ColorIndex by
+             threshold 80/50; web RadialGauge value/max/color); projection GaugeValue/GaugeMax/GaugeColorIndex; test All_nine_features_enabled_scores_full
+[x] chart  - LineChart             -> SafetySettingsPage.cs#BuildChart TsLineChart inside TsChartContainer, three step series
+             AEB/BSCW/ELDA over time (web stepAfter LineChart); projection BuildChartSeries; test Chart_builds_three_step_series_sorted_ascending + Chart_empty_when_no_history
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading               -> SafetySettingsState.Loading + ShowLoading; rendered SafetySettingsPage.cs#_loadingSkeleton
+             (TsSkeleton shimmer grid); test State_loading_when_query_in_flight
+[x] state  - empty                 -> SafetySettingsState.Empty + ShowEmpty; rendered _emptyState (TsEmptyState title+message
+             "No safety data available for this vehicle."); test State_empty_when_resolved_with_no_latest
+[x] state  - error                 -> SafetySettingsState.Error + ShowError; rendered _errorState (TsQueryError + Retry via
+             ActionInvoked -> RefreshAsync); test State_error_when_primary_query_failed + Feed_propagates_primary_failure
+[x] state  - success               -> SafetySettingsState.Success + ShowContent; rendered the gauge/metrics/signals/stats/ADAS/
+             chart/history panels; test State_success_when_latest_resolved
+
+# Strings (59) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names (SafetyStrings.Resolve)
+[x] string - ADAS Features                                      -> localizer.GetString("ADAS Features", "ADAS Features")
+[x] string - ADAS features, safety score, and driving stats     -> GetString("ADAS features, safety score, and driving stats", ...)
+[x] string - AEB                                                -> GetString("AEB", "AEB")
+[x] string - Adaptive cruise headway setting                    -> GetString("Adaptive cruise headway setting", ...)
+[x] string - Alerts for blind-spot hazards                      -> GetString("Alerts for blind-spot hazards", ...)
+[x] string - Alerts when exceeding speed limit                  -> GetString("Alerts when exceeding speed limit", ...)
+[x] string - Auto Emergency Braking                             -> GetString("Auto Emergency Braking", ...)
+[x] string - Automatic collision mitigation                     -> GetString("Automatic collision mitigation", ...)
+[x] string - BSC                                                -> GetString("BSC", "BSC")
+[x] string - BSCW                                               -> GetString("BSCW", "BSCW")
+[x] string - Blind Spot Camera                                  -> GetString("Blind Spot Camera", ...)
+[x] string - Blind Spot Collision Warning                       -> GetString("Blind Spot Collision Warning", ...)
+[x] string - CFD                                                -> GetString("CFD", "CFD")
+[x] string - Camera view when signaling                         -> GetString("Camera view when signaling", ...)
+[x] string - Cruise Follow Distance                             -> GetString("Cruise Follow Distance", ...)
+[x] string - Disabled                                           -> GetString("Disabled", "Disabled")
+[x] string - ELDA                                               -> GetString("ELDA", "ELDA")
+[x] string - Emergency Lane Departure Avoidance                 -> GetString("Emergency Lane Departure Avoidance", ...)
+[x] string - Enabled                                            -> GetString("Enabled", "Enabled")
+[x] string - FCW                                                -> GetString("FCW", "FCW")
+[x] string - Forward Collision Warning                          -> GetString("Forward Collision Warning", ...)
+[x] string - LDA                                                -> GetString("LDA", "LDA")
+[x] string - Lane Departure Avoidance                           -> GetString("Lane Departure Avoidance", ...)
+[x] string - No history records found.                          -> GetString("No history records found.", ...) -> HistoryEmptyMessage
+[x] string - No safety data available for this vehicle.         -> GetString("No safety data available for this vehicle.", ...) -> EmptyMessage
+[x] string - No safety state history to chart yet.              -> GetString("No safety state history to chart yet.", ...) -> ChartEmptyMessage
+[x] string - Off                                                -> GetString("Off", "Off")
+[x] string - On                                                 -> GetString("On", "On")
+[x] string - PIN                                                -> GetString("PIN", "PIN")
+[x] string - Pin to Drive                                       -> GetString("Pin to Drive", ...)
+[x] string - Prevents unintentional lane changes                -> GetString("Prevents unintentional lane changes", ...)
+[x] string - Requires PIN before driving                       -> GetString("Requires PIN before driving", ...)
+[x] string - SLW                                                -> GetString("SLW", "SLW")
+[x] string - Safety Score                                       -> GetString("Safety Score", ...) -> GaugeLabel / SummaryMetrics[0]
+[x] string - Safety Settings                                    -> GetString("Safety Settings", ...) -> Title / SafetySettingsRegistration.Title
+[x] string - Safety Settings History                            -> GetString("Safety Settings History", ...) -> HistoryTitle
+[x] string - Safety States Over Time                            -> GetString("Safety States Over Time", ...) -> ChartTitle
+[x] string - Speed Limit Warning                                -> GetString("Speed Limit Warning", ...)
+[x] string - Steers back on unintentional departure             -> GetString("Steers back on unintentional departure", ...)
+[x] string - Time                                               -> GetString("Time", "Time") -> history column 0
+[x] string - Total Features                                     -> GetString("Total Features", ...) -> SummaryMetrics[1]
+[x] string - Warns of potential frontal collisions              -> GetString("Warns of potential frontal collisions", ...)
+[x] string - enabled                                            -> GetString("enabled", "enabled") -> EnabledBadgeText "{n}/9 enabled"
+[x] string - error.loadFailed                                   -> GetString("error.loadFailed", "Failed to load data") -> ErrorText
+[x] string - safety.buckled                                     -> GetString("safety.buckled", "Buckled")
+[x] string - safety.distanceAutopilot                           -> GetString("safety.distanceAutopilot", "{{unit}} (autopilot)") -> DrivingStats[1].Sublabel
+[x] string - safety.distanceSinceReset                          -> GetString("safety.distanceSinceReset", "Distance Since Reset")
+[x] string - safety.driverBelt                                  -> GetString("safety.driverBelt", "Driver Belt")
+[x] string - safety.driverSeat                                  -> GetString("safety.driverSeat", "Driver Seat")
+[x] string - safety.drivingStats                                -> GetString("safety.drivingStats", "Driving Statistics") -> DrivingStatsTitle
+[x] string - safety.empty                                       -> GetString("safety.empty", "Empty") -> Driver Seat off-text
+[x] string - safety.liveSignals                                 -> GetString("safety.liveSignals", "Live Safety Signals") -> LiveSignalsTitle
+[x] string - safety.locked                                      -> GetString("safety.locked", "Locked")
+[x] string - safety.occupied                                    -> GetString("safety.occupied", "Occupied")
+[x] string - safety.passengerBelt                               -> GetString("safety.passengerBelt", "Passenger Belt")
+[x] string - safety.selfDrivingDistance                         -> GetString("safety.selfDrivingDistance", "Self-Driving Distance")
+[x] string - safety.unbuckled                                   -> GetString("safety.unbuckled", "Unbuckled")
+[x] string - safety.unlocked                                    -> GetString("safety.unlocked", "Unlocked")
+[x] string - safety.vehicleLock                                 -> GetString("safety.vehicleLock", "Vehicle Lock")
+
+PARITY_COVERED=79
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/SafetySettingsPageTests.cs, 27 tests):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) record all 59 keys above through a
+# RecordingLocalizer; Required_string_key_set_has_exactly_fifty_nine_unique_keys pins the count; the four State_*
+# tests assert the loading/empty/error/success matrix; All_nine_features_enabled_scores_full + Aeb_uses_inverted_off_flag
+# + Empty_snapshot_renders_low_score_status assert the gauge/metrics; Live_signals_reflect_security_polarity the live
+# tiles; Distance_since_reset_formats_in_active_units + Missing_distance_renders_em_dash the SI driving stats;
+# Builds_all_nine_feature_cards_in_web_order the ADAS cards; Chart_builds_three_step_series_sorted_ascending +
+# Chart_empty_when_no_history the line chart; History_table_has_ten_columns_and_newest_first_rows +
+# History_table_empty_message_when_no_rows the table; Clean_/Speed_/Boolean_/Numeric_ the safetyEnum.ts choke point;
+# Feed_issues_three_scoped_reads + Feed_propagates_primary_failure + Feed_degrades_when_history_and_security_fail the
+# generated-client GET request shaping; Diagnostics_/Registration_ the slug + route + operation ids.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SafetySettingsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (SafetySettingsPage Model/Source/ViewModel/view
+#   + SafetySettingsPageTests + ShellWindow registration + MQTTInspectorPage static fix + test csproj links + Resources.resw)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27628, Failed: 0, Skipped: 0 (incl. 27 SafetySettingsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=79
+PARITY_REQUIRED=79
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SafetySettingsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SafetySettingsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-vehicle-systems-SafetySettingsPage.log
+# git commit -m "feat(apps/windows): SafetySettingsPage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
