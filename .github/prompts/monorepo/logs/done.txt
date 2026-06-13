@@ -793,3 +793,4 @@ p2-windows/pages/trips/TripDetailPage.prompt.md
 p2-windows/pages/telemetry/SignalsWorkspacePage.prompt.md
 p2-windows/pages/telemetry/SignalLogViewerPage.prompt.md
 p2-windows/pages/trips/TripListPage.prompt.md
+p2-windows/pages/vehicle-systems/ClimateControlPage.prompt.md
