@@ -1,0 +1,139 @@
+================================================================================
+p2-windows · W7 · page:vehicles/DigitalTwin — WinUI 3 / Fluent parity
+Web source: web/src/features/vehicles/pages/DigitalTwinPage.tsx  (route /digital-twin)
+Output:     apps/windows/TeslaSync.App/feature-views/DigitalTwinPage/*  (+ Shell reg, ledger)
+================================================================================
+
+# NOTE ON PATHS (no silent drift):
+# The generated prompt's idealized output path (apps/windows/TeslaSync/Features/Vehicles/
+# DigitalTwinPage.xaml + DigitalTwinPageViewModel.cs) does NOT exist in-repo. This repo's
+# WinUI app is C#-markup (no per-page XAML); pages live under
+#   apps/windows/TeslaSync.App/feature-views/<Name>/  namespace TeslaSync.App.FeatureViews.<Domain>
+# following the established multi-file pattern (.cs view + .ViewModel.cs + .Model.cs + .Source.cs),
+# exactly as the 70 sibling W7 pages (e.g. feature-views/VehicleCostPage). Implemented to the
+# real convention rather than the idealized path.
+
+# PREREQUISITE FIX (unblock the whole-solution Release build — documented, not silent):
+# The branch HEAD's whole-solution Release build was RED before any of my work: 2 pre-existing
+# CA1822 analyzer errors (TreatWarningsAsErrors=true) in the committed sibling file
+#   apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs
+#   (BuildConnectionContent / BuildThroughputContent — both instance-independent).
+# Marked both `static` (behaviourally identical, zero-risk) so the solution — and therefore this
+# page + its tests — can build. This is the minimum change required to reach a green BUILD gate.
+
+=== FILES ===
+NEW  apps/windows/TeslaSync.App/feature-views/DigitalTwinPage/DigitalTwinPage.Model.cs
+NEW  apps/windows/TeslaSync.App/feature-views/DigitalTwinPage/DigitalTwinPage.Source.cs
+NEW  apps/windows/TeslaSync.App/feature-views/DigitalTwinPage/DigitalTwinPage.ViewModel.cs
+NEW  apps/windows/TeslaSync.App/feature-views/DigitalTwinPage/DigitalTwinPage.cs
+NEW  apps/windows/TeslaSync.App.Tests/FeatureViews/DigitalTwinPageTests.cs            (24 tests)
+EDIT apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs                            (PageFactory.Register "DigitalTwin")
+EDIT apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                      (compile Model/Source/ViewModel headless)
+EDIT apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs  (CA1822 unblock, see above)
+EDIT apps/parity/windows-ledger.json                                                 (page:vehicles/DigitalTwin → covered 45/45)
+
+=== ARCHITECTURE ===
+# Thin view (DigitalTwinPage.cs : UserControl) renders the projected DigitalTwinPageDisplay.
+# DigitalTwinPageViewModel (INotifyPropertyChanged) owns the shared VehicleSelectState (native
+#   useSelectedVehicle()), loads the fleet (web useVehicles), defaults to the first vehicle, reads
+#   the selected vehicle's state+security+charging trio and re-polls every 5 s (REFRESH_INTERVAL).
+# DigitalTwinPageProjection (pure) merges the reads via the shared DigitalTwinSignals (the port of
+#   web buildTwinState) and resolves every literal through ILocalizer.
+# DigitalTwinPageClientFeed binds the generated client (ADR-004): GET /vehicles, /vehicles/{id}/state,
+#   /security/latest?vehicle_id=, /charging-telemetry/latest?vehicle_id= (snake_case params).
+# Units: physical state only (booleans/enums) — no SI quantities on this page; nothing stored non-SI.
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+# ---- panels (5) — every web <GlassPanel> reproduced as a Fluent TsGlassPanel region --------------
+[x] panel  GlassPanel1  -> DigitalTwinPage.cs field `_emptyPanel` (TsGlassPanel) hosting `_noVehicles` TsEmptyState (web !vehicle branch)
+[x] panel  GlassPanel2  -> DigitalTwinPage.cs field `_twinPanel`  (TsGlassPanel) hosting TsVehicleTwin + TsVehiclePaintPicker + `_lastUpdated`
+[x] panel  GlassPanel3  -> DigitalTwinPage.cs field `_doorsPanel` (TsGlassPanel) — Doors & Openings (TsKVList | noDoorData TsEmptyState)
+[x] panel  GlassPanel4  -> DigitalTwinPage.cs field `_windowsPanel` (TsGlassPanel) — Windows (TsKVList | noWindowData TsEmptyState)
+[x] panel  GlassPanel5  -> DigitalTwinPage.cs field `_securityPanel` (TsGlassPanel) — Security & Status (TsKVList + TsStatusBadge)
+
+# ---- data states (3) — every source: loading -> empty -> success ---------------------------------
+[x] state  loading  -> DigitalTwinPageState.Loading; Display.ShowLoading; view `_loadingSkeleton`; test Loading_state_shows_the_skeleton
+[x] state  empty    -> DigitalTwinPageState.Empty;   Display.ShowEmpty;   GlassPanel1; test Empty_state_shows_the_no_vehicles_panel
+[x] state  success  -> DigitalTwinPageState.Success; Display.ShowContent; GlassPanel2-5; test Success_state_shows_the_content_and_badge
+#   per-panel empty placeholders (web securityData null): Side_panels_show_their_empty_states_when_no_security_data
+
+# ---- strings (37) — DigitalTwinPageProjection.Project resolves each via ILocalizer.GetString -----
+#   asserted on EVERY projection (success + loading) by DigitalTwinPageTests
+#   .Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) via RecordingLocalizer.
+[x] string  common.active                 -> sentryMode/hazards value
+[x] string  common.closed                 -> door/window/chargePort value
+[x] string  common.inactive               -> sentryMode value
+[x] string  common.no                     -> locked/driving/charging value
+[x] string  common.off                    -> headlights/hazards value
+[x] string  common.on                     -> headlights value
+[x] string  common.open                   -> door/window/chargePort value
+[x] string  common.yes                    -> locked/driving/charging value
+[x] string  digitalTwin.chargePort        -> securityItems label (lblChargePort)
+[x] string  digitalTwin.charging          -> securityItems label + chargePort "Charging" value (chargingText)
+[x] string  digitalTwin.doorDriverFront   -> doorItems label
+[x] string  digitalTwin.doorDriverRear    -> doorItems label
+[x] string  digitalTwin.doorPassengerFront-> doorItems label
+[x] string  digitalTwin.doorPassengerRear -> doorItems label
+[x] string  digitalTwin.doorsTitle        -> GlassPanel3 PanelTitle (DoorsTitle)
+[x] string  digitalTwin.driverSeat        -> securityItems label
+[x] string  digitalTwin.driving           -> securityItems label
+[x] string  digitalTwin.empty             -> driverSeat "Empty" value (emptyText)
+[x] string  digitalTwin.frunk             -> doorItems label
+[x] string  digitalTwin.hazards           -> securityItems label
+[x] string  digitalTwin.headlights        -> securityItems label
+[x] string  digitalTwin.lastUpdated       -> GlassPanel2 last-updated stamp (LastUpdatedLabel)
+[x] string  digitalTwin.locked            -> securityItems label
+[x] string  digitalTwin.noDoorData        -> GlassPanel3 empty message (NoDoorMessage)
+[x] string  digitalTwin.noVehicles        -> GlassPanel1 empty message (NoVehiclesMessage)
+[x] string  digitalTwin.noWindowData      -> GlassPanel4 empty message (NoWindowMessage)
+[x] string  digitalTwin.occupied          -> driverSeat "Occupied" value (occupiedText)
+[x] string  digitalTwin.securityTitle     -> GlassPanel5 PanelTitle (SecurityTitle)
+[x] string  digitalTwin.sentryMode        -> securityItems label
+[x] string  digitalTwin.subtitle          -> page header Subhead (Subtitle)
+[x] string  digitalTwin.title             -> page header PageTitle (Title) + Registration.Title
+[x] string  digitalTwin.trunk             -> doorItems label
+[x] string  digitalTwin.windowFD          -> windowItems label
+[x] string  digitalTwin.windowFP          -> windowItems label
+[x] string  digitalTwin.windowRD          -> windowItems label
+[x] string  digitalTwin.windowRP          -> windowItems label
+[x] string  digitalTwin.windowsTitle      -> GlassPanel4 PanelTitle (WindowsTitle)
+
+PARITY_COVERED=45
+
+# All 37 i18n keys already present in the platform catalog Strings/{en,he,ar}/Resources.resw
+# (prefix translation.*) — verified; no catalog edit required. Keys resolved by ILocalizer with the
+# exact web key names + web English fallbacks.
+
+=== GATE (windows headless triad — same invocation every sibling W7 page log uses) ===
+# Placeholder / stub scan (real target path; idealized apps/windows/TeslaSync/Features/Vehicles absent):
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DigitalTwinPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (17 pre-existing non-escalated warns)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (all new files LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27660, Failed: 0, Skipped: 0
+#   (incl. 24 DigitalTwinPageTests). Per the established per-page gate (every sibling log), the headless
+#   unit project TeslaSync.App.Tests is the test target; the TeslaSync.App.UITests WinAppDriver/Appium
+#   E2E suite is a separate runner lane (UiAutomationUnavailableException when the driver is absent) and
+#   is not part of the per-page headless gate.
+TEST_EXIT=0
+PARITY_COVERED=45
+PARITY_REQUIRED=45
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DigitalTwinPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DigitalTwinPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-vehicles-DigitalTwinPage.log
+# git commit -m "feat(apps/windows): DigitalTwinPage at web parity (W7 vehicles)"
+
+EXIT=0
+STATUS=DONE
