@@ -1,0 +1,128 @@
+=== P2 Shared surface 0082 DriveScore (Windows) ===
+date: 2026-06-13T02:09:29-07:00
+dotnet: 10.0.300
+runner: net10.0 SDK present; Microsoft.WindowsAppSDK.WinUI 2.1.0 (WinUI 3) restored; Microsoft.WindowsDesktop.App 10.0.8; OS Windows_NT 10.0.26200
+
+--- Scope / parity ---
+Surface = native WinUI 3 port of web/src/components/data-display/DriveScore.tsx: a purely presentational drive
+score panel — a circular score gauge beside a four-row component breakdown (efficiency / speed discipline /
+range preservation / trip length). New code (apps/windows/TeslaSync.App/shared-surfaces/):
+  - DriveScore.Model.cs (WinUI-free): DriveScoreRegistration (slug=DriveScore), DriveScoreModel (the SI drive
+    inputs: DistanceM/DurationS/MaxSpeedMps/StartBatteryPct/EndBatteryPct), DriveScoreBreakdown,
+    DriveScoreComponent, DriveScoreDisplay, DriveScoreProjection (the web computeDriveScore + getScoreColor port
+    + i18n + bar/gauge/accessible-name assembly), and PII-safe DriveScoreDiagnostics (view.opened slug=DriveScore).
+  - DriveScore.cs: a ContentControl that renders the TsGlassPanel -> [radial gauge] + [breakdown bars] and binds
+    to the projection; the view performs no HTTP.
+  - TeslaSync.App.Tests/SharedSurfaces/DriveScoreTests.cs: 41 headless tests (computeDriveScore vectors,
+    getScoreColor thresholds, i18n keys/fallbacks, projected rows, gauge fraction + accessible names, model
+    factory, diagnostics, arg guards).
+Parity decisions (web source is THE spec):
+  - Pure, synchronous, prop-driven ({ drive }); the parent Drive row/header owns any fetching => no fetch-driven
+    loading/error/stale/offline chrome. The single populated branch (gauge + breakdown) ALWAYS renders; an absent
+    SI field falls back to the same default the web uses, so the surface is never blank. Same precedent as the
+    accepted shared-surfaces ScoreBadge (0078) and BatteryDelta (0077).
+  - computeDriveScore ported term-for-term: SI fallbacks (distance/duration 0; maxSpeed -> avg speed;
+    startBattery -> 100; endBattery -> start); four weighted components (efficiency 0-40 toward the optimal
+    150 Wh/km, speed discipline 0-20 from avg/peak ratio, range preservation 0-20 from %/km, trip length 0-20
+    plateauing at 50 km); total = clamp(sum,0,100). JS Math.round reproduced as floor(x+0.5) (exact for the
+    finite non-negative score domain, e.g. 12.5 -> 13). Vectors cross-checked against a faithful JS replica:
+    {} -> 23/13/10/0/0; good(50km) -> 87/40/9/18/20; warn(30km) -> 53/13/13/15/12; bad(5km) -> 6/0/4/0/2;
+    optimal(60km) -> 89/30/20/19/20.
+  - getScoreColor thresholds: <40 => #ef4444 (web COLOR.BAD), <70 => #f59e0b (WARN), >=70 => #10b981 (GOOD).
+  - Gauge drawn with the shared chart geometry the native radial gauges use: ChartGeometry.RingArc (12 o'clock,
+    sweeping clockwise score/100) + ChartShapes.ArcPath (round caps = web strokeLinecap="round"). The arc + the
+    centred score figure are tinted by the threshold palette via DisplayPrimitives.HexBrush (a semantic data
+    colour shared with the web, like the ScoreBadge A-F palette; ambient theming still flows through the token
+    brushes). Background ring = TsColorBorderBrush (web --glass-border). Breakdown bar palette (efficiency
+    #00f0ff, speed #a855f7, range #10b981, trip #f59e0b) via HexBrush; bar track = TsColorBorderBrush; all text
+    via the W1 token brushes (TextPrimary/Secondary/Muted).
+  - Motion: the web framer-motion entrance (the arc drawing in via strokeDashoffset, the score figure fading in,
+    the bars growing from zero) is reproduced once on Loaded as an XAML Storyboard (StrokeDashOffset draw +
+    Opacity fade + ScaleX grow). Reduced-motion-aware: under MotionPreference.ReduceMotion the gauge/score/bars
+    snap to their settled state with no entrance (web prefers-reduced-motion short-circuit). The data-bearing
+    final visual is always composed in Render(), so every host (incl. reduced-motion) shows the complete surface.
+  - i18n: the six web keys (driveScore.title, .score, .efficiency, .speedDiscipline, .rangePreservation,
+    .tripLength) resolve through the P1/S10 ILocalizer facade (PassthroughLocalizer in tests) with the exact keys
+    + English fallbacks. All six ALSO exist in the shared catalog Strings/{en,ar,he}/Resources.resw (as
+    translation.driveScore.*) with the matching English values — verified present in all three locales.
+  - a11y: the gauge reads as ONE Narrator node ("Score {total}"); the panel title is a level-3 heading (web h3);
+    each breakdown bar carries a composed accessible name ("{label} {value} / {max}"); the decorative ring/arc
+    and the inner score/caption figures are AccessibilityView.Raw. No interactive elements exist on this surface.
+
+--- Tests-project registration (no corruption to repair on this branch) ---
+TeslaSync.App.Tests is plain net10.0 and cannot project-reference the WinUI app, so each WinUI-free surface source
+is Compile-linked. Added the new SharedSurfaces\DriveScore.Model.cs link in case-insensitive ordinal path-sorted
+position (between DraftRestorePrompt.ViewModel.cs and EditConflictBanner.Model.cs), preserving the file's single
+<Project>/<ItemGroup> invariant. The bare WinUI view DriveScore.cs is intentionally NOT linked (exercised by the
+app build), matching the ScoreBadge/BatteryDelta linking pattern. The csproj was valid single-root on this branch
+(no merge=union corruption to regenerate). New surface .cs files were authored with CRLF and converted to LF to
+satisfy the repo .editorconfig (end_of_line = lf); see FORMAT step.
+
+=== STEP 1: dotnet build TeslaSync.sln -c Release ===
+  Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+(A first standalone `dotnet build` of the App csproj alone failed with WMC9999 + an unknown-type XAML cascade; the
+root cause was a single CS0414 in the new view -- TreatWarningsAsErrors=true turned the dead-field warning into an
+error, which broke the assembly and so starved the XAML markup compiler of all custom types. The dead field was
+removed; DriveScore.cs/.Model.cs are warning-clean and the solution rebuilds 0/0 with TreatWarningsAsErrors=true.)
+BUILD_EXIT=0
+
+=== STEP 2: dotnet test TeslaSync.sln -c Release ===
+[full suite, includes environment-gated UIAutomation E2E]
+  Failed!  - Failed:   147, Passed:     0, Skipped:     0, Total:   147, Duration: 247 ms - TeslaSync.App.UITests.dll (net10.0)
+  Passed!  - Failed:     0, Passed: 27997, Skipped:     0, Total: 27997, Duration: 27 s - TeslaSync.App.Tests.dll (net10.0)
+  full_suite_exit=1
+  representative failure: TeslaSync.App.UITests.Fixtures.UiAutomationUnavailableException : UI automation cannot run: WinAppDriver/Appium runner is absent: nothing is listening on http://127.0.0.1:4723/ and WinAppDriver.exe was not found at its standard install paths or on PATH.
+[headless suite, Category!=UIAutomation -- the surface-validating suite; UITests csproj documents running the two suites independently]
+  Passed!  - Failed:     0, Passed: 27997, Skipped:     0, Total: 27997, Duration: 22 s - TeslaSync.App.Tests.dll (net10.0)
+  (of which DriveScoreTests: Passed 41, Failed 0)
+TEST_EXIT=0
+
+=== STEP 3: dotnet format TeslaSync.sln --verify-no-changes ===
+First pass flagged the 3 new files only (ENDOFLINE: CRLF -> LF, per .editorconfig end_of_line = lf); converted to
+LF (no BOM, matching the sibling ScoreBadge.cs) and re-verified. Second pass: format issue lines: 0 (DriveScore
+issues: 0). FORMAT_EXIT reflects the full-solution --verify-no-changes run.
+FORMAT_EXIT=0
+
+=== STEP 4: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/DriveScore ===
+GATE_LITERAL_PLACEHOLDER_EXIT=0
+note: DriveScore is a flat-file surface (DriveScore.cs + DriveScore.Model.cs, matching the prompt's DriveScore.*
+and the ScoreBadge/BatteryDelta precedent), so the gate's literal -Path matches no directory. To avoid a vacuous
+pass, the scan was ALSO run against each actual file:
+  DriveScore.cs              PLACEHOLDER_COUNT=0 ALLOWED=0
+  DriveScore.Model.cs        PLACEHOLDER_COUNT=0 ALLOWED=0
+  DriveScoreTests.cs         PLACEHOLDER_COUNT=0 ALLOWED=0
+  belt-and-suspenders grep (TODO|FIXME|XXX|Coming soon|Placeholder|Lorem ipsum|not implemented|NotImplementedException|// stub): 0 hits
+PLACEHOLDER_EXIT=0
+
+--- UIAutomation E2E capability note ---
+TeslaSync.App.UITests (Category=UIAutomation, 147 tests) drives the PACKAGED app out-of-process over the W3C
+WebDriver protocol via WinAppDriver/Appium. This runner has no WinAppDriver/Appium listener (port 4723) and no
+deployed MSIX, so the suite fails fast BY DESIGN (the csproj + WinAppDriverSession state it is never silently
+skipped). These are repo-wide app-shell E2E tests, NOT part of this surface (this surface adds ZERO UIAutomation
+tests; its required adapter/per-state/a11y tests are the 41 headless tests above). The required surface
+capability (WinUI 3 / WindowsAppSDK 2.1.0 / .NET 10) IS present: the solution builds Release-clean and the
+headless suite is fully green. Per the UITests csproj, the headless and UIAutomation suites run independently;
+the headless result is the surface gate. The 147 UIAutomation failures are an environment/runner-infra gap, not
+a defect, and match the accepted shared-surfaces BatteryDelta (0077) gate.
+
+--- Acceptance criteria ---
+[x] Surface renders the web-source branch (gauge + four-part breakdown); it always renders, never blank. The web
+    source has no fetch-driven loading/error/stale/offline chrome (prop-driven, parent owns fetching), per the
+    ScoreBadge/BatteryDelta precedent.
+[x] Hooks bind via P1/S8 + P1/S10: the only web hook is useTranslation -> ILocalizer facade; the view does no HTTP
+    (the drive is fed by the parent as the Model).
+[x] i18n: every web key (driveScore.title/.score/.efficiency/.speedDiscipline/.rangePreservation/.tripLength)
+    resolves through ILocalizer with the exact keys + English fallbacks, and every key has a matching entry in the
+    P1/S10 catalog (Strings/{en,ar,he}/Resources.resw).
+[x] Accessibility: the gauge is one Narrator node ("Score {total}"); the title is a level-3 heading; each bar has a
+    composed accessible name; decorative shapes + inner figures are AccessibilityView.Raw; reduced-motion honoured.
+[x] Tests: computeDriveScore vectors + getScoreColor thresholds + i18n keys/fallbacks + projected rows + gauge
+    fraction/accessible names + model factory + diagnostics + arg guards (41 tests, all pass).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (PLACEHOLDER_COUNT=0).
+[x] Telemetry: view.opened slug=DriveScore via DriveScoreDiagnostics on Loaded (once).
+
+SUMMARY: BUILD_EXIT=0 TEST_EXIT(headless)=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0 (full-suite incl. env-gated UIAutomation=1)
+EXIT=0
+STATUS=DONE
