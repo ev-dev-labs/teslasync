@@ -1,0 +1,116 @@
+p2-windows/W7 — page:settings/ActiveSessions — native WinUI 3 ActiveSessionsPage at web parity
+================================================================================================
+Web source : web/src/features/settings/pages/ActiveSessionsPage.tsx
+             (+ the wrapped web/src/features/settings/components/ActiveSessionsSection.tsx)
+Web route  : /account/sessions  (nav name "Active Sessions")
+Output     : apps/windows/TeslaSync.App/feature-views/ActiveSessionsPage/{ActiveSessionsPage.cs,
+             ActiveSessionsPage.Model.cs, ActiveSessionsPage.Source.cs, ActiveSessionsPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Settings path
+              does not exist — the Windows app is TeslaSync.App with C#-markup feature-views, not
+              XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json.)
+
+Shape of the parity unit
+------------------------
+The web page is a <PageContainer title subtitle copyLink> hosting <ActiveSessionsSection />. The manifest
+record (apps/parity/parity-manifest.json id=page:settings/ActiveSessions) lists requiredCount=2, both
+strings (account.sessions.title + account.sessions.subtitle) and NO data sources/panels/charts/maps of its
+own. There is NO separate parity unit for ActiveSessionsSection, so — honouring "no scope narrowing / no
+stubs as final" — the hosted section is reproduced natively in full (it is not stubbed): the four web render
+branches (loading, open-mode AUTH_MODE_OPEN notice, forward-auth table, empty) plus the per-row Sign out and
+the "Sign out all other devices" action, both behind a destructive, never-silenceable confirm dialog.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011)
+--------------------------------------------------------------
+- ActiveSessionsPage : UserControl — mounts the shared PageContainer surface (parity port of web
+  PageContainer, apps/windows/TeslaSync.App/shared-surfaces/PageContainer.cs) with CopyLink=true and
+  PageContent = a Fluent TsGlassPanel whose body switches between the loading notice (Spinner + caption),
+  the open-mode notice (Warning glyph + PanelTitle + HelperText), the failure surface (TsErrorDisplay +
+  Retry) and the forward-auth panel (header with the all-others TsButton, the sessions table with a
+  "this device" TsBadge + a per-row Sign out TsButton, or the empty Text). Revokes confirm through
+  TsConfirmDialog (IsDestructive=true). Design tokens + a11y (AutomationProperties, Group peer) throughout.
+- ActiveSessionsPageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Reads the list
+  through IActiveSessionsFeed (web useSessions); owns the per-row + all-others revoke flows (web
+  useRevokeSession / useRevokeAllOtherSessions); projects ActiveSessionsDisplay so the view is a thin
+  renderer. LoadAsync/RefreshAsync + RevokeAsync/RevokeAllOthersAsync; superseding CTS; no I/O in the view.
+- ActiveSessionsProjection / ActiveSessionsModel / ActiveSessionsDisplay — pure projection (no WinUI types)
+  resolving the five-state matrix (loading / open-mode / error / empty / populated), the device-label
+  heuristic (1:1 port of web describeDevice), the timestamp cells (shared SI/locale DateTimeFormatting),
+  the "this device" chip + per-row revoke affordance, and the two destructive confirm-copy templates.
+- ActiveSessionsSnapshot.FromJson — tolerant list parser ({mode,sessions} object, {data:[…]} envelope,
+  bare array; explicit mode:'open' -> open snapshot). ActiveSessionsRegistration — RouteName="ActiveSessions"
+  (matches RouteTable.cs Page("ActiveSessions","account/sessions",SettingsAccountIntegrations)),
+  Slug="ActiveSessionsPage", the three generated operation ids (get_api_v1_auth_sessions,
+  delete_api_v1_auth_sessions_id, delete_api_v1_auth_sessions_all_others) + AUTH_MODE_OPEN sentinel.
+- EmptyActiveSessionsFeed — the no-backend default the parameterless (shell-registered) page hosts itself
+  against (resolved-but-empty forward-auth list -> empty state), mirroring the other W7 pages' Empty feeds.
+  ActiveSessionsClientFeed — the generated-OpenAPI-client adapter (ADR-004): GET + the two DELETEs, mapping
+  the 501 AUTH_MODE_OPEN to the open snapshot exactly as web useSessions does.
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("ActiveSessions", () => new FeatureViews.Settings.ActiveSessionsPage()).
+  (Same edit also closed a pre-existing merge artifact in the Locations registration lambda that left the
+   constructor unbalanced — CS1026/CS1002/CS1513 at ShellWindow.xaml.cs:251 — which had the whole App
+   project red on arrival; required to reach a green BUILD gate.)
+
+Faithful-improvement note (data states / ADR-011)
+-------------------------------------------------
+The web maps a genuinely-errored list query to the open-mode branch (its `!sessions.data` guard catches the
+undefined data). The native surface instead promotes a real list-load failure to a dedicated error+Retry
+state (the prompt's "error -> InfoBar + Retry; never render a blank region" contract), while the explicit
+501 AUTH_MODE_OPEN still resolves to the open-mode notice exactly as web. No branch is dropped or stubbed.
+
+i18n note (R3/ADR-014)
+----------------------
+account.sessions.title / .subtitle (the two manifest strings) — and the hosted section's sessions.* keys
+ported beyond the manifest minimum for full fidelity — are NOT catalog entries in either the web i18n source
+or the generated platform catalog (apps/windows/Strings/{en,ar,he}/Resources.resw); the web resolves them as
+inline t(key, default) fallbacks. The native surface resolves them the same way: keyed
+ILocalizer.GetString(key, <same English default>) flowing through ShellLocalizer -> shell Localization
+(resw lookup -> English fallback). Zero hardcoded literals; the auto-generated resw is left untouched (it is
+machine-generated from web i18n; hand-editing would strand drift).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+[x] string - account.sessions.subtitle -> ActiveSessionsRegistration.Subtitle (ActiveSessionsPage.Model.cs)
+        localizer.GetString("account.sessions.subtitle",
+          "Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.")
+        -> ActiveSessionsDisplay.Subtitle (ActiveSessionsProjection.Project) + ActiveSessionsPageViewModel.Subtitle
+        -> PageContainer.Subtitle (ActiveSessionsPage.cs ctor + Render)
+[x] string - account.sessions.title    -> ActiveSessionsRegistration.Title (ActiveSessionsPage.Model.cs)
+        localizer.GetString("account.sessions.title", "Active sessions")
+        -> ActiveSessionsDisplay.Title + ActiveSessionsPageViewModel.Title
+        -> PageContainer title (ActiveSessionsPage.cs ctor + Render)
+PARITY_COVERED=2
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/ActiveSessionsPageTests.cs:
+# Projection_resolves_the_two_manifest_string_keys records both keys through a RecordingLocalizer;
+# Registration_exposes_the_manifest_title_and_subtitle_defaults pins the English fallbacks. The wider
+# section fidelity (five data states, describeDevice ladder, tolerant JSON parse, revoke + all-others flows,
+# generated-client request shaping incl. the AUTH_MODE_OPEN mapping, registration + PII-safe diagnostics) is
+# covered by the remaining cases — 40/40 passed.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ActiveSessionsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Settings path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  (whole solution; ActiveSessionsPage sources,
+#   ShellWindow registration, the test and the linked-source csproj entries all LF-normalised + style-clean)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26974, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ActiveSessionsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ActiveSessionsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-settings-ActiveSessionsPage.log
+# git commit -m "feat(apps/windows): ActiveSessionsPage at web parity (W7 settings)"
+
+EXIT=0
+STATUS=DONE
