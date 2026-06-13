@@ -9786,6 +9786,9 @@
   <data name="translation.efficiency.dailyTrend" xml:space="preserve">
     <value>Daily Efficiency ({0})</value>
   </data>
+  <data name="translation.efficiency.dailyTrend.aria" xml:space="preserve">
+    <value>Daily efficiency trend area chart</value>
+  </data>
   <data name="translation.efficiency.drives" xml:space="preserve">
     <value>Drives</value>
   </data>
@@ -9828,8 +9831,14 @@
   <data name="translation.efficiency.speedDist" xml:space="preserve">
     <value>Efficiency by Speed Range</value>
   </data>
+  <data name="translation.efficiency.speedDist.aria" xml:space="preserve">
+    <value>Efficiency by speed-range bar chart</value>
+  </data>
   <data name="translation.efficiency.speedVsEfficiency" xml:space="preserve">
     <value>Speed vs Efficiency</value>
+  </data>
+  <data name="translation.efficiency.speedVsEfficiency.aria" xml:space="preserve">
+    <value>Speed versus efficiency scatter plot</value>
   </data>
   <data name="translation.efficiency.subtitle" xml:space="preserve">
     <value>Energy consumption and driving efficiency analysis</value>
@@ -9848,6 +9857,9 @@
   </data>
   <data name="translation.efficiency.tempVsEfficiency" xml:space="preserve">
     <value>Temperature vs Efficiency</value>
+  </data>
+  <data name="translation.efficiency.tempVsEfficiency.aria" xml:space="preserve">
+    <value>Temperature versus efficiency scatter plot</value>
   </data>
   <data name="translation.efficiency.title" xml:space="preserve">
     <value>Efficiency</value>

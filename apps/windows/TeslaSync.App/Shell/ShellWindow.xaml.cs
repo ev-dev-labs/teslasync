@@ -166,6 +166,8 @@ public sealed partial class ShellWindow : Window
             page.OpenDashboardRequested += (_, _) => NavigateTo(string.Empty);
             return page;
         });
+        // Driving / Efficiency page (P2/W7) — parity port of web EfficiencyPage at route /efficiency.
+        _viewModel.PageFactory.Register("Efficiency", static () => new FeatureViews.Driving.EfficiencyPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

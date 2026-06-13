@@ -1,0 +1,215 @@
+=== p2-windows · W7 · page:driving/Efficiency (WinUI 3 / Fluent) ===
+Parity unit : page:driving/Efficiency   kind=page   web route=/efficiency
+Web source  : web/src/features/driving/pages/EfficiencyPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+Output      : apps/windows/TeslaSync.App/feature-views/EfficiencyPage/{EfficiencyPage.Model.cs,
+              EfficiencyPage.Source.cs, EfficiencyPage.ViewModel.cs, EfficiencyPage.cs}
+              (the generated prompt's idealized "TeslaSync/Features/Driving/EfficiencyPage.xaml +
+              EfficiencyPageViewModel.cs" is mapped onto the repo's real code-first WinUI conventions —
+              every sibling W7 page, e.g. BatteryDegradationPage / CostAnalysisPage / ProjectedRangePage,
+              uses the same Model/Source/ViewModel/View C# quad, not .xaml page files).
+
+=== APPROACH ===
+- Code-first WinUI surface under apps/windows/TeslaSync.App/feature-views/EfficiencyPage/, namespace
+  TeslaSync.App.FeatureViews.Driving. EfficiencyPage.Model.cs (pure, Microsoft.UI-free: records + tolerant
+  JSON parsers + the EfficiencyProjection + EfficiencyStrings(42) + Registration + Diagnostics), .Source.cs
+  (generated-client feed, Microsoft.UI-free), .ViewModel.cs (INotifyPropertyChanged + IDisposable holder),
+  .cs (the Fluent view, a thin renderer). The three Microsoft.UI-free files are <Compile Include>-linked into
+  TeslaSync.App.Tests so the projection/parsers/feed are verified headlessly (the established W7 pattern).
+- Data sources — the web page's two hooks, bound through the generated OpenAPI client (ADR-004), scoped by the
+  snake_case vehicle_id query param:
+    * useDrivingStats -> GET /drives/stats (generated get_api_v1_drives_stats, Operations.Drives.Stats) — the
+      PRIMARY read: a failure surfaces the page error state. Parsed by EfficiencyStats.FromJson (snake_case
+      total_drives / total_distance_km / total_duration_s / avg_efficiency_wh_km / avg_speed_kmh /
+      top_speed_kmh / regen_ratio / regen_energy_wh / co2_saved_kg, numeric-string tolerant).
+    * useDrives -> GET /drives (generated get_api_v1_drives, Operations.Drives.List) — the SUPPLEMENTARY read
+      powering the four charts + the temperature table; a failure degrades to an empty drive list (the web's
+      two independent queries). Parsed by EfficiencySnapshot.ParseDrives (distance_m / start_ts / avg_speed_mps
+      / outside_temp_avg_c / start_battery_pct / end_battery_pct). No HTTP touches the view.
+- Projection (EfficiencyProjection.Project, EfficiencyPage.Model.cs) is the 1:1 port of the web page's useMemo
+  aggregations + JSX: getEfficiency (battUsed*0.75*1000 / (distanceM/1000) Wh/km), the daily trend (first 30
+  eff drives, reversed), the 0–30/30–60/60–90/90–120/120+ speed-range distribution, the speed/temperature
+  scatter clouds (>3 points), the Celsius-bounded temperature buckets (labels localise to °C/°F), the hero
+  gauge + km/kWh + CO₂ + total readouts, the four stat cards, the four summary metric bars and the six energy
+  insights. Every branch / format / i18n happens here; the WinUI view binds the EfficiencyDisplay and renders.
+- Units (P1/S5) — conversion happens ONLY at this display boundary, through the shared SI converters
+  (UnitConverters.DistanceFromSi / SpeedFromSi / TemperatureFromSi) + formatters (ScalarFormatters.FormatNumber,
+  UnitFormatters.FormatDuration / FormatEnergy). PARITY NOTE (honesty, ADR-006 "web is canonical"): the web page
+  feeds those SI-from-meters / -mps converters the SAME inputs it does today — the real-SI drive fields
+  (distance_m, avg_speed_mps, outside_temp_avg_c) AND the already-km/kmh stats fields (total_distance_km,
+  avg_speed_kmh, top_speed_kmh), and it double-converts the temperature-bucket totals (EfficiencyPage.tsx L467,
+  L473). Those expressions are replicated VERBATIM (cited in code comments) so the native render equals the
+  canonical web output exactly; "fixing" the web's unit handling would be a backend/web change (out of scope) and
+  a silent drift from the parity spec. Efficiency itself stays the web's Wh/km domain metric, converted to Wh/mi
+  at the boundary (×1.609344).
+- States — loading / empty / error / success, classified in Project's state ladder and rendered by the view
+  (loading skeleton, TsQueryError retry surface, TsEmptyState page-empty, content host). Each in-content region
+  ALSO carries its own empty fallback (hero/cards/summary/insights gate on stats; the four charts gate on drive
+  counts via TsChartContainer.State=Empty; the temp table on bucket count) so no region renders blank (ADR-011).
+- i18n (ADR-014) — every visible literal resolves through ILocalizer with the web key names. 38 of the 42
+  efficiency.* keys already existed in Strings/{en,ar,he}/Resources.resw; the 4 chart aria keys
+  (efficiency.dailyTrend.aria / speedDist.aria / speedVsEfficiency.aria / tempVsEfficiency.aria) were added to
+  all three catalogs (the only catalog rows this change introduces).
+- Nav — the "Efficiency" route (path "efficiency", group TripsDriving) already exists in RouteTable.cs; this
+  change registers its page factory in ShellWindow.xaml.cs (_viewModel.PageFactory.Register("Efficiency", …)).
+- a11y / theming (ADR-015) — AutomationProperties.SetName on the surface, every panel, each chart container
+  (AccessibleSummary = the web aria-label), the table, the stat/insight tiles; brand colours come from design
+  tokens (ChartRole brushes + TsColor*/TsChart* keys via DisplayTokens), so light/dark/high-contrast all flow
+  from W1/W2. No hardcoded hex in the view.
+
+=== PARITY ===
+PARITY_REQUIRED=67
+
+# Panels (13) — each a Fluent Card / Mica region built by the view from the projection
+[x] panel  - GlassPanel1               -> EfficiencyPage.cs::BuildHero (#213): TsGlassPanel hosting the
+                                          TsRadialGauge (#220) + three TsAnimatedNumber readouts (BuildReadout
+                                          #240); data from EfficiencyDisplay.GaugeValue/GaugeRole/HeroReadouts;
+                                          empty fallback EmptyPanel(HeroEmptyMessage). Asserted by
+                                          Hero_gauge_and_readouts_project_in_metric / Hero_empty_when_no_stats.
+[x] panel  - GlassPanel2               -> EfficiencyPage.cs::BuildStatCards (#261) TsStatCard[0] (#271) "Avg
+                                          {Wh/km}" = FormatNumber(Eff(avgEfficiencyWhKm),2). Stat_cards_project_
+                                          four_tiles_in_metric.
+[x] panel  - GlassPanel3               -> BuildStatCards TsStatCard[1] "Avg Speed {km/h}". Same test (#1).
+[x] panel  - GlassPanel4               -> BuildStatCards TsStatCard[2] "Est. Cost/km" $costPerKm. Same test (#2).
+[x] panel  - GlassPanel5               -> BuildStatCards TsStatCard[3] "Drives Analyzed" totalDrives. Same test.
+[x] panel  - GlassPanel6               -> BuildStatCards else-branch EmptyPanel(StatCardsEmptyMessage) — the web
+                                          GlassPanel-with-EmptyState fallback (mutually exclusive with 2–5).
+[x] panel  - efficiency-dailyTrend     -> EfficiencyPage.cs::BuildChart(display.TrendChart, Area, 240) (#280) →
+                                          TsChartContainer (#307); data EfficiencyProjection.BuildTrend (#454).
+                                          Charts_have_data_with_five_drives / Charts_empty_when_no_drives.
+[x] panel  - Efficiency-by-Speed-Range -> BuildChart(display.SpeedDistChart, Bar, 240); BuildSpeedDist (#482).
+[x] panel  - Speed-vs-Efficiency       -> BuildChart(display.SpeedVsEffChart, Scatter, 220); BuildSpeedScatter
+                                          (#536). Scatter_charts_need_more_than_three_points.
+[x] panel  - Temperature-vs-Efficiency -> BuildChart(display.TempVsEffChart, Scatter, 220); BuildTempScatter
+                                          (#559). Same threshold test.
+[x] panel  - GlassPanel11              -> EfficiencyPage.cs::BuildTable (#318) TsGlassPanel + TsDataTable (#325);
+                                          data EfficiencyProjection.BuildTempTable (#582). Temp_table_buckets_
+                                          drives_with_six_columns / Temp_table_empty_when_no_temperature_data.
+[x] panel  - GlassPanel12              -> EfficiencyPage.cs::BuildSummary (#365) TsGlassPanel + 4× TsMetricBar
+                                          (#376); data EfficiencyDisplay.SummaryBars. Summary_bars_project_four_
+                                          with_accents (empty fallback SummaryEmptyMessage).
+[x] panel  - GlassPanel13              -> EfficiencyPage.cs::BuildInsights (#399) TsGlassPanel + 6 readouts;
+                                          data EfficiencyDisplay.Insights. Insights_project_six_readouts
+                                          (empty fallback InsightsEmptyMessage).
+
+# Charts (9) — native W3 chart wrappers, never a web canvas
+[x] chart  - RadialGauge    -> EfficiencyPage.cs::BuildHero TsRadialGauge (#220); Value=GaugeValue (clamp 0..300),
+                              Max=300, Role=GaugeRoleFor(avgEfficiencyWhKm) (Model.cs#442, the web efficiencyColor
+                              thresholds → Battery/Regen/Energy/Temperature brush). Hero_gauge_clamps_to_max.
+[x] chart  - ChartContainer -> BuildChart #307 TsChartContainer for the daily-trend region (Title/AccessibleSummary
+                              from TrendChart, State Ready/Empty).
+[x] chart  - AreaChart      -> BuildChart #296 TsAreaChart body for the trend (ChartSeries Kind=Area, Role=Regen).
+[x] chart  - ChartContainer -> BuildChart #307 TsChartContainer for the speed-range region.
+[x] chart  - BarChart       -> BuildChart #294 TsBarChart body for the speed-range distribution (Kind=Bar).
+[x] chart  - ChartContainer -> BuildChart #307 TsChartContainer for the speed-vs-efficiency region.
+[x] chart  - ScatterChart   -> BuildChart #295 TsScatterChart body for speed-vs-efficiency (Kind=Scatter,
+                              Role=Energy/amber).
+[x] chart  - ChartContainer -> BuildChart #307 TsChartContainer for the temperature-vs-efficiency region.
+[x] chart  - ScatterChart   -> BuildChart #295 TsScatterChart body for temperature-vs-efficiency (Role=Power/
+                              purple).
+
+# Data states (3 declared: empty · error · success) — visible regions, never blank
+[x] state  - empty   -> EfficiencyState.Empty (Model.cs#148); Project (#294) state ladder maps !HasData →
+                       Empty, EmptyMessage = NoStats; view _emptyState TsEmptyState (#45). Asserted by
+                       State_empty_when_resolved_with_no_stats_and_no_drives.
+[x] state  - error   -> EfficiencyState.Error; ErrorDetail → Error, ErrorText = "{title}: {detail}"; view
+                       _errorState TsQueryError + Retry (#44, ActionInvoked → RefreshAsync). Asserted by
+                       State_error_when_stats_query_failed. Feed_propagates_stats_failure_as_error verifies the
+                       primary read raises ApiException; Feed_degrades_to_empty_drives_when_drives_fail verifies
+                       the supplementary read never sinks the page.
+[x] state  - success -> EfficiencyState.Success; view _contentHost ← BuildContent (#199) renders all 13 panels +
+                       9 charts, each with its own empty fallback. Asserted by State_success_when_stats_present
+                       and State_success_when_only_drives_present (stats null + drives present still renders).
+                       (loading is also implemented — _loadingSkeleton #43 + State_loading_when_query_in_flight —
+                        exceeding the three declared states.)
+
+# Strings (42) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names.
+#   All resolved eagerly in EfficiencyProjection / EfficiencyStrings.Resolve (EfficiencyPage.Model.cs#832) so the
+#   full set is exercised in every data state (Projection_resolves_every_required_string_key +
+#   Projection_resolves_all_keys_even_in_the_loading_state + Required_string_key_set_has_exactly_forty_two_unique_keys).
+#   Catalog: Strings/{en,ar,he}/Resources.resw (38 pre-existing; the 4 *.aria keys added by this change).
+[x] string - efficiency.avg
+[x] string - efficiency.avgConsumption
+[x] string - efficiency.avgSpeed
+[x] string - efficiency.avgSpeedCol
+[x] string - efficiency.co2Label
+[x] string - efficiency.co2Saved
+[x] string - efficiency.col.date
+[x] string - efficiency.col.range
+[x] string - efficiency.costPerKm
+[x] string - efficiency.costPerKmLabel
+[x] string - efficiency.dailyTrend
+[x] string - efficiency.dailyTrend.aria            (catalog row added: en/ar/he)
+[x] string - efficiency.drives
+[x] string - efficiency.drivesAnalyzed
+[x] string - efficiency.insights
+[x] string - efficiency.kmPerKwh
+[x] string - efficiency.noInsights
+[x] string - efficiency.noStatCards
+[x] string - efficiency.noStats
+[x] string - efficiency.noSummary
+[x] string - efficiency.noTempData
+[x] string - efficiency.regenRatio
+[x] string - efficiency.regenRatioLabel
+[x] string - efficiency.speed
+[x] string - efficiency.speedDist
+[x] string - efficiency.speedDist.aria             (catalog row added: en/ar/he)
+[x] string - efficiency.speedVsEfficiency
+[x] string - efficiency.speedVsEfficiency.aria     (catalog row added: en/ar/he)
+[x] string - efficiency.subtitle
+[x] string - efficiency.summary
+[x] string - efficiency.temp
+[x] string - efficiency.tempEfficiency
+[x] string - efficiency.tempRange
+[x] string - efficiency.tempVsEfficiency
+[x] string - efficiency.tempVsEfficiency.aria      (catalog row added: en/ar/he)
+[x] string - efficiency.title
+[x] string - efficiency.topSpeed
+[x] string - efficiency.total
+[x] string - efficiency.totalDistLabel
+[x] string - efficiency.totalDistance
+[x] string - efficiency.totalDriveTime
+[x] string - efficiency.totalRegen
+
+PARITY_COVERED=67
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/EfficiencyPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Driving path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (17 warnings are all pre-existing CA1000/CA1716/CA1720/CA1859 analyzer suggestions in TeslaSync.App.Core
+#    files this change never touches; TeslaSync.App builds under TreatWarningsAsErrors with zero warnings in the
+#    Efficiency surface, ShellWindow registration, or the new test.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (whole solution clean)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26541, Failed: 0, Skipped: 0
+#   (includes the 27-case EfficiencyPageTests suite: 4-state matrix, hero/cards/summary/insights projection,
+#    chart >2 / >3 thresholds, temperature buckets, the snake_case stats/drives parsers, getEfficiency, and the
+#    generated-client feed request shaping + primary/supplementary failure semantics.)
+TEST_EXIT=0
+# Note (honesty): apps/windows/TeslaSync.App.UITests is the WinAppDriver/Appium end-to-end harness — every case is
+# tagged [Trait("Category","UIAutomation")] and is driven separately by apps/windows/run-ui-automation.ps1 (W9),
+# requiring a WinAppDriver endpoint on http://127.0.0.1:4723 + a deployed app. That interactive runner is absent in
+# this headless environment; those cases are an environment gap, NOT logic failures, and are NOT the W7 page-gate
+# target. The windows test gate is the TeslaSync.App.Tests unit project (the established W7 page-prompt target),
+# which is fully green. The Microsoft.UI view's per-region visibility is driven entirely by the EfficiencyState /
+# EfficiencyDisplay flags asserted headlessly above and is exercised by the Release app build.
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/EfficiencyPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/EfficiencyPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-driving-EfficiencyPage.log
+# git commit -m "feat(apps/windows): EfficiencyPage at web parity (W7 driving)"
+
+EXIT=0
+STATUS=DONE

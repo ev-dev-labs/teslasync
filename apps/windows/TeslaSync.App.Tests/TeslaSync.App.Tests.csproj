@@ -416,6 +416,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\BatteryDegradationPage\BatteryDegradationPage.Model.cs" Link="FeatureViews\BatteryDegradationPage\BatteryDegradationPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryDegradationPage\BatteryDegradationPage.Source.cs" Link="FeatureViews\BatteryDegradationPage\BatteryDegradationPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\BatteryDegradationPage\BatteryDegradationPage.ViewModel.cs" Link="FeatureViews\BatteryDegradationPage\BatteryDegradationPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.Model.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.Source.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\EfficiencyPage\EfficiencyPage.ViewModel.cs" Link="FeatureViews\EfficiencyPage\EfficiencyPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.Model.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.Source.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingDetailPage\ChargingDetailPage.ViewModel.cs" Link="FeatureViews\ChargingDetailPage\ChargingDetailPage.ViewModel.cs" />
