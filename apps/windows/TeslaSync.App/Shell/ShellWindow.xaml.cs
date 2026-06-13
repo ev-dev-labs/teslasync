@@ -299,6 +299,16 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register(
             "TwoFactorAuth",
             static () => new FeatureViews.Settings.TwoFactorAuthPage());
+        // Sharing / Shared Drive public report (P2/W7) — parity port of web SharedDrivePage at route /s/:token
+        // (chrome-less + unauthenticated). The share token is read from the live match; the expired view's
+        // "Go to TeslaSync" home link maps to the dashboard index (web ExpiredShareView href="/").
+        _viewModel.PageFactory.Register("SharedDrive", () =>
+        {
+            var page = new FeatureViews.Sharing.SharedDrivePage(_viewModel.Current.Param("token") ?? string.Empty);
+            page.HomeRequested += (_, _) => NavigateTo(string.Empty);
+            return page;
+        });
+
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
