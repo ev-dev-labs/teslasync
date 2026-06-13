@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:system/CommandHistory",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 28,
+    "requiredCount": 28,
+    "promptId": "p2-windows/W7/windows-page-system-CommandHistoryPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-CommandHistoryPage.log"
   }
 ]
