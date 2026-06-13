@@ -1,0 +1,197 @@
+=== P4 Shared surface 0120 ErrorDisplay (Apple) ===
+
+PREFLIGHT
+  Runner             : macOS (Darwin arm64, Apple Silicon — Mac Studio).
+  Xcode              : 26.5 (Build 17F42) at /Applications/Xcode.app/Contents/Developer.
+  Toolchain          : swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2.
+  Destinations       : iOS Simulator "iPhone 16" present (Booted) · iOS/macOS SDKs (iPhoneSimulator26.5,
+                       MacOSX) present.
+  Shared.xcframework : ABSENT — apps/apple/Frameworks/ holds only .gitkeep. Per that .gitkeep + project.yml,
+                       the KMP core is staged by Scripts/build-shared-xcframework.sh (a Gradle
+                       :core:assembleSharedXCFramework, git-ignored output), wired as a SCHEME PRE-ACTION.
+                       Not assembled in this checkout (a heavy Kotlin/Native build, out of this prompt's
+                       allowed-files scope) → the full-app Xcode link/compile input is unavailable.
+  Capability         : SwiftUI + Swift Charts + MapKit + iOS/macOS SDKs + simulators ALL present →
+                       NOT capability-BLOCKED. (This surface uses SwiftUI only; the web source has no
+                       charts/maps.)
+
+WEB SOURCE (the specification)
+  web/src/components/feedback/ErrorDisplay.tsx (+ its layout primitive _ErrorState.tsx) — the status-aware
+  error banner for NON-query failures (mutation failures, imperative fetches). It MIRRORS QueryError's
+  status branches but with two deliberate differences: it does NOT read isTransientWaiting (no "waiting"
+  branch) and it installs NO useEffect (no auto-retry on reconnect); instead it adds a `compact` density
+  prop for inline contexts. Branches:
+    • !error                       → renders nothing (`return null`).
+    • status === 404               → FileQuestion, "{{thing}} not found" (thing = resourceName ?? "Resource"),
+                                     optional "Back to list" CTA when listHref is set → navigate(listHref).
+    • status === 401 || 403        → Lock, "Sign in required", "Sign in" CTA → window.location.href='/login'.
+    • status >= 500                → Server, "Server error", optional "Retry" CTA → onRetry.
+    • network / offline / unknown  → WifiOff if offline else AlertCircle; isOffline = !online || status === 0;
+                                     offline → role=status/polite "You're offline" + disabled "Retry when
+                                     online"; else role=alert/assertive "Can't reach server" + "Retry".
+  `compact` (web _ErrorState): tighter padding (p-4→p-3), gap (gap-3→gap-2), icon box (p-2→p-1.5) and icon
+  size (h-4→h-3.5) for inline mutation errors.
+  Data sources (hooks): useTranslation (→ P1/S10 facade), useNavigate (→ P4 nav seam), useOnlineStatus
+  (→ the reactive `online` field of the P1/S8 snapshot). `error` is a prop, mapped to a Shared-free
+  classification at the seam (only `isApiError(error) ? error.status : undefined` is read).
+
+DELTA vs the QueryError sibling (P4/0133, the documented template)
+  - NO `.waiting` mode; ErrorFailure carries only `status: Int?` (no transient axis — ErrorDisplay never
+    imports isTransientWaiting).
+  - NO reconnect auto-retry in the state holder (web ErrorDisplay has no useEffect). Verified by
+    testReconnectDoesNotAutoRetry.
+  - ADDS ErrorDisplayDensity { comfortable, compact } (web `compact`) threaded input → model.density →
+    card + loading (container padding, row gap, icon-box padding, icon point size).
+  - KEEPS: P4 leaf states (loading/empty/stale/offline), one-shot stale auto-refresh, navigator (404
+    back-to-list, 401 /login), view.opened telemetry (slug "ErrorDisplay"), per-surface i18n facade.
+
+ARTIFACTS SHIPPED  (apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.*, the only allowed files + this log)
+  ErrorDisplay.Adapter.swift   (398 L) — Shared-free pure core: ErrorDisplayResolve, ErrorFailure(status?),
+                                          ErrorDisplayMode(+symbol/+isAssertive/+classify — the web if-ladder
+                                          verbatim), ErrorDisplayDensity(+CGFloat metrics = web compact),
+                                          ErrorDisplayActionKind/Action, ErrorDisplayText(+{{thing}} 404
+                                          interpolation), ErrorDisplayContent.make (per-branch copy+CTA — one
+                                          source of truth for view + tests), ErrorDisplayAccessibility.
+  ErrorDisplay.Model.swift     (257 L) — P1/S11 telemetry seam (+OSLog default), connection axis (web
+                                          useOnlineStatus + P4 freshness), ErrorDisplayInput (+derived
+                                          connection/density), ErrorDisplayResolved + Projection, @MainActor
+                                          @Observable ErrorDisplayModel (start/stop/refresh/perform; one-shot
+                                          stale auto-refresh; NO reconnect auto-retry), P1/S10 facade
+                                          ErrorDisplayStrings.
+  ErrorDisplay.Seams.swift     (152 L) — P1/S8 ErrorDisplaySource + P4 ErrorDisplayNavigator protocols,
+                                          StaticErrorDisplaySource (production controlled host),
+                                          InMemoryErrorDisplaySource + RecordingErrorDisplayNavigator
+                                          (previews/tests).
+  ErrorDisplay.States.swift    ( 77 L) — P4 leaf chrome: density-aware loading skeleton + "All clear" empty.
+  ErrorDisplay.Views.swift     (199 L) — rose-tinted failure card (_ErrorState port: icon chip + title +
+                                          message + trailing CTA, density-aware), rose ghost action button
+                                          (disabled+dimmed for "Retry when online"), freshness chip.
+  ErrorDisplay.swift           ( 96 L) — the surface view: phase switch (loading/empty/failure) + freshness
+                                          chip, view.opened on appear, combined-VoiceOver containment.
+  ErrorDisplay.Previews.swift  (108 L) — DEBUG previews for every branch (404 ±listHref / 401 / 5xx /
+                                          unreachable / offline) + compact variants + loading/empty/stale.
+  ErrorDisplay.Tests.swift     (332 L) — pure adapter/projection coverage (classify ladder, symbols, live
+                                          region, density metrics, text incl. {{thing}}, content per branch,
+                                          projection, connection/density axes, a11y label).
+  ErrorDisplay.ModelTests.swift(233 L) — state-holder coverage (view.opened once/re-arm, CTA dispatch,
+                                          NO-reconnect-auto-retry, density tracking, one-shot stale
+                                          auto-refresh + re-arm, controlled source).
+  ErrorDisplay.strings         ( 50 L) — per-surface i18n table: every web error.* key + leaf/freshness keys.
+  NOT touched (integration / out-of-scope, per the allowed-files list):
+    • project.yml — already routes TeslaSync/shared-surfaces into the app + test targets (glob); the new
+      files are picked up automatically. No registration edit needed or made.
+    • .swiftlint.yml `included` already covers shared-surfaces. The shared Localizable.xcstrings is
+      integration-owned; strings ship per-surface here.
+
+PARITY MAPPING (web → Apple platform tokens; no Tailwind ported)
+  _ErrorState rose card  → ErrorDisplayCard: rose = Color.TS.statusDanger at matching opacities (fill 6% /
+                           border 20% / icon chip 10%), RoundedRectangle(TSRadius.lg), .ultraThinMaterial
+                           = the web backdrop-blur-sm.
+  lucide icons           → SF Symbols: FileQuestion→doc.questionmark · Lock→lock.fill · Server→server.rack ·
+                           AlertCircle→exclamationmark.circle.fill · WifiOff→wifi.slash.
+  ghost <Button> + rose  → ErrorDisplayActionButton (rose foreground, fill 10%, press feedback); disabled
+    className             + 0.5 opacity for the offline "Retry when online" (web disabled={isOffline}).
+  compact prop           → ErrorDisplayDensity metrics (containerPadding lg→md, rowSpacing md→sm,
+                           iconBoxPadding sm→xs, iconPointSize 16→14) + title font body→bodySm.
+  FadeIn                  → TSFadeIn (Sources/Components/Motion) — honors Reduce Motion.
+  useTranslation         → ErrorDisplayStrings (P1/S10, table "ErrorDisplay"); zero English literals in code.
+  useNavigate / /login   → ErrorDisplayNavigator.navigate(to:) — 404 listHref + 401 "/login".
+  useOnlineStatus        → ErrorDisplayInput.online → connection axis (offline copy + freshness chip).
+  view.opened (P1/S11)   → ErrorDisplayTelemetry.viewOpened(surface:"ErrorDisplay") on first appear.
+
+STATES (every one renders — no hidden surface)
+  loading  → density-aware skeleton failure tile (parent resolving the operation).
+  empty    → "All clear" TSEmptyState card (web returns null; P4 leaf — never a blank box).
+  failure  → the classified tile: the four web branches with per-mode copy + CTA.
+  stale    → freshness chip + one-shot auto-refresh on the stale transition.
+  offline  → "You're offline" copy + offline freshness chip + disabled "Retry when online".
+
+GATE RESULTS (run on THIS runner; raw exits pasted — nothing fabricated)
+
+  [GREEN] xcodegen generate
+            "Created project at …/apps/apple/TeslaSync.xcodeproj"                              GEN_EXIT=0
+
+  [GREEN] swiftlint lint --strict (the 9 shipped ErrorDisplay*.swift)
+            "Done linting! Found 0 violations, 0 serious in 9 files."                          LINT_EXIT=0
+
+  [GREEN] swiftformat --lint (the 9 shipped ErrorDisplay*.swift)
+            "0/9 files require formatting."                                                    FORMAT_EXIT=0
+
+  [GREEN] check-placeholders.ps1 -Path <isolated copy of ErrorDisplay.*> -Language swift
+            "PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0"                                       PLACEHOLDER_EXIT=0
+
+  [GREEN] ISOLATED Swift 6 build + test (the substantive verification, mirroring the P4/0133 QueryError
+          disposition): a SwiftPM package named `TeslaSync` (macOS 15, swiftLanguageMode .v6 = the app's
+          strict-concurrency=complete), compiling the EXACT shipped ErrorDisplay app sources (Adapter +
+          Model + Seams + States + Views + view + Previews) against the REAL repo design-system
+          (apps/design/generated/apple/Tokens.swift + apps/apple/Sources/Design + Sources/Components) and
+          running the EXACT shipped tests (ErrorDisplay.Tests.swift + ErrorDisplay.ModelTests.swift via
+          @testable import TeslaSync):
+              Build complete! (8.17s)
+              Executed 58 tests, with 0 failures (0 unexpected)                                SWIFT_TEST_EXIT=0
+          (The full surface — SwiftUI view, card, rose button, density variants, and #Preview blocks —
+          COMPILES under the app's own Swift 6 strict-concurrency settings against the real tokens +
+          SwiftUI, on both iOS and macOS targets per supplementary `swiftc -typecheck` runs.)
+
+  [DEFERRED] xcodebuild -scheme TeslaSync       -destination 'platform=iOS Simulator,name=iPhone 16' build test : IOS_EXIT=DEFERRED
+  [DEFERRED] xcodebuild -scheme TeslaSync-macOS build test                                                       : MAC_EXIT=DEFERRED
+
+  WHY DEFERRED (full-app Xcode gate — the blocker pre-exists this change and is OUT OF THIS PROMPT'S
+  ALLOWED-FILES SCOPE; it involves ZERO ErrorDisplay files):
+    Attempted on THIS runner (xcodegen generate GREEN; xcodebuild -scheme TeslaSync build launched). The
+    full app build cannot complete here because the KMP `Shared.xcframework` is not staged:
+      • apps/apple/Frameworks/ holds only .gitkeep; the app/test targets declare
+        `framework: Frameworks/Shared.xcframework` as a link dependency and 14 of 15 Shared-importing
+        app sources `import Shared` UNCONDITIONALLY.
+      • Directly observed: typechecking an unguarded Shared-importing app source yields
+        "Sources/DashboardWidgets/BatteryCellsWidgetModel.swift:3:8: error: no such module 'Shared'".
+      • The framework is produced by a Gradle scheme PRE-ACTION (Scripts/build-shared-xcframework.sh →
+        :core:assembleSharedXCFramework) — a Kotlin/Native build that `xcodebuild … build` does not run
+        and that is outside this surface prompt's allowed files (apps/apple/TeslaSync/shared-surfaces/
+        ErrorDisplay.* + this log). macOS additionally carries the known dev-signing/entitlements
+        condition. Building the KMP core is owned by the P4/P99 Apple acceptance gate on a CI runner, not
+        by a single shared-surface prompt (task rule: do not fix pre-existing unrelated breakage).
+    The ErrorDisplay surface contributes only Shared-free files and is independently proven above to
+    COMPILE + PASS 58 tests under the app's own Swift 6 settings against the real design-system.
+
+HONESTY COVENANT (binding)
+  1  No red-as-green     : the full-app iOS/macOS xcodebuild gate is reported DEFERRED with its real root
+                           cause (unstaged KMP Shared.xcframework → "no such module 'Shared'"), never as
+                           passing. No exit code fabricated.
+  2  No scope narrowing  : every web branch reproduced — null (empty), 404 (±resourceName/±listHref), 401/
+                           403 (sign-in), 5xx (retry), network (offline vs can't-reach), the status-0
+                           offline sentinel, AND the `compact` density variant; the QueryError-only
+                           transient-waiting branch and reconnect auto-retry are correctly ABSENT.
+  3  No skip-and-assume  : every applicable gate EXECUTED on THIS runner with raw exits pasted; the
+                           deferred gate's blocker was directly verified (Frameworks/ file state, the
+                           14 unconditional `import Shared` app sources, the observed module error).
+  4  No stubs as final   : complete production surface (1819 L across 9 .swift + a 50 L strings table) +
+                           58 real tests; placeholder scanner = 0; no TODO/FIXME/stub/mock/placeholder/Lorem.
+  5  No parity shortcut  : icons/tints/opacity/compact-density/copy/CTA gating/disabled-offline/a11y/
+                           telemetry/states all mapped to platform tokens + verified in a real Swift 6
+                           build+test.
+  6  No delegation       : implemented directly; no agents/sub-tasks.
+  7  No predecessor bypass: P1/S8 state-holders, P1/S9 tokens, P1/S10 i18n, P1/S11 diagnostics, P4 nav all
+                           present and consumed; did NOT self-register project.yml/.swiftlint.yml (already
+                           wired) and did NOT edit the shared Localizable.xcstrings.
+  8  No commit on red    : the COMMITTED artifact (ErrorDisplay.* + this log) is GREEN on every applicable
+                           gate AND on a real isolated Swift 6 build+test; the deferred full-app gate is
+                           blocked only by a pre-existing, unrelated, out-of-scope condition (the unstaged
+                           KMP core) this commit neither introduces nor touches.
+  9  No silent drift     : changes confined to apps/apple/TeslaSync/shared-surfaces/ErrorDisplay.* + this
+                           log (the xcodegen-generated TeslaSync.xcodeproj is git-ignored and not committed).
+  10 EXIT/STATUS below.
+
+DISPOSITION
+  Production-polished, Apple-idiomatic ErrorDisplay shared surface shipped at parity with the web source and
+  INDEPENDENTLY VERIFIED: the entire surface (Adapter + Model + Seams + States + SwiftUI view + card + rose
+  button + density variants + previews) compiles and its 58 tests pass under the app's own Swift 6
+  strict-concurrency settings against the real design-system, with swiftlint/swiftformat/placeholder all
+  green and xcodegen green. The full-app iOS-Simulator + macOS xcodebuild build/test gate is DEFERRED (not
+  failed by this code): it is blocked by the pre-existing, out-of-scope unstaged KMP Shared.xcframework
+  ("no such module 'Shared'"), owned by the P4/P99 acceptance gate on a signed CI runner. This matches the
+  repo's sanctioned "code-complete + DEFERRED Xcode gate" disposition used by the sibling P4 Apple surfaces
+  (e.g. 0133 QueryError, 0138 SectionErrorBoundary).
+
+EXIT=0
+STATUS=DONE
