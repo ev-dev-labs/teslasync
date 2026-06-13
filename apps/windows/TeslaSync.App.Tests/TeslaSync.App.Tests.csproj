@@ -1450,6 +1450,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\PageContainer.ViewModel.cs" Link="SharedSurfaces\PageContainer.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PageSkeleton.Model.cs" Link="SharedSurfaces\PageSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PageSkeleton.ViewModel.cs" Link="SharedSurfaces\PageSkeleton.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PageHeaderSticky.Model.cs" Link="SharedSurfaces\PageHeaderSticky.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\PageHeaderSticky.ViewModel.cs" Link="SharedSurfaces\PageHeaderSticky.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.Model.cs" Link="SharedSurfaces\PinButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.Source.cs" Link="SharedSurfaces\PinButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PinButton.ViewModel.cs" Link="SharedSurfaces\PinButton.ViewModel.cs" />
