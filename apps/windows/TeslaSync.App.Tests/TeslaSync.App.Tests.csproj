@@ -1422,6 +1422,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" Link="SharedSurfaces\MetricSwitcherChart\MetricSwitcherChart.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NavigationGuardProvider.Model.cs" Link="SharedSurfaces\NavigationGuardProvider.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NavigationGuardProvider.Source.cs" Link="SharedSurfaces\NavigationGuardProvider.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\NavigationGuardProvider.ViewModel.cs" Link="SharedSurfaces\NavigationGuardProvider.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.Model.cs" Link="SharedSurfaces\NewVersionBanner.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.Source.cs" Link="SharedSurfaces\NewVersionBanner.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\NewVersionBanner.ViewModel.cs" Link="SharedSurfaces\NewVersionBanner.ViewModel.cs" />
