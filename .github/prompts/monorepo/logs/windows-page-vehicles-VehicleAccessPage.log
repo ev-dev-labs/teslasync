@@ -1,0 +1,189 @@
+================================================================================
+p2-windows · W7 · page:vehicles/VehicleAccess · WinUI 3 / Fluent parity port
+================================================================================
+Parity unit : page:vehicles/VehicleAccess
+Web source  : web/src/features/vehicles/pages/VehicleAccessPage.tsx
+Web route   : /vehicles/:id/access
+Output      : apps/windows/TeslaSync.App/feature-views/VehicleAccessPage/
+                VehicleAccessPage.cs            (WinUI 3 view, C# markup)
+                VehicleAccessPage.ViewModel.cs  (UI-thread-free state holder, 4 states/panel)
+                VehicleAccessPage.Model.cs      (records + projection + registration + diagnostics)
+                VehicleAccessPage.Source.cs     (IVehicleAccessFeed + EmptyFeed + generated-client feed)
+Nav reg     : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+                PageFactory.Register("VehicleAccess",
+                    () => new VehicleAccessPage(_viewModel.Current.Param("id")))
+                (RouteTable already maps VehicleAccess -> vehicles/:id/access, Hidden, group Vehicles)
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/VehicleAccessPageTests.cs (34 tests)
+                + 3 Microsoft.UI-free sources Compile-linked in TeslaSync.App.Tests.csproj
+                  (VehicleAccessPage.Model.cs / .Source.cs / .ViewModel.cs)
+Runner      : .NET 10.0.300 SDK · TFM net10.0-windows10.0.19041.0 · WinUI 3 — AVAILABLE (not BLOCKED)
+
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+--------------------------------------------------------------------------------
+Architecture (matches established sibling W7 pages: AlertRulesPage / ActiveSessionsPage)
+--------------------------------------------------------------------------------
+- MVVM, no business logic in code-behind. The view binds VehicleAccessPageViewModel and
+  renders the pure VehicleAccessDisplay projection; all branch selection / formatting /
+  i18n happen in the headless Model. State changes are marshalled onto the UI thread via
+  DispatcherQueue. The page + view-model are IDisposable (CA1001) and unsubscribe on Unloaded.
+- Data port IVehicleAccessFeed (web hooks) -> generated C# OpenAPI client (ADR-004), the
+  feed constructed per vehicle so each call fills the vehicleID path slot exactly once:
+    useVehicle               -> get_api_v1_vehicles_vehicleID                                 GET    /vehicles/{vehicleID}/            (display_name → header)
+    useVehicleDrivers        -> get_api_v1_vehicles_vehicleID_drivers                         GET    /vehicles/{vehicleID}/drivers
+    useVehicleInvitations    -> get_api_v1_vehicles_vehicleID_invitations                     GET    /vehicles/{vehicleID}/invitations
+    useRefreshVehicleDrivers -> post_api_v1_vehicles_vehicleID_drivers_refresh                POST   /vehicles/{vehicleID}/drivers/refresh
+    useRefreshVehicleInvit.. -> post_api_v1_vehicles_vehicleID_invitations_refresh            POST   /vehicles/{vehicleID}/invitations/refresh
+    useRemoveVehicleDriver   -> delete_api_v1_vehicles_vehicleID_drivers                      DELETE /vehicles/{vehicleID}/drivers      { share_user_id }
+    useCreateVehicleInvit..  -> post_api_v1_vehicles_vehicleID_invitations                    POST   /vehicles/{vehicleID}/invitations
+    useRevokeVehicleInvit..  -> post_api_v1_vehicles_vehicleID_invitations_invitationID_revoke POST  /vehicles/{vehicleID}/invitations/{invitationID}/revoke
+  (op ids cross-checked against apps/windows/Generated ApiEndpoints.All — all 8 present;
+   asserted by the 8 ClientFeed_* request-shaping tests.)
+- Shared Fluent components reused (no web pixel-cloning, ADR-005/006):
+    TsGlassPanel (the two panels), PageTitle / Subhead / Caption (header), SectionTitle
+    (panel headings), Label (column headers), Text / TextBlock (cells), TsBadge (row count +
+    role chip), TsButton (refresh / invite / remove / revoke), TsCopyButton (invite link),
+    TsStatusBadge (invitation status dot+word), TsDateTime (expiry), TsSkeleton (loading),
+    TsErrorDisplay (error+retry), TsEmptyState (empty), TsConfirmDialog (remove + revoke).
+    All colours/typography come from the W1 design tokens (Tokens.xaml) via DisplayTokens /
+    StatusResources — no hardcoded hex, no ad-hoc typography.
+- i18n: every visible literal flows through ILocalizer.GetString("<key>","<English fallback>").
+  The 27 manifest keys already exist verbatim in Strings/{en,ar,he}/Resources.resw and resolve
+  through the WinUI resource bridge (Localization.Get); headless tests assert every key is
+  requested (RecordingLocalizer) and that the English fallbacks match the web copy verbatim.
+- Units: this page has no SI-unit fields (driver/invitation metadata); nothing stored/computed
+  non-SI. The lone timestamp (expires_at) renders through the shared TsDateTime boundary.
+- Live data: this page has no live/SSE source (the web page is two TanStack queries only), so
+  no >2min staleness chrome is applicable (matches the web source).
+- Null safety: tolerant JSON parsers (VehicleDriver/VehicleInvitation.ParseList) never throw on
+  partial rows; every optional field em-dashes at the display boundary; the remove / copy /
+  revoke affordances are gated exactly as the web (share_user_id != null / invite_url / status
+  === 'pending'). An empty vehicle id disables both queries (web enabled: !!vehicleId).
+
+--------------------------------------------------------------------------------
+Pre-existing build blocker unblocked (required to compile the shared TeslaSync.App assembly)
+--------------------------------------------------------------------------------
+The branch HEAD did not build (BUILD_EXIT=1) before this change due to two pre-existing
+CA1822 analyzer-as-error violations in a SIBLING page, unrelated to vehicle-access:
+    feature-views/MQTTInspectorPage/MQTTInspectorPage.cs(329): BuildConnectionContent
+    feature-views/MQTTInspectorPage/MQTTInspectorPage.cs(389): BuildThroughputContent
+Both members do not touch instance data; the analyzer's own prescribed fix (mark `static`)
+was applied verbatim (zero behaviour change — both are pure builders over their `display`
+param + the `const ChartHeight`). VehicleAccessPage compiles into the same TeslaSync.App
+assembly, so this was the minimal change needed to make `dotnet build TeslaSync.sln` green and
+verify the new page. No other MQTTInspectorPage logic was touched.
+
+--------------------------------------------------------------------------------
+Gate (windows triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/VehicleAccessPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release   -> Build succeeded, 0 Error(s)
+#   (1 pre-existing Core warning CA1716 LoadState<T>.Error; not promoted to error in that project)
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> no changes required
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27670, Failed: 0, Skipped: 0
+#   (includes the 34 new VehicleAccessPageTests; same headless-unit-suite target the sibling W7
+#    page gate logs record, e.g. windows-page-notifications-AlertRulesPage.log)
+TEST_EXIT=0
+
+# NOTE — TeslaSync.App.UITests (W9 WinAppDriver UI-automation project) is NOT part of the W7
+#   page gate contract and is excluded here exactly as the sibling DONE pages do. In this
+#   headless environment every one of its tests raises UiAutomationUnavailableException
+#   (no WinAppDriver listening on http://127.0.0.1:4723/) — an infrastructure precondition
+#   affecting every UI test equally (0 logic failures), unrelated to this change. No
+#   red-as-green: the W7 gate target (TeslaSync.App.Tests) is fully green above.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=32
+--------------------------------------------------------------------------------
+[x] panel  · GlassPanel1
+      VehicleAccessPage.cs · BuildDriversPanel() -> TsGlassPanel hosting the drivers header
+      (icon + SectionTitle + count TsBadge + refresh TsButton) over the loading/error/empty/table
+      switch. web <FadeIn><GlassPanel className="p-6" data-tour="vehicle-access"> Drivers section.
+
+[x] panel  · GlassPanel2
+      VehicleAccessPage.cs · BuildInvitationsPanel() -> TsGlassPanel hosting the invitations header
+      (icon + SectionTitle + count TsBadge + refresh + Invite buttons) over the loading/error/empty/
+      table switch. web <FadeIn delay={0.05}><GlassPanel className="p-6"> Share Invitations section.
+
+[x] state  · loading
+      VehicleAccessPage.Model.cs · VehicleAccessProjection.SelectState (State=Loading, ShowLoading)
+      VehicleAccessPage.cs · _driversLoadingPanel / _invitationsLoadingPanel (3× TsSkeleton each).
+      web PageContainer loading={driversLoading || invitationsLoading}. Asserted by
+      Drivers_state_loading_when_query_in_flight + Invitations_state_loading_empty_error_success.
+
+[x] state  · empty
+      VehicleAccessPage.Model.cs · VehicleAccessProjection.SelectState (State=Empty, ShowEmpty)
+      VehicleAccessPage.cs · _driversEmpty / _invitationsEmpty (TsEmptyState w/ EmptyMessage + icon).
+      web {list.length > 0 ? <DataTable> : <EmptyState …/>}. Asserted by
+      Drivers_state_empty_when_resolved_with_no_rows + Invitations_empty_message_matches_web.
+
+[x] state  · success
+      VehicleAccessPage.Model.cs · VehicleAccessProjection.SelectState (State=Success, ShowRows, Rows)
+      VehicleAccessPage.cs · RebuildDriverRows()/BuildDriverRow() + RebuildInvitationRows()/
+      BuildInvitationRow() — name/email/role-chip/remove and status-badge/createdBy/expiry/copy/revoke.
+      web rules <DataTable …>. Asserted by Drivers_state_success_when_rows_present +
+      Driver_row_* + Invitation_row_*.
+      (Per-source error surface beyond the 3 required states is also implemented — TsErrorDisplay +
+       Retry — so a failed query is never blank; asserted by *_state_error_* tests.)
+
+[x] string · vehicleAccess.drivers.email        Model.cs · ProjectDrivers -> DriversColumnLabels.Email
+[x] string · vehicleAccess.drivers.empty        Model.cs · ProjectDrivers -> EmptyMessage
+[x] string · vehicleAccess.drivers.name         Model.cs · ProjectDrivers -> DriversColumnLabels.Name
+[x] string · vehicleAccess.drivers.refresh      Model.cs · ProjectDrivers -> RefreshAriaLabel
+[x] string · vehicleAccess.drivers.remove       Model.cs · ProjectDriverRow -> RemoveLabel
+[x] string · vehicleAccess.drivers.removeConfirm Model.cs · ProjectDrivers -> RemoveConfirm
+[x] string · vehicleAccess.drivers.removeMessage Model.cs · ProjectDrivers -> RemoveMessage
+[x] string · vehicleAccess.drivers.removeTitle  Model.cs · ProjectDrivers -> RemoveTitle
+[x] string · vehicleAccess.drivers.role         Model.cs · ProjectDrivers -> DriversColumnLabels.Role
+[x] string · vehicleAccess.drivers.title        Model.cs · ProjectDrivers -> Title
+[x] string · vehicleAccess.invitations.copyLink Model.cs · ProjectInvitations -> CopyLinkLabel (+ row)
+[x] string · vehicleAccess.invitations.create   Model.cs · ProjectInvitations -> CreateAriaLabel
+[x] string · vehicleAccess.invitations.createBtn Model.cs · ProjectInvitations -> CreateLabel
+[x] string · vehicleAccess.invitations.createdBy Model.cs · ProjectInvitations -> InvitationsColumnLabels.CreatedBy
+[x] string · vehicleAccess.invitations.empty    Model.cs · ProjectInvitations -> EmptyMessage
+[x] string · vehicleAccess.invitations.expires  Model.cs · ProjectInvitations -> InvitationsColumnLabels.Expires
+[x] string · vehicleAccess.invitations.link     Model.cs · ProjectInvitations -> InvitationsColumnLabels.Link
+[x] string · vehicleAccess.invitations.refresh  Model.cs · ProjectInvitations -> RefreshAriaLabel
+[x] string · vehicleAccess.invitations.revoke   Model.cs · ProjectInvitationRow -> RevokeLabel
+[x] string · vehicleAccess.invitations.revokeConfirm Model.cs · ProjectInvitations -> RevokeConfirm
+[x] string · vehicleAccess.invitations.revokeMessage Model.cs · ProjectInvitations -> RevokeMessage
+[x] string · vehicleAccess.invitations.revokeTitle  Model.cs · ProjectInvitations -> RevokeTitle
+[x] string · vehicleAccess.invitations.status   Model.cs · ProjectInvitations -> InvitationsColumnLabels.Status
+[x] string · vehicleAccess.invitations.title    Model.cs · ProjectInvitations -> Title
+[x] string · vehicleAccess.refresh              Model.cs · ProjectDrivers/ProjectInvitations -> RefreshLabel
+[x] string · vehicleAccess.subtitle             Model.cs · VehicleAccessRegistration.Subtitle
+[x] string · vehicleAccess.title                Model.cs · VehicleAccessRegistration.Title
+
+PARITY_COVERED=32
+--------------------------------------------------------------------------------
+Coverage verification:
+  VehicleAccessPageTests.Projection_resolves_every_required_string_key asserts all 27 required
+  i18n keys are requested by a single VehicleAccessProjection.Project(richModel) call (one driver
+  + one invitation row, so the row-level remove/revoke/copyLink keys are exercised) via a
+  RecordingLocalizer; the 2 panels + the loading/empty/error/success states are asserted by the
+  Drivers_state_* / Invitations_state_* / *_row_* tests; the generated-client feed's 8 endpoints
+  by the ClientFeed_* tests; the view-model load/refresh/create/remove/revoke flows by the
+  ViewModel_* tests. 34/34 pass. PARITY_COVERED (32) == PARITY_REQUIRED (32).
+
+Acceptance criteria:
+  [x] GlassPanel1 (Drivers) + GlassPanel2 (Invitations) implemented; no anonymous web region dropped
+      (page title/subtitle, per-panel header w/ count + refresh/(invite), table, both ConfirmDialogs).
+  [x] All 32 parity items render from the bound VehicleAccessPageViewModel/VehicleAccessDisplay.
+  [x] loading / empty / success implemented for both data sources (+ error surface w/ retry).
+  [x] All visible strings sourced via keyed ILocalizer.GetString; key names match web; zero hardcoded literals.
+  [x] Dark mode + a11y (AutomationProperties names on panels/rows/buttons, ToolTips, keyboard) +
+      SI display boundary (TsDateTime) + Fluent-native only (no web pixel-cloning).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED.
+  [x] windows ledger row for page:vehicles/VehicleAccess set covered (32/32, status=done).
+
+EXIT=0
+STATUS=DONE

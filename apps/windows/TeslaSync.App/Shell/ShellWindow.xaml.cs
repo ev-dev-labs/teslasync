@@ -120,6 +120,12 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Vehicles / Vehicle Access page (P2/W7) — parity port of web VehicleAccessPage at route
+        // /vehicles/:id/access. The route id is read from the live match and feeds the drivers + invitations
+        // queries (web enabled: !!vehicleId).
+        _viewModel.PageFactory.Register("VehicleAccess", () =>
+            new FeatureViews.Vehicles.VehicleAccessPage(_viewModel.Current.Param("id")));
+
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
 
