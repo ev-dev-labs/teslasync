@@ -1113,6 +1113,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\YearReviewPage\YearReviewPage.Source.cs" Link="FeatureViews\YearReviewPage\YearReviewPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearReviewPage\YearReviewPage.ViewModel.cs" Link="FeatureViews\YearReviewPage\YearReviewPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\YearlyTrendChart\YearlyTrendChart.Model.cs" Link="FeatureViews\YearlyTrendChart\YearlyTrendChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\globalShortcuts\globalShortcuts.Catalog.cs" Link="MiscSurfaces\globalShortcuts\globalShortcuts.Catalog.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\globalShortcuts\globalShortcuts.Model.cs" Link="MiscSurfaces\globalShortcuts\globalShortcuts.Model.cs" />
+    <Compile Include="..\TeslaSync.App\misc-surfaces\globalShortcuts\globalShortcuts.ViewModel.cs" Link="MiscSurfaces\globalShortcuts\globalShortcuts.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Model.cs" Link="MiscSurfaces\selectedVehicle.Model.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.Source.cs" Link="MiscSurfaces\selectedVehicle.Source.cs" />
     <Compile Include="..\TeslaSync.App\misc-surfaces\selectedVehicle.ViewModel.cs" Link="MiscSurfaces\selectedVehicle.ViewModel.cs" />
