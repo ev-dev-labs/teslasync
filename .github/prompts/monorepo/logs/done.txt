@@ -561,3 +561,4 @@ p3-android/feature-views/A-0308-VehicleSettingsTab.prompt.md
 p3-android/modals-dialogs/A-0008-SessionExpiredModal.prompt.md
 p3-android/modals-dialogs/A-0004-FeedbackModal.prompt.md
 p3-android/modals-dialogs/A-0007-ReauthDialog.prompt.md
+p3-android/modals-dialogs/A-0006-KeyboardShortcutsModal.prompt.md
