@@ -4243,6 +4243,10 @@
       "badge": "Helix",
       "generateButton": "Narrate forecast"
     },
+    "delta": {
+      "unknown": "Battery delta unknown",
+      "aria": "Battery {{from}}% to {{to}}%"
+    },
     "cells": {
       "title": "Battery Cells",
       "insight": {

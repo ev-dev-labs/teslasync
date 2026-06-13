@@ -1515,6 +1515,8 @@
   <string name="translation_battery_degradation_trendTitle">Health Trend &amp; Projection</string>
   <string name="translation_battery_degradation_warranty">80% Warranty</string>
   <string name="translation_battery_degradation_years">years</string>
+  <string name="translation_battery_delta_aria">Battery %1$s%% to %2$s%%</string>
+  <string name="translation_battery_delta_unknown">Battery delta unknown</string>
   <string name="translation_battery_empty">No battery health data available yet.</string>
   <string name="translation_battery_gauge_capacity">Capacity</string>
   <string name="translation_battery_gauge_cycles">Cycles</string>
