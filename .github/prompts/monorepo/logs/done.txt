@@ -616,3 +616,4 @@ p3-android/shared-meaningful/A-0027-AIMLChargingCurveClustering.prompt.md
 p3-android/shared-meaningful/A-0028-AIMqttSseInspectorExplanations.prompt.md
 p3-android/shared-meaningful/A-0029-AINLAlertBuilder.prompt.md
 p3-android/shared-meaningful/A-0025-AiLimitBanner.prompt.md
+p3-android/shared-meaningful/A-0030-AINLAutomationBuilder.prompt.md
