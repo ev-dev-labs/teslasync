@@ -255,6 +255,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
         // Driving / Regen Efficiency page (P2/W7) — parity port of web RegenEfficiencyPage at route /regen-efficiency.
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
+        // Vehicle Systems / Media Player page (P2/W7) — parity port of web MediaPlayerPage at route /media-player.
+        _viewModel.PageFactory.Register("MediaPlayer", static () => new FeatureViews.VehicleSystems.MediaPlayerPage());
         // System / Exports page (P2/W7) — parity port of web ExportsPage at route /exports.
         _viewModel.PageFactory.Register("Exports", static () => new FeatureViews.Exports.ExportsPage());
         // System / Scheduled exports panel (P2/W7) — parity port of web ScheduledExportsPanel (mounted on the Data

@@ -1,0 +1,212 @@
+=== p2-windows · W7 · page:vehicle-systems/MediaPlayer (WinUI 3 / Fluent) ===
+Parity unit : page:vehicle-systems/MediaPlayer   kind=page   web route=/media-player
+Web source  : web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+Output      : apps/windows/TeslaSync.App/feature-views/MediaPlayerPage/{MediaPlayerPage.Model.cs,
+              MediaPlayerPage.Source.cs, MediaPlayerPage.ViewModel.cs, MediaPlayerPage.cs}
+              (the generated prompt's idealized "TeslaSync/Features/VehicleSystems/MediaPlayerPage.xaml +
+              MediaPlayerPageViewModel.cs" is mapped onto the repo's real code-first WinUI conventions —
+              this is the first feature surface under the TeslaSync.App.FeatureViews.VehicleSystems namespace,
+              mirroring the sibling RegenEfficiencyPage / ChargingCurvePage surfaces).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+- Data sources — the web page's two hooks, each ported to the generated OpenAPI client (ADR-004):
+  * useMediaLatest → GET /media/latest?vehicle_id={id} (operation get_api_v1_media_latest): the PRIMARY read;
+    its presence/failure drives the now-playing card + the volume gauge and the page success/error branch.
+    Parsed into MediaReading (Model.cs MediaReading.FromJson; now_playing_title/artist/album/station,
+    playback_source/status, now_playing_duration/elapsed ms, audio_volume/_max/_increment — snake_case, null-
+    tolerant). Field names reuse the proven wire shape of the sibling MediaNowPlayingWidget.
+  * useMediaHistory → GET /media?vehicle_id={id}&limit=500 (operation get_api_v1_media): the SECONDARY best-
+    effort read feeding the four stat tiles, the volume-over-time area chart, the source-distribution pie and
+    the history table; a transport failure degrades to no rows (MediaPlayerClientFeed.FetchHistoryAsync catches
+    ApiException → empty), mirroring the web's two independent queries (only latestError reaches the web
+    PageContainer; historyError is an inline banner over a still-rendered card). Parsed by
+    MediaHistoryEntry.ParseList → MediaHistoryEntry.FromJson.
+- Projection (MediaPlayerProjection.Project) is the 1:1 port of the web render body + its statusVariant /
+  statusLabel / sourceIcon / fmtPlayTime helpers and the stats / volumeChartData / sourceData memos. State
+  precedence mirrors the web data lifecycle (loading → error → empty → success); empty = no now-playing object
+  AND no history (nothing to render), so the page is never blank (engineering guideline #6).
+- Units (P1/S5): audio volume is a raw device scale (0..max), NOT an SI quantity, so there is no unit
+  conversion on this surface; m:ss play-clocks come from millisecond positions via fmtPlayTime parity
+  (MediaPlayerProjection.PlayClock). Nothing non-SI is stored or computed.
+- Nav: route name MediaPlayer → path media-player already exists in RouteTable.cs#280 (RouteGroup.VehicleSystems);
+  the page factory is registered in Shell/ShellWindow.xaml.cs ("MediaPlayer" → new
+  FeatureViews.VehicleSystems.MediaPlayerPage()).
+- Catalog: 11 of the 26 web i18n keys already exist verbatim in Strings/{en,ar,he}/Resources.resw
+  (translation.* prefix: Artist, Paused, Playing, Source, Status, Stopped, Time, Track, Volume,
+  error.loadFailed, records); the 15 missing natural-language keys were ADDED to all three locales (Avg Volume,
+  Media Player, No playback history, No playback history for this period, No source data available, No track,
+  No volume data for this period, Now playing volume and listening history, Playback History, Source
+  Distribution, Top Source, Unique Tracks, Unknown artist, Volume Step, Volume over Time). Every visible literal
+  resolves through ILocalizer with the web key names; resolved once in MediaStrings.Resolve (Model.cs).
+
+=== PARITY ===
+PARITY_REQUIRED=42
+
+# Panels (9) — each a Fluent Card / GlassPanel region from the bound MediaPlayerDisplay
+[x] panel  - GlassPanel1     -> MediaPlayerPage.cs BuildNowPlaying: TsGlassPanel with the album-art tile (Border +
+                               Music FontIcon), the Heading title (display.NowPlaying.TrackTitle, "No track"
+                               fallback), the TsBadge status chip, the Subhead artist+album line, the optional
+                               station Caption, the source row (SourceGlyph + Caption) and the ProgressBar
+                               (Elapsed/Duration m:ss). Projection BuildNowPlaying (MediaNowPlayingDisplay).
+                               Asserted by NowPlaying_falls_back_to_no_track_and_unknown_artist +
+                               NowPlaying_joins_artist_and_album_and_shows_status +
+                               NowPlaying_progress_clock_matches_fmt_play_time + NowPlaying_hides_progress_without_duration.
+[x] panel  - GlassPanel2     -> MediaPlayerPage.cs BuildVolumeGaugePanel: TsGlassPanel hosting the volume
+                               TsRadialGauge (display.VolumeValue / VolumeMax / VolumeLabel). Asserted by
+                               Volume_gauge_reads_latest_volume_and_max + Volume_gauge_defaults_max_to_eleven.
+[x] panel  - Unique-Tracks   -> MediaPlayerPage.cs BuildMetricCard(MetricCards[0]) (TsMetricCard, "Unique Tracks" =
+                               distinct non-empty titles). Projection BuildMetricCards[0] + UniqueTracks (Model.cs).
+                               Asserted by Metric_cards_project_four_tiles_with_labels +
+                               UniqueTracks_counts_distinct_non_empty_titles.
+[x] panel  - Top-Source      -> BuildMetricCard(MetricCards[1]) (TsMetricCard, "Top Source" = most-frequent source
+                               or "--"). Projection BuildMetricCards[1] + TopSource. Asserted by
+                               Metric_cards_… + TopSource_returns_the_most_frequent_source_or_dash.
+[x] panel  - Avg-Volume      -> BuildMetricCard(MetricCards[2]) (TsMetricCard, "Avg Volume" = FormatNumber(mean,0)).
+                               Projection BuildMetricCards[2] + AverageVolume. Asserted by Metric_cards_… +
+                               AverageVolume_is_the_mean_across_history.
+[x] panel  - Volume-Step     -> BuildMetricCard(MetricCards[3]) (TsMetricCard, "Volume Step" =
+                               FormatNumber(audio_volume_increment,2) or em-dash). Projection BuildMetricCards[3].
+                               Asserted by Metric_cards_… + Volume_step_tile_formats_increment_or_dash.
+[x] panel  - GlassPanel7     -> MediaPlayerPage.cs BuildVolumeChart: TsChartContainer (web GlassPanel + ChartContainer)
+                               framing the TsAreaChart; State=Ready when history present else Empty (EmptyMessage
+                               "No volume data for this period") so the region is never blank. Projection
+                               BuildVolumeChart (MediaVolumeChartDisplay). Asserted by
+                               Volume_chart_sorts_points_ascending_by_time + Volume_chart_empty_without_history.
+[x] panel  - GlassPanel8     -> MediaPlayerPage.cs BuildSourceChart: TsChartContainer framing the TsPieChart + the
+                               source legend; State=Ready when sources present else Empty (EmptyMessage "No source
+                               data available"). Projection BuildSourceChart (MediaSourceChartDisplay). Asserted by
+                               Source_chart_buckets_and_sorts_slices_descending + Source_chart_empty_without_history.
+[x] panel  - GlassPanel9     -> MediaPlayerPage.cs BuildHistoryPanel: TsGlassPanel with the Music-glyph SectionTitle,
+                               the "<n> records" TsBadge, and either the TsDataTable (Time/Track/Artist/Source/
+                               Volume/Status) or a TsEmptyState ("No playback history for this period"). Projection
+                               BuildTable (MediaHistoryTableDisplay). Asserted by
+                               History_table_projects_columns_rows_and_records_badge +
+                               History_row_formats_volume_cell_and_status + History_table_empty_messages_are_localized.
+
+# Charts (3) — native W3 chart wrappers, never a web canvas
+[x] chart  - RadialGauge     -> MediaPlayerPage.cs BuildVolumeGaugePanel: TsRadialGauge (web RadialGauge) Value=
+                               audio_volume, Max=audio_volume_max||11, Label="Volume", Decimals=0. Projection
+                               VolumeValue/VolumeMax/VolumeLabel. Asserted by Volume_gauge_reads_latest_volume_and_max
+                               + Volume_gauge_defaults_max_to_eleven.
+[x] chart  - AreaChart       -> MediaPlayerPage.cs BuildVolumeChart: TsAreaChart (web AreaChart) with one Area series
+                               of volume ChartPoints sorted ascending by created_at, IncludeZero, YMax=volume max.
+                               Built from MediaVolumeChartDisplay.Points (Model.cs BuildVolumeChart). Asserted by
+                               Volume_chart_sorts_points_ascending_by_time.
+[x] chart  - PieChart        -> MediaPlayerPage.cs BuildSourceChart: TsPieChart (web PieChart) Values = source slices
+                               (ChartPoint Y=count, Label=name) sorted descending with the "Unknown" bucket for a
+                               missing source, plus a colour-indexed legend. Built from MediaSourceChartDisplay
+                               (Model.cs BuildSourceChart). Asserted by Source_chart_buckets_and_sorts_slices_descending.
+
+# Data states (4 declared: loading · empty · error · success) — every region visible, never blank
+[x] state  - loading         -> MediaPlayerState.Loading (Model.cs). display.ShowLoading drives the Fluent shimmer
+                               (MediaPlayerPage.cs _loadingSkeleton / TsSkeleton). Classified by the view-model while
+                               the primary now-playing read is in flight with no data. Asserted by
+                               State_loading_when_primary_query_in_flight +
+                               Projection_resolves_all_keys_even_in_the_loading_state + ViewModel_… matrix.
+[x] state  - empty           -> MediaPlayerState.Empty: no now-playing object AND no history → display.ShowEmpty →
+                               TsEmptyState ("No playback history for this period"). Asserted by
+                               State_empty_when_resolved_with_no_media_and_no_history +
+                               ViewModel_empty_snapshot_is_the_empty_state.
+[x] state  - error           -> MediaPlayerState.Error: a failed primary now-playing read → display.ShowError →
+                               TsQueryError + Retry; errorText = "Failed to load data: <detail>" (web error.loadFailed
+                               banner format). Asserted by State_error_when_primary_query_failed +
+                               ViewModel_feed_failure_is_the_error_state.
+[x] state  - success         -> MediaPlayerState.Success: a now-playing object OR any history row →
+                               display.ShowContent → the full page body. Asserted by State_success_when_latest_present
+                               + State_success_when_only_history_present + ViewModel_loads_media_into_the_success_state.
+
+# Strings (26) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names;
+#                resolved once in MediaStrings.Resolve (Model.cs). Asserted by
+#                Projection_resolves_every_required_string_key_in_success +
+#                Projection_resolves_all_keys_even_in_the_loading_state +
+#                Required_string_key_set_has_exactly_twenty_six_unique_keys.
+[x] string - Artist                                      -> MediaStrings.Artist — now-playing/table artist (pre-existing resw).
+[x] string - Avg Volume                                  -> MediaStrings.AvgVolume — metric tile 3 label (ADDED to en/ar/he).
+[x] string - Media Player                                -> MediaStrings.Title — page title + nav (ADDED).
+[x] string - No playback history                         -> MediaStrings.NoPlaybackHistory — DataTable emptyMessage (ADDED).
+[x] string - No playback history for this period         -> MediaStrings.NoPlaybackHistoryPeriod — table-panel + page empty (ADDED).
+[x] string - No source data available                    -> MediaStrings.NoSourceData — pie empty message (ADDED).
+[x] string - No track                                    -> MediaStrings.NoTrack — now-playing title fallback (ADDED).
+[x] string - No volume data for this period              -> MediaStrings.NoVolumeData — area-chart empty message (ADDED).
+[x] string - Now playing, volume, and listening history  -> MediaStrings.Subtitle — page header subtitle (ADDED).
+[x] string - Paused                                      -> MediaStrings.Paused — status label (pre-existing resw).
+[x] string - Playback History                            -> MediaStrings.PlaybackHistory — history panel title (ADDED).
+[x] string - Playing                                     -> MediaStrings.Playing — status label (pre-existing resw).
+[x] string - Source                                      -> MediaStrings.Source — table column 3 + source row (pre-existing).
+[x] string - Source Distribution                         -> MediaStrings.SourceDistribution — pie chart title (ADDED).
+[x] string - Status                                      -> MediaStrings.Status — table column 5 (pre-existing resw).
+[x] string - Stopped                                     -> MediaStrings.Stopped — status label (pre-existing resw).
+[x] string - Time                                        -> MediaStrings.Time — table column 0 (pre-existing resw).
+[x] string - Top Source                                  -> MediaStrings.TopSource — metric tile 2 label (ADDED).
+[x] string - Track                                       -> MediaStrings.Track — table column 1 (pre-existing resw).
+[x] string - Unique Tracks                               -> MediaStrings.UniqueTracks — metric tile 1 label (ADDED).
+[x] string - Unknown artist                              -> MediaStrings.UnknownArtist — now-playing artist fallback (ADDED).
+[x] string - Volume                                      -> MediaStrings.Volume — gauge label + table column 4 (pre-existing).
+[x] string - Volume Step                                 -> MediaStrings.VolumeStep — metric tile 4 label (ADDED).
+[x] string - Volume over Time                            -> MediaStrings.VolumeOverTime — area chart title (ADDED).
+[x] string - error.loadFailed                            -> MediaStrings.LoadFailed ("Failed to load data") — error text (pre-existing).
+[x] string - records                                     -> MediaStrings.Records — history "<n> records" badge (pre-existing).
+
+PARITY_COVERED=42
+# Coverage asserted headlessly by MediaPlayerPageTests (48 cases, 0 failed): the two tolerant JSON parsers
+# (MediaReading.FromJson object/non-object, MediaHistoryEntry.ParseList array/non-array), the loading/empty/
+# error/success state matrix (incl. latest-only and history-only success), the statusVariant/statusLabel bands,
+# the fmtPlayTime m:ss clock, the now-playing title/artist/album/source/progress projection, the volume gauge
+# value+default-max, the four metric tiles, the uniqueTracks/topSource/avgVolume stats, the volume-over-time
+# ascending series + empty, the source-distribution descending slices + Unknown bucket + legend + empty, the
+# history table columns/rows-newest-first/volume-cell/status/records-badge + empty messages, the view-model
+# state matrix (success/empty/error/refresh), the generated-client feed request shaping (both operations +
+# vehicle_id + limit=500 + graceful history-failure degradation + latest-failure propagation), the registration
+# constants and the PII-safe diagnostics. The WinUI view's per-region visibility is driven entirely by the
+# MediaPlayerDisplay flags asserted here and exercised by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MediaPlayerPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s), 0 Error(s)
+#   (TeslaSync.App.dll emitted under bin/x64/Release/net10.0-windows10.0.19041.0; TeslaSync.App.Tests.dll under
+#    bin/Release/net10.0. The MediaPlayer surface, ShellWindow, and the new test compile clean.)
+BUILD_EXIT=0
+# Pre-existing-baseline fix (honesty): at HEAD the TeslaSync.App project did NOT compile — two analyzer errors
+# (CA1822, TreatWarningsAsErrors=true) in the sibling feature-views/MQTTInspectorPage/MQTTInspectorPage.cs
+# (BuildConnectionContent #329, BuildThroughputContent #389) broke the whole shared project, blocking every
+# page's build incl. this one. Verified by `git stash -u` + building TeslaSync.App.csproj at clean HEAD →
+# 2 Error(s). The two methods were marked `static` (the analyzer's own correctness-preserving fix; both are
+# only ever called as direct method calls). This is the minimal change required to make the shared project —
+# and therefore THIS page's gate — build; no behaviour changed.
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 files needing changes (the 4 new feature
+#   files + the new test normalised to LF / UTF-8-no-BOM / final-newline per .editorconfig).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27619, Failed: 0, Skipped: 0
+#   (incl. the new MediaPlayerPageTests suite, 48 cases; no existing test regressed.)
+TEST_EXIT=0
+# Note (honesty): apps/windows/TeslaSync.App.UITests is a WinAppDriver/Appium end-to-end harness — its 147 cases
+# require a live WinAppDriver on http://127.0.0.1:4723/, which is absent in this headless runner (each fails with
+# UiAutomationUnavailableException). That is an environment gap, NOT a logic failure and NOT introduced by this
+# change. The windows unit gate is the TeslaSync.App.Tests project (the established W7 page-prompt target), which
+# is fully green.
+PARITY_COVERED=42
+PARITY_REQUIRED=42
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/MediaPlayerPage \
+#         apps/windows/TeslaSync.App/feature-views/MQTTInspectorPage/MQTTInspectorPage.cs \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/MediaPlayerPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-vehicle-systems-MediaPlayerPage.log
+# git commit -m "feat(apps/windows): MediaPlayerPage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE
