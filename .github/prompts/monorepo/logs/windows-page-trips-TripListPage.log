@@ -1,0 +1,130 @@
+P2-WINDOWS W7 — page:trips/TripList — WinUI 3 / Fluent parity port
+=================================================================
+Web source : web/src/features/trips/pages/TripListPage.tsx (route /trips)
+Output     : apps/windows/TeslaSync.App/feature-views/TripListPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages SharingTripsPage/CostAnalysisPage/QuickStatsPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Trips", …)
+             (RouteTable already maps Page("Trips","trips",TripsDriving))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry 21 of the 22
+             translation.trips.* keys (catalog-generated); added translation.trips.chart.title.aria
+             to all three catalogs. Every visible literal resolves by key.
+
+Files:
+  feature-views/TripListPage/TripListPage.Model.cs      (parsers + projection + registration + diagnostics + source port + CSV/JSON)
+  feature-views/TripListPage/TripListPage.Source.cs     (generated C# client cache-then-network: get_api_v1_trips, vehicle-scoped)
+  feature-views/TripListPage/TripListPage.ViewModel.cs  (INotifyPropertyChanged 3-state holder + units reproject + client-side paging)
+  feature-views/TripListPage/TripListPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/TripListPageTests.cs (32 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj        (link the 3 UI-free files; the WinUI view is build-only)
+  apps/windows/Strings/{en,he,ar}/Resources.resw        (added translation.trips.chart.title.aria)
+  Shell/ShellWindow.xaml.cs                             (PageFactory.Register("Trips", …))
+
+Data sources (P1/S8 state holder VM → generated C# client; web hook name kept at the C# call site):
+  useTrips -> TripListSource.StreamAsync, ApiRequest(Operations.Trips.List, vehicle_id?, limit=50)
+Units (P1/S5): SI read from the API; converted only at the display boundary in TripListProjection via
+  UnitConverters.DistanceFromSi + UnitFormatters.FormatEnergy + ScalarFormatters (no non-SI stored/computed).
+Live data: none (web page uses a TanStack-Query useTrips hook, no useLiveX/SSE), so no SSE subscription /
+  staleness chip (ADR-013 n/a). Unit preference is bound from AppSettingsHost and re-projects on change.
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+[1/34]   panel  Total-Distance
+         TripListProjection.BuildStatCards -> stat "distance" (CyanAccentBrushKey="TsChartSpeedBrush");
+         TripListPage.cs::RenderStats (TsMetricCard, web MetricCard color="cyan").
+         evidence-test: Projection_builds_four_stat_cards_in_web_order
+[2/34]   panel  Energy-Used
+         TripListProjection.BuildStatCards -> stat "energy" (AmberAccentBrushKey="TsColorWarningBrush");
+         TripListPage.cs::RenderStats (TsMetricCard, web MetricCard color="amber").
+         evidence-test: Projection_builds_four_stat_cards_in_web_order
+[3/34]   panel  Total-Cost
+         TripListProjection.BuildStatCards -> stat "cost" (GreenAccentBrushKey="TsChartBatteryBrush");
+         TripListPage.cs::RenderStats (TsMetricCard, web MetricCard color="green").
+         evidence-test: Projection_builds_four_stat_cards_in_web_order
+[4/34]   panel  Total-Trips
+         TripListProjection.BuildStatCards -> stat "total" (PurpleAccentBrushKey="TsChartPowerBrush");
+         TripListPage.cs::RenderStats (TsMetricCard, web MetricCard color="purple").
+         evidence-test: Projection_builds_four_stat_cards_in_web_order
+[5/34]   panel  Top-Trips-by-Distance
+         TripListProjection.BuildChartBars (top-10 desc); TripListPage.cs::_chart (TsChartContainer) +
+         BuildChartBars (native horizontal bars).
+         evidence-test: Projection_builds_top_ten_chart_bars_sorted_by_distance_descending
+[6/34]   panel  GlassPanel6 (All-Trips list)
+         TripListPage.cs::BuildLayout listPanel (TsGlassPanel) + RenderList (rows | TsEmptyState);
+         TripListProjection.BuildRows / TripListDisplay.ListHeading.
+         evidence-test: ViewModel_loading_then_success_lists_the_trips
+[7/34]   panel  GlassPanel7 (trip row)
+         TripListPage.cs::BuildTripRow (TsGlassPanel per trip: avatar + name + meta + distance/energy/cost);
+         TripListProjection row model.
+         evidence-test: Projection_row_ports_name_fallback_duration_drives_charges_distance_and_efficiency
+[8/34]   chart  ChartContainer
+         TripListPage.cs::_chart (TsChartContainer: Title/AccessibleSummary/EmptyMessage/DataView + export Actions).
+         evidence-test: Projection_carries_the_chrome_strings_in_every_state
+[9/34]   chart  BarChart
+         TripListPage.cs::BuildChartBars (native horizontal bar body) + BuildChartSeries (TsChartContainer.DataView,
+         ChartSeriesKind.Bar) — accessible data-table alternative with [Trip, Distance] columns.
+         evidence-test: Projection_chart_bar_uses_the_name_fallback_and_converts_distance
+[10/34]  state  loading
+         TripListState.Loading; TripListPage.cs::RenderStats (4 TsSkeleton) + RenderChart (ChartState.Loading).
+         evidence-test: Projection_loading_state_emits_no_stat_cards
+[11/34]  state  empty
+         TripListState.Empty; TripListPage.cs::RenderList (TsEmptyState) + RenderChart (ChartState.Empty);
+         zero-value stat cards still render (web parity).
+         evidence-test: ViewModel_empty_response_shows_the_empty_state, Projection_renders_zero_stat_cards_in_the_empty_state_but_no_chart_or_rows
+[12/34]  state  success
+         TripListState.Success; full section stack (stats + chart + rows + pager).
+         evidence-test: ViewModel_loading_then_success_lists_the_trips
+[13/34]  string trips.chart.col.trip       -> TripListProjection.ChartTripColumnLabel
+[14/34]  string trips.chart.distance       -> TripListProjection.ChartDistanceColumnLabel
+[15/34]  string trips.chart.empty          -> TripListProjection.ChartEmptyMessage
+[16/34]  string trips.chart.title          -> TripListProjection.ChartTitle
+[17/34]  string trips.chart.title.aria     -> TripListProjection.ChartAriaLabel (+ resw key added en/he/ar)
+[18/34]  string trips.export.csv           -> TripListProjection.ExportCsvLabel (TsButton, FileSavePicker export)
+[19/34]  string trips.export.json          -> TripListProjection.ExportJsonLabel (TsButton, FileSavePicker export)
+[20/34]  string trips.list.empty           -> TripListProjection.ListEmptyMessage
+[21/34]  string trips.list.heading         -> TripListProjection.ListHeading
+[22/34]  string trips.row.charges          -> TripListProjection.BuildRows (Count "trips.row.charges")
+[23/34]  string trips.row.cost             -> TripListProjection.BuildRows (costCaption)
+[24/34]  string trips.row.drives           -> TripListProjection.BuildRows (Count "trips.row.drives")
+[25/34]  string trips.row.trip             -> TripListProjection.ResolveName / ResolveChartName
+[26/34]  string trips.stats.cost           -> TripListProjection.BuildStatCards (costLabel)
+[27/34]  string trips.stats.distance       -> TripListProjection.BuildStatCards (distanceLabel)
+[28/34]  string trips.stats.driveCount     -> TripListProjection.BuildStatCards (energySub)
+[29/34]  string trips.stats.energy         -> TripListProjection.BuildStatCards (energyLabel)
+[30/34]  string trips.stats.total          -> TripListProjection.BuildStatCards (totalLabel)
+[31/34]  string trips.stats.totalDrives    -> TripListProjection.BuildStatCards (totalSub)
+[32/34]  string trips.stats.tripCount      -> TripListProjection.BuildStatCards (distanceSub)
+[33/34]  string trips.subtitle             -> TripListProjection.Subtitle
+[34/34]  string trips.title                -> TripListProjection.Title
+         strings [13..34] evidence-test: Projection_resolves_every_required_string_key_through_the_facade
+         (asserts all 22 keys flow through the RecordingLocalizer) + Projection_carries_the_chrome_strings_in_every_state.
+
+PARITY_COVERED=34
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Trips does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TripListPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s), 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <TripListPage Model/Source/ViewModel/view
+#   + TripListPageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27568, Failed: 0, Skipped: 0
+#   (incl. 32 TripListPageTests)
+TEST_EXIT=0
+PARITY_COVERED=34
+PARITY_REQUIRED=34
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TripListPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TripListPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-trips-TripListPage.log
+# git commit -m "feat(apps/windows): TripListPage at web parity (W7 trips)"
+
+EXIT=0
+STATUS=DONE

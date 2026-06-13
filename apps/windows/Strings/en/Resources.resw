@@ -20282,6 +20282,9 @@
   <data name="translation.trips.chart.title" xml:space="preserve">
     <value>Top Trips by Distance</value>
   </data>
+  <data name="translation.trips.chart.title.aria" xml:space="preserve">
+    <value>Top trips ranked by distance horizontal bar chart</value>
+  </data>
   <data name="translation.trips.detail.aiSuggestName.badge" xml:space="preserve">
     <value>Helix</value>
   </data>
