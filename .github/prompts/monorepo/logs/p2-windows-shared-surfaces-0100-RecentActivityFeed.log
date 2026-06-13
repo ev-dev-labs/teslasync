@@ -1,0 +1,90 @@
+=== P2 Shared surface 0100 RecentActivityFeed (Windows) ===
+run-at: 2026-06-13T03:16:04.3558955-07:00
+
+--- capability evidence ---
+WinUI 3 + .NET 10 capability: PRESENT (TeslaSync.App builds for net10.0-windows10.0.19041.0).
+.NET SDKs:
+9.0.314 [C:\Program Files\dotnet\sdk]
+10.0.300 [C:\Program Files\dotnet\sdk]
+WinAppDriver.exe: NOT FOUND on runner -> the [Trait(Category,UIAutomation)] suite (W9-0002, out-of-process
+  WinAppDriver automation of a packaged app) cannot run here and is gated by its own W9-0002 prompt, not this
+  shared-surface prompt. TEST below runs the headless unit suite (Category!=UIAutomation), which contains this
+  surface's RecentActivityFeedTests. Build/format/placeholder run over the whole solution unchanged.
+
+--- BUILD: dotnet build apps/windows/TeslaSync.sln -c Release ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  TeslaSync.TokenGen -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.TokenGen\bin\Release\net10.0\TeslaSync.TokenGen.dll
+  Generated -> D:\repos\teslasync-wt2\wt-02\apps\windows\Generated\bin\Debug\net10.0\Generated.dll
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(67,5): warning CA1720: Identifier 'Int' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(61,5): warning CA1720: Identifier 'String' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(70,5): warning CA1720: Identifier 'Float' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Units\DateTimeFormatting.cs(18,5): warning CA1720: Identifier 'Short' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(50,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(54,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(58,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(62,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(66,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(70,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(74,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Forms\VehicleOption.cs(29,26): warning CA1720: Identifier 'Short' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(290,69): warning CA1859: Change type of field 'ValueKindLongToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(322,69): warning CA1859: Change type of field 'CompactKindByName' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(307,66): warning CA1859: Change type of field 'ValueKindIntToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<int, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<int, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\Net\GeneratedApiClient.cs(218,81): warning CA1859: Change return type of method 'BuildIndex' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+  TeslaSync.App.Core -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\bin\Release\net10.0\TeslaSync.App.Core.dll
+  TeslaSync.App.UITests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+  TeslaSync.App.Platform -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Platform\bin\Release\net10.0-windows10.0.19041.0\TeslaSync.App.Platform.dll
+  TeslaSync.App.Tests -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  TeslaSync.App -> D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+
+Build succeeded.
+
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(67,5): warning CA1720: Identifier 'Int' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(61,5): warning CA1720: Identifier 'String' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\LiveEvent.cs(70,5): warning CA1720: Identifier 'Float' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Units\DateTimeFormatting.cs(18,5): warning CA1720: Identifier 'Short' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\LoadState.cs(37,26): warning CA1716: Rename type LoadState<T>.Error so that it no longer conflicts with the reserved language keyword 'Error'. Using a reserved keyword as the name of a type makes it harder for consumers in other languages to use the type. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1716) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(50,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(54,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(58,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(62,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(66,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(70,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\State\RepositoryResult.cs(74,39): warning CA1000: Do not declare static members on generic types (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1000) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Forms\VehicleOption.cs(29,26): warning CA1720: Identifier 'Short' contains type name (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1720) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(290,69): warning CA1859: Change type of field 'ValueKindLongToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(322,69): warning CA1859: Change type of field 'CompactKindByName' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Live\SseEventDecoder.cs(307,66): warning CA1859: Change type of field 'ValueKindIntToCompact' from 'System.Collections.Generic.IReadOnlyDictionary<int, TeslaSync.App.Core.Live.SignalKind>' to 'System.Collections.Generic.Dictionary<int, TeslaSync.App.Core.Live.SignalKind>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\Data\Net\GeneratedApiClient.cs(218,81): warning CA1859: Change return type of method 'BuildIndex' from 'System.Collections.Generic.IReadOnlyDictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' to 'System.Collections.Generic.Dictionary<string, TeslaSync.Windows.Generated.Api.EndpointDescriptor>' for improved performance (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1859) [D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Core\TeslaSync.App.Core.csproj]
+    17 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:04:47.48
+BUILD_EXIT=0
+
+--- TEST: dotnet test apps/windows/TeslaSync.sln -c Release --filter Category!=UIAutomation ---
+Test run for D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll (.NETCoreApp,Version=v10.0)
+Test run for D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.Tests\bin\Release\net10.0\TeslaSync.App.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `Category!=UIAutomation` in D:\repos\teslasync-wt2\wt-02\apps\windows\TeslaSync.App.UITests\bin\Release\net10.0\TeslaSync.App.UITests.dll
+
+
+Passed!  - Failed:     0, Passed: 28107, Skipped:     0, Total: 28107, Duration: 17 s - TeslaSync.App.Tests.dll (net10.0)
+TEST_EXIT=0
+
+--- FORMAT: dotnet format apps/windows/TeslaSync.sln --verify-no-changes ---
+Warnings were encountered while loading the workspace. Set the verbosity option to the 'diagnostic' level to log warnings.
+FORMAT_EXIT=0
+
+--- PLACEHOLDER: check-placeholders.ps1 -Path apps/windows/TeslaSync.App/shared-surfaces/RecentActivityFeed ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+SUMMARY: BUILD_EXIT=0 TEST_EXIT=0 FORMAT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
