@@ -108,6 +108,9 @@ public sealed partial class ShellWindow : Window
         // System / My Activity page (P2/W7) — parity port of web MyActivityPage at route /me/activity.
         _viewModel.PageFactory.Register("MyActivity", static () => new FeatureViews.SystemOps.MyActivityPage());
 
+        // Telemetry / Signal Log Viewer page (P2/W7) — parity port of web SignalLogViewerPage at route /signal-log.
+        _viewModel.PageFactory.Register("SignalLogViewer", static () => new FeatureViews.Telemetry.SignalLogViewerPage());
+
         // Notifications / Alert rules page (P2/W7) — parity port of web AlertRulesPage at route /notifications/rules.
         // The rule-name links and the "Open Alert Studio" affordances navigate to the studio route.
         _viewModel.PageFactory.Register("NotificationsRules", () =>

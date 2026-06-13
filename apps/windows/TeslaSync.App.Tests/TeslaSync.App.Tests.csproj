@@ -889,6 +889,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SignalDiffTable\SignalDiffTable.Model.cs" Link="FeatureViews\SignalDiffTable\SignalDiffTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalDiffTable\SignalDiffTable.Source.cs" Link="FeatureViews\SignalDiffTable\SignalDiffTable.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalDiffTable\SignalDiffTable.ViewModel.cs" Link="FeatureViews\SignalDiffTable\SignalDiffTable.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.Model.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.Source.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.ViewModel.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSelector\SignalSelector.Model.cs" Link="FeatureViews\SignalSelector\SignalSelector.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSelector\SignalSelector.ViewModel.cs" Link="FeatureViews\SignalSelector\SignalSelector.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.Model.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.Model.cs" />
