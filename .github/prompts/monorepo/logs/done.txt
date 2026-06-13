@@ -590,3 +590,4 @@ p3-android/shared-meaningful/A-0003-VisuallyHidden.prompt.md
 p3-android/shared-meaningful/A-0005-AIAnomalyExplanations.prompt.md
 p3-android/shared-meaningful/A-0004-AIAlertTuningSuggestions.prompt.md
 p3-android/shared-meaningful/A-0006-AIAutoNameUnnamedLocations.prompt.md
+p3-android/shared-meaningful/A-0002-RouteAnnouncer.prompt.md
