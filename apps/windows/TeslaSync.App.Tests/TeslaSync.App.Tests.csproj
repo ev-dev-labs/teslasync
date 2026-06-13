@@ -1014,6 +1014,7 @@
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.Source.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressureSection\TirePressureSection.ViewModel.cs" Link="FeatureViews\TirePressureSection\TirePressureSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TitleSlide\TitleSlide.Model.cs" Link="FeatureViews\TitleSlide\TitleSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ToggleCommandTile.Model.cs" Link="FeatureViews\ToggleCommandTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ToolCard.Presentation.cs" Link="FeatureViews\ToolCard.Presentation.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Model.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TorqueHistoryChart\TorqueHistoryChart.Source.cs" Link="FeatureViews\TorqueHistoryChart\TorqueHistoryChart.Source.cs" />
