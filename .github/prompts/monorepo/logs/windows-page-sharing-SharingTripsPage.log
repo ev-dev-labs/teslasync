@@ -1,0 +1,104 @@
+=== p2-windows · W7 · page:sharing/SharingTrips (WinUI 3 / Fluent) ===
+Parity unit : page:sharing/SharingTrips   kind=page   web route=/sharing/trips
+Web source  : web/src/features/sharing/pages/SharingTripsPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the repository-backed cache-then-network data port), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "TeslaSync/Features/Sharing/SharingTripsPage.xaml + ViewModel.cs" is mapped onto these real conventions;
+  the surface registers itself with the W4 ShellPageFactory by route name ("SharingTrips", already mapped by
+  RouteTable as Page("SharingTrips","sharing/trips",Sharing)).
+- Data source: useTrips({ vehicle_id, limit: 20 }). SharingTripsSource resolves the in-scope vehicle from the shared
+  IWidgetVehicleSource (native useSelectedVehicle), then reads the generated operation get_api_v1_trips through the
+  shared CacheThenNetworkEngine. Faithful to the web hook, the query is NOT disabled when no vehicle is selected —
+  it omits vehicle_id and reads fleet-wide; the limit is always sent. The view never performs HTTP (P1/S8 seam).
+- SI display boundary (P1/S5): total_distance_m is converted to the user's distance unit via
+  UnitConverters.DistanceFromSi + UnitLabels (web convertDistanceFromSI + unitPrefs.distance), fmtInt-style integer;
+  total_energy_wh is read as SI watt-hours (web fmtNumber(total_energy_wh) + " Wh"); the duration mirrors the page's
+  own formatDuration(start,end) rules; the date uses DateTimeVariant.Date ("MMM d, yyyy" == web formatDate). Live
+  units come from AppSettingsHost.Current.ToUnitPref() and re-project on AppSettingsService.Changed.
+- The page reproduces all three web regions: GlassPanel1 (recent-trips list with the 3 data states + the single
+  trip-selection model — a Fluent single-select ListView = web role="listbox"/role="option"), GlassPanel2 (the
+  static share-card hint), and the opt-in trip-postcard drafter (AITripPostcardShareCardImageGeneration, its own
+  parity unit) wired to the selected trip and gated default-OFF (StaticAiFeatureGate.Off + an off-mode transport),
+  so it collapses to nothing exactly like the web withAiFeature gate. The 2 GlassPanels + 3 states + 8 strings are
+  this page unit's 13 parity items; the AI drafter is reproduced structurally but tracked under its own unit.
+- All 8 i18n keys already exist verbatim in Strings/en/Resources.resw (translation.sharing.trips.*); the surface
+  resolves them through the ILocalizer facade with the web key names + verbatim English defaults (no new catalog
+  rows required). row.drives is the native "{0} drives" template (String.Format with the drive count).
+- Pre-existing blocker repaired (tightly coupled, build-breaking): the worktree's integration branch carried a bad
+  merge (commit e8f7a3d744) that inserted the NotificationsArchived registration INSIDE the Locations registration
+  lambda in Shell/ShellWindow.xaml.cs, leaving the Locations lambda unclosed (one missing `return page; });`). That
+  unbalanced C# (final brace depth +1) poisoned the XAML markup compiler's Roslyn type universe, so the whole app
+  failed to build with WMC9999 + a cascade of bogus "Unknown type 'TsButton'/..." WMC0001 errors (84 errors). Since
+  ShellWindow registration is exactly the NavigationView-registration file this prompt must edit (allowed-files
+  scope), restored the Locations block's `return page; });`. App then built 0 errors / 0 warnings.
+
+=== PARITY ===
+PARITY_REQUIRED=13
+
+# Panels (2) — the two web GlassPanel regions
+[x] panel  - GlassPanel1   -> SharingTripsPage.cs#BuildLayout recentPanel (TsGlassPanel): PanelTitle(RecentHeading) over
+                              the 3-state body (skeletons / TsEmptyState / single-select ListView of SharingTripRow);
+                              rows projected by SharingTripsProjection.BuildRows; test Projection_only_builds_rows_in_the_success_state
+[x] panel  - GlassPanel2   -> SharingTripsPage.cs#BuildLayout hintPanel (TsGlassPanel): PanelTitle(StaticHintHeading) +
+                              Text(StaticHintBody); display fields asserted by Projection_carries_both_panels_constant_strings_in_every_state
+
+# Data states (3) — loading / empty / success, each a visible region inside GlassPanel1 (never blank)
+[x] state  - loading       -> SharingTripsState.Loading -> _skeletons (3x TsSkeleton); ViewModel SetLoading;
+                              test ViewModel_loading_then_success_lists_the_trips (first emission)
+[x] state  - empty         -> SharingTripsState.Empty -> _emptyState (TsEmptyState, RouteGlyph + EmptyMessage);
+                              tests ViewModel_empty_response_shows_the_empty_state / ViewModel_loaded_but_no_trips_is_empty /
+                              ViewModel_failure_with_no_cache_folds_into_empty_like_the_web
+[x] state  - success       -> SharingTripsState.Success -> _list (ListView rows); test ViewModel_loading_then_success_lists_the_trips
+
+# Strings (8) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - sharing.trips.recent.empty       -> SharingTripsProjection.EmptyMessage GetString("sharing.trips.recent.empty", "No recent trips. Drive your vehicle to populate this list.")
+[x] string - sharing.trips.recent.heading     -> SharingTripsProjection.RecentHeading GetString("sharing.trips.recent.heading", "Recent trips")
+[x] string - sharing.trips.row.drives         -> SharingTripsProjection.DrivesText GetString("sharing.trips.row.drives", "{0} drives")
+[x] string - sharing.trips.row.trip           -> SharingTripsProjection.ResolveName GetString("sharing.trips.row.trip", "Trip") (Trip #{id} fallback)
+[x] string - sharing.trips.staticHint.body    -> SharingTripsProjection.StaticHintBody GetString("sharing.trips.staticHint.body", "Every drive in TeslaSync can be published …")
+[x] string - sharing.trips.staticHint.heading -> SharingTripsProjection.StaticHintHeading GetString("sharing.trips.staticHint.heading", "Static share cards")
+[x] string - sharing.trips.subtitle           -> SharingTripsProjection.Subtitle GetString("sharing.trips.subtitle", "Pick a recent trip to share as a static link, postcard, or image.")
+[x] string - sharing.trips.title              -> SharingTripsProjection.Title GetString("sharing.trips.title", "Share a trip")
+
+PARITY_COVERED=13
+# Coverage asserted headlessly by SharingTripsPageTests.Projection_resolves_every_required_string_key_through_the_facade
+# (records all 8 keys through a RecordingLocalizer) + the per-state ViewModel tests + the row-projection tests
+# (name fallback / drives tally / energy / distance unit conversion / formatDuration / date) + the source request-shape
+# tests (limit always sent; vehicle_id present/omitted/explicit). 25 tests, all passing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SharingTripsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Sharing path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only;
+#   TeslaSync.App builds 0/0 under TreatWarningsAsErrors). Includes the ShellWindow Locations-brace repair above.
+BUILD_EXIT=0
+# dotnet format --verify-no-changes (SharingTripsPage Model/Source/ViewModel/view + ShellWindow registration + the test)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release (the canonical headless gate, per every prior W7 page log)
+#   -> Passed: 27061, Failed: 0, Skipped: 0 (includes the 25 new SharingTripsPageTests)
+TEST_EXIT=0
+# NOTE (no red-as-green): the WinAppDriver UI-automation assembly TeslaSync.App.UITests cannot run in this environment —
+#   every test throws UiAutomationUnavailableException ("nothing is listening on http://127.0.0.1:4723/ and
+#   WinAppDriver.exe was not found"). This is the pre-existing environmental harness limitation shared by every prior
+#   DONE W7 page (whose gates likewise ran the headless TeslaSync.App.Tests project); it is not a regression from this
+#   change. UITESTS_EXIT=1 (environment: WinAppDriver absent), recorded transparently rather than hidden.
+PARITY_COVERED=13
+PARITY_REQUIRED=13
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SharingTripsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SharingTripsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-sharing-SharingTripsPage.log
+# git commit -m "feat(apps/windows): SharingTripsPage at web parity (W7 sharing)"
+
+EXIT=0
+STATUS=DONE

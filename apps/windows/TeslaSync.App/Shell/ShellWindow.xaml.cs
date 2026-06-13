@@ -326,6 +326,12 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+
+        // Sharing / Trip Sharing page (P2/W7) — parity port of web SharingTripsPage at route /sharing/trips.
+        // RouteTable already maps Page("SharingTrips","sharing/trips",Sharing); the page wires the recent-trips
+        // list (loading / empty / success), the static share-card hint and the default-off trip-postcard drafter.
+        _viewModel.PageFactory.Register(
+            "SharingTrips", static () => new FeatureViews.Sharing.SharingTripsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
