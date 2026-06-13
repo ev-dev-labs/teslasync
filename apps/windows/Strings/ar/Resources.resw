@@ -24337,4 +24337,49 @@
   <data name="translation.locations.retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+  <data name="translation.Avg Volume" xml:space="preserve">
+    <value>Avg Volume</value>
+  </data>
+  <data name="translation.Media Player" xml:space="preserve">
+    <value>Media Player</value>
+  </data>
+  <data name="translation.No playback history" xml:space="preserve">
+    <value>No playback history</value>
+  </data>
+  <data name="translation.No playback history for this period" xml:space="preserve">
+    <value>No playback history for this period</value>
+  </data>
+  <data name="translation.No source data available" xml:space="preserve">
+    <value>No source data available</value>
+  </data>
+  <data name="translation.No track" xml:space="preserve">
+    <value>No track</value>
+  </data>
+  <data name="translation.No volume data for this period" xml:space="preserve">
+    <value>No volume data for this period</value>
+  </data>
+  <data name="translation.Now playing, volume, and listening history" xml:space="preserve">
+    <value>Now playing, volume, and listening history</value>
+  </data>
+  <data name="translation.Playback History" xml:space="preserve">
+    <value>Playback History</value>
+  </data>
+  <data name="translation.Source Distribution" xml:space="preserve">
+    <value>Source Distribution</value>
+  </data>
+  <data name="translation.Top Source" xml:space="preserve">
+    <value>Top Source</value>
+  </data>
+  <data name="translation.Unique Tracks" xml:space="preserve">
+    <value>Unique Tracks</value>
+  </data>
+  <data name="translation.Unknown artist" xml:space="preserve">
+    <value>Unknown artist</value>
+  </data>
+  <data name="translation.Volume Step" xml:space="preserve">
+    <value>Volume Step</value>
+  </data>
+  <data name="translation.Volume over Time" xml:space="preserve">
+    <value>Volume over Time</value>
+  </data>
 </root>

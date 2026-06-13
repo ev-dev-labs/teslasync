@@ -737,6 +737,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Model.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.Source.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" Link="FeatureViews\MediaNavigationPanel\MediaNavigationPanel.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaPlayerPage\MediaPlayerPage.Model.cs" Link="FeatureViews\MediaPlayerPage\MediaPlayerPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaPlayerPage\MediaPlayerPage.Source.cs" Link="FeatureViews\MediaPlayerPage\MediaPlayerPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\MediaPlayerPage\MediaPlayerPage.ViewModel.cs" Link="FeatureViews\MediaPlayerPage\MediaPlayerPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MiniGridPreview\MiniGridPreview.Model.cs" Link="FeatureViews\MiniGridPreview\MiniGridPreview.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostChart\MonthlyCostChart.Model.cs" Link="FeatureViews\MonthlyCostChart\MonthlyCostChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MonthlyCostTable\MonthlyCostTable.Model.cs" Link="FeatureViews\MonthlyCostTable\MonthlyCostTable.Model.cs" />
