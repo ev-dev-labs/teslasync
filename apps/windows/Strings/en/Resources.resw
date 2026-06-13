@@ -71,6 +71,8 @@
   </data>
   <data name="translation.Automatic collision mitigation" xml:space="preserve">
     <value>Automatic collision mitigation</value>
+  <data name="translation.Available" xml:space="preserve">
+    <value>Available</value>
   </data>
   <data name="translation.Avg" xml:space="preserve">
     <value>Avg</value>
@@ -191,6 +193,8 @@
   </data>
   <data name="translation.Cruise Follow Distance" xml:space="preserve">
     <value>Cruise Follow Distance</value>
+  <data name="translation.Current Version" xml:space="preserve">
+    <value>Current Version</value>
   </data>
   <data name="translation.DC Power" xml:space="preserve">
     <value>DC Power</value>
@@ -257,6 +261,9 @@
   </data>
   <data name="translation.Download" xml:space="preserve">
     <value>Download</value>
+  </data>
+  <data name="translation.Downloading" xml:space="preserve">
+    <value>Downloading</value>
   </data>
   <data name="translation.Drives" xml:space="preserve">
     <value>Drives</value>
@@ -441,6 +448,12 @@
   <data name="translation.Insights" xml:space="preserve">
     <value>Insights</value>
   </data>
+  <data name="translation.Installed" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="translation.Installing" xml:space="preserve">
+    <value>Installing</value>
+  </data>
   <data name="translation.Instant" xml:space="preserve">
     <value>Instant</value>
   </data>
@@ -587,6 +600,11 @@
   </data>
   <data name="translation.No safety state history to chart yet." xml:space="preserve">
     <value>No safety state history to chart yet.</value>
+  <data name="translation.No software update history available" xml:space="preserve">
+    <value>No software update history available</value>
+  </data>
+  <data name="translation.No update history" xml:space="preserve">
+    <value>No update history</value>
   </data>
   <data name="translation.Nominal" xml:space="preserve">
     <value>Nominal</value>
@@ -801,6 +819,9 @@
   <data name="translation.Skipped" xml:space="preserve">
     <value>Skipped</value>
   </data>
+  <data name="translation.Software Updates" xml:space="preserve">
+    <value>Software Updates</value>
+  </data>
   <data name="translation.Source" xml:space="preserve">
     <value>Source</value>
   </data>
@@ -882,8 +903,14 @@
   <data name="translation.Total Size" xml:space="preserve">
     <value>Total Size</value>
   </data>
+  <data name="translation.Total Updates" xml:space="preserve">
+    <value>Total Updates</value>
+  </data>
   <data name="translation.Track" xml:space="preserve">
     <value>Track</value>
+  </data>
+  <data name="translation.Track firmware versions and update history" xml:space="preserve">
+    <value>Track firmware versions and update history</value>
   </data>
   <data name="translation.Type" xml:space="preserve">
     <value>Type</value>
@@ -905,6 +932,12 @@
   </data>
   <data name="translation.Update" xml:space="preserve">
     <value>Update</value>
+  </data>
+  <data name="translation.Update Timeline" xml:space="preserve">
+    <value>Update Timeline</value>
+  </data>
+  <data name="translation.Updates Installed" xml:space="preserve">
+    <value>Updates Installed</value>
   </data>
   <data name="translation.Uptime" xml:space="preserve">
     <value>Uptime</value>
@@ -929,6 +962,9 @@
   </data>
   <data name="translation.View" xml:space="preserve">
     <value>View</value>
+  </data>
+  <data name="translation.View release notes" xml:space="preserve">
+    <value>View release notes</value>
   </data>
   <data name="translation.Vin" xml:space="preserve">
     <value>Vin</value>

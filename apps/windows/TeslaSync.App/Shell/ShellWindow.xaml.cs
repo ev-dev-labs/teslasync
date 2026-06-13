@@ -257,6 +257,11 @@ public sealed partial class ShellWindow : Window
             page.OpenDashboardRequested += (_, _) => NavigateTo(string.Empty);
             return page;
         });
+        // Vehicle Systems / Software Updates page (P2/W7) — parity port of web SoftwareUpdatesPage at routes
+        // /software-updates + /vehicle-systems/software. RouteTable already maps both to "SoftwareUpdates".
+        _viewModel.PageFactory.Register(
+            FeatureViews.VehicleSystems.SoftwareUpdatesRegistration.RouteName,
+            static () => new FeatureViews.VehicleSystems.SoftwareUpdatesPage());
         // Driving / Efficiency page (P2/W7) — parity port of web EfficiencyPage at route /efficiency.
         _viewModel.PageFactory.Register("Efficiency", static () => new FeatureViews.Driving.EfficiencyPage());
         // Driving / DriveScore page (P2/W7) — parity port of web DriveScorePage at route /drive-score.
