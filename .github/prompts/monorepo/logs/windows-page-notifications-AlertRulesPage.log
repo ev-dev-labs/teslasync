@@ -1,0 +1,152 @@
+================================================================================
+p2-windows · W7 · page:notifications/AlertRules · WinUI 3 / Fluent parity port
+================================================================================
+Parity unit : page:notifications/AlertRules
+Web source  : web/src/features/notifications/pages/AlertRulesPage.tsx
+Web route   : /notifications/rules
+Output      : apps/windows/TeslaSync.App/feature-views/AlertRulesPage/
+                AlertRulesPage.cs            (WinUI 3 view, C# markup)
+                AlertRulesPage.ViewModel.cs  (UI-thread-free state holder, 4 states)
+                AlertRulesPage.Model.cs      (records + projection + registration + diagnostics)
+                AlertRulesPage.Source.cs     (IAlertRulesFeed + EmptyFeed + generated-client feed)
+Nav reg     : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+                PageFactory.Register("NotificationsRules", () => new AlertRulesPage())
+                (RouteTable already maps NotificationsRules -> notifications/rules)
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/AlertRulesPageTests.cs (29 tests)
+                + 3 headless sources registered in TeslaSync.App.Tests.csproj
+Runner      : .NET 10.0.300 SDK · TFM net10.0-windows10.0.19041.0 · WinUI 3 — AVAILABLE (not BLOCKED)
+
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+--------------------------------------------------------------------------------
+Architecture (matches established sibling W7 pages: FeedbackQueuePage / TripPlannerPage)
+--------------------------------------------------------------------------------
+- MVVM, no business logic in code-behind. The view binds AlertRulesPageViewModel and
+  renders the pure AlertRulesDisplay projection; all branch selection / formatting /
+  i18n happen in the headless Model. State changes marshalled onto the UI thread.
+- Data port IAlertRulesFeed (web hooks) -> generated C# OpenAPI client (ADR-004):
+    useAlertRules        -> get_api_v1_alerts_rules               GET  /alerts/rules
+    useBulkEnableRules   -> post_api_v1_alerts_rules_bulk_enable  POST /alerts/rules/bulk/enable  { ids }
+    useBulkDisableRules  -> post_api_v1_alerts_rules_bulk_disable POST /alerts/rules/bulk/disable { ids }
+    useDeleteAlertRule   -> delete_api_v1_alerts_rules_ruleID     DELETE /alerts/rules/{ruleID}
+    useSaveAlertRule     -> put_api_v1_alerts_rules_ruleID        PUT  /alerts/rules/{ruleID}     { name }
+  (op ids cross-checked against apps/windows/Generated ApiEndpoints.All — all present.)
+- Shared Fluent components reused (no web pixel-cloning, ADR-005/006):
+    TsGlassPanel, PageTitle, Subhead, Label, Text, ErrorText, TsSkeleton (loading),
+    TsErrorDisplay (error), TsEmptyState (empty + CTA), TsCheckbox (master tri-state +
+    per-row), TsEditableText (inline rename), TsBadge (enabled/disabled status),
+    TsSeverityBadge (severity chip), TsButton (Open Alert Studio).
+    EditConflictBanner shared surface (web EditConflictBanner + useEditLease) over
+    StaticEditLeaseSource with resourceLabel = editConflict.resource.alertRules.
+    BulkActionsToolbar shared surface (web BulkActionToolbar + useBulkSelection +
+    useConfirm) with enable/disable/delete(+confirm) actions and the rule item-noun.
+- i18n: every visible literal flows through ILocalizer.GetString("<key>","<English fallback>").
+  Per the established W7 contract the page keys resolve through the WinUI resource
+  bridge and fall back to the verbatim web English copy (sibling DONE pages add no
+  resw rows; the keyed call site IS the resolution path). Headless tests assert every
+  key is requested (RecordingLocalizer) and that the fallbacks match the web verbatim.
+- Units: this page has no SI-unit fields (rules list); nothing stored/computed non-SI.
+- Live data: this page has no live/SSE source (the web page is a TanStack query only),
+  so no >2min staleness chrome is applicable (matches the web source).
+
+--------------------------------------------------------------------------------
+Gate (windows triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AlertRulesPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release   -> Build succeeded, 0 Error(s)
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> no changes required
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26771, Failed: 0, Skipped: 0
+#   (includes the 29 new AlertRulesPageTests; same headless-unit-suite target the
+#    sibling W7 page gate logs record, e.g. windows-page-driving-TripPlannerPage.log)
+TEST_EXIT=0
+
+# NOTE — TeslaSync.App.UITests (W9 WinAppDriver UI-automation project) is NOT part of
+#   the W7 page gate contract and is excluded here exactly as the sibling DONE pages do.
+#   In this headless environment all 147 of its tests raise
+#   UiAutomationUnavailableException ("nothing is listening on http://127.0.0.1:4723/ …
+#   WinAppDriver.exe was not found") — an infrastructure precondition affecting every
+#   UI test equally (0 passed / 0 logic failures), unrelated to this change. No
+#   red-as-green: the W7 gate target (TeslaSync.App.Tests) is fully green above.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=31
+--------------------------------------------------------------------------------
+[x] panel  · GlassPanel1
+      AlertRulesPage.cs · BuildPanel() -> TsGlassPanel hosting loading/error/empty/table
+      (web <GlassPanel className="overflow-hidden">). Visibility per AlertRulesDisplay flags.
+
+[x] state  · loading
+      AlertRulesPage.Model.cs · AlertRulesProjection.Project (State=Loading, ShowLoading)
+      AlertRulesPage.cs · _loadingPanel = BuildLoadingPanel() (3× TsSkeleton, web 3× Skeleton)
+
+[x] state  · empty
+      AlertRulesPage.Model.cs · AlertRulesProjection.Project (State=Empty, ShowEmpty)
+      AlertRulesPage.cs · _emptyState (TsEmptyState: EmptyTitle/EmptyMessage/EmptyCtaLabel,
+      ActionInvoked -> NavigationRequested studio). web <EmptyState … actionTo studio>.
+
+[x] state  · error
+      AlertRulesPage.Model.cs · AlertRulesProjection.Project (State=Error, HasError, ErrorText)
+      AlertRulesPage.cs · _errorState (TsErrorDisplay: Title=ErrorText, ActionText=RetryLabel,
+      ActionInvoked -> RefreshAsync). web <ErrorDisplay error={error}>.
+
+[x] state  · success
+      AlertRulesPage.Model.cs · AlertRulesProjection.Project (State=Success, ShowRows, Rows)
+      AlertRulesPage.cs · RebuildRows()/BuildRow() — checkbox + name editor + open-in-studio +
+      signal + TsSeverityBadge + enabled/disabled TsBadge. web rules table <tbody>.
+
+[x] string · alertRules.bulk.delete            Model.cs · AlertRulesProjection.BulkLabels -> AlertRulesBulkLabels.Delete
+[x] string · alertRules.bulk.deleteConfirm.body  Model.cs · AlertRulesProjection.BulkLabels -> DeleteConfirmBody
+[x] string · alertRules.bulk.deleteConfirm.title Model.cs · AlertRulesProjection.BulkLabels -> DeleteConfirmTitle
+[x] string · alertRules.bulk.disable           Model.cs · AlertRulesProjection.BulkLabels -> Disable
+[x] string · alertRules.bulk.enable            Model.cs · AlertRulesProjection.BulkLabels -> Enable
+[x] string · alertRules.col.name               Model.cs · AlertRulesProjection.Project -> ColumnLabels.Name
+[x] string · alertRules.col.severity           Model.cs · AlertRulesProjection.Project -> ColumnLabels.Severity
+[x] string · alertRules.col.signal             Model.cs · AlertRulesProjection.Project -> ColumnLabels.Signal
+[x] string · alertRules.col.status             Model.cs · AlertRulesProjection.Project -> ColumnLabels.Status
+[x] string · alertRules.empty.body             Model.cs · AlertRulesProjection.Project -> EmptyMessage
+[x] string · alertRules.empty.cta              Model.cs · AlertRulesProjection.Project -> EmptyCtaLabel
+[x] string · alertRules.empty.title            Model.cs · AlertRulesProjection.Project -> EmptyTitle
+[x] string · alertRules.error.nameTooLong      Model.cs · AlertRulesProjection.NameTooLongMessage (+ ValidateName)
+[x] string · alertRules.noun.one               Model.cs · AlertRulesProjection.BulkLabels -> NounOne
+[x] string · alertRules.noun.other             Model.cs · AlertRulesProjection.BulkLabels -> NounOther
+[x] string · alertRules.openStudio             Model.cs · AlertRulesProjection.Project -> OpenStudioLabel
+[x] string · alertRules.selectRule             Model.cs · AlertRulesProjection.ProjectRow -> SelectRuleLabel (name-interpolated)
+[x] string · alertRules.subtitle               Model.cs · AlertRulesRegistration.Subtitle
+[x] string · alertRules.title                  Model.cs · AlertRulesRegistration.Title
+[x] string · bulk.selectAll                    Model.cs · AlertRulesProjection.Project -> SelectAllLabel (master checkbox a11y)
+[x] string · bulk.selectRow                    Model.cs · AlertRulesProjection.Project -> SelectRowLabel (row checkbox a11y)
+[x] string · common.delete                     Model.cs · AlertRulesProjection.BulkLabels -> DeleteConfirmLabel
+[x] string · common.disabled                   Model.cs · AlertRulesProjection.ProjectRow -> StatusLabel (enabled=false)
+[x] string · common.enabled                    Model.cs · AlertRulesProjection.ProjectRow -> StatusLabel (enabled=true)
+[x] string · editConflict.resource.alertRules  Model.cs · AlertRulesProjection.Project -> EditConflictResourceLabel
+[x] string · editableText.rename.alertRule     Model.cs · AlertRulesProjection.ProjectRow -> RenameLabel (name-interpolated)
+
+PARITY_COVERED=31
+--------------------------------------------------------------------------------
+Coverage verification:
+  AlertRulesPageTests.Projection_resolves_every_required_string_key asserts all 26
+  required i18n keys are requested by a single AlertRulesProjection.Project(richModel)
+  call (RecordingLocalizer); the 4 data states + the panel are asserted by
+  State_loading/empty/error/success_* and the row-projection tests. 29/29 pass.
+  PARITY_COVERED (31) == PARITY_REQUIRED (31).
+
+Acceptance criteria:
+  [x] GlassPanel1 implemented; no anonymous web region dropped.
+  [x] All 31 parity items render from the bound AlertRulesPageViewModel/AlertRulesDisplay.
+  [x] loading / empty / error / success implemented for the rules data source.
+  [x] All visible strings sourced via keyed ILocalizer.GetString; key names match web; zero hardcoded literals.
+  [x] Dark mode + a11y (AutomationProperties names, tri-state master select, keyboard) + Fluent-native only.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED.
+  [x] windows ledger row for page:notifications/AlertRules set covered (31/31, status=done).
+
+EXIT=0
+STATUS=DONE

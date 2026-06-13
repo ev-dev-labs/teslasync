@@ -381,6 +381,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Model.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.Source.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertMessageEditor\AlertMessageEditor.ViewModel.cs" Link="FeatureViews\AlertMessageEditor\AlertMessageEditor.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.Model.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.Source.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.ViewModel.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsSection\AlertsSection.Model.cs" Link="FeatureViews\AlertsSection\AlertsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.Model.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.ViewModel.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.ViewModel.cs" />

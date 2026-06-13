@@ -77,6 +77,15 @@ public sealed partial class ShellWindow : Window
         // Admin / Feedback queue page (P2/W7) — parity port of web FeedbackQueuePage at route /admin/feedback.
         _viewModel.PageFactory.Register("FeedbackQueue", static () => new FeatureViews.Admin.FeedbackQueuePage());
 
+        // Notifications / Alert rules page (P2/W7) — parity port of web AlertRulesPage at route /notifications/rules.
+        // The rule-name links and the "Open Alert Studio" affordances navigate to the studio route.
+        _viewModel.PageFactory.Register("NotificationsRules", () =>
+        {
+            var page = new FeatureViews.Notifications.AlertRulesPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
 

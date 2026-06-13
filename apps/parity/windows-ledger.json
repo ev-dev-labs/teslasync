@@ -88,5 +88,14 @@
     "requiredCount": 41,
     "promptId": "p2-windows/W7/windows-page-driving-TripPlannerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-TripPlannerPage.log"
+  },
+  {
+    "unitId": "page:notifications/AlertRules",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 31,
+    "requiredCount": 31,
+    "promptId": "p2-windows/W7/windows-page-notifications-AlertRulesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AlertRulesPage.log"
   }
 ]
