@@ -1,0 +1,152 @@
+p2-windows · W7 · page:admin/APIKeys — native WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/admin/pages/APIKeysPage.tsx  (route /api-keys)
+Prompt     : .github/prompts/monorepo/p2-windows/pages/admin/APIKeysPage.prompt.md
+Severity   : Parity page · Delegation: none (implemented in-repo)
+
+ENVIRONMENT
+-----------
+- .NET SDK 10.0.300 present; WinUI 3 / Windows App SDK 2.1.0 build works (full
+  solution builds clean). The Windows runner IS available, so the gate is NOT
+  blocked.
+- The generated C# OpenAPI client (apps/windows/Generated/, namespace
+  TeslaSync.Windows.Generated.Api) is .gitignored + regenerated, not committed.
+  Regenerated via `npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts`
+  (10 C# files) and materialized apps/windows/Generated/Generated.csproj so the
+  two project references (Core + Tests) resolve. All four api-keys operations are
+  present in ApiEndpoints.cs:
+    get_api_v1_api_keys            GET    /api-keys/
+    post_api_v1_api_keys           POST   /api-keys/
+    delete_api_v1_api_keys_id      DELETE /api-keys/{id}/
+    post_api_v1_api_keys_id_revoke POST   /api-keys/{id}/revoke
+
+PATH / OUTPUT RECONCILIATION (no scope narrowing)
+-------------------------------------------------
+The generated prompt names `apps/windows/TeslaSync/Features/Admin/APIKeysPage.xaml`
++ `APIKeysPageViewModel.cs`. That path/shape does not exist in this repo: every
+shipped W7 page (ApiLogsPage, ApiPlaygroundPage, WebhooksPage, …) lives under
+`apps/windows/TeslaSync.App/feature-views/<Page>/` and is authored as **C# markup**
+(no per-page .xaml) split into <Page>.cs / .Model.cs / .ViewModel.cs / .Source.cs
+in namespace TeslaSync.App.FeatureViews.Admin. The prompt's literal path is
+generated boilerplate; the page was implemented following the real, established
+convention so it integrates with the W3 component library, the W4 shell and the
+P1/S8 state-holder seam exactly like its peers.
+
+FILES
+-----
+  apps/windows/TeslaSync.App/feature-views/APIKeysPage/APIKeysPage.Model.cs
+      ApiKeysState enum (Loading/Loaded/Empty/Stale/Offline/Error); ApiKey,
+      ApiKeyList, CreatedApiKey read-models (FromJson, snake_case, null-tolerant);
+      ApiKeysProjection (Permission + Project + ProjectRows); ApiKeysDisplay /
+      ApiKeyRowDisplay; ApiKeysToast; ApiKeysRegistration (slug, route, ops, title);
+      ApiKeysDiagnostics (PII-safe view.opened).
+  apps/windows/TeslaSync.App/feature-views/APIKeysPage/APIKeysPage.Source.cs
+      IApiKeysSource port; EmptyApiKeysSource (inert default); ApiKeysSource
+      (cache-then-network read via CacheThenNetworkEngine + create/delete/revoke
+      through the generated IApiClient).
+  apps/windows/TeslaSync.App/feature-views/APIKeysPage/APIKeysPage.ViewModel.cs
+      ApiKeysPageViewModel : INotifyPropertyChanged, IDisposable — LoadAsync /
+      RetryAsync, CreateKeyAsync / DeleteKeyAsync / RevokeKeyAsync, ToastRequested,
+      per-state folding + projection (clock-injectable).
+  apps/windows/TeslaSync.App/feature-views/APIKeysPage/APIKeysPage.cs
+      WinUI view (UserControl): header + Create action, skeleton loading, error
+      surface (TsQueryError + retry), key rows (TsGlassPanel), empty surface
+      (TsEmptyState), create modal (form → one-time reveal panel), delete confirm.
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+      NavigationView registration: PageFactory.Register("APIKeys", …) — the route
+      name RouteTable already maps (Page("APIKeys","api-keys",AdminDevTools)).
+  apps/windows/Strings/en/Resources.resw
+      +40 translation.apiKeys.* entries (all 27 parity strings verbatim + the
+      operational toast/error/chrome strings).
+  apps/windows/TeslaSync.App.Tests/FeatureViews/APIKeysPageTests.cs
+      23 headless xUnit tests (parsing, permission/row projection, state matrix,
+      create/delete/revoke, registration, diagnostics).
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+      Linked Compile of the 3 WinUI-free page files (Model/Source/ViewModel).
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+panels (2/2)
+  [x] panel  GlassPanel1  — one-time generated-key reveal panel
+        APIKeysPage.cs · BuildGeneratedKeyContent → new TsGlassPanel { Content = TsMaskedValue }
+  [x] panel  GlassPanel2  — per-key list row panel
+        APIKeysPage.cs · BuildRow → new TsGlassPanel { Content = grid }
+
+data states (3/3 declared + error)
+  [x] state  loading  APIKeysPage.cs · Render (_loading) + BuildSkeletonRow (TsSkeleton);
+        ApiKeysPageViewModel.SetLoading; ApiKeysState.Loading
+  [x] state  empty    APIKeysPage.cs · RenderList (_emptyState = TsEmptyState);
+        ApiKeysPageViewModel.SetEmpty; ApiKeysState.Empty
+  [x] state  success  APIKeysPage.cs · RenderList/BuildRow from ApiKeysDisplay.Rows;
+        ApiKeysPageViewModel.ApplySnapshot (Loaded); ApiKeysState.Loaded
+  (+) state  error    APIKeysPage.cs · RenderError (TsQueryError + retry); ApiKeysState.Error
+
+strings (27/27 — resw key · resolving symbol)
+  [x] "API Key Created"                          translation.apiKeys.modal.createdTitle   · APIKeysPage.OpenCreateModalAsync
+  [x] "API Keys"                                 translation.apiKeys.title                · ApiKeysProjection.Project / ApiKeysRegistration.Title
+  [x] "API key, click to reveal"                 translation.apiKeys.reveal.aria          · APIKeysPage.BuildGeneratedKeyContent (TsMaskedValue.RevealLabel)
+  [x] "Admin"                                    translation.apiKeys.permission.admin     · ApiKeysProjection.Permission
+  [x] 'Are you sure …delete the key "{{name}}"?' translation.apiKeys.delete.message       · APIKeysPage.ConfirmDeleteAsync
+  [x] "Cancel"                                   translation.apiKeys.form.cancel          · APIKeysPage.OpenCreateModalAsync (CloseButtonText)
+  [x] "Copy"                                      translation.apiKeys.copy.title           · APIKeysPage.BuildGeneratedKeyContent (ToolTip)
+  [x] "Copy API key"                             translation.apiKeys.copy.aria            · APIKeysPage.BuildGeneratedKeyContent (AutomationProperties.Name)
+  [x] "Copy this key now — it won't be shown…"   translation.apiKeys.created.warning      · APIKeysPage.BuildGeneratedKeyContent (Caption)
+  [x] "Create Key"                               translation.apiKeys.createButton         · ApiKeysProjection.Project (CreateLabel)
+  [x] "Create an API key to enable …controls."   translation.apiKeys.empty.message        · ApiKeysProjection.Project (EmptyMessage)
+  [x] "Created"                                   translation.apiKeys.row.created          · ApiKeysProjection.ProjectRows (CreatedText)
+  [x] "Delete"                                    translation.apiKeys.delete.confirm       · ApiKeysProjection.ProjectRows (DeleteTooltip) / ConfirmDeleteAsync
+  [x] "Delete API Key"                           translation.apiKeys.delete.title         · APIKeysPage.ConfirmDeleteAsync (Title)
+  [x] "Done"                                      translation.apiKeys.created.done         · APIKeysPage.OpenCreateModalAsync (CloseButtonText swap)
+  [x] "Expired"                                   translation.apiKeys.badge.expired        · ApiKeysProjection.ProjectRows (ExpiredLabel)
+  [x] "Generate Key"                             translation.apiKeys.form.generate        · APIKeysPage.OpenCreateModalAsync (PrimaryButtonText)
+  [x] "Last used"                                translation.apiKeys.row.lastUsed         · ApiKeysProjection.ProjectRows (LastUsedText)
+  [x] "Manage programmatic access to TeslaSync"  translation.apiKeys.subtitle             · ApiKeysProjection.Project / ApiKeysRegistration.Subtitle
+  [x] "My Application"                           translation.apiKeys.form.nameHint        · APIKeysPage.OpenCreateModalAsync (TsInput.Hint)
+  [x] "Name"                                      translation.apiKeys.form.name            · APIKeysPage.OpenCreateModalAsync (TsInput.Header)
+  [x] "New API Key"                              translation.apiKeys.modal.newTitle       · APIKeysPage.OpenCreateModalAsync (Title)
+  [x] "No API keys"                              translation.apiKeys.empty.title          · ApiKeysProjection.Project (EmptyTitle)
+  [x] "Permissions"                              translation.apiKeys.form.permissions     · APIKeysPage.BuildPermissionSelect / OpenCreateModalAsync (Label)
+  [x] "Read"                                      translation.apiKeys.permission.read      · ApiKeysProjection.Permission
+  [x] "Read-Write"                               translation.apiKeys.permission.readWrite · ApiKeysProjection.Permission
+  [x] "Revoke"                                    translation.apiKeys.row.revoke           · ApiKeysProjection.ProjectRows (RevokeTooltip)
+
+PARITY_COVERED=32
+
+NOTES
+-----
+- Data sources bound through the generated C# client (ADR-004) via the P1/S8 seam:
+    useApiKeys      → get_api_v1_api_keys             (ApiKeysSource.StreamApiKeysAsync)
+    useCreateApiKey → post_api_v1_api_keys            (ApiKeysSource.CreateAsync)
+    useDeleteApiKey → delete_api_v1_api_keys_id       (ApiKeysSource.DeleteAsync)
+    useRevokeApiKey → post_api_v1_api_keys_id_revoke  (ApiKeysSource.RevokeAsync)
+  Read-model field names are SI/snake_case from internal/api/apikey/handler.go
+  (id, key_prefix, permissions, created_at, last_used_at, expires_at); the create
+  response carries the one-time "key".
+- a11y: AutomationProperties names on the page, create action, permission/expired
+  chips, the masked value reveal and the revoke/delete row actions; loading +
+  empty/error are live regions (LiveRegion / TsFeedbackState). Light/dark + Mica
+  honoured through the W2 design tokens (no hardcoded colours).
+- No charts / no map for this unit (manifest declares 0 of each).
+- No placeholders/stubs (ADR-011): check-placeholders csharp scan = 0.
+
+=== GATE ===
+# Placeholder scan run against the REAL page directory (the prompt's literal
+# apps/windows/TeslaSync/Features/Admin path does not exist in this repo).
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/APIKeysPage -Language csharp -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release -> Build succeeded, 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes -> no changes
+LINT_EXIT=0
+# Test gate scoped to the headless unit project, per the established W7 convention
+# (ApiLogsPage/ApiPlayground logs gate dotnet test on TeslaSync.App.Tests). The
+# WinAppDriver UI-automation project (TeslaSync.App.UITests, W9) requires a UI
+# runner that is absent here (nothing on http://127.0.0.1:4723/) and is out of
+# scope for this page prompt; those 147 failures are environmental, not caused by
+# this change.
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 29264, Failed: 0, Skipped: 0  (APIKeysPageTests: 23/23)
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE
