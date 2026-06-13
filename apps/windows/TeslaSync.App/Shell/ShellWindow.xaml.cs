@@ -115,6 +115,9 @@ public sealed partial class ShellWindow : Window
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
 
+        // System / DB Health page (P2/W7) — parity port of web DBHealthPage at route /db-health (group Diagnostics).
+        _viewModel.PageFactory.Register("DBHealthDashboard", static () => new FeatureViews.Diagnostics.DBHealthPage());
+
         // Admin / Vehicle cost page (P2/W7) — parity port of web VehicleCostPage at route /admin/vehicle-cost.
         _viewModel.PageFactory.Register("VehicleCost", static () => new FeatureViews.Admin.VehicleCostPage());
         // Battery / Energy flow page (P2/W7) — parity port of web EnergyFlowPage at route /energy-flow.
