@@ -170,6 +170,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Efficiency", static () => new FeatureViews.Driving.EfficiencyPage());
         // Driving / DriveScore page (P2/W7) — parity port of web DriveScorePage at route /drive-score.
         _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
+        // Driving / Regen Efficiency page (P2/W7) — parity port of web RegenEfficiencyPage at route /regen-efficiency.
+        _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
