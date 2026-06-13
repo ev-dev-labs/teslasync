@@ -25016,5 +25016,70 @@
   </data>
   <data name="translation.Wiper Heater" xml:space="preserve">
     <value>Wiper Heater</value>
+  <data name="translation.All Categories" xml:space="preserve">
+    <value>All Categories</value>
+  </data>
+  <data name="translation.Annual Est." xml:space="preserve">
+    <value>Annual Est.</value>
+  </data>
+  <data name="translation.Avg / Service" xml:space="preserve">
+    <value>Avg / Service</value>
+  </data>
+  <data name="translation.Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="translation.Due Date" xml:space="preserve">
+    <value>Due Date</value>
+  </data>
+  <data name="translation.Due Soon" xml:space="preserve">
+    <value>Due Soon</value>
+  </data>
+  <data name="translation.EV maintenance is typically 40-60% cheaper than a comparable gas vehicle." xml:space="preserve">
+    <value>EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.</value>
+  </data>
+  <data name="translation.Estimated Annual Cost" xml:space="preserve">
+    <value>Estimated Annual Cost</value>
+  </data>
+  <data name="translation.No cost data available yet. Log service records to see cost estimates." xml:space="preserve">
+    <value>No cost data available yet. Log service records to see cost estimates.</value>
+  </data>
+  <data name="translation.No items match the selected category. Try a different filter." xml:space="preserve">
+    <value>No items match the selected category. Try a different filter.</value>
+  </data>
+  <data name="translation.No maintenance items" xml:space="preserve">
+    <value>No maintenance items</value>
+  </data>
+  <data name="translation.No maintenance items found for this vehicle." xml:space="preserve">
+    <value>No maintenance items found for this vehicle.</value>
+  </data>
+  <data name="translation.No service records found." xml:space="preserve">
+    <value>No service records found.</value>
+  </data>
+  <data name="translation.No service records logged yet." xml:space="preserve">
+    <value>No service records logged yet.</value>
+  </data>
+  <data name="translation.No upcoming service projections available." xml:space="preserve">
+    <value>No upcoming service projections available.</value>
+  </data>
+  <data name="translation.Schedule Maintenance" xml:space="preserve">
+    <value>Schedule Maintenance</value>
+  </data>
+  <data name="translation.Service Projections" xml:space="preserve">
+    <value>Service Projections</value>
+  </data>
+  <data name="translation.Service Records" xml:space="preserve">
+    <value>Service Records</value>
+  </data>
+  <data name="translation.Service schedule, records, and upcoming maintenance" xml:space="preserve">
+    <value>Service schedule, records, and upcoming maintenance</value>
+  </data>
+  <data name="translation.Total Items" xml:space="preserve">
+    <value>Total Items</value>
+  </data>
+  <data name="translation.Total Spent" xml:space="preserve">
+    <value>Total Spent</value>
+  </data>
+  <data name="translation.general" xml:space="preserve">
+    <value>General</value>
   </data>
 </root>
