@@ -656,6 +656,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\FSMStateDiagram\FSMStateDiagram.ViewModel.cs" Link="FeatureViews\FSMStateDiagram\FSMStateDiagram.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FSMSubFSMPanel\FSMSubFSMPanel.Model.cs" Link="FeatureViews\FSMSubFSMPanel\FSMSubFSMPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FSMTimelineChart.Model.cs" Link="FeatureViews\FSMTimelineChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GasPriceAutoPollPage\GasPriceAutoPollPage.Model.cs" Link="FeatureViews\GasPriceAutoPollPage\GasPriceAutoPollPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GasPriceAutoPollPage\GasPriceAutoPollPage.ViewModel.cs" Link="FeatureViews\GasPriceAutoPollPage\GasPriceAutoPollPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Model.cs" Link="FeatureViews\GeneralSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.Source.cs" Link="FeatureViews\GeneralSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeneralSettings.ViewModel.cs" Link="FeatureViews\GeneralSettings.ViewModel.cs" />

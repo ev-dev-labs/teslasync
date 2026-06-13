@@ -103,6 +103,10 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("APIKeys","api-keys",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("APIKeys", static () => new FeatureViews.Admin.APIKeysPage());
 
+        // Admin / Gas Price Auto-Poll page (P2/W7) — parity port of web GasPriceAutoPollPage at route /gas-price.
+        // RouteTable already maps Page("GasPriceAutoPoll","gas-price",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("GasPriceAutoPoll", static () => new FeatureViews.Admin.GasPriceAutoPollPage());
+
         // Telemetry / Signals workspace page (P2/W7) — parity port of web SignalsWorkspacePage at route /signals.
         _viewModel.PageFactory.Register("SignalsWorkspace", static () => new FeatureViews.Telemetry.SignalsWorkspacePage());
 

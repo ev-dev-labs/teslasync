@@ -1,0 +1,87 @@
+=== p2-windows · W7 · page:admin/GasPriceAutoPoll (WinUI 3 / Fluent) ===
+Parity unit : page:admin/GasPriceAutoPoll   kind=page   web route=/gas-price
+Web source  : web/src/features/admin/pages/GasPriceAutoPollPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable observable state holder)
+  and <Name>.cs (the Fluent view). The generated prompt's idealized "GasPriceAutoPollPage.xaml + ViewModel.cs
+  under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface registers itself with the
+  W4 ShellPageFactory by route name ("GasPriceAutoPoll", already in RouteTable -> "gas-price",
+  RouteGroup.AdminDevTools), replacing its RoutePendingView fallback.
+- The web page is a thin PageContainer(title, subtitle) wrapper around the shared <GasPriceSettings/> surface.
+  The manifest scopes this unit to the 2 wrapper strings (gas.title / gas.subtitle); to avoid a stub page
+  (ADR-011) the native port faithfully reproduces BOTH regions the web page renders: the PageContainer header
+  AND the embedded GasPriceSettings card (fuel-chip header, auto-poll toggle, poll-interval select, Current
+  Price + Last Polled tiles, Poll Now + EIA source note).
+- Manifest models this unit as rendering from local state ("no API data sources"): the generated C# client
+  (ADR-004) exposes no /gas-price endpoint, so the view-model reads + mutates through an injected IGasPriceFeed
+  (default EmptyGasPriceFeed has no backend and returns null, so the panel renders its defaults and the toggle/
+  interval stay interactive via optimistic local edits). A host can supply a feed bound to the contract routes
+  GET /gas-price/status, POST /gas-price/toggle, PUT /gas-price/config, POST /gas-price/poll.
+- SI units N/A (no unit-bearing fields). Display formatting still flows through the shared SI display boundary:
+  ScalarFormatters.FormatCurrency (web formatCurrency) for the price and DateTimeFormatting.Format(..., Full)
+  (web formatDateTime) for the last-poll time; the web zero-time sentinel (0001-01-01T00:00:00Z -> "Never")
+  is reproduced verbatim.
+- All visible literals resolve through the ILocalizer facade with the verbatim web key names (the established
+  app pattern: ShellLocalizer -> Localization.Get(key, fallback) from Strings/{lang}/Resources.resw, falling
+  back to the English default in unpackaged/headless contexts). No new catalog rows required.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+# Strings (2) — every visible literal resolves through ILocalizer with the verbatim web key names.
+[x] string - gas.subtitle -> GasPriceProjection.Project + GasPriceAutoPollRegistration.Subtitle
+              localizer.GetString("gas.subtitle", "Automatically fetch US average gas prices from EIA");
+              rendered GasPriceAutoPollPage.cs#_subtitle (Subhead, the PageContainer header) and #_cardSubtitle
+              (Caption, the GasPriceSettings card header) via GasPriceDisplay.Subtitle.
+[x] string - gas.title    -> GasPriceProjection.Project + GasPriceAutoPollRegistration.Title
+              localizer.GetString("gas.title", "Gas Price Auto-Poll");
+              rendered GasPriceAutoPollPage.cs#_title (PageTitle, the PageContainer header) and #_cardTitle
+              (PanelTitle, the GasPriceSettings card header) via GasPriceDisplay.Title.
+
+PARITY_COVERED=2
+# Coverage asserted headlessly: GasPriceAutoPollPageTests.Projection_resolves_the_two_parity_strings_in_the_
+# loading_state and Registration_exposes_the_route_and_parity_strings record/return both keys through a
+# RecordingLocalizer / PassthroughLocalizer.
+
+# Beyond the 2 required strings (faithful reproduction of the embedded GasPriceSettings surface; no stub):
+#  - Panel: the GlassPanel card reproduced in full -> GasPriceAutoPollPage.cs#BuildCard (TsGlassPanel): fuel
+#    chip header, BuildControlsRow (auto-poll toggle + poll-interval select), BuildMetricsRow (Current Price +
+#    Last Polled tiles), BuildActionRow (Poll Now + EIA source note).
+#  - Data states (4): loading / empty / error / success -> GasPriceProjection.SelectState + GasPriceDisplay;
+#    tests State_loading_when_status_query_in_flight / State_empty_when_resolved_with_no_data /
+#    State_error_shows_banner_with_detail / State_success_when_status_has_data. The panel is never blank: the
+#    error InfoBar (TsAlertBanner Danger + Retry) sits above the still-rendered panel and the values shimmer
+#    (TsSkeleton) while loading.
+#  - 17 embedded component strings also resolved through ILocalizer (gas.autoPoll/enabled/disabled/running/
+#    stopped/pollInterval/intervalUpdated/daily/weekly/biweekly/monthly/currentPrice/lastPolled/never/
+#    pollTriggered/pollNow/source) + common.retry + error.loadFailed; asserted by
+#    GasPriceAutoPollPageTests.Projection_resolves_every_required_string_key.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/GasPriceAutoPollPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (pre-existing TeslaSync.App.Core CA analyzer warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  (GasPriceAutoPollPage sources + ShellWindow registration)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29336, Failed: 0, Skipped: 0 (incl. 18 new GasPriceAutoPollPageTests)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/GasPriceAutoPollPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/GasPriceAutoPollPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-GasPriceAutoPollPage.log
+# git commit -m "feat(apps/windows): GasPriceAutoPollPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE
