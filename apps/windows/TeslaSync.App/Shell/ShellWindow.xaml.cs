@@ -220,6 +220,8 @@ public sealed partial class ShellWindow : Window
             page.ConfigureAlertRulesRequested += (_, _) => NavigateTo("notifications/studio");
             return page;
         });
+        // Notifications / Channels page (P2/W7) — parity port of web ChannelsPage at route /notifications/channels.
+        _viewModel.PageFactory.Register("NotificationsChannels", static () => new FeatureViews.Notifications.ChannelsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

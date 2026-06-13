@@ -1,0 +1,86 @@
+p2-windows/W7 — page:notifications/Channels — native WinUI 3 ChannelsPage at web parity
+=======================================================================================
+Web source : web/src/features/notifications/pages/ChannelsPage.tsx
+Web route  : /notifications/channels  (nav name "Channels")
+Output     : apps/windows/TeslaSync.App/feature-views/ChannelsPage/{ChannelsPage.cs,
+             ChannelsPage.Model.cs, ChannelsPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Notifications
+              path does not exist — the Windows app is TeslaSync.App with C#-markup feature-views,
+              not XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json.)
+
+Shape of the parity unit
+------------------------
+The web page is a thin shell: a <PageContainer title subtitle copyLink> hosting <NotificationChannelsView />.
+It declares NO data sources, NO named panels, NO charts, NO maps and NO data states of its own — the manifest
+record (apps/parity/parity-manifest.json id=page:notifications/Channels) lists requiredCount=2, both strings.
+The hosted NotificationChannelsView is a separate, already-covered parity unit that owns its own four data
+states; this page owns only the titled, copy-link page-container chrome.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011)
+--------------------------------------------------------------
+- ChannelsPage : UserControl  — mounts the native PageContainer shared surface (the parity port of the web
+  PageContainer, apps/windows/TeslaSync.App/shared-surfaces/PageContainer.cs) with CopyLink=true and
+  PageContent = new NotificationChannelsView(...), reproducing the web tree 1:1.
+- ChannelsPageViewModel : INotifyPropertyChanged — the UI-thread-free state holder. With no data source it
+  resolves the page chrome (title + subtitle) through the injected ILocalizer and projects ChannelsPageDisplay;
+  LoadAsync/RefreshAsync exist for the page-lifecycle contract (re-resolve on locale change). No I/O in the view.
+- ChannelsPageRegistration — RouteName="NotificationsChannels" (matches RouteTable.cs L136
+  Page("NotificationsChannels","notifications/channels",RouteGroup.Notifications,"Channels")), Slug="ChannelsPage",
+  Title/Subtitle keyed through ILocalizer with the web key names + the web inline-default English copy.
+- EmptyNotificationChannelsSource — the no-backend feed the parameterless (shell-registered) page hosts the
+  channels view against, mirroring the other W7 pages' Empty*Source defaults.
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("NotificationsChannels", () => new FeatureViews.Notifications.ChannelsPage()).
+
+i18n note (R3/ADR-014)
+----------------------
+notifications.channels.title / .subtitle are NOT catalog entries in either the web i18n source
+(web/src/i18n/en.json) or the generated platform catalog (apps/windows/Strings/{en,ar,he}/Resources.resw) —
+the web resolves them as inline t(key, default) fallbacks. The native surface resolves them the same way:
+keyed ILocalizer.GetString(key, <same English default>) flowing through ShellLocalizer -> shell Localization
+(resw lookup -> English fallback). Zero hardcoded literals; the auto-generated resw is left untouched (it is
+machine-generated from web i18n by apps/shared/i18n/generators/gen-i18n.ts — hand-editing would strand drift).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+[x] string - notifications.channels.subtitle -> ChannelsPageRegistration.Subtitle (ChannelsPage.Model.cs)
+        localizer.GetString("notifications.channels.subtitle",
+          "Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.")
+        -> ChannelsPageDisplay.Subtitle -> ChannelsPageViewModel.Subtitle -> PageContainer.Subtitle (ChannelsPage.cs)
+[x] string - notifications.channels.title    -> ChannelsPageRegistration.Title (ChannelsPage.Model.cs)
+        localizer.GetString("notifications.channels.title", "Notification channels")
+        -> ChannelsPageDisplay.Title -> ChannelsPageViewModel.Title -> PageContainer title (ChannelsPage.cs)
+PARITY_COVERED=2
+# Coverage asserted headlessly: ChannelsPageTests.Registration_resolves_every_required_string_key records both
+# keys through a RecordingLocalizer; Display_projects_the_web_title_and_subtitle_defaults +
+# ViewModel_exposes_the_resolved_title_and_subtitle + ViewModel_reflects_a_localized_override assert the bound
+# state holder drives the chrome; Empty_source_* + Diagnostics_* + Registration_metadata_matches_the_route_table
+# cover the no-backend feed, the PII-safe view.opened diagnostic and the route binding. 10/10 passed.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChannelsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Notifications path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (whole solution; ChannelsPage sources, ShellWindow
+#   registration and the test all LF-normalised + style-clean)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26867, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ChannelsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ChannelsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-notifications-ChannelsPage.log
+# git commit -m "feat(apps/windows): ChannelsPage at web parity (W7 notifications)"
+
+EXIT=0
+STATUS=DONE
