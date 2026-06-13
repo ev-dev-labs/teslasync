@@ -813,3 +813,4 @@ p2-windows/shared-meaningful/W-0116-DraftRecoveryBanner.prompt.md
 p2-windows/shared-meaningful/W-0096-PlaybackControls.prompt.md
 p2-windows/shared-meaningful/W-0123-ImpersonationBanner.prompt.md
 p2-windows/shared-meaningful/W-0111-AchievementUnlockedToast.prompt.md
+p2-windows/shared-meaningful/W-0122-GuardedLink.prompt.md
