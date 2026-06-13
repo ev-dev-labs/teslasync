@@ -711,6 +711,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.ViewModel.cs" Link="FeatureViews\NotificationSettings.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.Model.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" Link="FeatureViews\NoVehicleSelected\NoVehicleSelected.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OnboardingPage\OnboardingPage.Model.cs" Link="FeatureViews\OnboardingPage\OnboardingPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OnboardingPage\OnboardingPage.Source.cs" Link="FeatureViews\OnboardingPage\OnboardingPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\OnboardingPage\OnboardingPage.ViewModel.cs" Link="FeatureViews\OnboardingPage\OnboardingPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Model.cs" Link="FeatureViews\OperationsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.Source.cs" Link="FeatureViews\OperationsSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OperationsSection.ViewModel.cs" Link="FeatureViews\OperationsSection.ViewModel.cs" />

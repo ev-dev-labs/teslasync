@@ -97,5 +97,14 @@
     "requiredCount": 31,
     "promptId": "p2-windows/W7/windows-page-notifications-AlertRulesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AlertRulesPage.log"
+  },
+  {
+    "unitId": "page:onboarding/Onboarding",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 28,
+    "requiredCount": 28,
+    "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
   }
 ]
