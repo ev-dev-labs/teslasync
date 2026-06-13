@@ -106,5 +106,14 @@
     "requiredCount": 28,
     "promptId": "p2-windows/W7/windows-page-onboarding-OnboardingPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:system/DBHealth",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 55,
+    "requiredCount": 55,
+    "promptId": "p2-windows/W7/windows-page-system-DBHealthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-DBHealthPage.log"
   }
 ]

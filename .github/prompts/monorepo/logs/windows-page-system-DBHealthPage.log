@@ -1,0 +1,180 @@
+=== p2-windows · W7 · page:system/DBHealth (WinUI 3 / Fluent) ===
+Parity unit : page:system/DBHealth   kind=page   web route=/db-health
+Web source  : web/src/features/system/pages/DBHealthPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  ApiLogsPage / FeedbackQueuePage / SchemaDriftPage do. The generated prompt's idealized
+  "DBHealthPage.xaml + DBHealthPageViewModel.cs under TeslaSync/Features/System" is mapped onto these real
+  conventions. The surface registers itself with the W4 ShellPageFactory by route name ("DBHealthDashboard",
+  already in RouteTable.cs → /db-health, group Diagnostics).
+- Namespace: TeslaSync.App.FeatureViews.Diagnostics (the page lives in the Diagnostics nav group). The literal web
+  folder name "system" maps to a C# namespace ending in `.System`, which collides with the BCL `System` root inside
+  the namespace body (FeatureViews.System would shadow global System for inline-qualified references); the repo's
+  own "system" page (StatusPageSkeleton) likewise uses a disambiguated namespace (SystemStatus). `.Diagnostics` is
+  the route-group-accurate, collision-free choice; the ledger unitId stays page:system/DBHealth.
+- Data binding (ADR-004): the three manifest data sources are useDBStats (GET /dev-tools/db-stats), useMigrations
+  (GET /dev-tools/migration-status) and useConnectionPool (GET /dev-tools/runtime-info), none parameterized. The
+  view-model reads through an injected IDbHealthFeed; the default EmptyDbHealthFeed resolves the empty states, and
+  the generated-client-backed DbHealthClientFeed (DBHealthPage.Source.cs) binds to the generated OpenAPI operations
+  get_api_v1_dev_tools_db_stats / _migration_status / _runtime_info, asserted in tests via FakeApiClient. No HTTP
+  touches the view. Each source has an independent loading/error/data state; a stats or migration failure raises the
+  top "Error loading data" banner (web queryError = statsError || migrationError); a pool failure renders the
+  "no pool data" empty state with no banner (web useConnectionPool surfaces no page-level error).
+- The Go wire shape is minimal (db-stats → tables[{schema,name,row_count}] + table_count + database_size;
+  migration-status → {version,dirty}; runtime-info → {…,max_open,open,in_use,idle,wait_count}); size_bytes,
+  index_count, last_vacuum, pending, migrations[], current_version and wait_duration_ms are NOT returned, so every
+  web null-safe branch (em-dash size/indexes/last-vacuum, the >100MB large-table highlight, the no-migration-history
+  empty state, waitDurationMs ?? 0) is reproduced via tolerant snake_case parsers (DbStatsSnapshot/MigrationSnapshot/
+  PoolSnapshot.FromJson + JsonReadHelpers).
+- The web page renders all states INSIDE the page body (per-region), so the native port reproduces them as visible
+  Fluent regions per ADR-006: per-region loading → TsSkeleton / TsChartContainer Loading; error → top
+  TsAlertBanner(Danger); empty → TsEmptyState / TsChartContainer Empty / TsDataTable EmptyMessage; success → the
+  populated stat cards, bar chart, table and panels. Never a blank region.
+- SI units: the only unit-bearing display is bytes (DB size / table size), formatted at the display boundary by the
+  page-local FormatBytes (a 1:1 port of the web page-local formatBytes: B exact, KB/MB one decimal, GB two decimals).
+  Row/pool counts format through the shared NumberFormatting port (web fmtInt); timestamps (recent migrations /
+  last vacuum, never populated by the current backend but implemented for fidelity) through DateTimeFormatting.
+- All 41 i18n keys resolve through the ILocalizer facade with the exact web key names. 38 already existed in
+  Strings/en/Resources.resw (auto-imported from web en.json); the 3 keys that exist only as inline t() defaults in
+  the web source (dbHealth.chartTitle.aria, dbHealth.noMigrationData, dbHealth.noPoolData) were added verbatim,
+  alphabetically placed. The ar/he catalogs lag en by design; the app falls back to the English default via
+  ILocalizer until translated.
+- An auto-refresh DispatcherQueueTimer (30 s) mirrors the web INTERVALS.STANDARD refetch so the "Auto-refresh 30s"
+  indicator is truthful; the table-sort control (Size / Rows / Name) drives the view-model's sort key, which
+  re-projects the sorted rows (web setSortKey + sortedTables useMemo).
+
+=== PARITY ===
+PARITY_REQUIRED=55
+
+# Panels (8) — every web region reproduced as a Fluent Card/Mica region
+[x] panel  - Total-DB-Size       -> DBHealthPage.cs _totalSizeCard (TsStatCard) <- DbHealthDisplay.StatCards[0]
+             (DbHealthProjection.Project: dbHealth.totalSize + FormatBytes(database_size)); web StatCard "Total DB
+             Size"; test StatCards_project_the_four_summary_metrics + FormatBytes_matches_the_web_page_local_contract
+[x] panel  - Tables              -> DBHealthPage.cs _tablesCard (TsStatCard) <- StatCards[1] (dbHealth.tables;
+             tables.Count, em-dash while loading); web StatCard "Tables"; test StatCards_project_the_four_summary_metrics
+             + Tables_stat_card_is_em_dash_while_loading
+[x] panel  - Large-Tables-100MB  -> DBHealthPage.cs _largeTablesCard (TsStatCard) <- StatCards[2] (dbHealth.largeTables;
+             LargeTableThreshold=100MB); web StatCard "Large Tables (>100MB)"; test
+             Large_tables_counts_only_tables_over_the_threshold
+[x] panel  - Migration-Version   -> DBHealthPage.cs _migrationCard (TsStatCard) <- StatCards[3] (dbHealth.migration;
+             version ?? currentVersion ?? em-dash); web StatCard "Migration Version"; test
+             StatCards_project_the_four_summary_metrics
+[x] panel  - Table-Sizes-Top-15  -> DBHealthPage.cs _chartContainer (TsChartContainer) + RenderChart; web
+             ChartContainer "Table Sizes (Top 15)"; test Chart_projects_up_to_fifteen_bars_sorted_by_row_count
+[x] panel  - GlassPanel6         -> DBHealthPage.cs _tablesPanel (TsGlassPanel) tables list: BuildTablesPanel +
+             BuildTableContent (sort control + TsDataTable / skeleton / EmptyMessage); web tables GlassPanel; test
+             Table_rows_sort_by_rows_descending + Table_rows_sort_by_name_ascending
+[x] panel  - GlassPanel7         -> DBHealthPage.cs _migrationPanel (TsGlassPanel): BuildMigrationContent (version /
+             status / pending / recent migrations / empty); web Migration Status GlassPanel; test
+             Migration_panel_projects_version_clean_status_and_recent_entries + _shows_dirty_and_pending + _empty_when_no_history
+[x] panel  - GlassPanel8         -> DBHealthPage.cs _poolPanel (TsGlassPanel): BuildPoolContent (six metrics + usage
+             bar / empty); web Connection Pool GlassPanel; test Pool_panel_projects_six_metrics_and_usage +
+             Pool_usage_flags_high_utilisation + Pool_panel_empty_when_max_open_absent
+
+# Charts (2) — native W3 chart wrappers, never a web canvas
+[x] chart  - ChartContainer      -> DBHealthPage.cs _chartContainer (TsChartContainer) RenderChart: State =
+             Loading/Empty/Ready, AccessibleSummary (dbHealth.chartTitle.aria), DataView (XLabel + Series); web
+             ChartContainer; test State_loading/empty/success + Chart_projects_up_to_fifteen_bars
+[x] chart  - BarChart            -> DBHealthPage.cs BuildBarChart (native horizontal bars: category name + ratio bar +
+             value) + BuildChartSeries; DbHealthProjection.BuildBars (top-15 by row_count, name truncation, 0..1
+             ratio); web recharts BarChart layout="vertical"; test Chart_projects_up_to_fifteen_bars_sorted_by_row_count
+             + Chart_truncates_long_table_names
+
+# Data states (4) — implemented for every source
+[x] state  - loading             -> DbHealthState.Loading (DbHealthProjection.Project: anyLoading && !anyData);
+             Display.ChartLoading/TablesLoading/MigrationLoading/PoolLoading; test State_loading_when_every_query_is_in_flight
+[x] state  - empty               -> DbHealthState.Empty (resolved, no data); per-region TablesEmptyMessage /
+             NoMigrationDataMessage / NoPoolDataMessage; test State_empty_when_resolved_with_no_data +
+             ViewModel_empty_feed_resolves_every_empty_branch
+[x] state  - error               -> DbHealthState.Error + Display.ShowErrorBanner (stats||migration failure, web
+             queryError); test State_error_when_a_query_fails_and_the_banner_shows + ViewModel_stats_failure_raises_the_error_banner
+             + ViewModel_pool_failure_renders_empty_pool_without_banner
+[x] state  - success             -> DbHealthState.Success (anyData); populated cards/chart/table/panels; test
+             State_success_when_data_present + ViewModel_success_populates_every_panel
+
+# Strings (41) — every visible literal resolves from Strings/en/Resources.resw via ILocalizer (web key names)
+[x] string - dbHealth.autoRefresh       -> DbHealthProjection.Project localizer.GetString("dbHealth.autoRefresh","Auto-refresh 30s")
+[x] string - dbHealth.chartTitle        -> localizer.GetString("dbHealth.chartTitle","Table Sizes (Top 15)")
+[x] string - dbHealth.chartTitle.aria   -> localizer.GetString("dbHealth.chartTitle.aria","Top fifteen database table sizes horizontal bar chart")  (added to resw)
+[x] string - dbHealth.clean             -> localizer.GetString("dbHealth.clean","\u2713 Clean")
+[x] string - dbHealth.col.rows          -> localizer.GetString("dbHealth.col.rows","Rows")
+[x] string - dbHealth.col.table         -> localizer.GetString("dbHealth.col.table","Table")
+[x] string - dbHealth.currentVersion    -> localizer.GetString("dbHealth.currentVersion","Current Version")
+[x] string - dbHealth.dirty             -> localizer.GetString("dbHealth.dirty","\u26a0 Dirty")
+[x] string - dbHealth.error             -> localizer.GetString("dbHealth.error","Error loading data") -> ErrorBannerTitle
+[x] string - dbHealth.largeTables       -> localizer.GetString("dbHealth.largeTables","Large Tables (>100MB)")
+[x] string - dbHealth.migration         -> localizer.GetString("dbHealth.migration","Migration Version")
+[x] string - dbHealth.migrationTitle    -> localizer.GetString("dbHealth.migrationTitle","Migration Status")
+[x] string - dbHealth.noMigrationData   -> localizer.GetString("dbHealth.noMigrationData","Migration data unavailable")  (added to resw)
+[x] string - dbHealth.noMigrations      -> localizer.GetString("dbHealth.noMigrations","No migration history available")
+[x] string - dbHealth.noPoolData        -> localizer.GetString("dbHealth.noPoolData","Connection pool data unavailable")  (added to resw)
+[x] string - dbHealth.noTables          -> localizer.GetString("dbHealth.noTables","No tables found")
+[x] string - dbHealth.pending           -> localizer.GetString("dbHealth.pending","Pending")
+[x] string - dbHealth.pool.idle         -> localizer.GetString("dbHealth.pool.idle","Idle")
+[x] string - dbHealth.pool.inUse        -> localizer.GetString("dbHealth.pool.inUse","In Use")
+[x] string - dbHealth.pool.maxOpen      -> localizer.GetString("dbHealth.pool.maxOpen","Max Open")
+[x] string - dbHealth.pool.open         -> localizer.GetString("dbHealth.pool.open","Open")
+[x] string - dbHealth.pool.waitCount    -> localizer.GetString("dbHealth.pool.waitCount","Wait Count")
+[x] string - dbHealth.pool.waitDuration -> localizer.GetString("dbHealth.pool.waitDuration","Wait Duration")
+[x] string - dbHealth.poolTitle         -> localizer.GetString("dbHealth.poolTitle","Connection Pool")
+[x] string - dbHealth.poolUsage         -> localizer.GetString("dbHealth.poolUsage","Pool Usage")
+[x] string - dbHealth.recentMigrations  -> localizer.GetString("dbHealth.recentMigrations","Recent Migrations")
+[x] string - dbHealth.rows              -> localizer.GetString("dbHealth.rows","Rows") -> RowsSeriesName
+[x] string - dbHealth.sort.name         -> localizer.GetString("dbHealth.sort.name","Name")
+[x] string - dbHealth.sort.rows         -> localizer.GetString("dbHealth.sort.rows","Rows")
+[x] string - dbHealth.sort.size         -> localizer.GetString("dbHealth.sort.size","Size")
+[x] string - dbHealth.status            -> localizer.GetString("dbHealth.status","Status")
+[x] string - dbHealth.subtitle          -> localizer.GetString("dbHealth.subtitle","Database health metrics and table statistics")
+[x] string - dbHealth.table.indexes     -> localizer.GetString("dbHealth.table.indexes","Indexes")
+[x] string - dbHealth.table.lastVacuum  -> localizer.GetString("dbHealth.table.lastVacuum","Last Vacuum")
+[x] string - dbHealth.table.name        -> localizer.GetString("dbHealth.table.name","Table")
+[x] string - dbHealth.table.rows        -> localizer.GetString("dbHealth.table.rows","Rows")
+[x] string - dbHealth.table.size        -> localizer.GetString("dbHealth.table.size","Size")
+[x] string - dbHealth.tables            -> localizer.GetString("dbHealth.tables","Tables")
+[x] string - dbHealth.tablesTitle       -> localizer.GetString("dbHealth.tablesTitle","Tables")
+[x] string - dbHealth.title             -> localizer.GetString("dbHealth.title","DB Health") -> Title / DbHealthRegistration.Title
+[x] string - dbHealth.totalSize         -> localizer.GetString("dbHealth.totalSize","Total DB Size")
+
+PARITY_COVERED=55
+# Coverage asserted headlessly: DBHealthPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every one of the 41 keys above through a RecordingLocalizer; the four
+# data-state tests + the stat-card / chart / table-sort / migration / pool projection tests assert each region
+# renders from the bound DbHealthDisplay state holder; the three ClientFeed_sends_the_*_operation tests assert the
+# generated-client GET request shaping (web useDBStats / useMigrations / useConnectionPool) and
+# ClientFeed_propagates_api_exception the failure path; the ViewModel_* tests assert the
+# loading/empty/error(stats)/success matrix, the pool-error-without-banner branch, the sort re-projection and the
+# refresh reload of all three queries.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DBHealthPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s), 0 Warning(s) in TeslaSync.App
+#   (pre-existing TeslaSync.App.Core CA informational warnings only; none in the new feature surface)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (DBHealthPage Model/Source/ViewModel/view
+#   + DBHealthPageTests + ShellWindow registration + test csproj links + Resources.resw, all LF/utf-8-no-BOM)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27131, Failed: 0, Skipped: 0
+#   (incl. 40 DBHealthPageTests)
+TEST_EXIT=0
+PARITY_COVERED=55
+PARITY_REQUIRED=55
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DBHealthPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DBHealthPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-DBHealthPage.log
+# git commit -m "feat(apps/windows): DBHealthPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE

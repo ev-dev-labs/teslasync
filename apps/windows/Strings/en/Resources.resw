@@ -7938,6 +7938,9 @@
   <data name="translation.dbHealth.chartTitle" xml:space="preserve">
     <value>Table Sizes (Top 15)</value>
   </data>
+  <data name="translation.dbHealth.chartTitle.aria" xml:space="preserve">
+    <value>Top fifteen database table sizes horizontal bar chart</value>
+  </data>
   <data name="translation.dbHealth.clean" xml:space="preserve">
     <value>✓ Clean</value>
   </data>
@@ -7965,8 +7968,14 @@
   <data name="translation.dbHealth.migrationTitle" xml:space="preserve">
     <value>Migration Status</value>
   </data>
+  <data name="translation.dbHealth.noMigrationData" xml:space="preserve">
+    <value>Migration data unavailable</value>
+  </data>
   <data name="translation.dbHealth.noMigrations" xml:space="preserve">
     <value>No migration history available</value>
+  </data>
+  <data name="translation.dbHealth.noPoolData" xml:space="preserve">
+    <value>Connection pool data unavailable</value>
   </data>
   <data name="translation.dbHealth.noTables" xml:space="preserve">
     <value>No tables found</value>
