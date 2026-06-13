@@ -764,3 +764,4 @@ p2-windows/pages/notifications/AlertRulesPage.prompt.md
 p2-windows/pages/notifications/ArchivedPage.prompt.md
 p2-windows/pages/notifications/ChannelsPage.prompt.md
 p2-windows/pages/notifications/BrowserNotificationsPage.prompt.md
+p2-windows/pages/notifications/QuietHoursPage.prompt.md
