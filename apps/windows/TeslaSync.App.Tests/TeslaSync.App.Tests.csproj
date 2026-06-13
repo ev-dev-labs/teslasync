@@ -452,6 +452,8 @@
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.Source.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" Link="FeatureViews\ByteSizeConverter\ByteSizeConverter.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChangesPanel\ChangesPanel.Model.cs" Link="FeatureViews\ChangesPanel\ChangesPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChannelsPage\ChannelsPage.Model.cs" Link="FeatureViews\ChannelsPage\ChannelsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChannelsPage\ChannelsPage.ViewModel.cs" Link="FeatureViews\ChannelsPage\ChannelsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" Link="FeatureViews\ChargerSpecsPanel\ChargerSpecsPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargerTypeBreakdown\ChargerTypeBreakdown.Model.cs" Link="FeatureViews\ChargerTypeBreakdown\ChargerTypeBreakdown.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargerTypeChart\ChargerTypeChart.Model.cs" Link="FeatureViews\ChargerTypeChart\ChargerTypeChart.Model.cs" />

@@ -192,6 +192,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Exports", static () => new FeatureViews.Exports.ExportsPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
+        // Notifications / Channels page (P2/W7) — parity port of web ChannelsPage at route /notifications/channels.
+        _viewModel.PageFactory.Register("NotificationsChannels", static () => new FeatureViews.Notifications.ChannelsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
