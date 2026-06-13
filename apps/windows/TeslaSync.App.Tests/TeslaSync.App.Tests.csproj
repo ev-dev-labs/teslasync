@@ -1401,6 +1401,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Model.cs" Link="SharedSurfaces\InstallPrompt.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.Source.cs" Link="SharedSurfaces\InstallPrompt.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InstallPrompt.ViewModel.cs" Link="SharedSurfaces\InstallPrompt.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\OnboardingWizard.Model.cs" Link="SharedSurfaces\OnboardingWizard.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\OnboardingWizard.Source.cs" Link="SharedSurfaces\OnboardingWizard.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\OnboardingWizard.ViewModel.cs" Link="SharedSurfaces\OnboardingWizard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Model.cs" Link="SharedSurfaces\KpiOverviewCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.Source.cs" Link="SharedSurfaces\KpiOverviewCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\KpiOverviewCard.ViewModel.cs" Link="SharedSurfaces\KpiOverviewCard.ViewModel.cs" />
