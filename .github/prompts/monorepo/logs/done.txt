@@ -692,3 +692,4 @@ p3-android/shared-meaningful/A-0103-ScoreBadge.prompt.md
 p3-android/shared-meaningful/A-0104-ServiceStatus.prompt.md
 p3-android/shared-meaningful/A-0105-SourceLayerBadge.prompt.md
 p3-android/shared-meaningful/A-0108-TimeStamp.prompt.md
+p3-android/shared-meaningful/A-0109-UsageCard.prompt.md
