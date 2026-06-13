@@ -705,3 +705,4 @@ p3-android/shared-meaningful/A-0124-InlineCallout.prompt.md
 p3-android/shared-meaningful/A-0117-DraftRestorePrompt.prompt.md
 p3-android/shared-meaningful/A-0121-GotoIndicator.prompt.md
 p3-android/shared-meaningful/A-0115-CookieConsentBanner.prompt.md
+p3-android/shared-meaningful/A-0118-EditConflictBanner.prompt.md
