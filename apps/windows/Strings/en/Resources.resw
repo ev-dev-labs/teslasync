@@ -3306,6 +3306,129 @@
   <data name="translation.anomaly.value" xml:space="preserve">
     <value>Value</value>
   </data>
+  <data name="translation.apiKeys.badge.expired" xml:space="preserve">
+    <value>Expired</value>
+  </data>
+  <data name="translation.apiKeys.copy.aria" xml:space="preserve">
+    <value>Copy API key</value>
+  </data>
+  <data name="translation.apiKeys.copy.title" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="translation.apiKeys.createButton" xml:space="preserve">
+    <value>Create Key</value>
+  </data>
+  <data name="translation.apiKeys.created.done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="translation.apiKeys.created.warning" xml:space="preserve">
+    <value>Copy this key now — it won't be shown again.</value>
+  </data>
+  <data name="translation.apiKeys.delete.cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="translation.apiKeys.delete.confirm" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="translation.apiKeys.delete.message" xml:space="preserve">
+    <value>Are you sure you want to permanently delete the key "{{name}}"?</value>
+  </data>
+  <data name="translation.apiKeys.delete.title" xml:space="preserve">
+    <value>Delete API Key</value>
+  </data>
+  <data name="translation.apiKeys.empty.message" xml:space="preserve">
+    <value>Create an API key to enable programmatic access to TeslaSync data and controls.</value>
+  </data>
+  <data name="translation.apiKeys.empty.title" xml:space="preserve">
+    <value>No API keys</value>
+  </data>
+  <data name="translation.apiKeys.error.auth" xml:space="preserve">
+    <value>Sign in to manage API keys</value>
+  </data>
+  <data name="translation.apiKeys.error.load" xml:space="preserve">
+    <value>Failed to load API keys</value>
+  </data>
+  <data name="translation.apiKeys.error.offline" xml:space="preserve">
+    <value>You're offline — showing the last saved keys</value>
+  </data>
+  <data name="translation.apiKeys.error.title" xml:space="preserve">
+    <value>Couldn't load API keys</value>
+  </data>
+  <data name="translation.apiKeys.form.cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="translation.apiKeys.form.generate" xml:space="preserve">
+    <value>Generate Key</value>
+  </data>
+  <data name="translation.apiKeys.form.name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="translation.apiKeys.form.nameHint" xml:space="preserve">
+    <value>My Application</value>
+  </data>
+  <data name="translation.apiKeys.form.nameRequired" xml:space="preserve">
+    <value>Name is required.</value>
+  </data>
+  <data name="translation.apiKeys.form.permissions" xml:space="preserve">
+    <value>Permissions</value>
+  </data>
+  <data name="translation.apiKeys.modal.createdTitle" xml:space="preserve">
+    <value>API Key Created</value>
+  </data>
+  <data name="translation.apiKeys.modal.newTitle" xml:space="preserve">
+    <value>New API Key</value>
+  </data>
+  <data name="translation.apiKeys.offlineChip" xml:space="preserve">
+    <value>Offline</value>
+  </data>
+  <data name="translation.apiKeys.permission.admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="translation.apiKeys.permission.read" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="translation.apiKeys.permission.readWrite" xml:space="preserve">
+    <value>Read-Write</value>
+  </data>
+  <data name="translation.apiKeys.reveal.aria" xml:space="preserve">
+    <value>API key, click to reveal</value>
+  </data>
+  <data name="translation.apiKeys.row.created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="translation.apiKeys.row.lastUsed" xml:space="preserve">
+    <value>Last used</value>
+  </data>
+  <data name="translation.apiKeys.row.revoke" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="translation.apiKeys.staleChip" xml:space="preserve">
+    <value>Stale</value>
+  </data>
+  <data name="translation.apiKeys.subtitle" xml:space="preserve">
+    <value>Manage programmatic access to TeslaSync</value>
+  </data>
+  <data name="translation.apiKeys.title" xml:space="preserve">
+    <value>API Keys</value>
+  </data>
+  <data name="translation.apiKeys.toast.created" xml:space="preserve">
+    <value>API key created</value>
+  </data>
+  <data name="translation.apiKeys.toast.createError" xml:space="preserve">
+    <value>Failed to create API key</value>
+  </data>
+  <data name="translation.apiKeys.toast.deleted" xml:space="preserve">
+    <value>API key deleted</value>
+  </data>
+  <data name="translation.apiKeys.toast.deleteError" xml:space="preserve">
+    <value>Failed to delete API key</value>
+  </data>
+  <data name="translation.apiKeys.toast.revoked" xml:space="preserve">
+    <value>API key revoked</value>
+  </data>
+  <data name="translation.apiKeys.toast.revokeError" xml:space="preserve">
+    <value>Failed to revoke API key</value>
+  </data>
   <data name="translation.apiLogs.adjustFilters" xml:space="preserve">
     <value>Try adjusting your filters</value>
   </data>
