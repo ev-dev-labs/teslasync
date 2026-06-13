@@ -897,6 +897,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Source.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.ViewModel.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatorTempChart.Model.cs" Link="FeatureViews\StatorTempChart.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatusApiDocsPage\StatusApiDocsPage.Examples.cs" Link="FeatureViews\StatusApiDocsPage\StatusApiDocsPage.Examples.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatusApiDocsPage\StatusApiDocsPage.Model.cs" Link="FeatureViews\StatusApiDocsPage\StatusApiDocsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatusApiDocsPage\StatusApiDocsPage.ViewModel.cs" Link="FeatureViews\StatusApiDocsPage\StatusApiDocsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusHeader\StatusHeader.Model.cs" Link="FeatureViews\StatusHeader\StatusHeader.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatusPageSkeleton\StatusPageSkeleton.Model.cs" Link="FeatureViews\StatusPageSkeleton\StatusPageSkeleton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SubscribeCard\SubscribeCard.Model.cs" Link="FeatureViews\SubscribeCard\SubscribeCard.Model.cs" />

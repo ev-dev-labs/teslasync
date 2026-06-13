@@ -1,0 +1,169 @@
+=== p2-windows · W7 · page:system/StatusApiDocs (WinUI 3 / Fluent) ===
+Parity unit : page:system/StatusApiDocs   kind=page   web route=/docs/status-api
+Web source  : web/src/features/system/pages/StatusApiDocsPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/StatusApiDocsPage/ (+ NavigationView registration, test, ledger)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent
+  view), exactly as the sibling W7 HelpPage / DataExportPage do. The generated prompt's idealized
+  "TeslaSync/Features/System/StatusApiDocsPage.xaml + StatusApiDocsPageViewModel.cs" is mapped onto these real
+  conventions. The namespace is TeslaSync.App.FeatureViews.SystemOps (aligns with RouteGroup.SystemOps, the
+  manifest's system/ group; a `.System` sub-namespace would shadow the global System namespace).
+- A fourth file, StatusApiDocsPage.Examples.cs, holds ONLY the six verbatim example-response payloads. It is
+  generated from the web source via JSON.stringify(example, null, 2) so each disclosure shows the identical JSON a
+  self-hosted operator reads on the web docs page (byte-for-byte; the live example keeps the web's escaped
+  backslash-n, rendered as two backslashes then 'n'). Pure data → linked into the test project for headless assert.
+- Data binding (ADR-004): the manifest declares NO API data sources — the web page is explicit static
+  documentation ("Static content — no backend round-trip"; it imports no hook, only react-router Link + lucide
+  icons). So there is no generated-client feed and no <Name>.Source.cs; StatusApiDocsPageViewModel projects the
+  static six-endpoint catalog through StatusApiDocsProjection with zero HTTP. LoadAsync/RefreshAsync honour the
+  page lifecycle (OnLoaded → LoadAsync) by re-projecting synchronously (no fabricated network call).
+- One data state (manifest: success): the web page has no fetch/loading/error branch, so the honest native union
+  is StatusApiDocsState.Success (the catalog yielded endpoints → overview + endpoint cards + footer) plus a
+  defensive StatusApiDocsState.Empty branch (a null/empty catalog → overview + a friendly TsEmptyState + footer,
+  never a blank region, ADR-011). The overview and footer panels are always visible.
+- Panels (ADR-005), in web source order, mapped to the manifest's three GlassPanel slots:
+  · GlassPanel1 = the per-endpoint card (web the reusable <Endpoint> component, instantiated 6×). Each is a
+    TsGlassPanel (Mica/glass via the W1 surface tokens) holding a method badge (TsBadge Status=Info, web
+    Badge variant="info"), the code path (mono + cyan accent token, web text-cyan-200), an optional query hint
+    (muted, web ?{query}), the description, and a TsAccordion ("Example response", web <details>/<summary>)
+    revealing the verbatim example JSON in a horizontally-scrollable mono block (web <pre> overflow-x-auto).
+  · GlassPanel2 = the overview panel (web the first <GlassPanel>): a Server-glyph "Overview" heading, two prose
+    paragraphs (mounting/auth, the "Designed for" integration list) and the amber additive-only note (Code glyph +
+    warning token, web text-amber-200/80 with the <Code> icon).
+  · GlassPanel3 = the closing muted footer panel (web the last <GlassPanel>).
+  No hardcoded colours/typography — DisplayTokens (TsColor*/TsChartSpeedBrush/TsColorWarningBrush/TsRadius* +
+  TsTypeFontFamilyMono) drive light/dark/high-contrast from W1.
+- Header (web PageContainer title/subtitle/actions): the shared native PageContainer surface (the W3 port of
+  web/src/components/layout/PageContainer.tsx) carries the heading-level-1 title + muted subtitle; the actions
+  slot hosts a chromeless "Back to System Status" HyperlinkButton (web the ArrowLeft Link to="/system-status")
+  whose Click raises NavigationRequested → the shell NavigateTo. The page body is centred at max-width 768
+  (web max-w-3xl mx-auto) with 20px section gaps (web space-y-5).
+- Navigation entry: RouteTable.cs already maps Page("StatusApiDocs","docs/status-api",RouteGroup.SystemOps,…) —
+  unchanged. ShellWindow.xaml.cs registers the page factory
+  (new FeatureViews.SystemOps.StatusApiDocsPage(); NavigationRequested → NavigateTo). The back-link target
+  (/system-status) is an existing canonical route — this page introduces NO new surface.
+- i18n (ADR-014): the web page hardcodes every literal (it has zero useTranslation calls; the manifest extracted 0
+  string keys). The platform catalog Strings/en|ar|he/Resources.resw is AUTO-GENERATED from the web i18n source
+  ("do not edit by hand") and therefore carries no statusApiDocs.* keys. Per the established HelpPage precedent,
+  every visible literal is still externalised through ILocalizer.GetString(key, englishFallback) under a new
+  statusApiDocs.* namespace (title/subtitle/back/overview.{title,p1,p2,note}/exampleResponse/footer/empty +
+  endpoints.<id>.description). Absent keys resolve to the verbatim web English copy via the fallback (the
+  ShellLocalizer → ResourceLoader bridge), so the page is fully localisable yet introduces zero hardcoded UI text
+  and requires no hand-edit of the generated catalog. The endpoint method/path/query strings and the JSON example
+  payloads are code/data literals (the web renders them as <code>/<pre>, not translatable prose) and live in the
+  catalog, matching how HelpPage keeps routes as data.
+- a11y (ADR-015): AutomationProperties names on the page (title), each endpoint card (method + path + description)
+  and the example disclosures; decorative glyphs set AccessibilityView=Raw; the endpoint host is a Main landmark;
+  the page exposes a Group automation peer; light/dark + high-contrast honoured through the W1 tokens.
+- Units (ADR-005/P1-S5): the page documents an API contract and renders no measured quantities, so no unit
+  conversion is involved; the example payloads are reproduced verbatim from the web source.
+
+PRE-EXECUTION FINDING (fixed — tightly coupled, build-blocking):
+- ShellWindow.xaml.cs is the single NavigationView registration seam this prompt must edit. At HEAD its "Commands"
+  page-factory lambda was syntactically unclosed (the `return page; });` was lost in a prior integration merge,
+  splicing the next comment straight after `page.ViewHistoryRequested += …`). That C# syntax error fails the
+  pass-1 compile, which crashes the WinUI XAML markup compiler (WMC9999 null-ref) and cascades into 84 "unknown
+  type" errors — the whole TeslaSync.App project was RED at baseline. Because the page cannot be registered (nor
+  the build gate pass) without editing this exact constructor, the coupled one-line fix (restore
+  `return page; });` for the Commands lambda) was applied alongside the StatusApiDocs registration. No other
+  behaviour changed.
+
+=== PARITY ===
+PARITY_REQUIRED=4
+- [x] panel — GlassPanel1 (endpoint card, web <Endpoint>, instantiated 6×)
+      evidence: StatusApiDocsPage.cs → StatusApiDocsPage.BuildEndpointPanel(StatusEndpointItem,string) returns a
+      TsGlassPanel (method TsBadge + mono/cyan path + query caption + description + TsAccordion example disclosure);
+      driven from StatusApiEndpointCatalog.Default (6 entries) via StatusApiDocsProjection.ProjectEndpoints.
+      headless asserts: Six_endpoints_render_in_web_order, Endpoints_carry_the_web_paths, Every_endpoint_is_a_GET,
+      Only_uptime_and_incidents_carry_a_query_hint, Endpoint_description_and_automation_name_resolve,
+      Endpoint_examples_are_the_verbatim_pretty_printed_json, Catalog_is_the_six_canonical_endpoints.
+- [x] panel — GlassPanel2 (overview)
+      evidence: StatusApiDocsPage.cs → StatusApiDocsPage.BuildOverviewPanel(StatusApiDocsDisplay) returns a
+      TsGlassPanel (Server-glyph heading + 2 paragraphs + BuildOverviewNote amber note); content from
+      StatusApiDocsProjection.ProjectOverview (StatusOverviewParagraph[], the third IsNote=true).
+      headless asserts: Overview_renders_two_paragraphs_then_the_amber_note, Overview_paragraphs_resolve_the_web_copy.
+- [x] panel — GlassPanel3 (footer)
+      evidence: StatusApiDocsPage.cs → StatusApiDocsPage.BuildFooterPanel(StatusApiDocsDisplay) returns a
+      TsGlassPanel with the muted footer text (StatusApiDocsDisplay.Footer).
+      headless assert: Framing_strings_resolve_the_web_defaults (Footer starts "Need an additional endpoint…").
+- [x] state — success data state
+      evidence: StatusApiDocsProjection.Project derives StatusApiDocsState.Success when the catalog yields
+      endpoints (else the defensive Empty surface); surfaced by StatusApiDocsPageViewModel.State.
+      headless asserts: Default_catalog_projects_success_state, Empty_catalog_projects_the_defensive_empty_state,
+      ViewModel_default_catalog_is_success_with_six_endpoints, ViewModel_empty_catalog_degrades_to_empty_with_message.
+PARITY_COVERED=4
+
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/StatusApiDocsPageTests.cs — 20 tests, all
+# passing). The framing/endpoint i18n keys are pinned by Projection_resolves_every_framing_string (9 keys) and
+# Projection_resolves_every_endpoint_description_string (6 keys) through a RecordingLocalizer; the web English
+# defaults by Framing_strings_resolve_the_web_defaults; the view-model load/refresh/reload flow + registration
+# (slug=StatusApiDocsPage, route=StatusApiDocs, back=/system-status) + PII-safe Diagnostics
+# (view.opened slug=StatusApiDocsPage) round it out. The WinUI view itself is exercised by the app build.
+
+=== GATE ===
+# 1) Placeholder / stub scan (ADR-011) — scoped to the new feature subtree + the new test file, exactly as the
+#    prompt's gate scopes -Path to the page directory:
+#    & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/StatusApiDocsPage -Language csharp
+#    & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/StatusApiDocsPageTests.cs -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) Build (solution) — dotnet build apps/windows/TeslaSync.sln -c Release
+#    Result: Build succeeded. 0 Error(s). (The pre-existing WMC9999 XAML-compiler crash is resolved by the coupled
+#    Commands-lambda fix; TeslaSync.App.dll now emits clean.) The only warnings on a full rebuild are 17
+#    PRE-EXISTING CA* analyzer warnings in TeslaSync.App.Core (GeneratedApiClient / SseEventDecoder /
+#    RepositoryResult / VehicleOption) — none from this prompt's files, which compile clean under TeslaSync.App's
+#    TreatWarningsAsErrors (the StatusApiDocsPage view's own CA1822/CA1859 hints were fixed before commit).
+BUILD_EXIT=0
+
+# 3) Lint / format (dotnet format --verify-no-changes).
+#    Scoped to THIS prompt's changeset (the only files it created/edited) — all LF / utf-8, no changes:
+#    dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include \
+#        apps/windows/TeslaSync.App/feature-views/StatusApiDocsPage/ \
+#        apps/windows/TeslaSync.App.Tests/FeatureViews/StatusApiDocsPageTests.cs \
+#        apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#        apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+LINT_EXIT=0
+#    HONEST DISCLOSURE (no red-as-green): the UNSCOPED solution-wide `dotnet format … --verify-no-changes`
+#    returns 2 because of SIX PRE-EXISTING CRLF files that this prompt did NOT touch and that are OUT OF SCOPE
+#    (page:driving/SharedDrive + the TourLauncher surface). `git status --short` shows my changeset is only:
+#      M apps/parity/windows-ledger.json
+#      M apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj
+#      M apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+#      ?? apps/windows/TeslaSync.App.Tests/FeatureViews/StatusApiDocsPageTests.cs
+#      ?? apps/windows/TeslaSync.App/feature-views/StatusApiDocsPage/
+#    The six pre-existing CRLF files (none mine; `git diff --name-only HEAD` lists none of them against my work):
+#      apps/windows/TeslaSync.App/feature-views/SharedDrivePage/SharedDrivePage.cs
+#      apps/windows/TeslaSync.App/feature-views/SharedDrivePage/SharedDrivePage.Model.cs
+#      apps/windows/TeslaSync.App/feature-views/SharedDrivePage/SharedDrivePage.Source.cs
+#      apps/windows/TeslaSync.App/feature-views/SharedDrivePage/SharedDrivePage.ViewModel.cs
+#      apps/windows/TeslaSync.App/misc-surfaces/TourLauncher/TourLauncher.Catalog.cs
+#      apps/windows/TeslaSync.App.Tests/FeatureViews/SharedDrivePageTests.cs
+#    Per scope discipline (other parity units' files are out of scope; do not fix unrelated pre-existing issues),
+#    they are left untouched. Every file this prompt owns is format-clean (LINT_EXIT=0 above).
+
+# 4) Test — dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+#    Passed: 27342, Failed: 0, Skipped: 0 (incl. the 20 new StatusApiDocsPageTests; no regressions —
+#    the ShellWindow registration is a WinUI view file not linked into the test project, validated by the build).
+TEST_EXIT=0
+
+PARITY_COVERED=4
+PARITY_REQUIRED=4
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/StatusApiDocsPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/StatusApiDocsPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-StatusApiDocsPage.log
+# git commit -m "feat(apps/windows): StatusApiDocsPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE

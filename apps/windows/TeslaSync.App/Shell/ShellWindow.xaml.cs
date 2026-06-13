@@ -231,6 +231,19 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Commands.CommandsPage();
             page.ViewHistoryRequested += (_, _) => NavigateTo(FeatureViews.Commands.CommandsRegistration.CommandHistoryRoute);
+            return page;
+        });
+
+        // System / Status API docs page (P2/W7) — parity port of web StatusApiDocsPage at route /docs/status-api.
+        // The header "Back to System Status" link navigates to the system-status page (web Link to="/system-status").
+        // RouteTable already maps Page("StatusApiDocs","docs/status-api",RouteGroup.SystemOps).
+        _viewModel.PageFactory.Register("StatusApiDocs", () =>
+        {
+            var page = new FeatureViews.SystemOps.StatusApiDocsPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // System / Help page (P2/W7) — parity port of web HelpPage (the deterministic RAG-help baseline). The web
         // page is unrouted in App.tsx; the Windows shell exposes it as the hidden "Help" deep-link (RouteTable path
         // `help`). The five curated cards navigate to existing canonical routes (docs/status-api, onboarding,
