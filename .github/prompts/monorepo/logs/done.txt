@@ -910,3 +910,4 @@ p2-windows/pages/admin/FeatureFlagsPage.prompt.md
 p2-windows/pages/admin/GasPriceAutoPollPage.prompt.md
 p2-windows/pages/admin/FleetTelemetryCoveragePage.prompt.md
 p2-windows/pages/admin/FleetAPIPage.prompt.md
+p2-windows/pages/admin/GDPRExportPage.prompt.md
