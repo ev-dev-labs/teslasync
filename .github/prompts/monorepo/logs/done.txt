@@ -548,3 +548,4 @@ p3-android/feature-views/A-0301-VehicleHeader.prompt.md
 p3-android/feature-views/A-0296-RecentChargesSection.prompt.md
 p3-android/feature-views/A-0300-VehicleConfigSection.prompt.md
 p3-android/feature-views/A-0304-VehicleGauges.prompt.md
+p3-android/feature-views/A-0303-VehicleCharts.prompt.md
