@@ -5404,6 +5404,7 @@
   <string name="translation_savedViews_title">Saved views</string>
   <string name="translation_savedViews_unpin">Unpin</string>
   <string name="translation_savedViews_unsetDefault">Clear default</string>
+  <string name="translation_score_aria">Score %1$s</string>
   <string name="translation_search_aiSearch_badge">Helix</string>
   <string name="translation_search_aiSearch_description">Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.</string>
   <string name="translation_search_aiSearch_placeholder">e.g. drives last weekend over 200 km with phantom drain</string>
