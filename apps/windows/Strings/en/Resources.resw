@@ -14211,6 +14211,12 @@
   <data name="translation.notifications.view.label" xml:space="preserve">
     <value>View</value>
   </data>
+  <data name="translation.notifications.webhooks.subtitle" xml:space="preserve">
+    <value>Custom HTTPS endpoints that receive HMAC-signed event payloads.</value>
+  </data>
+  <data name="translation.notifications.webhooks.title" xml:space="preserve">
+    <value>Webhooks</value>
+  </data>
   <data name="translation.onboarding.charging" xml:space="preserve">
     <value>Charge Analytics</value>
   </data>

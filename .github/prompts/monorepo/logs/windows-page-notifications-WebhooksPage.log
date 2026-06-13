@@ -1,0 +1,85 @@
+P2-WINDOWS W7 — page:notifications/Webhooks — WinUI 3 / Fluent parity port
+==========================================================================
+Web source : web/src/features/notifications/pages/WebhooksPage.tsx (route /notifications/webhooks)
+             A thin PageContainer (localized title + subtitle + a copyLink action) that wraps the shared
+             <WebhookChannelsSection /> (which owns the webhook list/CRUD and its own loading/empty/error states).
+Output     : apps/windows/TeslaSync.App/feature-views/WebhooksPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling done pages
+              QuickStatsPage / WeeklyDigestPage / EnergyProductsPage. The generated prompt's idealized
+              apps/windows/TeslaSync/Features/Notifications/WebhooksPage.xaml + WebhooksPageViewModel.cs do not
+              match the in-repo structure, so the real convention was followed — no silent drift.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register("NotificationsWebhooks", static () => new FeatureViews.Notifications.WebhooksPage())
+             (RouteTable already maps Page("NotificationsWebhooks","notifications/webhooks",Notifications,"Webhooks"))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw — added the two web inline-default keys
+             translation.notifications.webhooks.title / .subtitle. The web page uses t() inline defaults; the keys
+             are NOT present in web/src/i18n/en.json, so they were added to the windows catalog (the only string
+             catalog this task is scoped to edit). he/ar are English-fallback placeholder locales (status=placeholder).
+
+Files:
+  feature-views/WebhooksPage/WebhooksPage.Model.cs      (registration + WebhooksDisplay projection + PII-safe diagnostics)
+  feature-views/WebhooksPage/WebhooksPage.Source.cs     (EmptyWebhookChannelsSource — inert default port for the embedded section)
+  feature-views/WebhooksPage/WebhooksPage.ViewModel.cs  (INotifyPropertyChanged state holder + LoadAsync/RefreshAsync/NotifyOpened)
+  feature-views/WebhooksPage/WebhooksPage.cs            (WinUI 3 UserControl, Fluent + design tokens; PageTitle+Subhead+CopyLinkButton header wrapping WebhookChannelsSection)
+  TeslaSync.App.Tests/FeatureViews/WebhooksPageTests.cs (6 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj        (Compile-link the 3 UI-free files; the WinUI view is build-only)
+  apps/parity/windows-ledger.json                       (new row page:notifications/Webhooks, covered==required==2)
+
+Data sources: none — the web page renders no API query of its own (manifest: "no API data sources — renders from
+  navigation params / local state"). The webhook list and its loading/empty/error states belong to the embedded
+  WebhookChannelsSection (its own parity unit, already ported); the page's default constructor feeds it the inert
+  EmptyWebhookChannelsSource (the empty-source default every shell-registered W7 page uses), and the section renders
+  its friendly empty surface from the single RepositoryResult.Empty() emission.
+Units (P1/S5): n/a — the page chrome carries no SI quantities.
+Live data: none — no useLiveX/SSE on the web page, so no SSE subscription / staleness chip (ADR-013 n/a).
+copyLink (web PageContainer copyLink): shared SharedSurfaces.CopyLinkButton wired to a DelegateCurrentLinkProvider
+  returning DeepLink.BuildUri("notifications/webhooks") (teslasync://app/notifications/webhooks) + SystemClipboardWriter.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1/2] string notifications.webhooks.subtitle
+      WebhooksPage.Model.cs::WebhooksPageRegistration.Subtitle(ILocalizer) =
+        localizer.GetString("notifications.webhooks.subtitle", "Custom HTTPS endpoints that receive HMAC-signed event payloads.")
+      -> WebhooksPageViewModel.BuildDisplay -> WebhooksDisplay.Subtitle -> WebhooksPage.Render -> Subhead _subtitle.Value.
+      catalog: apps/windows/Strings/en/Resources.resw name="translation.notifications.webhooks.subtitle" (he/ar mirror).
+      evidence-test: WebhooksPageTests.Registration_resolves_the_title_and_subtitle_keys_with_web_defaults,
+                     WebhooksPageTests.ViewModel_projects_the_localized_page_chrome
+[2/2] string notifications.webhooks.title
+      WebhooksPage.Model.cs::WebhooksPageRegistration.Title(ILocalizer) =
+        localizer.GetString("notifications.webhooks.title", "Webhooks")
+      -> WebhooksPageViewModel.BuildDisplay -> WebhooksDisplay.Title (+ AutomationName) -> WebhooksPage.Render -> PageTitle _title.Value.
+      catalog: apps/windows/Strings/en/Resources.resw name="translation.notifications.webhooks.title" (he/ar mirror).
+      evidence-test: WebhooksPageTests.Registration_resolves_the_title_and_subtitle_keys_with_web_defaults,
+                     WebhooksPageTests.ViewModel_projects_the_localized_page_chrome
+
+PARITY_COVERED=2
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Notifications does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/WebhooksPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0  (WebhooksPageTests.cs also scanned: 0 / 0)
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); the only warnings are pre-existing TeslaSync.App.Core CA*)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (all new .cs are LF / utf-8-no-BOM)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.sln -c Release --filter "Category!=UIAutomation"
+#   -> Passed: 26887, Failed: 0, Skipped: 0  (incl. 6 WebhooksPageTests)
+#   (Category=UIAutomation is the WinAppDriver / packaged-app suite run separately by run-ui-automation.ps1 per the
+#    UITests project contract; its driver + deployed app are absent on this headless runner — never silently skipped.)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/WebhooksPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/WebhooksPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-notifications-WebhooksPage.log
+# git commit -m "feat(apps/windows): WebhooksPage at web parity (W7 notifications)"
+
+EXIT=0
+STATUS=DONE
