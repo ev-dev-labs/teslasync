@@ -1,0 +1,36 @@
+/*
+  ActionItem.strings
+  TeslaSync — P4 shared surface · 0196 · ActionItem (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/status/ActionItem.tsx) renders NO translated copy of its own: the `title`, `description`,
+  and `cta.label` are caller-supplied (already-localized) string props, and the leading glyph + the CTA
+  chevron are decorative. The only strings this surface owns are the native a11y additions: the localized
+  severity word that names the colour-encoded severity for VoiceOver (the accessible parity of the web's
+  colour-only severity signal), and the CTA navigation hints (in-app vs. external) — Apple-HIG affordances
+  the web omits but VoiceOver users expect on an actionable affordance.
+
+  All keys live in the per-surface "ActionItem" table and resolve through the P1/S10 facade
+  (ActionItemStrings) so the Swift sources hold no hardcoded prose; they fold into the app
+  `Localizable.xcstrings` master catalog at integration time. In test / preview bundles
+  `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Severity words (spoken peer of the web colour-only severity tier) --- */
+
+/* VoiceOver word for the info tier — named so the colour-encoded severity reaches non-sighted users. */
+"actionItem.severity.info" = "Information";
+
+/* VoiceOver word for the warn tier. */
+"actionItem.severity.warn" = "Warning";
+
+/* VoiceOver word for the error tier. */
+"actionItem.severity.error" = "Error";
+
+/* --- CTA VoiceOver hints (shipped native a11y additions; the web omits them) --- */
+
+/* Hint for a CTA that navigates in-app (web internal <Link to>) or fires a handler (web <button>). */
+"actionItem.activate.hint" = "Opens details";
+
+/* Hint for a CTA that opens an external target out of the app (web `external` → target="_blank"). */
+"actionItem.external.hint" = "Opens in your browser";
