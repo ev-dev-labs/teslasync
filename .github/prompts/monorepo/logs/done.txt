@@ -903,3 +903,4 @@ p2-windows/widget-primitives/W-0010-WidgetStatGrid.prompt.md
 p2-windows/pages/admin/ApiPlaygroundPage.prompt.md
 p2-windows/pages/admin/DLQInspectorPage.prompt.md
 p2-windows/pages/admin/APIKeysPage.prompt.md
+p2-windows/pages/admin/BackupRestorePage.prompt.md
