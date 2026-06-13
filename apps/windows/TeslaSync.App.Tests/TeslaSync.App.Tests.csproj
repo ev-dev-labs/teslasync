@@ -393,6 +393,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\APIKeysPage\APIKeysPage.ViewModel.cs" Link="FeatureViews\APIKeysPage\APIKeysPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.Model.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiLogsPage\ApiLogsPage.ViewModel.cs" Link="FeatureViews\ApiLogsPage\ApiLogsPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RedisSignalViewerPage\RedisSignalViewerPage.Model.cs" Link="FeatureViews\RedisSignalViewerPage\RedisSignalViewerPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RedisSignalViewerPage\RedisSignalViewerPage.Source.cs" Link="FeatureViews\RedisSignalViewerPage\RedisSignalViewerPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\RedisSignalViewerPage\RedisSignalViewerPage.ViewModel.cs" Link="FeatureViews\RedisSignalViewerPage\RedisSignalViewerPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.Model.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.Source.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.ViewModel.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.ViewModel.cs" />

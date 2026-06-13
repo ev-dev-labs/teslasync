@@ -45,6 +45,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
   },
   {
+    "unitId": "page:admin/RedisSignalViewer",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p2-windows/W7/windows-page-admin-RedisSignalViewerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-RedisSignalViewerPage.log"
+  },
+  {
     "unitId": "page:admin/SchemaDrift",
     "platform": "windows",
     "status": "done",

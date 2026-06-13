@@ -1,0 +1,123 @@
+================================================================================
+p2-windows · W7 · page:admin/RedisSignalViewer — WinUI 3 / Fluent parity
+================================================================================
+Artifact : page:admin/RedisSignalViewer
+Web src  : web/src/features/admin/pages/RedisSignalViewerPage.tsx (route /redis-signals)
+Output   : apps/windows/TeslaSync.App/feature-views/RedisSignalViewerPage/
+             RedisSignalViewerPage.cs           (WinUI 3 UserControl view)
+             RedisSignalViewerPage.ViewModel.cs (ObservableObject state holder, P1/S8)
+             RedisSignalViewerPage.Model.cs     (records + state + projection + registration)
+             RedisSignalViewerPage.Source.cs    (generated C# client feed, ADR-004)
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/RedisSignalViewerPageTests.cs
+Nav      : RouteTable.cs Page("RedisSignalViewer","redis-signals",RouteGroup.TelemetrySignals)
+           ShellWindow.xaml.cs PageFactory.Register("RedisSignalViewer", … RedisSignalViewerPage())
+Strings  : apps/windows/Strings/{en,he,ar}/Resources.resw  (translation.redis.* + common.cancel)
+ADR refs : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+NOTE on paths: the generated prompt's idealized output path
+(apps/windows/TeslaSync/Features/Admin/*.xaml + *ViewModel.cs) does not exist in this
+repository. The established, building W7 convention is a code-built WinUI UserControl page
+under apps/windows/TeslaSync.App/feature-views/<Page>/ split into
+view (.cs) + ViewModel.cs + Model.cs + Source.cs, with the headless logic compiled into
+TeslaSync.App.Tests via <Compile Include> links. This artifact follows that real convention
+(identical to the sibling done pages ApiLogsPage / SignalLogViewerPage). No web pixel-cloning.
+
+Data source bound through the generated C# client (manifest):
+  useVehicles  GET /vehicles  → RedisSignalViewerClientFeed.FetchVehiclesAsync
+                                 (Operations get_api_v1_vehicles)
+Page behaviour also binds (web getRedisSignals/purge/purgeAll, generated client):
+  GET    /dev-tools/redis-signals?vehicle_id=…   get_api_v1_dev_tools_redis_signals
+  DELETE /dev-tools/redis-signals?vehicle_id=…   delete_api_v1_dev_tools_redis_signals
+  DELETE /dev-tools/redis-signals/keys           delete_api_v1_dev_tools_redis_signals_keys
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=51
+
+-- panels (6) ------------------------------------------------------------------
+[x] panel  GlassPanel1     RedisSignalViewerPage.cs BuildControlsPanel()/_controlsPanel (TsGlassPanel): vehicle TsSelect + search TsInput + category TsSelect + auto-refresh TsToggle + refresh/purge/purge-all TsButton
+[x] panel  Total-Signals   Model.cs RedisSignalViewerProjection.Project statCards[0] "redis.totalSignals"; view _totalCard (TsStatCard); test Projection_counts_each_value_type_into_the_stat_tiles
+[x] panel  Numbers         Model.cs Project statCards[1] "redis.numbers"; view _numbersCard (TsStatCard); test Projection_counts_each_value_type_into_the_stat_tiles
+[x] panel  Strings         Model.cs Project statCards[2] "redis.strings"; view _stringsCard (TsStatCard); test Projection_counts_each_value_type_into_the_stat_tiles
+[x] panel  Booleans        Model.cs Project statCards[3] "redis.booleans"; view _booleansCard (TsStatCard); test Projection_counts_each_value_type_into_the_stat_tiles
+[x] panel  GlassPanel6     RedisSignalViewerPage.cs BuildTablePanel()/_tablePanel (TsGlassPanel) hosting _table (TsDataTable) + _selectPromptEmpty/_tableLoading/_noMatchEmpty/_noSignalsEmpty
+
+-- data states (4) -------------------------------------------------------------
+[x] state  loading   RedisSignalViewerState.Loading; Display.ShowTableLoading (_tableLoading TsTableSkeleton); test Projection_loading_is_the_loading_state
+[x] state  empty     RedisSignalViewerState.Empty; Display.ShowSelectPrompt/ShowNoSignals (TsEmptyState); tests Projection_no_vehicle_is_the_empty_state_with_the_select_prompt, Projection_selected_vehicle_with_no_signals_is_the_no_signals_empty_state
+[x] state  error     RedisSignalViewerState.Error; Display.HasError/ErrorBannerText (_errorBanner TsAlertBanner Danger); tests Projection_error_is_the_error_state_with_the_load_failed_banner, ViewModel_signals_failure_is_the_error_state
+[x] state  success   RedisSignalViewerState.Success; Display.ShowTable (_table TsDataTable); tests Projection_with_rows_is_the_success_state_and_renders_the_table, ViewModel_select_vehicle_loads_its_signals_into_success
+
+-- strings (41) — all resolved every projection in Model.cs RedisSignalViewerProjection.Project
+   via localizer.GetString("<key>", …); verified by test Projection_resolves_every_required_string_key
+[x] string  common.cancel                 Project → PurgeCancelLabel (dialog Cancel button)
+[x] string  redis.allCategories           Project → categoryOptions[0] (All Categories)
+[x] string  redis.autoRefresh             Project → AutoRefreshLabel (_autoRefreshToggle.Header)
+[x] string  redis.booleans                Project → statCards[3].Label
+[x] string  redis.category                Project → columnHeaders[3] (table Category header)
+[x] string  redis.headerChip.l1Seen       Project → L1ChipText (_l1Chip TsBadge)
+[x] string  redis.headerChip.mode         Project → ModeChipText (_modeChip TsBadge)
+[x] string  redis.maskedCoord             Project → MaskedCoordLabel (masked location-row help text)
+[x] string  redis.noMatch                 Project → NoMatchMessage (_noMatchEmpty)
+[x] string  redis.numbers                 Project → statCards[1].Label
+[x] string  redis.purgeAllButton          Project → PurgeAllButtonText (_purgeAllButton)
+[x] string  redis.purgeAllButtonTitle     Project → PurgeAllButtonTitle (_purgeAllButton tooltip)
+[x] string  redis.purgeAllConfirm         Project → purge-all dialog PrimaryButtonText
+[x] string  redis.purgeAllMessage         Project → purge-all dialog message body
+[x] string  redis.purgeAllPartial         Project → PurgeAllPartialTitle (purge notice)
+[x] string  redis.purgeAllPartialDetail   Project → PurgeAllPartialDetailTemplate (purge notice)
+[x] string  redis.purgeAllSuccess         Project → PurgeAllSuccessTitle (purge notice)
+[x] string  redis.purgeAllSuccessDetail   Project → PurgeAllSuccessDetailTemplate (purge notice)
+[x] string  redis.purgeAllTitle           Project → PurgeDialogTitle (purge-all mode)
+[x] string  redis.purgeAllTypedLabel      Project → PurgeTypedConfirmationLabel (typed confirm input)
+[x] string  redis.purgeButton             Project → PurgeButtonText (_purgeButton)
+[x] string  redis.purgeButtonTitle        Project → PurgeButtonTitle (_purgeButton tooltip)
+[x] string  redis.purgeConfirm            Project → purge-one dialog PrimaryButtonText
+[x] string  redis.purgeError              Project → PurgeErrorTitle (purge notice Danger)
+[x] string  redis.purgeMessage            Project → purge-one dialog message body
+[x] string  redis.purgeNoOpDetail         Project → PurgeNoOpDetailTemplate (purge notice)
+[x] string  redis.purgeNoOpTitle          Project → PurgeNoOpTitle (purge notice Info)
+[x] string  redis.purgeSuccess            Project → PurgeSuccessTitle (purge notice Success)
+[x] string  redis.purgeSuccessDetail      Project → PurgeSuccessDetailTemplate (purge notice)
+[x] string  redis.purgeTitle              Project → PurgeDialogTitle (purge-one mode, vehicle named)
+[x] string  redis.refresh                 Project → RefreshLabel (_refreshButton)
+[x] string  redis.searchPlaceholder       Project → SearchHint (_searchInput.Hint)  [web i18n key; parity:allow]
+[x] string  redis.selectPrompt            Project → SelectPromptMessage (_selectPromptEmpty)
+[x] string  redis.selectVehicle           Project → SelectVehiclePrompt (_vehicleSelect.Hint)
+[x] string  redis.signalName              Project → columnHeaders[0] (table Signal Name header)
+[x] string  redis.strings                 Project → statCards[2].Label
+[x] string  redis.subtitle                Project → Subtitle (_subtitle)
+[x] string  redis.title                   Project → Title (_title) + RedisSignalViewerRegistration.Title
+[x] string  redis.totalSignals            Project → statCards[0].Label
+[x] string  redis.type                    Project → columnHeaders[2] (table Type header)
+[x] string  redis.value                   Project → columnHeaders[1] (table Value header)
+
+PARITY_COVERED=51
+
+================================================================================
+=== GATE ===
+================================================================================
+# Placeholder scan (ADR-011) — feature dir + test file
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RedisSignalViewerPage -Language csharp
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# Build (Release) — whole windows solution
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0   (0 errors)
+
+# Lint — analyzers + whitespace
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0
+
+# Test (Release)
+$ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+TEST_EXIT=0   (Passed: 29462, Failed: 0, Skipped: 0; new RedisSignalViewerPageTests: 50/50)
+
+Ledger: apps/parity/windows-ledger.json → page:admin/RedisSignalViewer
+        status=done coveredCount=51 requiredCount=51
+
+EXIT=0
+STATUS=DONE
