@@ -807,3 +807,4 @@ p2-windows/feature-views/W-0308-VehicleSettingsTab.prompt.md
 p2-windows/shared-meaningful/W-0082-DriveScore.prompt.md
 p2-windows/shared-meaningful/W-0101-RouteDisplay.prompt.md
 p2-windows/shared-meaningful/W-0100-RecentActivityFeed.prompt.md
+p2-windows/shared-meaningful/W-0099-ProgressRing.prompt.md
