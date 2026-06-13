@@ -1,0 +1,100 @@
+=== P3 Shared surface 0164 VehicleSelect (Android) ===
+note: gradlew invoked as gradlew.bat with --no-daemon (Windows runner).
+note: the Gradle module is :android (settings.gradle.kts maps projectDir=app); the prompt gate's :app:
+      placeholder is this repo's :android: module — same adaptation the sibling 0157 RangePicker / 0110
+      UserCell gates record.
+note: surface ships as flat files under com/teslasync/shared-surfaces/ (the prompt's allowed-files path); the
+      mandated directory cannot form a valid Kotlin package (hyphen + PascalCase leaf), so the package is
+      io.teslasync.android.sharedsurfaces.vehicleselect with @file:Suppress("InvalidPackageDeclaration") —
+      identical to the RangePicker / UserCell precedent. Tests live in the matching real package path under
+      test/ and androidTest/ (no suppress needed there).
+note: the gate's extensionless -Path .../shared-surfaces/VehicleSelect matches no file, so the placeholder
+      scan below targets the real .kt files for genuine coverage (RangePicker/UserCell precedent).
+note: this surface is the state-aware, store-bound picker. The atomic components/forms/VehicleSelect dropdown
+      is the P3 component-library bundle (out of scope). i18n reuses existing P1/S10 catalog keys rather than
+      adding new ones (apps/android strings.xml is GENERATED from apps/shared/i18n/catalog by gen-i18n.ts;
+      editing it would drift + is out of allowed-files scope). The web vehicleSelect.aria ("Select vehicle")
+      reuses translation_vehiclePicker_aria — the layout sibling VehiclePicker renders the identical
+      "Select vehicle" label, so one catalog entry serves both (asserted by name in the model unit test).
+
+### gradlew :android:assembleRelease ###
+> Task :android:compileReleaseKotlin
+> Task :android:assembleRelease
+BUILD SUCCESSFUL in 3m 11s
+70 actionable tasks: 9 executed, 61 up-to-date
+BUILD_EXIT=0
+
+### gradlew :android:testReleaseUnitTest ###
+> Task :android:compileReleaseUnitTestKotlin
+> Task :android:testReleaseUnitTest
+BUILD SUCCESSFUL in 3m 47s
+TEST_EXIT=0
+unit-test result XML (app/build/test-results/testReleaseUnitTest), VehicleSelect classes only:
+  io.teslasync.android.sharedsurfaces.vehicleselect.VehicleSelectModelTest:     tests=21 failures=0 errors=0 skipped=0
+  io.teslasync.android.sharedsurfaces.vehicleselect.VehicleSelectViewModelTest: tests=10 failures=0 errors=0 skipped=0
+  (31 VehicleSelect cases passed; the whole testReleaseUnitTest suite was GREEN.)
+
+### gradlew :android:ktlintCheck :android:detekt ###
+first attempt FAILED — NOT a lint violation: a concurrent Gradle instance on this shared (non-sandboxed)
+machine held the build cache lock, so ':android:runKtlintCheckOverMainSourceSet' could not STORE its cache
+entry ("Timeout waiting to lock Build cache ... currently in use by another Gradle instance. Owner PID: 105120").
+The detekt + androidTest/test ktlint source-set checks had already completed in that run. Re-ran with
+--no-build-cache to sidestep the shared-cache contention and obtain an honest result:
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck
+> Task :android:detekt UP-TO-DATE
+BUILD SUCCESSFUL in 1m 21s
+LINT_EXIT=0
+  (ktlint over main + test + androidTest source sets clean; detekt clean, warningsAsErrors=true, MaxLineLength=140.)
+
+### check-placeholders.ps1 (genuine per-file scan of shipped files) ###
+  VehicleSelect.kt               count=0
+  VehicleSelectModel.kt          count=0
+  VehicleSelectSource.kt         count=0
+  VehicleSelectViewModel.kt      count=0
+  VehicleSelectModelTest.kt      count=0
+  VehicleSelectViewModelTest.kt  count=0
+  VehicleSelectUiTest.kt         count=0
+PLACEHOLDER_COUNT_MINE=0
+PLACEHOLDER_EXIT=0
+
+### instrumented UI test (androidTest) ###
+file: app/src/androidTest/java/io/teslasync/android/sharedsurfaces/vehicleselect/VehicleSelectUiTest.kt
+      (7 cases: loading / content+accessible-label / empty / stale-chip / offline-chip / error-retry / stateful-bind).
+ktlint+detekt: PASS (linted with the androidTest source set in the gate's ktlintCheck — UP-TO-DATE above).
+execution: NOT run by this gate (gate = assembleRelease + testReleaseUnitTest only); requires a connected
+      device/emulator (none on this runner).
+compile note: ':android:compileDebugAndroidTestKotlin' currently FAILS due to PRE-EXISTING errors in 16
+      UNRELATED sibling files (TirePressureHistoryWidget/ChatMessageItem/FSMTimelineChart/SuggestedPrompts/
+      TimestampTool/CommandConfirmDialog/Popover/SessionExpired/AnnotationList/ElevationProfile/
+      FormatterPrefsBridge/ReloadPrompt/RouteAnnouncer/RouteDisplay/ScoreBadge/TimelineScrubber) that reference
+      unresolved androidx.compose.ui.test assertExists/assertDoesNotExist/onAllNodes/assert. 25 errors total;
+      VehicleSelectUiTest.kt is NOT among them — kotlinc reports all errors before failing, so the new file
+      type-checks clean against the resolving compose-test API subset it uses (createComposeRule /
+      onNodeWithTag / onNodeWithContentDescription / onNodeWithText / assertIsDisplayed / performClick /
+      waitForIdle). Same pre-existing condition the 0157 RangePicker / 0110 UserCell logs record.
+
+### parity summary ###
+web source: web/src/components/forms/VehicleSelect.tsx (+ useSelectedVehicle.ts + store/selectedVehicle.tsx).
+data binding (P1/S8, no HTTP in the view): VehicleSelectSource over SelectedVehicleStore (selection) +
+  VehiclesStore.vehicles() (fleet feed) — the same shared holders every vehicle-scoped screen follows.
+states reproduced (every one renders — no hidden surface): loading (select-shaped skeleton) / content (the
+  Material 3 Select dropdown, options = display_name || vin || "Vehicle {id}", optional leading car icon) /
+  empty (friendly NoVehicleSelected — web returns null because the host page shows it; a self-contained
+  surface shows it itself) / hard error (QueryError + Retry) / stale (stale chip + one auto-refresh) /
+  offline (cached fleet kept selectable + offline chip) / refreshing (updating chip).
+a11y: merged TalkBack trigger label "Select vehicle, {active}" on the dropdown; loading row labelled;
+  EmptyState/QueryError carry their own descriptions. i18n: every string via stringResource over existing
+  P1/S10 catalog keys (en/ar/he). diagnostics: one-shot PII-safe view.opened {surface=VehicleSelect} via the
+  redacting logger — never a vehicle id or VIN; select/refresh also log surface-slug-only events.
+files: shared-surfaces/{VehicleSelect.kt, VehicleSelectModel.kt, VehicleSelectSource.kt, VehicleSelectViewModel.kt};
+  test/vehicleselect/{VehicleSelectModelTest.kt, VehicleSelectViewModelTest.kt};
+  androidTest/vehicleselect/VehicleSelectUiTest.kt.
+
+### result ###
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
