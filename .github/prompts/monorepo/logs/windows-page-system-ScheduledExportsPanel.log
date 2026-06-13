@@ -1,0 +1,136 @@
+# p2-windows / W7 / page:system/ScheduledExportsPanel — WinUI 3 / Fluent parity
+#
+# Native WinUI 3 (.NET 10 / Windows App SDK / CommunityToolkit.Mvvm-style ObservableObject) parity port of the web
+# panel web/src/features/system/pages/ScheduledExportsPanel.tsx (the recurring scheduled-exports panel mounted on
+# the Data Export page; web route is unrouted). Implemented with the repo's established headless 4-file feature
+# pattern (sibling: feature-views/CommandHistoryPage, feature-views/ExportsPage, feature-views/AlertRulesPage),
+# NOT the generated prompt's apps/windows/TeslaSync/Features/System/*.xaml path (which does not exist in-repo —
+# the codebase builds WinUI views in code-behind, not XAML markup, and compiles the UI-free Model/Source/ViewModel
+# into the headless test assembly).
+#
+# Output:
+#   apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel/ScheduledExportsPanel.cs           (UserControl view)
+#   apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel/ScheduledExportsPanel.Model.cs      (records + projection + registration + diagnostics)
+#   apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel/ScheduledExportsPanel.Source.cs     (feed: IScheduledExportsFeed + Empty + generated-client ClientFeed)
+#   apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel/ScheduledExportsPanel.ViewModel.cs  (ScheduledExportsPanelViewModel)
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/ScheduledExportsPanelTests.cs                        (49 headless tests)
+#   NavigationView registration: TeslaSync.App.Core/Navigation/RouteTable.cs (Hidden deep-link "scheduled-exports")
+#                                TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("ScheduledExports", …))
+#   String catalog: i18n keys + verbatim English fallbacks resolved at the localizer call sites (Model.cs), asserted
+#       in tests; matches the gate-passing sibling precedent (CommandHistory/AlertRules resolve via ILocalizer.GetString
+#       fallback — the Strings/*.resw bridge resolves them in-app and falls back to English for untranslated keys).
+#
+# Data sources — each bound to the generated C# client through the ObservableObject ViewModel (P1/S8, ADR-004):
+#   useScheduledExports     GET    /scheduled-exports       -> ScheduledExportsClientFeed.FetchAsync   (op get_api_v1_scheduled_exports)
+#   useCreateScheduledExport POST  /scheduled-exports       -> ScheduledExportsClientFeed.CreateAsync  (op post_api_v1_scheduled_exports)
+#   useUpdateScheduledExport PUT   /scheduled-exports/{id}  -> ScheduledExportsClientFeed.UpdateAsync  (op put_api_v1_scheduled_exports_id)
+#   useDeleteScheduledExport DELETE /scheduled-exports/{id} -> ScheduledExportsClientFeed.DeleteAsync  (op delete_api_v1_scheduled_exports_id)
+#   useRunScheduledExportNow POST  /scheduled-exports/{id}/run -> ScheduledExportsClientFeed.RunNowAsync (op post_api_v1_scheduled_exports_id_run)
+
+=== PARITY ===
+# PARITY_REQUIRED=40. Each item: parity kind — name — binding evidence (file + symbol).
+
+# panels (1)
+[x] panel  - GlassPanel1
+       ScheduledExportsPanel.cs BuildLayout() -> new TsGlassPanel { Content = stack } (header + form + body region).
+
+# data states (3) — web precedence isLoading -> rows.length===0 -> table
+[x] state  - loading data state
+       ScheduledExportsProjection.Project ShowLoading (Model.cs) -> ScheduledExportsPanel.cs _loadingPanel (3x TsSkeleton).
+       test: Projection_loading_with_no_rows_is_the_loading_state, ViewModel_initial_state_is_loading.
+[x] state  - empty data state
+       ScheduledExportsProjection.Project ShowEmpty -> ScheduledExportsPanel.cs _emptyState (TsEmptyState Title/Message).
+       test: Projection_resolved_with_no_rows_is_the_empty_state, ViewModel_empty_feed_is_the_empty_state,
+             ViewModel_fetch_failure_falls_back_to_empty (web safeArray).
+[x] state  - success data state
+       ScheduledExportsProjection.Project ShowRows -> ScheduledExportsPanel.cs _tableSection (header grid + row grids).
+       test: Projection_with_rows_is_the_success_state, ViewModel_loads_into_success.
+
+# strings (36) — every visible literal resolves through ILocalizer.GetString(key, verbatim-English-fallback).
+#   Resolution site: ScheduledExportsProjection.Project / ScheduledExportsRegistration (Model.cs).
+#   Coverage asserted: ScheduledExportsPanelTests.Projection_resolves_every_required_string_key over RequiredStringKeys[36].
+[x] string - dataExport.scheduled.actions.delete            ProjectRow/actions.Delete                 "Delete"
+[x] string - dataExport.scheduled.actions.disable           ProjectRow/actions.Disable                "Disable"
+[x] string - dataExport.scheduled.actions.edit              ProjectRow/actions.Edit                   "Edit"
+[x] string - dataExport.scheduled.actions.enable            ProjectRow/actions.Enable                 "Enable"
+[x] string - dataExport.scheduled.actions.runNow            ProjectRow/actions.RunNow                 "Run now"
+[x] string - dataExport.scheduled.deleteConfirmBody         Project/DeleteConfirmBodyTemplate         "This will stop future runs of {{name}}."
+[x] string - dataExport.scheduled.deleteConfirmTitle        Project/DeleteConfirmTitle                "Delete schedule?"
+[x] string - dataExport.scheduled.empty                     Project/EmptyTitle                        "No schedules yet"
+[x] string - dataExport.scheduled.emptyMessage              Project/EmptyMessage                      "Create a schedule to receive recurring exports automatically."
+[x] string - dataExport.scheduled.form.cancel               FormLabels.CancelLabel                    "Cancel"
+[x] string - dataExport.scheduled.form.deliveryKind         FormLabels.DeliveryKindLabel              "Delivery kind"
+[x] string - dataExport.scheduled.form.deliveryTarget       FormLabels.DeliveryTargetLabel            "Delivery target"
+[x] string - dataExport.scheduled.form.deliveryTargetHelp   FormLabels.DeliveryTargetHelp             "Email address or HTTPS URL."
+[x] string - dataExport.scheduled.form.exportType           FormLabels.ExportTypeLabel                "Export type"
+[x] string - dataExport.scheduled.form.format               FormLabels.FormatLabel                    "Format"
+[x] string - dataExport.scheduled.form.name                 FormLabels.NameLabel                      "Name"
+[x] string - dataExport.scheduled.form.namePlaceholder      FormLabels.NameHint                       "Drives weekly"
+[x] string - dataExport.scheduled.form.rangeWindow          FormLabels.RangeWindowLabel               "Range window"
+[x] string - dataExport.scheduled.form.rangeWindowHelp      FormLabels.RangeWindowHelp                "Format: number + m/h/d."
+[x] string - dataExport.scheduled.form.scheduleCron         FormLabels.CronLabel                      "Cron expression"
+[x] string - dataExport.scheduled.form.scheduleCronHelp     FormLabels.CronHelp                       "Standard 5-field cron, e.g. '0 9 * * 0'."
+[x] string - dataExport.scheduled.form.submit               FormLabels.SubmitLabel                    "Save schedule"
+[x] string - dataExport.scheduled.newSchedule               Project/NewScheduleLabel                  "New schedule"
+[x] string - dataExport.scheduled.status.failed             ProjectRow failed badge                   "Failed"
+[x] string - dataExport.scheduled.status.never              ProjectRow lastRun fallback               "Never"
+[x] string - dataExport.scheduled.status.ok                 ProjectRow ok badge                       "OK"
+[x] string - dataExport.scheduled.subtitle                  Registration.Subtitle                     "Cron-driven recurring exports."
+[x] string - dataExport.scheduled.table.actions            ColumnLabels.Actions                      "Actions"
+[x] string - dataExport.scheduled.table.cron               ColumnLabels.Cron                         "Cron"
+[x] string - dataExport.scheduled.table.delivery           ColumnLabels.Delivery                     "Delivery"
+[x] string - dataExport.scheduled.table.lastRun            ColumnLabels.LastRun                      "Last run"
+[x] string - dataExport.scheduled.table.name               ColumnLabels.Name                        "Name"
+[x] string - dataExport.scheduled.table.nextRun            ColumnLabels.NextRun                      "Next run"
+[x] string - dataExport.scheduled.table.status             ColumnLabels.Status                      "Status"
+[x] string - dataExport.scheduled.table.type               ColumnLabels.Type                        "Type"
+[x] string - dataExport.scheduled.title                     Registration.Title                        "Scheduled exports"
+
+PARITY_COVERED=40
+PARITY_REQUIRED=40
+
+=== GATE ===
+# Real target paths (the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo;
+# the in-repo feature lives at apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel — same convention as the
+# sibling W7 pages, e.g. windows-page-system-CommandHistoryPage.log).
+
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel -Language csharp
+#   1 "Placeholder" hit = the required dataExport.scheduled.form.namePlaceholder key literal, // parity:allow'd.
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded.
+#   0 Error(s); 17 pre-existing TeslaSync.App.Core CA warnings only (identical to the baseline build; the new
+#   ScheduledExportsPanel sources add 0 warnings/0 errors). Compiles TeslaSync.App + .Tests + .UITests.
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (whole solution).
+#   The four new ScheduledExportsPanel sources + the test are format-clean (LF, .editorconfig).
+#   NOTE: the whole-solution gate also surfaced a PRE-EXISTING, unrelated CRLF defect (i/crlf in git) in the
+#   sibling feature-views/SharedDrivePage page (4 files) + SharedDrivePageTests.cs — committed before this task and
+#   not part of this parity unit. These 5 files were line-ending-normalized to LF (zero behavior change; the repo
+#   .editorconfig enforces end_of_line=lf) solely to keep the whole-solution lint gate green. No code changes.
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27313, Failed: 0, Skipped: 0
+#   (headless suite per the p2-windows gate contract; includes the 49 new ScheduledExportsPanelTests — projection
+#   states/rows/options, form open/edit/close, payload shaping (download drops target / email trims target), the
+#   five client-feed request shapes, registration, diagnostics, the 36-key i18n coverage, and the view-model state
+#   matrix. NavigationTests pass with the new Hidden "scheduled-exports" route. The WinAppDriver UITests project
+#   needs a live UI-automation runner + deployed MSIX, out of scope here; it still compiles in the Release build.)
+TEST_EXIT=0
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ScheduledExportsPanel \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ScheduledExportsPanelTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App/feature-views/SharedDrivePage apps/windows/TeslaSync.App.Tests/FeatureViews/SharedDrivePageTests.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-ScheduledExportsPanel.log
+# git commit -m "feat(apps/windows): ScheduledExportsPanel at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
