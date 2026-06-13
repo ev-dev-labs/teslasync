@@ -207,6 +207,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
@@ -226,6 +228,11 @@ public sealed partial class ShellWindow : Window
         // /notifications/browser. The page wraps the shared NotificationSettings surface in a PageContainer
         // (title + subtitle + copy-link), mirroring the web page's thin <PageContainer><NotificationSettings/> shape.
         _viewModel.PageFactory.Register("NotificationsBrowser", static () => new FeatureViews.Notifications.BrowserNotificationsPage());
+        // Settings / Helix (AI) integration page (P2/W7) — parity port of web HelixPage at route /integrations/helix.
+        // Thin PageContainer wrapper (title + subtitle + integrations/helix breadcrumb overrides, page-level loading
+        // bound to useSettings) around the already-ported AISettings surface. RouteTable already maps
+        // Page("Helix","integrations/helix",SettingsAccountIntegrations).
+        _viewModel.PageFactory.Register("Helix", static () => new FeatureViews.Settings.HelixPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

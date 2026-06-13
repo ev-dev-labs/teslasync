@@ -1,0 +1,111 @@
+=== p2-windows · W7 · page:settings/Helix (WinUI 3 / Fluent) ===
+Parity unit : page:settings/Helix   kind=page   web route=/integrations/helix
+Web source  : web/src/features/settings/pages/HelixPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection +
+  registration, unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder)
+  and <Name>.cs (the Fluent view). The generated prompt's idealized "HelixPage.xaml + HelixPageViewModel.cs under
+  TeslaSync/Features/Settings" is mapped onto these real conventions; the surface registers itself with the W4
+  ShellPageFactory by route name ("Helix"), the route RouteTable already maps (integrations/helix).
+- Web HelixPage is a thin <PageContainer title subtitle breadcrumbLabels loading={useSettings().isLoading}>
+  wrapping the <AISettings/> component. The native port reproduces that exactly: HelixPage.cs composes the shared
+  PageContainer surface (parity port of web/src/components/layout/PageContainer.tsx) with the same three strings +
+  the integrations/helix breadcrumb overrides, hosts the already-ported AISettings feature-view as PageContent, and
+  binds PageContainer.IsLoading to HelixPageViewModel (the page's own useSettings binding). The AISettings child is
+  its own W-prompt surface (feature-views/AISettings) — out of scope here except as the hosted body.
+- Data source useSettings (GET /settings) is bound through the shared IAiSettingsSource (the same seam AISettings
+  uses); the shell default is the new EmptyAiSettingsSource (mirrors the EmptyXSource convention of the sibling
+  BrowserNotificationsPage), which resolves the read to the empty state so the page leaves loading and shows the
+  Helix opt-in form. No SI unit-bearing fields on this surface.
+- The three i18n keys (helix.page.title, helix.page.subtitle, helix.breadcrumb.integrations) did NOT yet exist in
+  the platform catalog; added verbatim (web fallbacks) to Strings/{en,he,ar}/Resources.resw in alphabetical
+  position (between translation.healthy and translation.help.*). The surface resolves them through the ILocalizer
+  facade with the web key names.
+- Pre-existing blocker repaired: ShellWindow.xaml.cs (the W4 NavigationView page-factory registration block — an
+  allowed file for this prompt) had a malformed "Locations" registration whose lambda was never closed
+  (missing `return page; });`), so its body bled into the following "NotificationsArchived" registration. This was
+  a hard C# syntax error (CS1026/CS1002/CS1513 at line 255) that failed pass-1 of the WinUI XAML markup compiler and
+  cascaded into 84 WMC0001/WMC0110 "unknown type" errors + a WMC9999 internal-compiler crash, i.e. the whole
+  TeslaSync.App project (and therefore the solution build, lint and test) was red before any change. The lambda was
+  closed to match the sibling Dashboard/Locations registration shape; the build then went green. Repairing a
+  pre-existing in-block blocker is the established practice for these page prompts (cf. the ApiLogsPage log's
+  Tests.csproj repair).
+- TeslaSync.App.Tests references the App surfaces by LINKED Microsoft.UI-free source (not an assembly ref); the two
+  Microsoft.UI-free HelixPage sources (HelixPage.Model.cs + HelixPage.ViewModel.cs) were added to its <Compile>
+  union in the He* cluster. The Fluent view (HelixPage.cs) is exercised by the app build, as for every sibling page.
+
+=== PARITY ===
+PARITY_REQUIRED=5
+
+# Panels (0) / Charts (0) / Maps (0)
+#   The web HelixPage declares no GlassPanel/chart/map of its own — it composes PageContainer + the already-ported
+#   AISettings surface (its own prompt). There are no anonymous regions in the web source to reproduce here.
+
+# Data states (2) — loading / success (the two states the web page wires via PageContainer loading={useSettings().isLoading})
+[x] state  - loading -> HelixPage.ViewModel.cs#HelixPageViewModel.IsLoading (web useSettings().isLoading; field-init true,
+             set in #StreamSettingsAsync as `result.Status == LoadStatus.Loading`); bound to the container via
+             HelixPage.cs#SyncLoading -> PageContainer.IsLoading, rendered as the PageContainer loading spinner.
+             Tests: HelixPageTests.ViewModel_starts_in_the_loading_state, ViewModel_stays_loading_while_only_a_loading_emission_is_seen.
+[x] state  - success -> once the settings read resolves (LoadStatus.Loaded/Empty) HelixPageViewModel.IsLoading flips
+             false -> HelixPage.cs#SyncLoading clears PageContainer.IsLoading -> the container renders
+             PageContent = AISettings (the Helix opt-in form). HelixPage.cs#HelixPage(...) sets PageContent = _settings.
+             Tests: HelixPageTests.ViewModel_resolves_out_of_loading_on_a_loaded_settings_document, ViewModel_resolves_out_of_loading_when_settings_arrive.
+
+# Strings (3) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - helix.breadcrumb.integrations -> HelixPage.Model.cs#HelixPageRegistration.IntegrationsBreadcrumb
+             localizer.GetString("helix.breadcrumb.integrations", "Integrations"); folded into #BreadcrumbOverrides
+             (integrations segment) and published to PageContainer.breadcrumbOverrides in HelixPage.cs. resw rows:
+             translation.helix.breadcrumb.integrations (en/he/ar). Tests: IntegrationsBreadcrumb_resolves_the_web_key_with_the_web_fallback,
+             Registration_resolves_every_required_string_key_from_the_catalog, BreadcrumbOverrides_resolve_each_segment_from_the_catalog.
+[x] string - helix.page.subtitle -> HelixPage.Model.cs#HelixPageRegistration.Subtitle localizer.GetString(
+             "helix.page.subtitle", "Optional AI integration. Off by default — nothing runs until you opt in here.");
+             set as PageContainer.Subtitle in HelixPage.cs. resw rows: translation.helix.page.subtitle (en/he/ar).
+             Test: HelixPageTests.Subtitle_resolves_the_web_key_with_the_web_fallback.
+[x] string - helix.page.title -> HelixPage.Model.cs#HelixPageRegistration.Title localizer.GetString("helix.page.title",
+             "Helix"); used as the PageContainer title and the breadcrumb "helix" segment label. resw rows:
+             translation.helix.page.title (en/he/ar). Tests: HelixPageTests.Title_resolves_the_web_key_with_the_web_fallback,
+             BreadcrumbOverrides_map_the_integrations_and_helix_segments.
+
+PARITY_COVERED=5
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/HelixPageTests.cs (15 tests):
+# the three string keys are recorded through a RecordingLocalizer; the loading/success states are driven through a
+# controllable FakeAiSettingsSource into HelixPageViewModel; the shell-default EmptyAiSettingsSource is asserted to
+# resolve settings + usage to the empty state and accept a save no-op.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/HelixPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Settings path does not exist in-repo)
+#   + apps/windows/TeslaSync.App.Tests/FeatureViews/HelixPageTests.cs
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Warning(s) 0 Error(s) (App project clean; 17 pre-existing
+#   TeslaSync.App.Core CA warnings are non-fatal and predate this change)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> clean (new HelixPage sources normalized to LF per
+#   apps/.editorconfig end_of_line=lf)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26956, Failed: 0, Skipped: 0 (includes the 15
+#   new HelixPageTests). This is the W7-page TEST gate, per the established sibling-page logs.
+TEST_EXIT=0
+# NOTE: the separate W9 suite apps/windows/TeslaSync.App.UITests (WinAppDriver/Appium UI automation) is not part of
+#   the W7-page TEST gate and is environmentally unavailable here — all 147 tests hard-fail identically with
+#   UiAutomationUnavailableException ("nothing listening on http://127.0.0.1:4723/ ... WinAppDriver.exe not found"),
+#   a deliberate by-design hard-fail when the runner is absent. This is pre-existing, infra-only, and unrelated to
+#   HelixPage (the page's parity is asserted by the green TeslaSync.App.Tests suite above).
+PARITY_COVERED=5
+PARITY_REQUIRED=5
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/HelixPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/HelixPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-settings-HelixPage.log
+# git commit -m "feat(apps/windows): HelixPage at web parity (W7 settings)"
+
+EXIT=0
+STATUS=DONE

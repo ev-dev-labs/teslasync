@@ -11574,6 +11574,15 @@
   <data name="translation.healthy" xml:space="preserve">
     <value>healthy</value>
   </data>
+  <data name="translation.helix.breadcrumb.integrations" xml:space="preserve">
+    <value>Integrations</value>
+  </data>
+  <data name="translation.helix.page.subtitle" xml:space="preserve">
+    <value>Optional AI integration. Off by default — nothing runs until you opt in here.</value>
+  </data>
+  <data name="translation.helix.page.title" xml:space="preserve">
+    <value>Helix</value>
+  </data>
   <data name="translation.help.aiHelp.askButton" xml:space="preserve">
     <value>Ask the assistant</value>
   </data>

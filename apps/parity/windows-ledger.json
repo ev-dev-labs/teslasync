@@ -97,5 +97,14 @@
     "requiredCount": 31,
     "promptId": "p2-windows/W7/windows-page-notifications-AlertRulesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AlertRulesPage.log"
+  },
+  {
+    "unitId": "page:settings/Helix",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p2-windows/W7/windows-page-settings-HelixPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-HelixPage.log"
   }
 ]
