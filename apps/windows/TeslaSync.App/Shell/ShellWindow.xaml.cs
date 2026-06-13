@@ -129,6 +129,8 @@ public sealed partial class ShellWindow : Window
 
         // Admin / Vehicle cost page (P2/W7) — parity port of web VehicleCostPage at route /admin/vehicle-cost.
         _viewModel.PageFactory.Register("VehicleCost", static () => new FeatureViews.Admin.VehicleCostPage());
+        // Vehicles / Digital Twin page (P2/W7) — parity port of web DigitalTwinPage at route /digital-twin.
+        _viewModel.PageFactory.Register("DigitalTwin", static () => new FeatureViews.Vehicles.DigitalTwinPage());
         // Battery / Energy flow page (P2/W7) — parity port of web EnergyFlowPage at route /energy-flow.
         _viewModel.PageFactory.Register("EnergyFlow", static () => new FeatureViews.Battery.EnergyFlowPage());
         // Battery / Energy products page (P2/W7) — parity port of web EnergyProductsPage at route /energy-products.

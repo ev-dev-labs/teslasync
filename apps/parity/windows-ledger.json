@@ -142,5 +142,14 @@
     "requiredCount": 42,
     "promptId": "p2-windows/W7/windows-page-trips-TripReplayPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-trips-TripReplayPage.log"
+  },
+  {
+    "unitId": "page:vehicles/DigitalTwin",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 45,
+    "requiredCount": 45,
+    "promptId": "p2-windows/W7/windows-page-vehicles-DigitalTwinPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicles-DigitalTwinPage.log"
   }
 ]
