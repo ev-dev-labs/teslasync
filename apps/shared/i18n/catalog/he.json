@@ -22748,6 +22748,24 @@
       "translated": false,
       "value": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source."
     },
+    "translation.help.aiHelp.error": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Helix couldn’t answer your question. Please try again."
+    },
+    "translation.help.aiHelp.inputLabel": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "Your question"
+    },
+    "translation.help.aiHelp.placeholder": {
+      "fallbackFrom": "en",
+      "tokens": [],
+      "translated": false,
+      "value": "e.g. How do I enable energy cost forecasting?"
+    },
     "translation.help.aiHelp.title": {
       "fallbackFrom": "en",
       "tokens": [],

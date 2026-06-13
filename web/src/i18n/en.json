@@ -69,7 +69,10 @@
       "title": "Ask the help assistant",
       "badge": "Helix",
       "description": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
-      "askButton": "Ask the assistant"
+      "askButton": "Ask the assistant",
+      "placeholder": "e.g. How do I enable energy cost forecasting?",
+      "error": "Helix couldn’t answer your question. Please try again.",
+      "inputLabel": "Your question"
     },
     "tooltip": {
       "iconLabel": "More info"
