@@ -609,3 +609,4 @@ p3-android/shared-meaningful/A-0019-AIFeedbackQueueTriage.prompt.md
 p3-android/shared-meaningful/A-0022-AIIncidentTimelineSummarizer.prompt.md
 p3-android/shared-meaningful/A-0021-AIInboxAutoCategorization.prompt.md
 p3-android/shared-meaningful/A-0020-AIGeofenceAwareAutomationSuggestions.prompt.md
+p3-android/shared-meaningful/A-0023-AILearnedAnomalyBaselines.prompt.md
