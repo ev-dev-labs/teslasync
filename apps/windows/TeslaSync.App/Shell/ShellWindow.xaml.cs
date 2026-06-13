@@ -250,6 +250,17 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register(
             "NotificationsQuietHours",
             static () => new FeatureViews.Notifications.QuietHoursPage());
+
+        // Notifications / Inbox page (P2/W7) — parity port of web InboxPage at route /notifications/inbox. The
+        // "View archived" header action navigates to the archived inbox (web Link to /notifications/archived) and
+        // the hosted body's empty CTA navigates to the alert studio (web to /notifications/studio).
+        _viewModel.PageFactory.Register("NotificationsInbox", () =>
+        {
+            var page = new FeatureViews.Notifications.InboxPage();
+            page.ViewArchivedRequested += (_, _) => NavigateTo("notifications/archived");
+            page.ConfigureAlertRulesRequested += (_, _) => NavigateTo("notifications/studio");
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

@@ -635,6 +635,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Model.cs" Link="FeatureViews\InboxBody\InboxBody.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Source.cs" Link="FeatureViews\InboxBody\InboxBody.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.ViewModel.cs" Link="FeatureViews\InboxBody\InboxBody.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxPage\InboxPage.Model.cs" Link="FeatureViews\InboxPage\InboxPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxPage\InboxPage.Source.cs" Link="FeatureViews\InboxPage\InboxPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\InboxPage\InboxPage.ViewModel.cs" Link="FeatureViews\InboxPage\InboxPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentForm\IncidentForm.Model.cs" Link="FeatureViews\IncidentForm\IncidentForm.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentForm\IncidentForm.Source.cs" Link="FeatureViews\IncidentForm\IncidentForm.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentForm\IncidentForm.ViewModel.cs" Link="FeatureViews\IncidentForm\IncidentForm.ViewModel.cs" />

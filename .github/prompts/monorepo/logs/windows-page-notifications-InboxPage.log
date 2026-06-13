@@ -1,0 +1,84 @@
+=== p2-windows · W7 · page:notifications/Inbox (WinUI 3 / Fluent) ===
+Parity unit : page:notifications/Inbox   kind=page   web route=/notifications/inbox
+Web source  : web/src/features/notifications/pages/InboxPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (cache-then-network read seams), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "TeslaSync/Features/Notifications/InboxPage.xaml + InboxPageViewModel.cs" is mapped onto these real
+  conventions; the surface registers with the W4 ShellPageFactory by route name ("NotificationsInbox", already
+  defined in TeslaSync.App.Core/Navigation/RouteTable.cs).
+- Web parity shape: InboxPage.tsx is a thin host — usePageTitle + useVehicles() + useAlertRules(), then
+  <PageContainer title subtitle copyLink actions={View archived}> hosting <InboxBody archived=false vehicles
+  rules/>. The native port mounts the shared SharedSurfaces.PageContainer over the shared FeatureViews.InboxBody
+  (already built, W-component) and adds the right-aligned "View archived" TsButton action.
+- Data sources: the page owns the two auxiliary reads the web page performs. InboxPageSource streams
+  GET /vehicles (Operations.Vehicles.List = get_api_v1_vehicles) and GET /alerts/rules (get_api_v1_alerts_rules)
+  through the shared CacheThenNetworkEngine (the same pipeline web useVehicles/useAlertRules ride). The hosted
+  InboxBody is self-contained by its own ADR decision ("neither notification endpoint is vehicle-scoped, so no
+  vehicle source is required" — InboxBody.cs) and resolves its own vehicle/rule labels from the notification
+  readings, so the page's two reads back the page-level data-source contract + freshness rather than being
+  prop-drilled into the body. The shell mounts the page over EmptyInboxPageSource + EmptyInboxSource +
+  NoOpInboxCommands (the established empty-source host pattern shared with EnergyPage/QuickStatsPage); the
+  data-wired host injects InboxPageSource + InboxSource + InboxCommands.
+- i18n: three new keys added verbatim to Strings/{en,ar,he}/Resources.resw
+  (translation.notifications.inbox.{title,subtitle,viewArchived}); resolved through the ILocalizer facade with
+  the web key names. The ar/he catalogs mirror en's English values, matching the existing notifications.inbox.*
+  convention in those files.
+- Test wiring: TeslaSync.App targets a WinUI TFM and cannot be project-referenced from the plain net10.0 test
+  host, so the three Microsoft.UI-free InboxPage sources are linked into TeslaSync.App.Tests.csproj (path-sorted
+  after the InboxBody links). The WinUI view (InboxPage.cs) is exercised by the app build.
+
+=== PARITY ===
+PARITY_REQUIRED=4
+
+# Panels / regions — the web InboxPage declares no <GlassPanel> of its own; it hosts InboxBody inside
+# PageContainer. Reproduced as SharedSurfaces.PageContainer (title + subtitle + copy-link + actions chrome) hosting
+# FeatureViews.InboxBody (archived=false) -> InboxPage.cs#_pageContainer.PageContent = _body, with the header
+# "View archived" action -> InboxPage.cs#_viewArchived (TsButton, ButtonVariant.Subtle, InboxPageRegistration.ArchiveGlyph).
+
+# Data states — page-owned useVehicles + useAlertRules reads folded into InboxPageState (loading/loaded/empty/error).
+# The web page renders the inbox unconditionally (queries default to []), so the state never blanks the body.
+[x] state  - loading       -> InboxPageState.Loading + InboxPageViewModel.State/VehiclesStatus/AlertRulesStatus (RecomputeState); test InboxPageTests.Initial_state_is_loading_before_any_read / Load_keeps_loading_while_a_read_is_pending
+[x] state  - empty         -> InboxPageState.Empty (both reads settled, no data) via EmptyInboxPageSource; test InboxPageTests.Load_reaches_empty_when_both_reads_are_empty
+[x] state  - error         -> InboxPageState.Error (both reads failed) via StaticInboxPageSource.Emitting(Failure); test InboxPageTests.Load_reaches_error_when_both_reads_fail
+[x] state  - success       -> InboxPageState.Loaded + InboxPageViewModel.State (RecomputeState); page renders PageContainer + InboxBody content; tests InboxPageTests.Load_reaches_loaded_when_both_reads_return_data / Load_reaches_loaded_when_only_one_read_returns_data / Cached_then_loaded_sequence_keeps_data_and_ends_loaded
+
+# Strings (3) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - notifications.inbox.title        -> InboxPageRegistration.TitleKey="notifications.inbox.title" / Title(localizer) "Inbox"; resw translation.notifications.inbox.title; bound InboxPageViewModel.Title; rendered PageContainer title (InboxPage.cs new PageContainer(localizer, _viewModel.Title)); tests Registration_exposes_ported_string_keys / Registration_resolves_english_defaults / ViewModel_surfaces_the_three_header_strings
+[x] string - notifications.inbox.subtitle     -> InboxPageRegistration.SubtitleKey="notifications.inbox.subtitle" / Subtitle(localizer) "Recent notifications from your alert rules."; resw translation.notifications.inbox.subtitle; bound InboxPageViewModel.Subtitle; rendered PageContainer.Subtitle (InboxPage.cs); tests Registration_resolves_english_defaults / ViewModel_surfaces_the_three_header_strings
+[x] string - notifications.inbox.viewArchived -> InboxPageRegistration.ViewArchivedKey="notifications.inbox.viewArchived" / ViewArchivedLabel(localizer) "View archived"; resw translation.notifications.inbox.viewArchived; bound InboxPageViewModel.ViewArchivedLabel; rendered InboxPage.cs#_viewArchived.Text (TsButton) + AutomationProperties name; tests Registration_resolves_english_defaults / ViewModel_surfaces_the_three_header_strings
+
+PARITY_COVERED=4
+# Coverage asserted headlessly across InboxPageTests (20 tests): the three string tests record the web key names +
+# English defaults through PassthroughLocalizer; the five state tests drive loading/loaded(success)/empty/error from
+# the bound InboxPageViewModel state holder; plus diagnostics, registration-metadata and JSON-adapter coverage.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/InboxPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Notifications path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (InboxPage sources + ShellWindow registration + test csproj)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26901, Failed: 0, Skipped: 0 (InboxPageTests: 20/20)
+TEST_EXIT=0
+PARITY_COVERED=4
+PARITY_REQUIRED=4
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/InboxPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/InboxPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-notifications-InboxPage.log
+# git commit -m "feat(apps/windows): InboxPage at web parity (W7 notifications)"
+
+EXIT=0
+STATUS=DONE
