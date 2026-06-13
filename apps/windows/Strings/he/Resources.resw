@@ -14514,6 +14514,53 @@
   <data name="translation.polling.sleep" xml:space="preserve">
     <value>Sleep</value>
   </data>
+  <data name="translation.powerDashboards.editor.clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="translation.powerDashboards.editor.copy" xml:space="preserve">
+    <value>Copy to clipboard</value>
+  </data>
+  <data name="translation.powerDashboards.editor.copyEmpty" xml:space="preserve">
+    <value>Type or paste a dashboard JSON envelope above before copying.</value>
+  </data>
+  <data name="translation.powerDashboards.editor.copyFailed" xml:space="preserve">
+    <value>Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.</value>
+  </data>
+  <data name="translation.powerDashboards.editor.copySuccess" xml:space="preserve">
+    <value>Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model).</value>
+  </data>
+  <data name="translation.powerDashboards.editor.copyUnavailable" xml:space="preserve">
+    <value>Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.</value>
+  </data>
+  <data name="translation.powerDashboards.editor.label" xml:space="preserve">
+    <value>Dashboard JSON editor</value>
+  </data>
+  <data name="translation.powerDashboards.editor.placeholder" xml:space="preserve">
+    <value>{
+  "title": "Fleet overview",
+  "slots": [
+    {
+      "panel_name": "drives_per_day_timeseries",
+      "grid_pos": { "x": 0, "y": 0, "w": 24, "h": 8 }
+    }
+  ]
+}</value>
+  </data>
+  <data name="translation.powerDashboards.editor.title" xml:space="preserve">
+    <value>Manual dashboard JSON editor</value>
+  </data>
+  <data name="translation.powerDashboards.intro" xml:space="preserve">
+    <value>Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.</value>
+  </data>
+  <data name="translation.powerDashboards.panels.intro" xml:space="preserve">
+    <value>These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.</value>
+  </data>
+  <data name="translation.powerDashboards.panels.title" xml:space="preserve">
+    <value>Curated panel catalog</value>
+  </data>
+  <data name="translation.powerDashboards.title" xml:space="preserve">
+    <value>Dashboard Composer</value>
+  </data>
   <data name="translation.powerFlow.backupCapable" xml:space="preserve">
     <value>Backup Capable</value>
   </data>

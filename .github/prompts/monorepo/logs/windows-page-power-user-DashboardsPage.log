@@ -1,0 +1,136 @@
+=== p2-windows · W7 · page:power-user/Dashboards (WinUI 3 / Fluent) ===
+Parity unit : page:power-user/Dashboards   kind=page   web route=/power/dashboards
+Web source  : web/src/features/power-user/pages/DashboardsPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/DashboardsPage/{DashboardsPage.Model.cs, .Source.cs, .ViewModel.cs, .Platform.cs, .cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the seams), <Name>.ViewModel.cs (INotifyPropertyChanged state
+  holder) and <Name>.cs (the Fluent UserControl view), exactly as the sibling W7 PowersharePage / JsonFormatter
+  do. The generated prompt's idealized "DashboardsPage.xaml + DashboardsPageViewModel.cs under
+  TeslaSync/Features/PowerUser" is mapped onto these real conventions. The surface registers itself with the W4
+  ShellPageFactory by route name ("PowerDashboards", already in TeslaSync.App.Core/Navigation/RouteTable.cs L228
+  → power/dashboards, group PowerUser) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the manifest declares NO API data sources — the web page renders entirely from local
+  state (the dashboardJson editor value + the install-wide-static curated catalog). The native port has no
+  client feed; instead two seams carry the web's two side effects: IDashboardDraftStore (the localStorage
+  round-trip under "ai.dashboardComposer.draft", web loadPersistedJson/persistJson) and IDashboardClipboard (the
+  navigator.clipboard guard + writeText). The WinUI implementations (LocalSettingsDashboardDraftStore over
+  ApplicationData.LocalSettings with the same try/catch the web wraps localStorage in; WindowsDashboardClipboard
+  over the WinUI Clipboard) live in .Platform.cs (App-only, WinUI TFM); the pure seams + InMemoryDashboardDraftStore
+  live in .Source.cs and link into the headless net10.0 test host. No HTTP/clipboard/storage touches the view —
+  the view-model drives both seams.
+- AI composer scope: the web page also renders <AINLDashboardComposer onApply={…}/> above the editor. That is a
+  separate shared component (a distinct W3 parity unit with its own i18n keys); this page unit's manifest scopes
+  ONLY the two manual GlassPanels and their 13 strings (requiredCount=16) and lists no AI strings/panels, so the
+  AI drafter is intentionally out of scope here. The manual baseline — which the web renders in AI-off mode via
+  withAiFeature — is reproduced in full. This is documented, not silent scope-narrowing.
+- Panels (ADR-006): both GlassPanels are always-visible Fluent TsGlassPanel regions (never blank). GlassPanel1
+  is the manual JSON editor (PanelTitle + TsTextarea with the example-envelope hint + an accessible name +
+  Copy/Clear TsButtons + an amber polite status live region); GlassPanel2 is the curated catalog (PanelTitle +
+  intro + a two-column grid of bordered cards, each a mono cyan panel_name + a secondary description). The single
+  declared data state is "success": with no async source the page always renders its content; Copy/Clear enable
+  on Display.CanCopy (web canCopy = dashboardJson.trim().length > 0).
+- Copy flow: DashboardsPageViewModel.CopyAsync reproduces the web handleCopy precedence verbatim — blank editor
+  → DashboardCopyOutcome.Empty (copyEmpty); !clipboard.IsAvailable → Unavailable (copyUnavailable); writeText
+  resolves → Success (copySuccess); writeText throws → Failed (copyFailed). The status line is left untouched on
+  edit (web parity: only Clear / a new copy changes it). All four status strings are resolved on every projection
+  so the i18n contract holds regardless of which branch later runs.
+- Units (ADR-002): the surface carries no measurements — there is no miles/mph/psi/°F/kWh path on this page, so no
+  SI conversion applies (web parity).
+- i18n (ADR-014): all 13 manifest keys flow through ILocalizer.GetString("<web key>", "<English default>") in
+  DashboardComposerProjection, resolved UNCONDITIONALLY in Project so every key is recorded on every render
+  (tests Projection_resolves_every_required_string_key + _even_when_the_editor_has_content). The 13 keys were
+  added verbatim (web key names, "translation.<key>") to all three catalogs Strings/{en,ar,he}/Resources.resw in
+  alphabetical position just before the powerFlow block, preserving LF/UTF-8-with-BOM (validated: 13/13 present,
+  valid XML in each catalog; the multi-line editor example and the → arrow round-trip intact). NOTE: the resw is
+  generator-owned and sources from web en.json; these hand-added keys would not be re-emitted by gen-i18n until
+  the same keys land in web en.json (today the web supplies them as inline t() defaults) — documented here, not
+  silent. The resw is not part of the dotnet build, so this does not affect the build gate.
+- a11y (ADR-015): AutomationProperties.SetName on the page (Group AutomationPeer falling back to the title), both
+  GlassPanels, the editor (the editor.label key), the Copy/Clear buttons, and each catalog card; the copy status
+  is a polite LiveRegion (web role="status"). Light/dark + tokens honored — every colour/typography comes from the
+  W1/W2 design tokens via the shared components (TsGlassPanel / TsTextarea / TsButton / PageTitle / PanelTitle)
+  and the DisplayTokens brushes (TextSecondary, the warning brush for the amber status, the speed/cyan brush for
+  the panel_name, the border brush for the catalog cards).
+- The single shell file the W7 surface must edit to register itself, ShellWindow.xaml.cs, gained one
+  PageFactory.Register("PowerDashboards", …) line; it is in-scope and documented here.
+
+=== PARITY ===
+PARITY_REQUIRED=16
+
+# Panels (2) — every web region reproduced as an always-visible Fluent TsGlassPanel region, bound to the DashboardComposerDisplay state holder
+[x] panel  - GlassPanel1 -> Manual JSON editor: DashboardsPage.cs#BuildEditorPanel (_editorPanel TsGlassPanel,
+             Padding 24) hosting _editorTitle PanelTitle (Display.EditorTitle) + _editor TsTextarea (Hint =
+             Display.EditorHint, AutomationName = Display.EditorLabel) + Copy/Clear TsButtons (Display.CopyLabel /
+             ClearLabel, IsEnabled = Display.CanCopy) + _status amber polite live region; web "Manual dashboard
+             JSON editor" GlassPanel; tests Copy_blank_editor_yields_empty_status / _without_clipboard_yields_
+             unavailable_status / _success_writes_trimmed_json_and_reports_success / _failure_reports_failed_status
+[x] panel  - GlassPanel2 -> Curated catalog: DashboardsPage.cs#BuildCatalogPanel (_catalogPanel TsGlassPanel,
+             Padding 24) hosting _catalogTitle PanelTitle (Display.PanelsTitle) + _catalogIntro (Display.PanelsIntro)
+             + _catalogGrid (2-col bordered cards from Display.Panels = DashboardComposerCatalog.Sorted(), each a
+             mono cyan panel_name + secondary description); web "Curated panel catalog" GlassPanel; tests
+             Catalog_exposes_the_six_curated_panels / _sorted_is_ascending_by_name / _descriptions_match_the_web_
+             catalog / Projection_exposes_the_sorted_catalog
+
+# Data state (1) — the success render (no API source; the page always renders its content, never blank)
+[x] state  - success -> the page declares no API data source and renders from local state; DashboardsPage.cs#Render
+             always renders the header + both GlassPanels (web parity); Display.CanCopy gates Copy/Clear; the copy
+             flow surfaces its status without ever blanking a region; asserted via Projection_resolves_every_
+             required_string_key (the success projection) + ViewModel_seeds_from_the_draft_store +
+             ViewModel_set_text_updates_state_persists_and_raises
+
+# Strings (13) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - powerDashboards.editor.clear           -> DashboardComposerProjection.ClearKey -> Display.ClearLabel (_clearButton.Text)
+[x] string - powerDashboards.editor.copy            -> DashboardComposerProjection.CopyKey -> Display.CopyLabel (_copyButton.Text)
+[x] string - powerDashboards.editor.copyEmpty       -> DashboardComposerProjection.CopyEmptyKey -> Display.CopyEmptyMessage (CopyAsync Empty branch)
+[x] string - powerDashboards.editor.copyFailed      -> DashboardComposerProjection.CopyFailedKey -> Display.CopyFailedMessage (CopyAsync Failed branch)
+[x] string - powerDashboards.editor.copySuccess     -> DashboardComposerProjection.CopySuccessKey -> Display.CopySuccessMessage (CopyAsync Success branch)
+[x] string - powerDashboards.editor.copyUnavailable -> DashboardComposerProjection.CopyUnavailableKey -> Display.CopyUnavailableMessage (CopyAsync Unavailable branch)
+[x] string - powerDashboards.editor.label           -> DashboardComposerProjection.EditorLabelKey -> Display.EditorLabel (editor AutomationProperties.Name)
+[x] string - powerDashboards.editor.placeholder     -> DashboardComposerProjection.EditorHintKey -> Display.EditorHint (_editor.Hint)
+[x] string - powerDashboards.editor.title           -> DashboardComposerProjection.EditorTitleKey -> Display.EditorTitle (_editorTitle PanelTitle)
+[x] string - powerDashboards.intro                  -> DashboardComposerProjection.IntroKey -> Display.Intro (_intro)
+[x] string - powerDashboards.panels.intro           -> DashboardComposerProjection.PanelsIntroKey -> Display.PanelsIntro (_catalogIntro)
+[x] string - powerDashboards.panels.title           -> DashboardComposerProjection.PanelsTitleKey -> Display.PanelsTitle (_catalogTitle PanelTitle)
+[x] string - powerDashboards.title                  -> DashboardComposerProjection.TitleKey -> Display.Title + DashboardsRegistration.Title (PageTitle)
+# String coverage asserted headlessly: DashboardsPageTests.Projection_resolves_every_required_string_key (+
+# _even_when_the_editor_has_content) record every one of the 13 web keys through a RecordingLocalizer; the
+# verbatim English defaults are pinned by Projection_falls_back_to_the_verbatim_web_defaults, and the
+# copy-status branch mapping by Display_status_for_maps_each_outcome_to_its_message.
+
+PARITY_COVERED=16
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DashboardsPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/PowerUser path does not exist in-repo)
+PLACEHOLDER_ALLOWED=1
+#   (the single allow is the editor.placeholder i18n key const in DashboardsPage.Model.cs — the web key name is
+#    literally "…editor.placeholder"; opted out with `// parity:allow web i18n key name (verbatim)`)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 0 Warning(s).
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (all 5 new .cs files + the test file
+#   normalized CRLF->LF, UTF-8-no-BOM; whole-solution verify clean).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 26943, Failed: 0, Skipped: 0
+#   (incl. 33 DashboardsPageTests cases). The W7 page gate's dotnet test targets the headless TeslaSync.App.Tests
+#   project, matching the sibling W7 page logs; the WinAppDriver UI-automation suite (TeslaSync.App.UITests) is a
+#   W9 concern and requires a WinAppDriver/Appium runner that is absent in this environment — out of scope here.
+TEST_EXIT=0
+PARITY_COVERED=16
+PARITY_REQUIRED=16
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DashboardsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DashboardsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-power-user-DashboardsPage.log
+# git commit -m "feat(apps/windows): DashboardsPage at web parity (W7 power-user)"
+
+EXIT=0
+STATUS=DONE
