@@ -1,0 +1,192 @@
+=== P4 Shared surface 0163 VehicleMultiSelect (Apple) ===
+Prompt:   .github/prompts/monorepo/p4-apple/shared-meaningful/P-0163-VehicleMultiSelect.prompt.md
+Web spec: components/forms/VehicleMultiSelect.tsx
+Native:   apps/apple/TeslaSync/shared-surfaces/VehicleMultiSelect.*
+Runner:   Xcode 26.5 (17F42) · Swift 6.3.2 · iOS Simulator (iPhone 16, booted) · macOS 15 SDK
+          swiftlint 0.63.3 · swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh present · gradle 8.14.5 / Kotlin 2.0.21
+Capability: SwiftUI present; Swift Charts + MapKit present (this surface needs NEITHER — see below).
+            Platform IS fully capable (xcframework built, project generated, surface compiled + tested) →
+            NOT a capability BLOCK.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+WEB SOURCE NATURE (faithful-parity note)
+────────────────────────────────────────────────────────────────────────────────────────────────
+`components/forms/VehicleMultiSelect.tsx` is a CONTROLLED popover multi-select. Its real hooks are
+`useTranslation` + `useId`; the fleet arrives as the `vehicles: Vehicle[]` PROP (the parent Alert Studio
+editor owns `useVehicles()`), and every edit routes out through the `onChange` prop. The prompt's data-source
+list ("useVehicles, useTranslation, useId") is the domain extraction; the component itself never fetches.
+Mirroring the accepted sibling VehicleSelect (0164), the native peer reconciles the prop-driven web with the
+P4 "every state renders" contract via a P1/S8 Source→Snapshot→Model seam: the host implements the source over
+its `useVehicles()` feed + the editor's controlled value, and the surface adds the always-render leaf states
+(loading skeleton, fetch-error retry) + the freshness chip ON TOP of the faithful web body. No HTTP in the
+view. No web branch invented away; no fetch chrome fabricated beyond the P4 leaf contract.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+SHIPPED FILES (9 — all within the prompt's allowed scope `VehicleMultiSelect.*`; line counts)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  349  VehicleMultiSelect.Adapter.swift      pure Foundation core: surface slug, i18n resolve typealias, the
+                                             discriminated-union value (VehicleMultiSelectValue = allSticky |
+                                             specific[ids]), the fleet row (display_name/model/vin/id), the
+                                             connectivity axis, the summary variant + row/projection value
+                                             types, and the pure VehicleMultiSelectProjector — verbatim ports
+                                             of web `vehicleLabel`, `lastFourVin`, `dedupSort`, the trigger
+                                             summary branch, `unknownIds` (D10), `handleToggleAll` (D13) /
+                                             `handleToggleVehicle`, and the `hydrateVehicleSelection` /
+                                             `buildVehiclePayload` codec (D11/D12/D14).
+  180  VehicleMultiSelect.Seams.swift        P1/S11 telemetry seam + OSLog default; P4 phase; snapshot (web
+                                             value + vehicles + errorKey + disabled + in-flight/error/
+                                             connectivity); P1/S8 read-source seam + Live / InMemory sources.
+  331  VehicleMultiSelect.Model.swift        P1/S10 i18n facade (9 verbatim web keys + native chrome) +
+                                             @Observable @MainActor holder: fleet/value/errorKey/disabled
+                                             state, derived projection + localized summary + inline error,
+                                             All-sentinel / per-vehicle toggle routing (web onChange, incl.
+                                             D13 restore), popover-open + trigger-enabled rules, stale
+                                             auto-refresh-once / offline-keeps-cached, once-only view.opened.
+  324  VehicleMultiSelect.Views.swift        check box glyph, check row (role=checkbox parity w/ toggle a11y
+                                             value), trigger (summary Badge + rotating chevron + danger border
+                                             + .popover), popover listbox (sentinel / vehicle / unknown rows +
+                                             dividers), empty-fleet help, inline error text, loading skeleton,
+                                             fetch-error retry tile, freshness chip.
+  108  VehicleMultiSelect.swift              public surface; phase switch (loading/content/empty/error) +
+                                             freshness chip + empty-help + inline error; injected-model +
+                                             source/onChange convenience inits.
+  101  VehicleMultiSelect.Previews.swift     6 #Previews: summary variants / none+unknown / empty-fleet /
+                                             validation-error / loading+error / stale+offline.
+   93  VehicleMultiSelect.strings            P1/S10 table — the 9 verbatim web t() keys
+                                             (notifications.alertStudio.editor.vehicles*) + the faciaded inline
+                                             fallback (vehicleMultiSelect.fleetFallbackName) + native chrome /
+                                             a11y keys (loading/error/freshness/option-value).
+  325  VehicleMultiSelect.AdapterTests.swift pure XCTest: slug, lastFourVin, vehicleLabel chain, dedupSort,
+                                             summary variants, unknownIds (D10), toggles (incl. D13), full
+                                             projection, hydrate/buildPayload codec, value-type equality.
+  392  VehicleMultiSelect.Tests.swift        state-holder + view-composition + facade: view.opened-once,
+                                             phase ingestion, toggle routing (sentinel-fresh / add-remove /
+                                             D13 restore), errorKey resolution, trigger-enabled + popover
+                                             rules, stale-autorefresh-once / offline-no-refetch, every subview
+                                             composes, all 9 web keys + interpolation + a11y labels resolve.
+  ----
+  2203  total (9 files). Web source: 454 lines. The native surface is LARGER, not gutted: it adds the P1/S8
+        state-holder + seams, the P1/S10 facade, the full XCTest suites, the previews, and the P4 leaf states.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+PARITY MAP (web symbol → native)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  VehicleSelection {all_sticky|specific}        → VehicleMultiSelectValue {.allSticky|.specific([Int])}
+  vehicleLabel(v)                               → VehicleMultiSelectProjector.vehicleLabel(...)  (— model / (VIN ...last4))
+  lastFourVin / dedupSort                       → lastFourVIN / dedupSort  (id>0, de-dupe, sort)
+  triggerSummary (5 branches)                   → VehicleMultiSelectSummary {.all/.none/.one/.partial/.count}
+  handleToggleAll (D13 restore)                 → toggleAll(value, previousSpecific)
+  handleToggleVehicle                           → toggleVehicle(value, id)
+  unknownIds (D10, Unknown badge)               → unknownIDs(value, knownIDs) → unknownRows
+  isFleetEmpty → disabled trigger + help        → phase .empty → disabled trigger + emptyFleetHelp
+  errorKey → danger border + <p role=alert>     → errorText + danger trigger border + ErrorText view
+  hydrateVehicleSelection / buildVehiclePayload → Projector.hydrate / buildPayload (D11/D12/D14)
+  t(key, default) [9 keys]                      → VehicleMultiSelectStrings (P1/S10) — verbatim fallbacks
+  useId (trigger/popover/error ids)             → SwiftUI .popover binding + accessibility identity
+  (no web peer) view.opened                     → P1/S11 telemetry, slug "VehicleMultiSelect", once per instance
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+STATES (every one renders — verified by previews + tests)
+────────────────────────────────────────────────────────────────────────────────────────────────
+  loading  → skeleton trigger pill (native leaf).
+  content  → trigger (summary Badge + chevron) + .popover (All sentinel / vehicle rows / unknown rows).
+  empty    → web disables the trigger for an empty fleet → native .empty phase: disabled trigger + help line.
+  error    → fetch-failure retry tile (native leaf; web has no QueryError peer).
+  stale    → freshness chip + auto-refresh ONCE (resets after a live read).
+  offline  → freshness chip; cached fleet kept; no refetch.
+  validation error (web errorKey) → danger trigger border + inline error text (orthogonal to phase).
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+GATE RESULTS (real, captured — see files/ logs for raw output)
+────────────────────────────────────────────────────────────────────────────────────────────────
+SURFACE-SCOPED + ISOLATED (the surface's definition of done — all GREEN):
+  FORMAT_SURFACE_EXIT=0   swiftformat --lint on the 8 shipped .swift files → 0/8 require formatting.
+  LINT_SURFACE_EXIT=0     swiftlint --strict on the 8 shipped .swift files → 0 violations.
+  SWIFTC_EXIT=0           swiftc -typecheck of the surface + previews against the REAL shared UI layer
+                          (DesignTokens + Sources/Components + Sources/Design), iphonesimulator SDK,
+                          -swift-version 6 -strict-concurrency=complete -D DEBUG → 0 errors.
+  SURFACE_TEST_EXIT=0     SwiftPM isolated run (macOS 15, Swift 6 language mode) of both XCTest files against
+                          the real UI layer → Executed 65 tests, 0 failures.
+  PLACEHOLDER_EXIT=0      check-placeholders.ps1 genuine scan of the 9 shipped files → PLACEHOLDER_COUNT=0
+                          (self-test PASS; the literal prompt gate path also EXIT=0).
+  XCODEGEN_EXIT=0         xcodegen generate → all 9 files wired (54 pbxproj refs: iOS+macOS app + both test
+                          bundles + file refs).
+  XCFRAMEWORK_EXIT=0      apps/apple/Scripts/build-shared-xcframework.sh (gradle :core:assembleSharedXCFramework)
+                          → Shared.xcframework staged (ios-arm64 / ios-arm64-simulator / macos-arm64).
+
+FULL-APP / FULL-TREE AGGREGATE (RED — proven FOREIGN / ENVIRONMENTAL, outside this prompt's allowed files):
+  FORMAT_TREE_EXIT=1      swiftformat --lint apps/apple → 1/5442 files require formatting. The ONLY offender is
+                          TeslaSync/feature-views/RecentDrivesSection.Previews.swift (redundantType, L27-28) —
+                          a FOREIGN committed file. ZERO VehicleMultiSelect hits.
+  LINT_TREE_EXIT=2        swiftlint --strict (full tree) → exactly 3 violations, ALL in
+                          TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift (identifier_name a/b/c) —
+                          a FOREIGN committed file (commit 4b4d6219f). ZERO VehicleMultiSelect hits.
+  IOS_EXIT=65             xcodebuild -scheme TeslaSync -destination 'iPhone 16' build test → BUILD FAILED.
+                          Root cause: a Swift COMPILER CRASH (frontend bug, "include the crash backtrace")
+                          during IRGen of the FOREIGN file
+                          TeslaSync/feature-views/AppearanceSettings.Controls.swift. The ONLY crash site in the
+                          log is that foreign file; ZERO crash/error sites are VehicleMultiSelect. My files
+                          compiled to .o objects successfully before the foreign crash aborted the link.
+  BASELINE_IOS_EXIT=65    DIFFERENTIAL PROOF: removed all 9 VehicleMultiSelect.* files, regenerated (0 pbxproj
+                          refs), rebuilt → BUILD FAILED with the SAME foreign compiler crash on
+                          AppearanceSettings.Controls.swift. ⇒ the iOS red is independent of this surface.
+  MAC_EXIT=65             xcodebuild -scheme TeslaSync-macOS build test → BUILD FAILED at the signing phase
+                          (before app compilation): error "TeslaSync-macOS / TeslaSyncWidgets-macOS has
+                          entitlements that require signing with a development certificate." ENVIRONMENTAL — no
+                          macOS development-signing certificate on the runner. ZERO VehicleMultiSelect errors.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+FOREIGN-RED ATTRIBUTION (honesty covenant #1 "no red-as-green", #8 "no commit on red")
+────────────────────────────────────────────────────────────────────────────────────────────────
+  • My change set = exactly the 9 untracked VehicleMultiSelect.* additions (git status --porcelain).
+  • The format / lint / iOS-crash offenders are COMMITTED baseline files in feature-views / widget-primitives
+    that I never touched and am scoped OUT of editing (prompt "Allowed files" + "Out of Scope").
+  • The iOS red is a compiler-bug crash on a foreign file, reproduced with my surface REMOVED
+    (BASELINE_IOS_EXIT=65, same crash site) — definitively not caused by this surface.
+  • The macOS red is the runner's missing development-signing certificate — environmental.
+  • This is NOT red-as-green: the aggregate reds are recorded with their real non-zero exits and proven
+    foreign/environmental + deferred to the signed P99 acceptance gate, exactly as accepted sibling 0164
+    (p4-apple-shared-surfaces-0164-VehicleSelect.log) did. The SURFACE itself is 0-red everywhere it is
+    measurable in isolation.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+ACCEPTANCE CRITERIA
+────────────────────────────────────────────────────────────────────────────────────────────────
+[x] Surface renders on Apple with all states from the web source reproduced (loading / content+popover /
+    empty-fleet disabled trigger+help / fetch-error retry / stale+offline freshness / validation errorKey).
+    6 #Previews + view-composition tests across every phase.
+[x] Hooks bind via the shared P1/S8 state-holder (VehicleMultiSelectModel + VehicleMultiSelectSource); no HTTP
+    in the view. useTranslation → P1/S10 facade; the web controlled value/onChange contract is kept (host owns
+    the fleet feed + editor value; toggles route out through onChange).
+[x] Every source i18n key resolves through the P1/S10 facade with verbatim fallbacks — the 9
+    notifications.alertStudio.editor.vehicles* keys + the faciaded inline fallback + native chrome/a11y keys.
+    No hardcoded English in Swift (verified by placeholder gate + facade tests).
+[x] Accessibility: trigger carries the summary name + error value + hint; every check row is a labelled toggle
+    announcing Selected/Not selected (role=checkbox parity); empty/error/freshness elements labelled; Dynamic
+    Type fonts; reduce-motion honoured by TSSkeleton.
+[x] Tests: adapter unit (cached→projection, label/codec/toggles) + per-state model (view.opened-once, phase
+    ingestion, stale-autorefresh-once, offline-no-refetch, toggle routing incl. D13) + view-composition + a11y
+    label tests — 65/65 green in isolation (SwiftPM, Swift 6 strict concurrency).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders genuine scan = 0).
+[x] Telemetry: view.opened with surface slug "VehicleMultiSelect" (once on start).
+[x] Full-app xcodebuild build/test reds are FOREIGN (proven via baseline differential) / ENVIRONMENTAL
+    (macOS signing); DEFERRED to the signed P99 acceptance gate. The surface itself is clean + green.
+
+────────────────────────────────────────────────────────────────────────────────────────────────
+EXIT CODES
+────────────────────────────────────────────────────────────────────────────────────────────────
+FORMAT_SURFACE_EXIT=0   (8 shipped .swift files — 0/8 require formatting)
+LINT_SURFACE_EXIT=0     (swiftlint --strict on the 8 shipped .swift files — 0 violations)
+SWIFTC_EXIT=0           (surface + previews type-check 0-error on the real shared UI layer, swift6 strict=complete)
+SURFACE_TEST_EXIT=0     (65/65 surface assertions executed green — SwiftPM, Swift 6)
+PLACEHOLDER_EXIT=0      (PLACEHOLDER_COUNT=0 — genuine 9-file scan + self-test PASS + literal gate path)
+XCODEGEN_EXIT=0         (54 VehicleMultiSelect pbxproj refs — iOS+macOS app + both test bundles)
+XCFRAMEWORK_EXIT=0      (gradle :core:assembleSharedXCFramework → Shared.xcframework staged)
+FORMAT_TREE_EXIT=1      (DEFERRED — 1 FOREIGN file: RecentDrivesSection.Previews.swift; surface 0/8)
+LINT_TREE_EXIT=2        (DEFERRED — 3 FOREIGN violations in WidgetChartSummary.Tests.swift; surface 0)
+IOS_EXIT=65             (DEFERRED — FOREIGN swiftc IRGen CRASH on AppearanceSettings.Controls.swift; surface 0 errors)
+BASELINE_IOS_EXIT=65    (surface REMOVED → SAME foreign crash → proves the iOS red is not this surface)
+MAC_EXIT=65             (DEFERRED — ENVIRONMENTAL: no macOS development-signing certificate on the runner)
+
+EXIT=0
+STATUS=DONE

@@ -1,0 +1,93 @@
+/*
+  VehicleMultiSelect.strings
+  TeslaSync — P4 shared surface · 0163 · VehicleMultiSelect (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peers of the web `t(key, default)` keys
+  in `components/forms/VehicleMultiSelect.tsx`. The nine `notifications.alertStudio.editor.vehicles*` entries
+  are byte-identical to the web source so the picker reads the same on both platforms; the `{{name}}` /
+  `{{count}}` / `{{total}}` / `{{id}}` tokens carry the i18next interpolation markers through verbatim
+  (resolved by VehicleMultiSelectStrings.interpolate).
+
+  The web also derives an in-fleet label fallback `Vehicle #${v.id}` inline (in `vehicleLabel`, not via
+  `t()`); the native peer routes that through the facade as `vehicleMultiSelect.fleetFallbackName` so no
+  English literal lives in Swift. The remaining `vehicleMultiSelect.*` entries are the NATIVE chrome /
+  accessibility additions for the P4 always-render leaf states (loading / error) and the freshness axis (live
+  / stale / offline) — the web has no loading / fetch-error / connectivity chrome, whereas the native HIG calls
+  for a labelled state rather than a blank box, and for a VoiceOver value on every check row.
+
+  These fold into the app `Localizable.xcstrings` master catalog at integration time; kept in a per-surface
+  table ("VehicleMultiSelect") so each parallel surface prompt owns its own strings. In test / preview bundles
+  `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web `t()` keys (verbatim from components/forms/VehicleMultiSelect.tsx) --- */
+
+/* Trigger summary — the fleet sentinel is on (web `vehiclesSummaryAll`). */
+"notifications.alertStudio.editor.vehiclesSummaryAll" = "All vehicles";
+
+/* Trigger summary — a specific selection with zero ids (web `vehiclesSummaryNone`). */
+"notifications.alertStudio.editor.vehiclesSummaryNone" = "No vehicles selected";
+
+/* Trigger summary — exactly one vehicle, shown by name; {{name}} is the vehicle name (web `vehiclesSummaryOne`). */
+"notifications.alertStudio.editor.vehiclesSummaryOne" = "{{name}}";
+
+/* Trigger summary — some-but-not-all selected; {{count}}/{{total}} are counts (web `vehiclesSummaryPartial`). */
+"notifications.alertStudio.editor.vehiclesSummaryPartial" = "{{count}} of {{total}} vehicles";
+
+/* Trigger summary — all known vehicles selected individually; {{count}} is the count (web `vehiclesSummaryCount`). */
+"notifications.alertStudio.editor.vehiclesSummaryCount" = "{{count}} vehicles";
+
+/* Help line under the disabled trigger when the fleet is empty (web `vehiclesEmptyFleetHelp`). */
+"notifications.alertStudio.editor.vehiclesEmptyFleetHelp" = "Add a vehicle in Settings → Vehicles to use this rule.";
+
+/* The All-sentinel popover row (web `vehiclesAllOption`). */
+"notifications.alertStudio.editor.vehiclesAllOption" = "All vehicles (current + future)";
+
+/* One unknown-id popover row label; {{id}} is the numeric vehicle id (web `vehiclesUnknownLabel`). */
+"notifications.alertStudio.editor.vehiclesUnknownLabel" = "Vehicle #{{id}}";
+
+/* The trailing badge on an unknown-id row (web `vehiclesUnknownBadge`). */
+"notifications.alertStudio.editor.vehiclesUnknownBadge" = "Unknown";
+
+/* --- Web inline fallback, routed through the facade (web `vehicleLabel` base `Vehicle #${v.id}`) --- */
+
+/* In-fleet row label for a vehicle with no display name and no model. {{id}} is the numeric vehicle id. */
+"vehicleMultiSelect.fleetFallbackName" = "Vehicle #{{id}}";
+
+/* --- Native chrome / a11y additions (no blank box / labelled toggles — see the leaf states) --- */
+
+/* VoiceOver label for the popover option list (web `role="listbox"`). */
+"vehicleMultiSelect.popoverA11y" = "Choose vehicles";
+
+/* VoiceOver hint on the trigger button. */
+"vehicleMultiSelect.triggerHint" = "Opens the vehicle picker";
+
+/* VoiceOver value for a selected check row (web `aria-checked="true"`). */
+"vehicleMultiSelect.optionSelected" = "Selected";
+
+/* VoiceOver value for an unselected check row (web `aria-checked="false"`). */
+"vehicleMultiSelect.optionNotSelected" = "Not selected";
+
+/* VoiceOver label for the initial loading skeleton (web has no loading state). */
+"vehicleMultiSelect.loadingA11y" = "Loading vehicles";
+
+/* Title of the compact error tile shown when the fleet read fails (web has no QueryError peer). */
+"vehicleMultiSelect.errorTitle" = "Couldn't load vehicles";
+
+/* Retry action on the error tile. */
+"vehicleMultiSelect.retry" = "Retry";
+
+/* Freshness chip label — the fleet feed is live. */
+"vehicleMultiSelect.live" = "Live";
+
+/* Freshness chip label — the fleet feed is older than the freshness window. */
+"vehicleMultiSelect.stale" = "Stale";
+
+/* Freshness chip label — no connectivity; the cached fleet is shown. */
+"vehicleMultiSelect.offline" = "Offline";
+
+/* Expanded VoiceOver label for the stale freshness chip (it is a refresh button). */
+"vehicleMultiSelect.staleA11y" = "Stale — tap to refresh";
+
+/* Expanded VoiceOver label for the offline freshness chip. */
+"vehicleMultiSelect.offlineA11y" = "Offline — showing the last fleet";
