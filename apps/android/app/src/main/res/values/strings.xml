@@ -3900,6 +3900,9 @@
   <string name="translation_help_aiHelp_askButton">Ask the assistant</string>
   <string name="translation_help_aiHelp_badge">Helix</string>
   <string name="translation_help_aiHelp_description">Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.</string>
+  <string name="translation_help_aiHelp_error">Helix couldn’t answer your question. Please try again.</string>
+  <string name="translation_help_aiHelp_inputLabel">Your question</string>
+  <string name="translation_help_aiHelp_placeholder">e.g. How do I enable energy cost forecasting?</string>
   <string name="translation_help_aiHelp_title">Ask the help assistant</string>
   <string name="translation_help_baseline_links_chatbot_description">Talk to the in-app assistant. Available in deterministic mode or LLM mode when Helix is enabled.</string>
   <string name="translation_help_baseline_links_chatbot_title">Chatbot</string>
