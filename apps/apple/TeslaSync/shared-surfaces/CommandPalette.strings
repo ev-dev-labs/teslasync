@@ -1,0 +1,128 @@
+/*
+  CommandPalette.strings
+  TeslaSync — P4 shared surface · 0205 · CommandPalette (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The first blocks mirror the web
+  `components/ui/CommandPalette.tsx` `t()` calls VERBATIM (same key, same English default), so the native
+  palette resolves identical copy: the palette + search section headings, the vehicle-command labels, the
+  recent-time buckets (whose web `{{count}}` interpolation becomes a `%d` placeholder), the scope chips +
+  placeholders + empty messages, and the header / empty / footer copy (the `{{query}}` / `{{command}}` /
+  `{{scope}}` interpolations become `%@`).
+
+  The final block is native a11y + leaf-state copy the web gets "for free" from the DOM: the dialog role, the
+  search-field label, the row hint, the back / close controls, the trigger label, and the loading / error /
+  freshness chrome (the web has no `QueryError` / skeleton / stale-offline peer).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table ("CommandPalette") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping labels deterministic.
+*/
+
+/* --- Palette section headings (web palette.section.*) --- */
+"palette.section.pages" = "Pages";
+"palette.section.commands" = "Vehicle Commands";
+"palette.section.vehicles" = "Vehicles";
+"palette.section.preferences" = "Preferences";
+"palette.section.actions" = "Actions";
+"palette.section.mostUsed" = "Most Used";
+"palette.section.recent" = "Recent";
+"palette.section.selectVehicle" = "Select Vehicle";
+
+/* --- Server-search section headings (web search.section.*) --- */
+"search.section.vehicle" = "Vehicles";
+"search.section.drive" = "Drives";
+"search.section.charging" = "Charging";
+"search.section.alert" = "Alerts";
+"search.section.notification" = "Notifications";
+"search.section.geofence" = "Geofences";
+"search.section.automation" = "Automations";
+"search.section.location" = "Locations";
+"search.section.trip" = "Trips";
+"search.section.results" = "Results";
+
+/* --- Recent-page relative-time buckets (web palette.recent.*; %d is the count) --- */
+"palette.recent.justNow" = "Just now";
+"palette.recent.minutesAgo" = "%dm ago";
+"palette.recent.hoursAgo" = "%dh ago";
+"palette.recent.daysAgo" = "%dd ago";
+
+/* --- Vehicle-command labels (web palette.cmd.*) --- */
+"palette.cmd.wakeUp" = "Wake Up Vehicle";
+"palette.cmd.lock" = "Lock Vehicle";
+"palette.cmd.unlock" = "Unlock Vehicle";
+"palette.cmd.sentryOn" = "Sentry Mode On";
+"palette.cmd.sentryOff" = "Sentry Mode Off";
+"palette.cmd.climateOn" = "Climate On";
+"palette.cmd.climateOff" = "Climate Off";
+"palette.cmd.dogMode" = "Dog Mode";
+"palette.cmd.campMode" = "Camp Mode";
+"palette.cmd.chargePortOpen" = "Open Charge Port";
+"palette.cmd.chargePortClose" = "Close Charge Port";
+"palette.cmd.chargeStart" = "Start Charging";
+"palette.cmd.chargeStop" = "Stop Charging";
+"palette.cmd.chargeMax" = "Charge to Max Range";
+"palette.cmd.chargeStandard" = "Charge to Standard";
+"palette.cmd.frunk" = "Open Frunk";
+"palette.cmd.trunk" = "Open Trunk";
+"palette.cmd.ventWindows" = "Vent Windows";
+"palette.cmd.closeWindows" = "Close Windows";
+"palette.cmd.horn" = "Honk Horn";
+"palette.cmd.flash" = "Flash Lights";
+"palette.cmd.playPause" = "Play / Pause";
+"palette.cmd.nextTrack" = "Next Track";
+"palette.cmd.prevTrack" = "Previous Track";
+
+/* Vehicle-command sublabels (web `→ {vehicleName}` / palette.cmd.selectVehicle / palette.cmd.switchVehicle). */
+"palette.cmd.target" = "→ %@";
+"palette.cmd.selectVehicle" = "Select vehicle…";
+"palette.cmd.switchVehicle" = "Switch to %@";
+
+/* The `{state}` fallback for a vehicle with no live state (web literal 'unknown'). */
+"palette.vehicle.unknownState" = "unknown";
+
+/* --- Scope chips, placeholders, and empty messages (web palette.scope.* / palette.placeholder.*) --- */
+"palette.scope.command" = "Commands";
+"palette.scope.navigate" = "Pages";
+"palette.scope.vehicle-switch" = "Vehicles";
+"palette.scope.registry" = "Settings";
+"palette.placeholder.command" = "Search commands…";
+"palette.placeholder.navigate" = "Search pages…";
+"palette.placeholder.vehicle-switch" = "Switch vehicle…";
+"palette.placeholder.registry" = "Search settings…";
+"palette.scope.command.empty" = "No commands available";
+"palette.scope.navigate.empty" = "No pages available";
+"palette.scope.vehicle-switch.empty" = "No vehicles available";
+"palette.scope.registry.empty" = "No settings available";
+
+/* --- Header / empty / footer copy (web palette.* + search.palette.viewAll; %@ is the interpolation) --- */
+"palette.placeholder" = "Search pages, commands…";
+"palette.selectVehicleFor" = "Send \"%@\" to…";
+"palette.clearScope" = "Clear %@ filter";
+"palette.noVehicles" = "No vehicles available";
+"palette.noResults" = "No results for \"%@\"";
+"search.palette.viewAll" = "View all results for \"%@\"";
+"palette.shortcut" = "Shortcut: %@";
+"palette.navigate" = "Navigate";
+"palette.select" = "Select";
+"palette.back" = "Back";
+"palette.clearFilter" = "Clear filter";
+"palette.close" = "Close";
+"palette.vehicle" = "vehicle";
+"palette.vehicles" = "vehicles";
+"palette.filterBy" = "Filter";
+
+/* --- Native a11y + leaf-state copy (no web t() key; the DOM supplies these to AT automatically) --- */
+"commandPalette.a11y.title" = "Command palette";
+"commandPalette.a11y.searchField" = "Search pages, commands, and vehicles";
+"commandPalette.a11y.rowHint" = "Activate";
+"commandPalette.a11y.back" = "Back to search";
+"commandPalette.a11y.close" = "Close command palette";
+"commandPalette.trigger" = "Search…";
+"commandPalette.loadingA11y" = "Loading commands";
+"commandPalette.errorTitle" = "Couldn't load commands";
+"commandPalette.retry" = "Retry";
+"commandPalette.live" = "Live";
+"commandPalette.stale" = "Stale";
+"commandPalette.offline" = "Offline";
+"commandPalette.staleA11y" = "Stale — tap to refresh";
+"commandPalette.offlineA11y" = "Offline — showing the last loaded commands";
