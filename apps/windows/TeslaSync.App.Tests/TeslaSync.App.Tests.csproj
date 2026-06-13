@@ -1076,6 +1076,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.Source.cs" Link="FeatureViews\VehicleHero\VehicleHero.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleHero\VehicleHero.ViewModel.cs" Link="FeatureViews\VehicleHero\VehicleHero.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehiclePhotoGallery\VehiclePhotoGallery.Model.cs" Link="FeatureViews\VehiclePhotoGallery\VehiclePhotoGallery.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleSettingsTab\VehicleSettingsTab.Model.cs" Link="FeatureViews\VehicleSettingsTab\VehicleSettingsTab.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleSettingsTab\VehicleSettingsTab.Source.cs" Link="FeatureViews\VehicleSettingsTab\VehicleSettingsTab.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleSettingsTab\VehicleSettingsTab.ViewModel.cs" Link="FeatureViews\VehicleSettingsTab\VehicleSettingsTab.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.Model.cs" Link="FeatureViews\VinDecoder\VinDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.ViewModel.cs" Link="FeatureViews\VinDecoder\VinDecoder.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.Model.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.Model.cs" />
