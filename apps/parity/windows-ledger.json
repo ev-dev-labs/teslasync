@@ -88,5 +88,14 @@
     "requiredCount": 41,
     "promptId": "p2-windows/W7/windows-page-driving-TripPlannerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-TripPlannerPage.log"
+  },
+  {
+    "unitId": "page:notifications/QuietHours",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-notifications-QuietHoursPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-QuietHoursPage.log"
   }
 ]

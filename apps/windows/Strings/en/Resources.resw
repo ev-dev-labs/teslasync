@@ -14175,6 +14175,12 @@
   <data name="translation.notifications.quietHours.aiSuggestion.title" xml:space="preserve">
     <value>Suggest a quiet-hours window from your notification history</value>
   </data>
+  <data name="translation.notifications.quietHours.subtitle" xml:space="preserve">
+    <value>Suppress non-critical notifications during a configurable window.</value>
+  </data>
+  <data name="translation.notifications.quietHours.title" xml:space="preserve">
+    <value>Quiet hours</value>
+  </data>
   <data name="translation.notifications.stats.activeChannels" xml:space="preserve">
     <value>Active Channels</value>
   </data>

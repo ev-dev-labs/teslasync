@@ -200,6 +200,13 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+
+        // Notifications / Quiet Hours page (P2/W7) — parity port of web QuietHoursPage at route
+        // /notifications/quiet-hours. Hosts the deterministic QuietHoursPanel inside the shared PageContainer
+        // (title + subtitle + copy-link); RouteTable already maps Page("NotificationsQuietHours","notifications/quiet-hours").
+        _viewModel.PageFactory.Register(
+            "NotificationsQuietHours",
+            static () => new FeatureViews.Notifications.QuietHoursPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
