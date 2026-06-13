@@ -3642,6 +3642,10 @@
   <string name="translation_feedback_queue_title">Feedback queue</string>
   <string name="translation_feedback_submitError">Failed to submit feedback. Please try again.</string>
   <string name="translation_feedback_title">Report a bug / Send feedback</string>
+  <string name="translation_feedbackTriage_aiAdvisor_badge">Helix</string>
+  <string name="translation_feedbackTriage_aiAdvisor_button">Suggest triage</string>
+  <string name="translation_feedbackTriage_aiAdvisor_description">Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.</string>
+  <string name="translation_feedbackTriage_aiAdvisor_title">Helix triage advisor</string>
   <string name="translation_filter_pending">Filtering…</string>
   <string name="translation_filters_activeLabel">Active filters</string>
   <string name="translation_filters_clearAll">Clear all</string>
