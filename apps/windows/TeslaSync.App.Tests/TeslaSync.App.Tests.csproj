@@ -1390,6 +1390,9 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\HelpTooltip\HelpTooltip.Model.cs" Link="SharedSurfaces\HelpTooltip\HelpTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ImpersonationBanner.Model.cs" Link="SharedSurfaces\ImpersonationBanner.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ImpersonationBanner.Source.cs" Link="SharedSurfaces\ImpersonationBanner.Source.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ImpersonationBanner.ViewModel.cs" Link="SharedSurfaces\ImpersonationBanner.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\InlineCallout.Model.cs" Link="SharedSurfaces\InlineCallout.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Input.Model.cs" Link="SharedSurfaces\Input.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\Input.ViewModel.cs" Link="SharedSurfaces\Input.ViewModel.cs" />
