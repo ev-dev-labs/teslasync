@@ -624,3 +624,4 @@ p3-android/shared-meaningful/A-0038-AIPiiRedactionSharedExports.prompt.md
 p3-android/shared-meaningful/A-0035-AINLSqlPlayground.prompt.md
 p3-android/shared-meaningful/A-0039-AIPredictiveMaintenance.prompt.md
 p3-android/shared-meaningful/A-0031-AINLDashboardComposer.prompt.md
+p3-android/shared-meaningful/A-0033-AINLGrafanaPanel.prompt.md
