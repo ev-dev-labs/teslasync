@@ -778,3 +778,4 @@ p2-windows/pages/system/CommandsPage.prompt.md
 p2-windows/pages/system/CommandHistoryPage.prompt.md
 p2-windows/pages/sharing/SharingTripsPage.prompt.md
 p2-windows/pages/system/HelpPage.prompt.md
+p2-windows/pages/system/DataExportPage.prompt.md
