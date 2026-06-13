@@ -121,6 +121,11 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("GasPriceAutoPoll","gas-price",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("GasPriceAutoPoll", static () => new FeatureViews.Admin.GasPriceAutoPollPage());
 
+        // Admin / Tesla Orders page (P2/W7) — parity port of web TeslaOrdersPage at route /tesla-orders.
+        // RouteTable already maps Page("TeslaOrders","tesla-orders",RouteGroup.AdminDevTools). The page is a thin
+        // wrapper: a PageContainer header (orders.title / orders.subtitle) over the shared ActiveOrdersSection.
+        _viewModel.PageFactory.Register("TeslaOrders", static () => new FeatureViews.Admin.TeslaOrdersPage());
+
         // Telemetry / Signals workspace page (P2/W7) — parity port of web SignalsWorkspacePage at route /signals.
         _viewModel.PageFactory.Register("SignalsWorkspace", static () => new FeatureViews.Telemetry.SignalsWorkspacePage());
 

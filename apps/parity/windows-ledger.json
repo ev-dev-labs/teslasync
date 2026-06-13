@@ -187,5 +187,14 @@
     "requiredCount": 45,
     "promptId": "p2-windows/W7/windows-page-vehicle-systems-MaintenancePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-MaintenancePage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaOrders",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-admin-TeslaOrdersPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log"
   }
 ]
