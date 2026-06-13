@@ -599,3 +599,4 @@ p3-android/shared-meaningful/A-0011-AIChargingDiagnosis.prompt.md
 p3-android/shared-meaningful/A-0012-AIChatbotIndicator.prompt.md
 p3-android/shared-meaningful/A-0013-AICostForecastNarration.prompt.md
 p3-android/shared-meaningful/A-0010-AIChargingCurveFingerprintClustering.prompt.md
+p3-android/shared-meaningful/A-0015-AIDataRepairSuggestions.prompt.md
