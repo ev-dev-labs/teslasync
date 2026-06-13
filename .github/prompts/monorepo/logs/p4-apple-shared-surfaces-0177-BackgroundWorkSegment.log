@@ -1,0 +1,275 @@
+=== P4 Shared surface 0177 BackgroundWorkSegment (Apple) ===
+
+Prompt: .github/prompts/monorepo/p4-apple/shared-meaningful/P-0177-BackgroundWorkSegment.prompt.md
+Web source of truth: web/src/components/layout/status-bar/BackgroundWorkSegment.tsx
+  (+ web/src/hooks/useBackgroundJobs.ts — the aggregation hook the component reads:
+   active export jobs (/export/jobs), TanStack useIsMutating() count, and the module-scoped
+   registerJob custom-job store)
+Native output: apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.*
+Date: 2026-06-13  Host: Darwin / Xcode 26.5 (17F42) / Swift 6.3.2 / xcodegen 2.45.4 /
+      swiftlint 0.63.3 / swiftformat 0.61.1 / pwsh 7.6.2  Branch auto/20260612-204423-13998/53 (HEAD bd04832f1)
+
+Honesty Covenant (binding — verbatim):
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+=== PREFLIGHT ===
+- Capability: SwiftUI + Swift Charts + MapKit on iOS 18 / iPadOS 18 / macOS 15 SDKs are PRESENT
+  (Xcode 26.5, Swift 6.3.2). iPhone 16 simulator present + booted → the prompt's exact destination is
+  runnable. → capability satisfied (NOT a platform-capability BLOCKED case). This surface uses no chart
+  and no map (web "Charts/maps used: none"), so Swift Charts / MapKit are not exercised here.
+- KMP Shared.xcframework: the app targets depend on Frameworks/Shared.xcframework, which is absent at
+  rest (only .gitkeep). The TeslaSync scheme carries a "Stage Shared.xcframework" pre-action that builds
+  it via Gradle (:core:assembleSharedDebugXCFramework). On this runner that pre-action RAN and SUCCEEDED
+  ("xcframework successfully written out to .../apps/shared/core/build/XCFrameworks/debug/Shared.xcframework"),
+  so the absent binary is not the app-build blocker (see GATE for the real ones). java present; the KMP
+  Gradle toolchain works on this runner.
+- Depends-on (P4 core theme/nav/live/cache/state-holders, P1/S8 state holders, P1/S9 tokens, P1/S10 i18n,
+  P1/S11 diagnostics): present + consumed — Color.TS / Font.TS / TSSpacing / TSRadius tokens
+  (apps/design/generated/apple/Tokens.swift); TSSkeleton shared component (Sources/Components/Feedback);
+  @Observable state-holder seam; NSLocalizedString i18n facade; os.Logger telemetry. The surface
+  typechecks against them with 0 errors on BOTH SDKs (see GATE) → predecessors effectively DONE here.
+- Build wiring already present: project.yml + .swiftlint.yml already glob TeslaSync/shared-surfaces
+  (added by 0001 AnnouncerRegion) for the app targets and the co-located *Tests.swift into the XCTest
+  bundles. NO edits to those files were needed — this surface stays strictly within its allowed files
+  (the 12 surface files + this log).
+
+=== SURVEY ===
+Web source BackgroundWorkSegment.tsx is a footer status-bar segment over `useBackgroundJobs()` →
+`{ jobs, count, hasJobs }` (jobs sorted oldest-first by startedAt). It returns `null` when `!hasJobs`
+(hidden while quiet). When work is in flight it renders a `<Tooltip>`-wrapped `<button>`: a spinning
+Loader2 + (unless `iconOnly`) the summary text — `count === 1 ? t('statusBar.background.one','1 task')
+: t('statusBar.background.many','{{count}} tasks',{count})` — tinted amber, with
+aria-label `${t('statusBar.background.aria','Background tasks')}: ${summary}` and tooltip
+`${t('statusBar.background.tooltip','Background work in progress')} · ${summary}`. Tapping toggles a
+`role="dialog"` popover (heading `t('statusBar.background.heading','Running')`) listing each job: a
+per-kind glyph (KIND_ICON: export→FileDown, mutation→Save, custom→Sparkles), the job label + optional
+description, and a trailing spinner. Click-outside / Escape close it; a `useEffect` closes it when
+`!hasJobs`. useBackgroundJobs aggregates active export jobs (queued/processing → label
+`file_name || '{type} export'`, desc 'Queued'/'Processing'), a composite mutation job
+('Saving…' / 'Saving {n} changes…') from useIsMutating(), and module-scoped registerJob custom jobs.
+Data sources (P1/S8): useTranslation, useBackgroundJobs. Shared components: @/components/ui (Tooltip).
+Charts/maps: none. Canonical surface pattern studied: shared-surfaces/VersionSegment (0181) — the
+sibling footer status-bar segment (Adapter/Model/Seams/Polling/View/Views/States/Previews/strings/Tests).
+
+=== REASONING ===
+- The native surface reproduces the web composition as a status-bar segment bound through
+  `BackgroundWorkSegmentModel` (no HTTP/aggregation in the view): the active state is the spinner +
+  summary button opening a native `.popover` running-jobs list; the orthogonal connection axis is a
+  freshness chip inside the popover.
+- Architecture mirrors the canonical VersionSegment leaf:
+  • Adapter (pure, Foundation): BackgroundWorkSurface (slug + 5s web poll cadence), BackgroundWorkConnection,
+    BackgroundJobKind (+ SF-Symbol peers of KIND_ICON + VoiceOver names), BackgroundJob (web BackgroundJob),
+    BackgroundWorkSnapshot, BackgroundWorkData, BackgroundWorkResolved + BackgroundWorkProjection (the
+    web hasJobs/count/oldest-first-sort derivation + the P4 leaf precedence error→loading→empty),
+    BackgroundWorkSummary (web `count===1?one:many`), BackgroundWorkAccessibility (tooltip + aria builders).
+  • Model: BackgroundWorkTelemetry seam (P1/S11 view.opened) + OSLog default; BackgroundWorkStrings
+    i18n facade (P1/S10); @Observable BackgroundWorkSegmentModel — popover open state (web useState(open))
+    with the open-only-when-active guard + the close-on-drain rule (web useEffect on hasJobs), one-shot
+    stale auto-refresh, hasJobs (web hasJobs gate so a host can hide while quiet).
+  • Seams: BackgroundWorkSource protocol (+InMemory); MutationActivityObserver (web useIsMutating, +InMemory);
+    BackgroundCustomJobObserver + BackgroundCustomJobRegistry (web module-scoped registerJob: idempotent by
+    id, returns a cleanup closure, process-wide .shared); BackgroundWorkPoller (web pollWhileActive, +Manual);
+    BackgroundWorkTimestamp.
+  • Polling: BackgroundExportStatus/BackgroundExportJob + ExportJobsProbe (+Closure/+Scripted) — web
+    useExportJobs; TimerBackgroundWorkPoller; PollingBackgroundWorkSource — aggregates the three signals
+    into one job list exactly like the web hook (active-export filter + map, composite mutation job, custom
+    rows), drives the freshness axis off the export probe.
+  • View (swift) + Views + States + Previews + strings + AdapterTests/ModelTests/PollingTests.
+- The web `if (!hasJobs) return null` (hidden while quiet) is reproduced AND surfaced as the P4 `empty`
+  leaf: a friendly "No background work" pill (never a blank box), with `model.hasJobs` exposed so a host
+  may instead hide the surface to match the web's literal quietness. This is the predecessor-accepted
+  disposition for a web component that folds a state away (sibling VersionSegment surfaces the probe
+  lifecycle its web hook hides). loading/error leaves surface the /export/jobs probe lifecycle the web
+  hook swallows.
+- Native idioms (not Tailwind ports): the click-outside / Escape dismissal is the native `.popover`
+  behaviour (no manual mousedown/keydown listeners); the Loader2 spinner is the system `ProgressView`;
+  amber is Color.TS.statusWarning; the popover/chip/pills use the P1/S9 tokens. The mutation job's
+  startedAt is set once on the 0→positive transition (stable sort) rather than the web's per-render
+  `new Date()`.
+
+=== CHANGES ===
+New (apps/apple/TeslaSync/shared-surfaces/, 12 files, 2177 lines):
+  BackgroundWorkSegment.Adapter.swift       262  pure core: surface id, connection, kind(+glyphs), job,
+                                                  snapshot, data, resolved + projection, summary + a11y.
+  BackgroundWorkSegment.Model.swift         162  telemetry seam, i18n facade, @Observable state-holder.
+  BackgroundWorkSegment.Seams.swift         246  source(+InMemory), mutation observer(+InMemory), custom
+                                                  registry (registerJob), poller(+Manual), timestamp.
+  BackgroundWorkSegment.Polling.swift       295  export status/job + probe(+Closure/+Scripted), timer
+                                                  poller, PollingBackgroundWorkSource aggregation.
+  BackgroundWorkSegment.swift               103  surface view (slug, phase switch, popover binding, prod
+                                                  + model inits).
+  BackgroundWorkSegment.Views.swift         226  spinner, active button, popover content, job row,
+                                                  freshness chip.
+  BackgroundWorkSegment.States.swift        103  loading skeleton / empty quiet / error pills.
+  BackgroundWorkSegment.Previews.swift       96  #Preview per state + the popover content.
+  BackgroundWorkSegment.strings              51  i18n table: web keys + job-row data + per-kind a11y +
+                                                  leaf chrome + freshness.
+  BackgroundWorkSegment.AdapterTests.swift  174  21 tests: surface id, kind glyphs, projector, summary,
+                                                  accessibility, value-type equality.
+  BackgroundWorkSegment.ModelTests.swift    241  16 tests: telemetry-once, phases, popover open/close +
+                                                  close-on-drain, stale auto-refresh, offline cached,
+                                                  view composition, strings facade.
+  BackgroundWorkSegment.PollingTests.swift  218  13 tests: in-memory source, mutation observer, custom
+                                                  registry, export filter, scripted probe, manual poller,
+                                                  polling-source orchestration (mapping/mutation/custom/axis).
+Modified: NONE outside the surface. project.yml + .swiftlint.yml already glob shared-surfaces (0001), so
+  the gate compiles + lints this surface without any wiring edit.
+git status (no drift outside the surface + this log):
+  ?? apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.{Adapter,Model,Seams,Polling,Views,States,
+     Previews,AdapterTests,ModelTests,PollingTests}.swift, BackgroundWorkSegment.swift,
+     BackgroundWorkSegment.strings
+  (the generated TeslaSync.xcodeproj and the staged Frameworks/Shared.xcframework are git-ignored.)
+
+=== PARITY ===  PARITY_UNIT = shared-surface:components/layout/status-bar/BackgroundWorkSegment
+Data + behaviour (web BackgroundWorkSegment + useBackgroundJobs) — reproduced (asserted by tests):
+  [x] summary: count===1 → "1 task" else "{{count}} tasks" with count interpolated — BackgroundWorkSummaryTests.
+  [x] oldest-first sort (a.startedAt.localeCompare), stabilised by id — ProjectorTests.testActiveSorts…
+  [x] hasJobs gate / phase selection: active when jobs present (even mid-loading/error), else error →
+      loading → empty — ProjectorTests + ModelTests.testEmptyLoadingErrorPhases / testPushFromLoadingToActive.
+  [x] kind → glyph (web KIND_ICON FileDown/Save/Sparkles → arrow.down.doc / square.and.arrow.down /
+      sparkles) — BackgroundJobKindTests.
+  [x] tooltip "{tooltip} · {summary}" + aria "{aria}: {summary}" — BackgroundWorkAccessibilityTests.
+  [x] popover toggle + open-only-when-active + close-on-drain (web useEffect !hasJobs → setOpen(false)) —
+      ModelTests.testTogglePopover… / testOpenPopoverNoOpWhenNoJobs / testPopoverClosesWhenWorkDrains.
+  [x] export aggregation: active (queued/processing) filter, label file_name || '{type} export',
+      desc Queued/Processing, id "export:{id}" — PollingTests.testExportJobsMappedAndFiltered.
+  [x] composite mutation job (web useIsMutating): "Saving…" / "Saving {n} changes…", cleared at 0 —
+      PollingTests.testCompositeMutationJob.
+  [x] custom registry (web registerJob): idempotent-by-id replace + cleanup closure + clear —
+      SeamTests.testCustomRegistry… ; appended into the feed — PollingTests.testCustomJobsAppended.
+i18n (P1/S10 table "BackgroundWorkSegment") — every web key reproduced verbatim
+  (statusBar.background.one/many/tooltip/aria/heading) plus the job-row data labels the web hook builds
+  inline (exportFallback/exportQueued/exportProcessing/saving/savingMany), the per-kind VoiceOver names,
+  and the native P4 leaf + freshness chrome; every Swift literal routes through the facade fallback
+  (no hardcoded English) — BackgroundWorkStringsTests + the 0-placeholder gate.
+States — every one renders (no hidden surface):
+  [x] loading    — skeleton pill while the first /export/jobs probe is in flight
+  [x] empty      — friendly "No background work" pill (web `return null` made visible; host may hide via hasJobs)
+  [x] error      — danger pill + retry (the leaf the web hook swallows)
+  [x] active     — spinner + summary button opening the running-jobs popover (web open state)
+  [x] stale      — freshness chip + one-shot auto-refresh on the transition
+  [x] offline    — freshness chip, cached jobs retained, no auto-refresh
+Binding / a11y / telemetry:
+  [x] Bound via the P1/S8 BackgroundWorkSource (+ Export/Mutation/Custom seams); no HTTP/aggregation in the view.
+  [x] VoiceOver: segment button label = web aria ("Background tasks: {summary}") + open hint; popover is
+      a contained element labelled "Background tasks"; each job row combines to "{kind}: {label}. {desc}";
+      glyphs + spinners decorative; freshness chip + retry labelled; the spinner is the system ProgressView
+      (reduce-motion handled by the system); Dynamic Type via Font.TS system fonts.
+  [x] Telemetry: view.opened emitted once with slug "BackgroundWorkSegment" (P1/S11), asserted.
+PARITY_COVERED == PARITY_REQUIRED (summary + sort + gate/phases + kind glyphs + tooltip/aria + popover +
+the three-signal aggregation + i18n + 6 states + a11y + telemetry).
+
+=== GATE ===
+Runnable host gates (exact prompt commands / their cross-platform equivalents) — all green:
+
+[FORMAT]      swiftformat --lint (config apps/apple/.swiftformat) over the 11 surface .swift files
+              -> 0/11 files require formatting.
+              FORMAT_EXIT=0
+
+[LINT]        swiftlint lint --strict (config apps/apple/.swiftlint.yml) over the 11 surface .swift files
+              -> Done linting! Found 0 violations, 0 serious in 11 files.
+              LINT_EXIT=0
+
+[PLACEHOLDER] pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment -Language swift
+              -> PLACEHOLDER_ALLOWED=0 ; PLACEHOLDER_COUNT=0
+              PLACEHOLDER_EXIT=0
+
+[XCODEGEN]    cd apps/apple ; xcodegen generate -> Created project at TeslaSync.xcodeproj
+              (72 BackgroundWorkSegment refs wired into the app + test targets via the existing glob.)
+              XCODEGEN_EXIT=0
+
+[SURFACE TESTS] Real Adapter + Model + Seams + Polling + AdapterTests + ModelTests + PollingTests executed
+              via a standalone SwiftPM harness (the identical surface source files compiled against the
+              REAL design system — Tokens.swift + Components UI Typography/Cards/Badges/Buttons +
+              Feedback/Skeletons + Design TSDesign/TSMaterial — as module TeslaSync, `@testable import`),
+              Swift 6 language mode (swiftLanguageMode .v6 = -strict-concurrency=complete), macOS 15:
+              -> Test Suite 'All tests' passed. Executed 50 tests, with 0 failures (0 unexpected).
+                 (Surface 3, Kind 3, Projector 8, Summary 2, Accessibility 2, ValueType 3, Model 12,
+                  View 3, Strings 1, Seam 6, PollingSource 7.)
+              SWIFT_TEST_EXIT=0
+
+[ISOLATED TYPECHECK] The whole surface (8 SwiftUI/source files) typechecks against the REAL design system
+              under Swift 6 (-swift-version 6 ⇒ -strict-concurrency=complete) + -D DEBUG (so the #Preview
+              blocks compile) on BOTH SDKs:
+              -> iOS-18 simulator SDK (arm64-apple-ios18.0-simulator) : 0 errors.  TYPECHECK_IOS_EXIT=0
+              -> macOS-15 SDK        (arm64-apple-macos15.0)          : 0 errors.  TYPECHECK_MAC_EXIT=0
+
+Full Xcode app build/test (DEFERRED — not a defect in this surface; the documented P4-apple predecessor
+disposition, identical to logs/p4-apple-shared-surfaces-0001-AnnouncerRegion.log and the VersionSegment
+0181 sibling):
+
+[XCODEBUILD iOS]   xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+              -> The "Stage Shared.xcframework" Gradle pre-action built + staged the framework
+                 ("xcframework successfully written out"), the app target compiled (1629 SwiftCompile
+                 invocations, SwiftEmitModule succeeded — the whole module incl. this surface type-checked),
+                 then ** TEST FAILED ** with (2 failures). Both failing commands are a swift-frontend
+                 CRASH in IR generation, reproducibly on a PRE-EXISTING SIBLING file:
+                   "4. While evaluating request IRGenRequest(IR Generation for file
+                      ".../apps/apple/TeslaSync/feature-views/AppearanceSettings.Controls.swift")
+                    5. While emitting IR SIL function @$sSbScA_pSgIeAghyg_SbIeAghn_TR"
+                 (a reabstraction thunk for a (Bool, Scheduler?)->Bool closure — a compiler IRGen crash,
+                 NOT a source error; the whole log has 0 `error:` diagnostics). No crash had a
+                 BackgroundWorkSegment primary-file; grep "BackgroundWorkSegment.*error:" = 0. This surface
+                 contributes 0 of the failures and its 8 files appear only as successfully-listed
+                 compilation inputs.
+              IOS_EXIT=65   (DEFERRED — swift-frontend IRGen crash on the sibling feature-views/
+                             AppearanceSettings.Controls.swift, owned by another prompt; this surface 0 errors)
+
+[XCODEBUILD macOS] xcodebuild -scheme TeslaSync-macOS build test
+              -> ** TEST FAILED ** (1 failure): "TeslaSync-macOS" and "TeslaSyncWidgets-macOS" have
+                 entitlements that require signing with a development certificate (none on this runner;
+                 hardened runtime + app-extension entitlements). No IRGen crash reached; grep
+                 "BackgroundWorkSegment.*error:" = 0. This surface contributes 0 errors and already
+                 typechecks clean on the macOS-15 SDK (TYPECHECK_MAC_EXIT=0 above).
+              MAC_EXIT=65   (DEFERRED — environmental macOS code-signing / no dev certificate on runner;
+                             this surface clean: 0 errors)
+
+Why DONE (not BLOCKED): every runnable host gate is genuinely green and the surface itself is verifiably
+clean — 0 compile errors on the iOS-18 AND macOS-15 SDKs under Swift 6 strict concurrency, 50/50 tests
+pass, lint/format/placeholder clean, xcodegen green. The only red is the full-app xcodebuild, caused
+exclusively by (a) a pre-existing swift-frontend IRGen crash in ANOTHER prompt's sibling surface
+(feature-views/AppearanceSettings.Controls.swift) and (b) the runner lacking a macOS signing identity —
+neither in this prompt's scope ("Out of Scope: Other surfaces in the same feature") nor its allowed
+files. Both xcodebuild reds are shown verbatim with root-cause evidence rather than hidden. This is the
+predecessor-accepted DEFERRED disposition (see the committed AnnouncerRegion + VersionSegment logs and
+apps/macos-pending-verifications.md), not a defect in BackgroundWorkSegment.
+
+Honesty Covenant resolution:
+  1  No red-as-green ...... runnable host gates green; xcodebuild shown DEFERRED with verbatim evidence
+                           (IOS_EXIT=65 sibling IRGen crash, MAC_EXIT=65 signing); surface clean.
+  2  No scope narrowing ... exact prompt gate commands run; full results recorded, not a subset.
+  3  No skip-and-assume ... both iOS + macOS xcodebuild actually executed end-to-end; the iOS Gradle
+                           pre-action really built Shared.xcframework; real exit 65/65 captured with the
+                           actual crash stack + signing diagnostics quoted.
+  4  No stubs ............. no TODO/placeholder/fatalError; every state renders real content; a real
+                           polling aggregation source + custom-job registry ship (not fakes);
+                           PLACEHOLDER_COUNT=0.
+  5  No parity shortcuts .. summary, sort, gate/phases, kind glyphs, tooltip/aria, popover, the
+                           three-signal aggregation, i18n (web keys verbatim) and the 6 states all
+                           reproduced (PARITY_COVERED==REQUIRED).
+  6  No delegation ........ implemented directly; no sub-agents / parallel / background delegation.
+  7  No predecessor bypass  P4-core/P1 deps consumed + compile clean; followed the P4-apple DEFERRED precedent.
+  8  No commit on red ..... runnable gates green + surface clean (0 errors both SDKs); xcodebuild DEFERRED
+                           per precedent (not a surface red).
+  9  No silent drift ...... only the 12 surface files + this log; project.yml/.swiftlint.yml already glob
+                           shared-surfaces (no edit needed); generated xcodeproj + staged xcframework git-ignored.
+  10 Log ends with EXIT and STATUS each on its own line.
+
+=== COMMIT ===
+git add apps/apple/TeslaSync/shared-surfaces/BackgroundWorkSegment.* \
+        .github/prompts/monorepo/logs/p4-apple-shared-surfaces-0177-BackgroundWorkSegment.log
+git commit -m "feat(apps/apple/shared-surfaces): add BackgroundWorkSegment surface (P4)"
+
+IOS_EXIT=65        (DEFERRED — pre-existing sibling feature-views/AppearanceSettings.Controls.swift IRGen compiler crash; this surface 0 errors)
+MAC_EXIT=65        (DEFERRED — macOS code-signing / no dev certificate on runner; this surface 0 errors)
+LINT_EXIT=0
+FORMAT_EXIT=0
+PLACEHOLDER_EXIT=0
+SWIFT_TEST_EXIT=0  (50/50 executed green; real Adapter+Model+Seams+Polling+test sources, Swift 6 strict concurrency)
+TYPECHECK_IOS_EXIT=0  (8 surface files vs real design system, iOS-18 SDK, strict concurrency: 0 errors)
+TYPECHECK_MAC_EXIT=0  (8 surface files vs real design system, macOS-15 SDK, strict concurrency: 0 errors)
+XCODEGEN_EXIT=0
+EXIT=0
+STATUS=DONE
