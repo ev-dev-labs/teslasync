@@ -4044,7 +4044,11 @@
   <string name="translation_kilometers">Kilometers</string>
   <string name="translation_kiosk_bgOpacity">Background Opacity</string>
   <string name="translation_kiosk_brightness">Dimmed Brightness</string>
+  <string name="translation_kiosk_clockBottomLeft">Bottom Left</string>
+  <string name="translation_kiosk_clockBottomRight">Bottom Right</string>
   <string name="translation_kiosk_clockPosition">Clock Position</string>
+  <string name="translation_kiosk_clockTopLeft">Top Left</string>
+  <string name="translation_kiosk_clockTopRight">Top Right</string>
   <string name="translation_kiosk_cursorTimeout">Hide After</string>
   <string name="translation_kiosk_dashboardsToRotate">Dashboards to Rotate</string>
   <string name="translation_kiosk_default">Default</string>
@@ -4054,9 +4058,13 @@
   <string name="translation_kiosk_exit">Exit kiosk mode</string>
   <string name="translation_kiosk_exitLabel">Exit Kiosk</string>
   <string name="translation_kiosk_hideCursor">Auto-hide Cursor</string>
+  <string name="translation_kiosk_hint">Kiosk mode enters fullscreen and hides all navigation. Touch the screen to reveal the exit button, then use the Back gesture to exit.</string>
+  <string name="translation_kiosk_minutes">%1$d min</string>
+  <string name="translation_kiosk_never">Never</string>
   <string name="translation_kiosk_preview">Preview — this is how widgets will look</string>
   <string name="translation_kiosk_rotation">Dashboard Rotation</string>
   <string name="translation_kiosk_rotationInterval">Rotation Interval</string>
+  <string name="translation_kiosk_seconds">%1$ds</string>
   <string name="translation_kiosk_settings">Kiosk Settings</string>
   <string name="translation_kiosk_showClock">Show Clock</string>
   <string name="translation_kiosk_solid">Solid</string>
