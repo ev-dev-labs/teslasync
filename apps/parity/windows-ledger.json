@@ -70,5 +70,14 @@
     "requiredCount": 7,
     "promptId": "p2-windows/W7/windows-page-charging-TeslaChargingSessionsMap",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:driving/Efficiency",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 67,
+    "requiredCount": 67,
+    "promptId": "p2-windows/W7/windows-page-driving-EfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-EfficiencyPage.log"
   }
 ]
