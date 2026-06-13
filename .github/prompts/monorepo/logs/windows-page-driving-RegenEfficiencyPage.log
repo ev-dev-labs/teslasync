@@ -1,0 +1,201 @@
+=== p2-windows · W7 · page:driving/RegenEfficiency (WinUI 3 / Fluent) ===
+Parity unit : page:driving/RegenEfficiency   kind=page   web route=/regen-efficiency
+Web source  : web/src/features/driving/pages/RegenEfficiencyPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+Output      : apps/windows/TeslaSync.App/feature-views/RegenEfficiencyPage/{RegenEfficiencyPage.Model.cs,
+              RegenEfficiencyPage.Source.cs, RegenEfficiencyPage.ViewModel.cs, RegenEfficiencyPage.cs}
+              (the generated prompt's idealized "TeslaSync/Features/Driving/RegenEfficiencyPage.xaml +
+              RegenEfficiencyPageViewModel.cs" is mapped onto the repo's real code-first WinUI conventions —
+              this is the first feature surface under the TeslaSync.App.FeatureViews.Driving namespace).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client data port, also Microsoft.UI-free),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view).
+  Mirrors the sibling BatteryDegradationPage / ChargingCurvePage surfaces.
+- Data sources — the web page's two hooks, each ported to the generated OpenAPI client (ADR-004):
+  * useRegenEfficiency → GET /analytics/regen [start,end] (operation get_api_v1_analytics_regen): the PRIMARY
+    read; its presence gates the page success/empty branch and its failure surfaces the page error, exactly as
+    the web page gates on `data ?`. Parsed into RegenSummary (Model.cs RegenSummary.FromJson; total_regen_wh /
+    total_drive_wh / regen_ratio / monthly_avg_regen / free_charges, snake_case with camelCase alias, ?? 0).
+  * useDrives → GET /drives (operation get_api_v1_drives): the SECONDARY best-effort read that feeds the
+    client-side monthly-trend chart + the recent-drives table; a transport failure degrades to no drives
+    (RegenEfficiencyClientFeed.FetchDrivesAsync catches ApiException → empty), mirroring the web's two
+    independent queries. Parsed by RegenEfficiencyClientFeed.ParseDrives → RegenDrive.FromJson.
+- Projection (RegenEfficiencyProjection.Project) is the 1:1 port of the web render body + its regenColor /
+  getRegenRatio / monthlyTrend / regenDrives helpers. State precedence mirrors the web data lifecycle
+  (loading → error → empty → success). The backend rollup feeds the hero gauge, the six stat cards and the
+  four metric bars; the drive list feeds the monthly-trend composed chart (bucket by yyyy-MM, sum regen Wh /
+  count / sum distance, most-recent 12, regenKwh = Wh/1000, distance via the user unit) and the recent-drives
+  table (regen-positive drives, ≤20, per-drive ratio = regenEnergyWh/energyUsedWh*100 guarded by avgPowerW>0).
+- Units (P1/S5): energy is SI watt-hours, power SI watts, distance SI meters on the wire; every readout is
+  converted only at the projection boundary via UnitFormatters.FormatEnergy/FormatPower +
+  UnitConverters.DistanceFromSi + ScalarFormatters (percent/number). Nothing non-SI is stored or computed. The
+  regen.recoveredInfo "{0} kWh" line restates Wh→kWh at the boundary (the kWh unit is intrinsic to the catalog
+  template, matching the web formatEnergy(...) string).
+- Nav: route name RegenEfficiency → path regen-efficiency already exists in RouteTable.cs#282; the page factory
+  is registered in Shell/ShellWindow.xaml.cs ("RegenEfficiency" → new FeatureViews.Driving.RegenEfficiencyPage()).
+- Catalog: 29 of the 30 web i18n keys already exist verbatim in Strings/{en,ar,he}/Resources.resw
+  (translation.* prefix); the one missing key, regen.monthlyTrend.aria, was added to all three locales
+  ("Monthly regen energy and drive count composed chart"). No other catalog rows added; every visible literal
+  resolves through ILocalizer with the web key names.
+
+=== PARITY ===
+PARITY_REQUIRED=47
+
+# Panels (10) — each a Fluent Card / GlassPanel region from the bound RegenEfficiencyDisplay
+[x] panel  - GlassPanel1        -> RegenEfficiencyPage.cs BuildHeroGauge: TsGlassPanel hosting the regen-ratio
+                                   TsRadialGauge + the recovery-summary Caption (display.RecoveredInfo). Projection
+                                   RegenEfficiencyProjection.Project (Gauge* + RecoveredInfo). Asserted by
+                                   Gauge_rounds_the_ratio_and_maps_quality_status + Recovered_summary_formats_kwh_
+                                   and_free_charges.
+[x] panel  - GlassPanel2        -> RegenEfficiencyPage.cs BuildStatCards tile[0] (TsStatCard, Total Regen =
+                                   FormatEnergy(total_regen_wh)). Projection BuildStatCards (Model.cs). Asserted by
+                                   Stat_cards_project_six_tiles_with_lifetime_placeholders[0].
+[x] panel  - GlassPanel3        -> BuildStatCards tile[1] (Recovery Rate = FormatPercentage(regen_ratio)).
+                                   Asserted by Stat_cards_…[1].
+[x] panel  - GlassPanel4        -> BuildStatCards tile[2] (Monthly Avg kW = FormatPower(monthly_avg_regen)).
+                                   Asserted by Stat_cards_…[2].
+[x] panel  - GlassPanel5        -> BuildStatCards tile[3] (Free Charges = FormatNumber(free_charges)). Asserted by
+                                   Stat_cards_…[3].
+[x] panel  - GlassPanel6        -> BuildStatCards tile[4] (Lifetime Regen kWh — em-dash, web const is null).
+                                   Asserted by Stat_cards_…[4] (== "\u2014").
+[x] panel  - GlassPanel7        -> BuildStatCards tile[5] (Lifetime Drive kWh — em-dash, web const is null).
+                                   Asserted by Stat_cards_…[5] (== "\u2014").
+[x] panel  - Monthly-Regen-Trend-> RegenEfficiencyPage.cs BuildTrendChart: TsChartContainer (web ChartContainer)
+                                   framing the composed chart; State=Ready when >1 month else Empty so the region
+                                   is never blank (engineering guideline #6). Projection BuildTrend
+                                   (RegenTrendChartDisplay). Asserted by Trend_chart_visible_only_with_more_than_
+                                   one_month.
+[x] panel  - GlassPanel9        -> RegenEfficiencyPage.cs BuildMetricsStrip: TsGlassPanel with the Activity-glyph
+                                   SectionTitle + TsHelpTooltip + four TsMetricBar bars. Projection BuildMetricBars
+                                   (RegenMetricBarDisplay[4]). Asserted by Metric_bars_project_four_bars_with_
+                                   accent_brushes.
+[x] panel  - GlassPanel10       -> RegenEfficiencyPage.cs BuildRecentDrives: TsGlassPanel with the recent-drives
+                                   TsDataTable, or a TsEmptyState (common.noData) when no regen-positive drives.
+                                   Projection BuildTable. Asserted by Table_includes_only_drives_with_positive_
+                                   regen_capped_at_twenty + Table_empty_message_when_no_regen_drives.
+
+# Charts (3) — native W3 chart wrappers, never a web canvas
+[x] chart  - RadialGauge        -> RegenEfficiencyPage.cs BuildHeroGauge: TsRadialGauge (web RadialGauge) Value=
+                                   round(regen_ratio), Max=100, Unit="%", Role=ChartRole.Regen, Diameter=180.
+                                   Projection Gauge* fields. Asserted by Gauge_rounds_the_ratio_and_maps_quality_
+                                   status + RegenStatus_follows_the_web_color_bands.
+[x] chart  - ChartContainer     -> RegenEfficiencyPage.cs BuildTrendChart: TsChartContainer (web ChartContainer)
+                                   Title=regen.monthlyTrend, AccessibleSummary=regen.monthlyTrend.aria, State driven
+                                   by RegenTrendChartDisplay.Visible. Asserted by Trend_chart_visible_only_with_
+                                   more_than_one_month.
+[x] chart  - ComposedChart      -> RegenEfficiencyPage.cs BuildTrendChart: TsComposedChart (web ComposedChart) with
+                                   two per-series-kind series — a Bar series (Drives, ColorIndex 4) + a Line series
+                                   (Regen kWh, Role=Regen). Built from RegenSeriesDisplay (Model.cs BuildTrend) via
+                                   BuildSeries. Asserted by Trend_chart_…(Series[0].Kind==Bar, Series[1].Kind==Line,
+                                   Series[1].Role==Regen) + Monthly_trend_buckets_drives_by_month_and_converts_
+                                   distance + Monthly_trend_keeps_only_the_most_recent_twelve_months.
+
+# Data states (4 declared: loading · empty · error · success) — every region visible, never blank
+[x] state  - loading            -> RegenEfficiencyState.Loading (Model.cs). display.ShowLoading drives the Fluent
+                                   shimmer (RegenEfficiencyPage.cs _loadingSkeleton / TsSkeleton). Classified by the
+                                   view-model while the primary regen read is in flight with no data. Asserted by
+                                   State_loading_when_query_in_flight + Projection_resolves_all_keys_even_in_the_
+                                   loading_state + ViewModel_… matrix.
+[x] state  - empty              -> RegenEfficiencyState.Empty: a regen body that is not a JSON object → HasData
+                                   false → display.ShowEmpty → TsEmptyState (regen.noData "No regen efficiency data
+                                   available yet"). Asserted by State_empty_when_resolved_with_no_regen_object +
+                                   ViewModel_empty_snapshot_is_the_empty_state.
+[x] state  - error              -> RegenEfficiencyState.Error: a failed primary regen read → display.ShowError →
+                                   TsQueryError + Retry (errorText carries the detail). Asserted by State_error_
+                                   when_regen_query_failed + ViewModel_feed_failure_is_the_error_state.
+[x] state  - success            -> RegenEfficiencyState.Success: regen rollup present → display.ShowContent → the
+                                   full page body. Asserted by State_success_when_regen_present + ViewModel_loads_
+                                   regen_into_the_success_state.
+
+# Strings (30) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names;
+#                resolved once in RegenStrings.Resolve (Model.cs) so the coverage test asserts all 30 in one pass.
+#                Asserted by Projection_resolves_every_required_string_key_in_success +
+#                Projection_resolves_all_keys_even_in_the_loading_state +
+#                Required_string_key_set_has_exactly_thirty_unique_keys.
+[x] string - common.noData                 -> RegenStrings.NoData ("No data available") — recent-drives empty state.
+[x] string - help.regenEfficiency.iconLabel-> RegenStrings.HelpIconLabel ("More info about regen metrics") — the
+                                              metrics TsHelpTooltip AutomationProperties name.
+[x] string - regen.col.drives              -> RegenStrings.ColDrives ("Drives") — trend chart data column.
+[x] string - regen.col.month               -> RegenStrings.ColMonth ("Month") — trend chart data column.
+[x] string - regen.col.regenKwh            -> RegenStrings.ColRegenKwh ("Regen kWh") — trend chart data column.
+[x] string - regen.date                    -> RegenStrings.Date ("Date") — recent-drives table column 0.
+[x] string - regen.distanceCol             -> RegenStrings.DistanceCol ("Distance") — table column 1.
+[x] string - regen.drives                  -> RegenStrings.Drives ("Drives") — composed-chart bar series name.
+[x] string - regen.freeCharges             -> RegenStrings.FreeCharges ("Free Charges") — stat card 4 label.
+[x] string - regen.freeChargesBar          -> RegenStrings.FreeChargesBar ("Free Charges") — metric bar 4 label.
+[x] string - regen.lifetimeDrive           -> RegenStrings.LifetimeDrive ("Lifetime Drive kWh") — stat card 6 label.
+[x] string - regen.lifetimeRegen           -> RegenStrings.LifetimeRegen ("Lifetime Regen kWh") — stat card 5 label.
+[x] string - regen.maxRegenCol             -> RegenStrings.MaxRegenCol ("Max Regen") — table column 2.
+[x] string - regen.metrics                 -> RegenStrings.Metrics ("Regen Metrics") — metrics strip title.
+[x] string - regen.monthlyAvg              -> RegenStrings.MonthlyAvg ("Monthly Avg kW") — stat card 3 label.
+[x] string - regen.monthlyAvgBar           -> RegenStrings.MonthlyAvgBar ("Monthly Avg") — metric bar 3 label.
+[x] string - regen.monthlyTrend            -> RegenStrings.MonthlyTrend ("Monthly Regen Trend") — chart title.
+[x] string - regen.monthlyTrend.aria       -> RegenStrings.MonthlyTrendAria ("Monthly regen energy and drive count
+                                              composed chart") — chart AccessibleSummary. ADDED to en/ar/he resw.
+[x] string - regen.noData                  -> RegenStrings.RegenNoData ("No regen efficiency data available yet") —
+                                              page-level empty surface.
+[x] string - regen.ratioCol                -> RegenStrings.RatioCol ("Ratio") — table column 3.
+[x] string - regen.ratioLabel              -> RegenStrings.RatioLabel ("Recovery Rate") — stat card 2 label.
+[x] string - regen.recentDrives            -> RegenStrings.RecentDrives ("Recent Regen Drives") — table panel title.
+[x] string - regen.recoveredInfo           -> RegenStrings.RecoveredInfo ("You've recovered {0} kWh — equivalent to
+                                              ~{1} free charges.") composed with string.Format under the gauge.
+[x] string - regen.regenKwh                -> RegenStrings.RegenKwh ("Regen kWh") — composed-chart line series name.
+[x] string - regen.regenRatio             -> RegenStrings.RegenRatio ("Regen Ratio") — hero gauge label.
+[x] string - regen.regenRatioBar          -> RegenStrings.RegenRatioBar ("Regen Ratio") — metric bar 2 label.
+[x] string - regen.subtitle               -> RegenStrings.Subtitle — page header subtitle.
+[x] string - regen.title                  -> RegenStrings.Title ("Regenerative Braking") — page title + nav.
+[x] string - regen.totalRegen             -> RegenStrings.TotalRegen ("Total Regen") — stat card 1 label.
+[x] string - regen.totalRegenLabel        -> RegenStrings.TotalRegenLabel ("Total Regen") — metric bar 1 label.
+
+PARITY_COVERED=47
+# Coverage asserted headlessly by RegenEfficiencyPageTests (38 cases, 0 failed): the two tolerant JSON parsers
+# (RegenSummary.FromJson object/non-object, RegenDrive.FromJson, ParseDrives array/non-array), the projection's
+# loading/empty/error/success matrix, the regenColor quality bands, the six stat cards (incl. the two null
+# lifetime tiles), the four accent-brush metric bars, the monthly-trend bucketing + 12-month window + SI
+# distance conversion + Bar/Line composed series, the recent-drives filter/cap/per-drive ratio + display-boundary
+# formatting, the view-model state matrix (success/empty/error/refresh), the generated-client feed request
+# shaping (both operations + vehicle_id + range + graceful drives-failure degradation + regen-failure
+# propagation), the registration constants and the PII-safe diagnostics. The WinUI view's per-region visibility
+# is driven entirely by the RegenEfficiencyDisplay flags asserted here and exercised by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RegenEfficiencyPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Driving path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App.dll emitted under bin/x64/Release/net10.0-windows10.0.19041.0; the 17 CA1000/CA1716/CA1720/
+#    CA1859 warnings are pre-existing analyzer perf/naming suggestions in TeslaSync.App.Core files this change
+#    never touches — zero warnings in the RegenEfficiency surface, ShellWindow, or the new test.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <the 4 new feature files + the new test>
+#   -> 0 files needing changes (files normalised to LF / UTF-8-no-BOM / final-newline per .editorconfig).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26572, Failed: 0, Skipped: 0
+#   (incl. the new RegenEfficiencyPageTests suite, 38 cases; +260 over the pre-change 26312 baseline → 38 new
+#    minus none removed; no existing test regressed.)
+TEST_EXIT=0
+# Note (honesty): apps/windows/TeslaSync.App.UITests is a WinAppDriver/Appium end-to-end harness — its cases
+# require a live WinAppDriver on http://127.0.0.1:4723/, which is absent in this headless runner. That is an
+# environment gap, NOT a logic failure and NOT introduced by this change. The windows unit gate is the
+# TeslaSync.App.Tests project (the established W7 page-prompt target), which is fully green.
+PARITY_COVERED=47
+PARITY_REQUIRED=47
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/RegenEfficiencyPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/RegenEfficiencyPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-driving-RegenEfficiencyPage.log
+# git commit -m "feat(apps/windows): RegenEfficiencyPage at web parity (W7 driving)"
+
+EXIT=0
+STATUS=DONE

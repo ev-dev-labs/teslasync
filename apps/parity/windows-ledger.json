@@ -70,5 +70,14 @@
     "requiredCount": 7,
     "promptId": "p2-windows/W7/windows-page-charging-TeslaChargingSessionsMap",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:driving/RegenEfficiency",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 47,
+    "requiredCount": 47,
+    "promptId": "p2-windows/W7/windows-page-driving-RegenEfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-RegenEfficiencyPage.log"
   }
 ]

@@ -15444,6 +15444,9 @@
   <data name="translation.regen.monthlyTrend" xml:space="preserve">
     <value>Monthly Regen Trend</value>
   </data>
+  <data name="translation.regen.monthlyTrend.aria" xml:space="preserve">
+    <value>Monthly regen energy and drive count composed chart</value>
+  </data>
   <data name="translation.regen.noData" xml:space="preserve">
     <value>No regen efficiency data available yet</value>
   </data>
