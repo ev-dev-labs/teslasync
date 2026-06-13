@@ -611,3 +611,4 @@ p3-android/shared-meaningful/A-0021-AIInboxAutoCategorization.prompt.md
 p3-android/shared-meaningful/A-0020-AIGeofenceAwareAutomationSuggestions.prompt.md
 p3-android/shared-meaningful/A-0023-AILearnedAnomalyBaselines.prompt.md
 p3-android/shared-meaningful/A-0026-AILogTraceSummarization.prompt.md
+p3-android/shared-meaningful/A-0024-AILifetimeStatsQA.prompt.md
