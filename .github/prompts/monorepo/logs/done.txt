@@ -772,3 +772,4 @@ p2-windows/pages/power-user/DashboardsPage.prompt.md
 p2-windows/pages/settings/ActiveSessionsPage.prompt.md
 p2-windows/pages/settings/HelixPage.prompt.md
 p2-windows/pages/settings/SettingsPage.prompt.md
+p2-windows/pages/settings/TwoFactorAuthPage.prompt.md
