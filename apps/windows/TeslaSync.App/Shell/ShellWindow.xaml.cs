@@ -207,6 +207,8 @@ public sealed partial class ShellWindow : Window
         {
             var page = new FeatureViews.Maps.LocationsPage();
             page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
@@ -222,6 +224,8 @@ public sealed partial class ShellWindow : Window
         });
         // Notifications / Channels page (P2/W7) — parity port of web ChannelsPage at route /notifications/channels.
         _viewModel.PageFactory.Register("NotificationsChannels", static () => new FeatureViews.Notifications.ChannelsPage());
+        // Settings / Active Sessions page (P2/W7) — parity port of web ActiveSessionsPage at route /account/sessions.
+        _viewModel.PageFactory.Register("ActiveSessions", static () => new FeatureViews.Settings.ActiveSessionsPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
