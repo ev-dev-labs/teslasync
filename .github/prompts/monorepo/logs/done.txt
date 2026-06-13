@@ -830,3 +830,4 @@ p2-windows/feature-views/W-0262-ScheduledExportsPanel.prompt.md
 p2-windows/feature-views/W-0258-TeslaAuthCard.prompt.md
 p2-windows/feature-views/W-0259-UpdateAvailableCallout.prompt.md
 p2-windows/feature-views/W-0260-ToggleCommandTile.prompt.md
+p2-windows/feature-views/W-0278-ClimatePanel.prompt.md
