@@ -1,0 +1,113 @@
+=== p2-windows · W7 · page:maps/TemperatureImpact (WinUI 3 / Fluent) ===
+Parity unit : page:maps/TemperatureImpact   kind=page   web route=/temperature-impact
+Web source  : web/src/features/maps/pages/TemperatureImpactPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300), maui-windows workload installed — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable state holder),
+  <Name>.Source.cs (generated-client feed, ADR-004) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "TemperatureImpactPage.xaml + ViewModel.cs under TeslaSync/Features/Maps" is mapped onto these real
+  conventions; the surface registers with the W4 ShellPageFactory by route name ("TemperatureImpact", already in
+  RouteTable.cs under RouteGroup.MapsLocation).
+- The manifest page record carries no dataSources, but the web page does fetch GET /analytics/temperature-impact
+  and its four declared states are real, so the view-model reads samples through an injected
+  ITemperatureImpactFeed (default EmptyTemperatureImpactFeed → empty state; TemperatureImpactClientFeed binds the
+  generated operation get_api_v1_analytics_temperature_impact via Operations.Analytics.TemperatureImpact). The
+  loading/empty/error/success branch precedence mirrors the web data lifecycle.
+- SI cutover (ADR / unit-conversion.instructions): outside_temp (°C SI) is converted at the display boundary via
+  UnitConverters.TemperatureFromSi; efficiency Wh/km → Wh/mi via the web's KM_PER_MILE factor (no
+  convertEfficiencyFromSI helper exists, matching the web inline note). Nothing non-SI is stored/computed.
+- The web's per-point scatter fill (bucket colour) is rendered as one Fluent scatter series named via
+  tempImpact.scatterName ("Drives") to preserve the series-name parity; bucket colour is conveyed instead through
+  the line chart + the optimal-analysis badges (Fluent-native, not web pixel-cloning per ADR-005).
+- The in-page web VehicleSelect action is the shell's global header picker on native (sibling W7 pages do the
+  same); the header carries a TsDataFreshness chip (ADR-013). The web AICabinTemperatureImpactNarrative is a
+  separate already-ported shared-surface parity unit (gated off by ai_mode by default) and is intentionally not
+  re-embedded here — it is tracked under its own unit, not this page's 8 panels.
+- All 22 i18n keys already exist verbatim in Strings/en/Resources.resw (translation.tempImpact.* +
+  translation.common.noData + translation.error.loadFailed + translation.temperature.title); the surface resolves
+  them through the ILocalizer facade with the web key names (no new catalog rows required). The optimalDesc /
+  optimalDelta / tipOptimal templates use the resw's {0}.. placeholders via string.Format (web {{var}} → {N}).
+- Test project (net10.0, no WinUI host) Compile-links the three Microsoft.UI-free sources
+  (Model/Source/ViewModel) in TeslaSync.App.Tests.csproj (path-sorted between TemperatureGauges and
+  TemperatureMetricCards); the bare WinUI view is exercised by the app build.
+
+=== PARITY ===
+PARITY_REQUIRED=36
+
+# Panels (8) — the four summary MetricCards + the four GlassPanel regions from the web source
+[x] panel  - Avg-Efficiency    -> TemperatureImpactProjection.BuildStatCards StatCards[0] (avgEff `{n} Wh/km|mi`, AccentBrush); rendered TemperatureImpactPage.cs#BuildStatCards (TsMetricCard); test StatCards_expose_four_summary_tiles_in_order
+[x] panel  - Best-Temp-Range   -> BuildStatCards StatCards[1] (stats.Best.Label + subtitle stats.Best.Avg, SuccessBrush, TrendingUp glyph); rendered BuildStatCards (TsMetricCard DeltaText)
+[x] panel  - Worst-Temp-Range  -> BuildStatCards StatCards[2] (stats.Worst.Label + subtitle stats.Worst.Avg, PowerBrush, Sun glyph); rendered BuildStatCards (TsMetricCard)
+[x] panel  - Total-Data-Points -> BuildStatCards StatCards[3] (stats.Total integer, AccentBrush); rendered BuildStatCards (TsMetricCard); test StatCards_fall_back_to_em_dash_without_data
+[x] panel  - GlassPanel5       -> TemperatureImpactPage.cs#BuildScatterPanel (TsGlassPanel: SectionTitle ScatterTitle + TsScatterChart); Display.ScatterPoints/AverageLine
+[x] panel  - GlassPanel6       -> TemperatureImpactPage.cs#BuildLinePanel (TsGlassPanel: SectionTitle BucketTitle + TsLineChart over Display.Buckets)
+[x] panel  - GlassPanel7       -> TemperatureImpactPage.cs#BuildOptimalPanel (TsGlassPanel Glow=Green): Thermometer + OptimalTitle + OptimalDesc + OptimalDelta + per-bucket TsBadge row; Projection.BuildOptimal; test Optimal_panel_describes_best_range_with_delta_and_badges
+[x] panel  - GlassPanel8       -> TemperatureImpactPage.cs#BuildTipsPanel (TsGlassPanel): Lightbulb + TipsTitle + tip TsBadge list OR TsEmptyState(common.noData); Projection.BuildTips; test Tips_include_optimal_cold_and_hot_when_those_buckets_have_data
+
+# Charts (2) — native W3 chart wrappers (never a web canvas)
+[x] chart  - ScatterChart      -> TemperatureImpactPage.cs#BuildScatterPanel TsScatterChart (Series=[ChartSeries(ScatterSeriesName, Display.ScatterPoints)], Annotations=[HorizontalLine @ AverageLine]); Projection.BuildScatter converts temp+eff at boundary; test Scatter_points_convert_temperature_and_efficiency_at_the_boundary
+[x] chart  - LineChart         -> TemperatureImpactPage.cs#BuildLinePanel TsLineChart (Series=[ChartSeries(BucketSeriesName, points from Display.Buckets)]); test Buckets_expose_all_five_bands_with_averages_and_counts
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading           -> TemperatureImpactState.Loading + TemperatureImpactDisplay.ShowLoading; rendered TemperatureImpactPage.cs#_loadingSkeleton (TsSkeleton blocks); test State_loading_when_query_in_flight
+[x] state  - empty             -> TemperatureImpactState.Empty + ShowEmpty + EmptyMessage(common.noData); rendered _emptyState (TsEmptyState); tests State_empty_when_resolved_with_no_points / ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error             -> TemperatureImpactState.Error + ShowError + ErrorTitle/ErrorDetail/RetryLabel; rendered _errorState (TsQueryError + Retry → RefreshAsync); tests State_error_when_query_failed / ViewModel_feed_failure_is_the_error_state
+[x] state  - success           -> TemperatureImpactState.Success + ShowContent; rendered BuildContent (cards + scatter + line + optimal + tips); tests State_success_when_points_present / ViewModel_loads_points_into_the_success_state
+
+# Strings (22) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - common.noData          -> TempImpactStrings.Resolve localizer.GetString("common.noData", "No data available")
+[x] string - error.loadFailed       -> TempImpactStrings.Resolve localizer.GetString("error.loadFailed", "Failed to load data")
+[x] string - tempImpact.avgEff      -> TempImpactStrings.Resolve localizer.GetString("tempImpact.avgEff", "Avg Efficiency") (line-chart series name)
+[x] string - tempImpact.avgEfficiency -> TempImpactStrings.Resolve localizer.GetString("tempImpact.avgEfficiency", "Avg Efficiency") (metric-card label)
+[x] string - tempImpact.bestRange   -> TempImpactStrings.Resolve localizer.GetString("tempImpact.bestRange", "Best Temp Range")
+[x] string - tempImpact.bucketTitle -> TempImpactStrings.Resolve localizer.GetString("tempImpact.bucketTitle", "Efficiency by Temperature Range")
+[x] string - tempImpact.efficiency  -> TempImpactStrings.Resolve localizer.GetString("tempImpact.efficiency", "Efficiency")
+[x] string - tempImpact.optimalDelta -> TempImpactStrings.Resolve localizer.GetString("tempImpact.optimalDelta", "Compared to the worst range ({0}), you save {1} {2} on average.")
+[x] string - tempImpact.optimalDesc -> TempImpactStrings.Resolve localizer.GetString("tempImpact.optimalDesc", "Your most efficient temperature range is {0} with an average of {1} {2} across {3} drives.")
+[x] string - tempImpact.optimalTitle -> TempImpactStrings.Resolve localizer.GetString("tempImpact.optimalTitle", "Optimal Temperature Analysis")
+[x] string - tempImpact.scatterName -> TempImpactStrings.Resolve localizer.GetString("tempImpact.scatterName", "Drives")
+[x] string - tempImpact.scatterTitle -> TempImpactStrings.Resolve localizer.GetString("tempImpact.scatterTitle", "Temperature vs Efficiency")
+[x] string - tempImpact.subtitle    -> TempImpactStrings.Resolve localizer.GetString("tempImpact.subtitle", "How outside temperature affects driving efficiency")
+[x] string - tempImpact.temperature -> TempImpactStrings.Resolve localizer.GetString("tempImpact.temperature", "Temperature")
+[x] string - tempImpact.tipCold     -> TempImpactStrings.Resolve localizer.GetString("tempImpact.tipCold", "Precondition your cabin in cold weather to reduce battery drain")
+[x] string - tempImpact.tipHot      -> TempImpactStrings.Resolve localizer.GetString("tempImpact.tipHot", "Park in shade during hot weather to preserve battery efficiency")
+[x] string - tempImpact.tipOptimal  -> TempImpactStrings.Resolve localizer.GetString("tempImpact.tipOptimal", "Best efficiency observed in the {0} range")
+[x] string - tempImpact.tipsTitle   -> TempImpactStrings.Resolve localizer.GetString("tempImpact.tipsTitle", "Recommendations")
+[x] string - tempImpact.title       -> TempImpactStrings.Resolve / TemperatureImpactRegistration.Title localizer.GetString("tempImpact.title", "Temperature Impact")
+[x] string - tempImpact.totalPoints -> TempImpactStrings.Resolve localizer.GetString("tempImpact.totalPoints", "Total Data Points")
+[x] string - tempImpact.worstRange  -> TempImpactStrings.Resolve localizer.GetString("tempImpact.worstRange", "Worst Temp Range")
+[x] string - temperature.title      -> TempImpactStrings.Resolve localizer.GetString("temperature.title", "Temperature Impact") (web usePageTitle → page AutomationName)
+
+PARITY_COVERED=36
+# Coverage asserted headlessly: TemperatureImpactPageTests.Projection_resolves_every_required_string_key_in_success
+# (+_even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests + the
+# StatCards / Scatter / Buckets / Optimal / Tips tests assert each panel + chart renders from the bound
+# TemperatureImpactDisplay state holder. 42 tests total for this surface.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TemperatureImpactPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Maps path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s) 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (TemperatureImpactPage sources + tests + ShellWindow registration)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 26763, Failed: 0, Skipped: 0
+TEST_EXIT=0
+PARITY_COVERED=36
+PARITY_REQUIRED=36
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TemperatureImpactPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TemperatureImpactPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-maps-TemperatureImpactPage.log
+# git commit -m "feat(apps/windows): TemperatureImpactPage at web parity (W7 maps)"
+
+EXIT=0
+STATUS=DONE

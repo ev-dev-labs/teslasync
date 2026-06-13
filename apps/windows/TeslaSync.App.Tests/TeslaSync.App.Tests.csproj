@@ -859,6 +859,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.Source.cs" Link="FeatureViews\TelemetryPipelineCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TelemetryPipelineCard.ViewModel.cs" Link="FeatureViews\TelemetryPipelineCard.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureGauges.Model.cs" Link="FeatureViews\TemperatureGauges.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureImpactPage\TemperatureImpactPage.Model.cs" Link="FeatureViews\TemperatureImpactPage\TemperatureImpactPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureImpactPage\TemperatureImpactPage.Source.cs" Link="FeatureViews\TemperatureImpactPage\TemperatureImpactPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TemperatureImpactPage\TemperatureImpactPage.ViewModel.cs" Link="FeatureViews\TemperatureImpactPage\TemperatureImpactPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.Model.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.Source.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TemperatureMetricCards\TemperatureMetricCards.ViewModel.cs" Link="FeatureViews\TemperatureMetricCards\TemperatureMetricCards.ViewModel.cs" />
