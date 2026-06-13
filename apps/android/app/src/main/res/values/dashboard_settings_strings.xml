@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the DashboardSettingsModal modal/dialog
+  (com/teslasync/modals-dialogs/DashboardSettingsModal), the native port of
+  web/src/features/dashboard/components/DashboardSettingsModal.tsx.
+
+  The web component IS i18n-aware: it calls t('dashSettings.vehicleFilterDesc', '…')
+  and t(`dashSettings.refresh${value}`, '…') with inline English fallbacks. The
+  auto-generated translation_* catalog (web/src/i18n -> apps/shared/i18n ->
+  values/strings.xml) already carries the section-level dashSettings.* keys
+  (title, identity, vehicleFilter, refresh, display, showBorders, compactMode,
+  nameLabel, name, iconLabel, allVehicles) plus common.cancel / common.save — the
+  DashboardSettingsModal resolves those directly from strings.xml. The two groups
+  below are the keys the web source references that are NOT present in the
+  generated catalog: the vehicle-filter helper sentence and the six auto-refresh
+  option labels. They are supplied here through the same hand-authored
+  *_strings.xml mechanism the sibling surfaces use (confirm_dialog_strings.xml /
+  incident_form_strings.xml / nav_strings.xml), so every native string resolves
+  through stringResource with no English literals in Kotlin. Values are verbatim
+  from the web source's t() fallbacks; the resource names mirror the web
+  dashSettings.* key suffixes.
+-->
+<resources>
+    <string name="translation_dashSettings_vehicleFilterDesc">Show data for a specific vehicle in all widgets. Widget-level filters take precedence.</string>
+    <string name="translation_dashSettings_refresh0">Default (per widget)</string>
+    <string name="translation_dashSettings_refresh5">Every 5 seconds</string>
+    <string name="translation_dashSettings_refresh10">Every 10 seconds</string>
+    <string name="translation_dashSettings_refresh30">Every 30 seconds</string>
+    <string name="translation_dashSettings_refresh60">Every minute</string>
+    <string name="translation_dashSettings_refresh300">Every 5 minutes</string>
+</resources>
