@@ -95,6 +95,10 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("ApiPlayground","api-playground",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("ApiPlayground", static () => new FeatureViews.Admin.ApiPlaygroundPage());
 
+        // Admin / Fleet API page (P2/W7) — parity port of web FleetAPIPage at route /fleet-api.
+        // RouteTable already maps Page("FleetAPI","fleet-api",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("FleetAPI", static () => new FeatureViews.Admin.FleetAPIPage());
+
         // Admin / API Keys page (P2/W7) — parity port of web APIKeysPage at route /api-keys.
         // RouteTable already maps Page("APIKeys","api-keys",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("APIKeys", static () => new FeatureViews.Admin.APIKeysPage());

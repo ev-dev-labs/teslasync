@@ -631,6 +631,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\FeedbackQueuePage\FeedbackQueuePage.Source.cs" Link="FeatureViews\FeedbackQueuePage\FeedbackQueuePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FeedbackQueuePage\FeedbackQueuePage.ViewModel.cs" Link="FeatureViews\FeedbackQueuePage\FeedbackQueuePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FlagsTable\FlagsTable.Model.cs" Link="FeatureViews\FlagsTable\FlagsTable.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetAPIPage\FleetAPIPage.Model.cs" Link="FeatureViews\FleetAPIPage\FleetAPIPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetAPIPage\FleetAPIPage.Source.cs" Link="FeatureViews\FleetAPIPage\FleetAPIPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetAPIPage\FleetAPIPage.ViewModel.cs" Link="FeatureViews\FleetAPIPage\FleetAPIPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Model.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.Source.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetStatsBar\FleetStatsBar.ViewModel.cs" Link="FeatureViews\FleetStatsBar\FleetStatsBar.ViewModel.cs" />

@@ -1,0 +1,160 @@
+=== p2-windows · W7 · page:admin/FleetAPI (WinUI 3 / Fluent) ===
+Parity unit : page:admin/FleetAPI   kind=page   web route=/fleet-api
+Web source  : web/src/features/admin/pages/FleetAPIPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "FleetAPIPage.xaml + FleetAPIPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real
+  conventions (matching the sibling W7 admin pages ApiLogsPage / VehicleCostPage); the surface registers itself with
+  the W4 ShellPageFactory by route name ("FleetAPI" — RouteTable already maps Page("FleetAPI","fleet-api",AdminDevTools)).
+- Data sources bind to the generated C# OpenAPI client (ADR-004) through an IFleetApiFeed seam (P1/S8): four reads
+  (get_api_v1_settings, get_api_v1_settings_polling_config, get_api_v1_dev_tools_telemetry_capture_stats,
+  get_api_v1_system_version) and two mutations (post_api_v1_settings_suspend_api {suspended},
+  put_api_v1_settings_polling_config <full config>). EmptyFleetApiFeed is the headless default; FleetApiClientFeed is
+  the contract-client adapter, exercised by ClientFeed_* tests. The web hook names (useSettings, usePollingConfig,
+  useCaptureStats, useVersionInfo, useToggleAPISuspend, useUpdatePollingConfig) are preserved at the C# call sites in
+  the XML docs of IFleetApiFeed / FleetApiClientFeed. No unit-bearing fields on this admin surface (SI N/A); fmtInt is
+  ported through the shared NumberFormatting port.
+- 69 new i18n rows (translation.fleetApi.*) added to Strings/{en,ar,he}/Resources.resw; common.noData already exists
+  verbatim. The surface resolves all 70 manifest strings through the ILocalizer facade with the exact web English
+  defaults (the projection records every key — asserted headlessly by FleetAPIPageTests via a RecordingLocalizer in
+  both the success and loading states, and the distinct-key count == 70).
+- Pre-existing, out-of-scope note: Strings/en/Resources.resw carries a malformed (merge=union) <data
+  name="translation.Volume over Time"> element missing its </data> close tag (present in git HEAD; the resw→PRI
+  tooling tolerates it — the WinUI build's PRI generation succeeds). Left untouched per scope.
+
+=== PARITY ===
+PARITY_REQUIRED=81
+
+# Panels (8) — every web GlassPanel region, each a Fluent TsGlassPanel/Mica card
+[x] panel  - GlassPanel1 -> FleetAPIPage.cs#_pollingPanel (BuildPollingPanel, TsGlassPanel): Tesla API Polling kill-switch — IconBox (pause/play) + PollingTitle + PollingStatus + _pollingToggle
+[x] panel  - GlassPanel2 -> FleetAPIPage.cs#_suspendedNotePanel (BuildSuspendedNote, TsGlassPanel): danger-tinted suspended callout (pause glyph + SuspendedNote), visible when IsSuspended
+[x] panel  - GlassPanel3 -> FleetAPIPage.cs#_controlsPanel (BuildControlsPanel, TsGlassPanel): API Endpoint Controls — shield IconBox + ControlsTitle + ControlsSubtitle + EnabledSummary + the four sections
+[x] panel  - GlassPanel4 -> FleetAPIPage.cs#BuildEndpointCard (EndpointCard.Panel, TsGlassPanel): the reusable web EndpointToggle card (title+desc+TsToggle), one per polling/on-demand/command endpoint + the raw-recording card
+[x] panel  - GlassPanel5 -> FleetAPIPage.cs#_retentionRow (BuildRetentionRow, TsGlassPanel): Retention Period row (title+desc + TsSelect), visible when ShowRetention
+[x] panel  - GlassPanel6 -> FleetAPIPage.cs#_captureStatsChip (TsGlassPanel, Cyan glow): captured-signal chip (CaptureStatsText), visible when ShowCaptureStats
+[x] panel  - GlassPanel7 -> FleetAPIPage.cs#_endpointsPanel (BuildEndpointsPanel, TsGlassPanel): API Endpoints — globe IconBox + EndpointsTitle + VersionSubtitle + configured list / empty state
+[x] panel  - GlassPanel8 -> FleetAPIPage.cs#BuildConfiguredRow (TsGlassPanel): one configured-endpoint URL row (label Caption + url Code), one per version.endpoints entry
+
+# Data states (3) — loading / empty / success, each a visible region (never blank)
+[x] state  - loading -> FleetApiState.Loading + FleetApiDisplay.ShowLoading (FleetApiProjection.Project) -> PageContainer.IsLoading; test FleetAPIPageTests.State_loading_when_first_read_in_flight
+[x] state  - empty   -> FleetApiState.Empty + ShowEndpointsEmpty -> FleetAPIPage.cs#_endpointsEmpty (TsEmptyState, common.noData); tests State_empty_when_no_configured_endpoints / ViewModel_empty_feed_is_the_empty_state
+[x] state  - success -> FleetApiState.Success + ShowConfiguredEndpoints -> FleetAPIPage.cs#_configuredList (GlassPanel8 rows); tests State_success_when_configured_endpoints_present / ViewModel_loads_all_four_reads_into_success
+
+# Strings (70) — every visible literal resolves from Strings/*.resw via ILocalizer with the web defaults
+# (all resolved in FleetApiProjection.Project / BuildEndpoints / BuildConfigured; coverage asserted by
+#  FleetAPIPageTests.Projection_resolves_every_required_string_key[_even_while_loading] + _exactly_seventy_distinct_keys)
+[x] string - 1 day                                                                  -> GetString("fleetApi.retention.d1")
+[x] string - 14 days                                                                -> GetString("fleetApi.retention.d14")
+[x] string - 3 days                                                                 -> GetString("fleetApi.retention.d3")
+[x] string - 30 days                                                                -> GetString("fleetApi.retention.d30")
+[x] string - 7 days                                                                 -> GetString("fleetApi.retention.d7")
+[x] string - API (Internal)                                                         -> BuildConfigured GetString("fleetApi.endpoint.api")
+[x] string - API Endpoint Controls                                                  -> GetString("fleetApi.controls.title")
+[x] string - API Endpoints                                                          -> GetString("fleetApi.endpoints.title")
+[x] string - API resumed                                                            -> GetString("fleetApi.toast.resumedTitle")
+[x] string - API suspended                                                          -> GetString("fleetApi.toast.suspendedTitle")
+[x] string - All Tesla API calls have been paused                                   -> GetString("fleetApi.toast.suspendedBody")
+[x] string - All Tesla Fleet API calls are suspended                                -> GetString("fleetApi.polling.suspendedStatus")
+[x] string - Auto-delete captured signals after this many days                      -> GetString("fleetApi.capture.retentionDesc")
+[x] string - Battery & charging data                                                -> BuildEndpoints GetString("fleetApi.ep.desc.batteryCharging")
+[x] string - Capture every fleet telemetry signal to MongoDB for debugging          -> GetString("fleetApi.capture.enabledDesc")
+[x] string - Charge State                                                           -> BuildEndpoints GetString("fleetApi.ep.label.chargeState")
+[x] string - Climate & temperature data                                             -> BuildEndpoints GetString("fleetApi.ep.desc.climateTemp")
+[x] string - Climate State                                                          -> BuildEndpoints GetString("fleetApi.ep.label.climateState")
+[x] string - Commands                                                               -> GetString("fleetApi.section.commands")
+[x] string - Configured Endpoints                                                   -> GetString("fleetApi.endpoints.configured")
+[x] string - Control Tesla Fleet API polling, endpoint toggles, and telemetry capture -> GetString("fleetApi.subtitle")
+[x] string - Could not toggle API suspension                                        -> GetString("fleetApi.toast.suspendError")
+[x] string - Drive State                                                            -> BuildEndpoints GetString("fleetApi.ep.label.driveState")
+[x] string - Failed                                                                 -> GetString("fleetApi.toast.failedTitle")
+[x] string - Failed to update polling config                                        -> GetString("fleetApi.toast.pollingError")
+[x] string - Firmware release notes                                                 -> BuildEndpoints GetString("fleetApi.ep.desc.firmwareNotes")
+[x] string - Fleet API                                                              -> GetString("fleetApi.navTitle")
+[x] string - Fleet API Settings                                                     -> GetString("fleetApi.title") / FleetApiRegistration.Title
+[x] string - GPS coordinates                                                        -> BuildEndpoints GetString("fleetApi.ep.desc.gps")
+[x] string - List vehicles from Tesla                                               -> BuildEndpoints GetString("fleetApi.ep.desc.listVehicles")
+[x] string - Location & speed data                                                  -> BuildEndpoints GetString("fleetApi.ep.desc.locationSpeed")
+[x] string - Location Data                                                          -> BuildEndpoints GetString("fleetApi.ep.label.locationData")
+[x] string - Lock, unlock, climate, etc.                                            -> BuildEndpoints GetString("fleetApi.ep.desc.lockUnlock")
+[x] string - Locks, doors, odometer                                                 -> BuildEndpoints GetString("fleetApi.ep.desc.locksDoors")
+[x] string - Model, trim, options                                                   -> BuildEndpoints GetString("fleetApi.ep.desc.modelTrim")
+[x] string - MongoDB Connected                                                      -> GetString("fleetApi.capture.connected")
+[x] string - MongoDB Not Configured                                                 -> GetString("fleetApi.capture.notConfigured")
+[x] string - Nearby Charging                                                        -> BuildEndpoints GetString("fleetApi.ep.label.nearbyCharging")
+[x] string - OAuth Callback                                                         -> BuildConfigured GetString("fleetApi.endpoint.oauth")
+[x] string - On-Demand Endpoints                                                    -> GetString("fleetApi.section.onDemand")
+[x] string - Polling Endpoints                                                      -> GetString("fleetApi.section.polling")
+[x] string - Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service. -> GetString("fleetApi.polling.suspendedNote")
+[x] string - Polling config updated                                                 -> GetString("fleetApi.toast.pollingUpdated")
+[x] string - Raw Signal Recording                                                   -> GetString("fleetApi.capture.rawTitle")
+[x] string - Recent Alerts                                                          -> BuildEndpoints GetString("fleetApi.ep.label.recentAlerts")
+[x] string - Release Notes                                                          -> BuildEndpoints GetString("fleetApi.ep.label.releaseNotes")
+[x] string - Retention Period                                                       -> GetString("fleetApi.capture.retentionTitle")
+[x] string - Service Data                                                           -> BuildEndpoints GetString("fleetApi.ep.label.serviceData")
+[x] string - Service history & status                                               -> BuildEndpoints GetString("fleetApi.ep.desc.serviceHistory")
+[x] string - Set MONGODB_ENABLED=true and configure MONGODB_URI to enable           -> GetString("fleetApi.capture.disabledDesc")
+[x] string - Supercharger locations                                                 -> BuildEndpoints GetString("fleetApi.ep.desc.superchargers")
+[x] string - Sync vehicles from Tesla                                               -> BuildEndpoints GetString("fleetApi.ep.desc.syncVehicles")
+[x] string - Telemetry Capture                                                      -> GetString("fleetApi.section.telemetryCapture")
+[x] string - Tesla API Polling                                                      -> GetString("fleetApi.polling.title")
+[x] string - Tesla API polling has been re-enabled                                  -> GetString("fleetApi.toast.resumedBody")
+[x] string - Tesla Fleet API                                                        -> BuildConfigured GetString("fleetApi.endpoint.teslaApi")
+[x] string - Toggle individual Tesla Fleet API endpoints on or off                  -> GetString("fleetApi.controls.subtitle")
+[x] string - Vehicle Commands                                                       -> BuildEndpoints GetString("fleetApi.ep.label.commands")
+[x] string - Vehicle Config                                                         -> BuildEndpoints GetString("fleetApi.ep.label.vehicleConfig")
+[x] string - Vehicle Discovery                                                      -> BuildEndpoints GetString("fleetApi.ep.label.vehicleDiscovery")
+[x] string - Vehicle State                                                          -> BuildEndpoints GetString("fleetApi.ep.label.vehicleState")
+[x] string - Vehicle alert history                                                  -> BuildEndpoints GetString("fleetApi.ep.desc.alertHistory")
+[x] string - Vehicle data is being polled from Tesla                                -> GetString("fleetApi.polling.activeStatus")
+[x] string - Wake Up                                                                -> BuildEndpoints GetString("fleetApi.ep.label.wakeUp")
+[x] string - Wake vehicle from sleep                                                -> BuildEndpoints GetString("fleetApi.ep.desc.wakeSleep")
+[x] string - Web Frontend                                                           -> BuildConfigured GetString("fleetApi.endpoint.web")
+[x] string - common.noData                                                          -> GetString("common.noData", "No data available")
+[x] string - enabled                                                                -> GetString("fleetApi.controls.enabled")
+[x] string - signals captured from                                                  -> GetString("fleetApi.capture.signalsCaptured")
+[x] string - vehicle                                                                -> GetString("fleetApi.capture.vehicle")
+
+PARITY_COVERED=81
+# 81 = 8 panels + 3 states + 70 strings (== requiredCount in apps/parity/parity-manifest.json record page:admin/FleetAPI).
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/FleetAPIPageTests.cs (51 tests): the string-key
+# coverage tests (success + loading + distinct==70), the three data-state tests, the per-panel projection tests
+# (polling status, endpoint counts 7/11/2, enabled-summary count, capture badge/retention/stats chip, configured rows),
+# the notice mapping [Theory] (5 kinds), the tolerant parsers, the view-model mutation matrix (suspend / resume /
+# fail / endpoint toggle / retention / no-op / clear-notice) and the generated-client feed request shaping.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FleetAPIPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (1 pre-existing TeslaSync.App.Core CA1716 warning only; not in scope)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29338, Failed: 0, Skipped: 0
+#   (includes the 51 FleetAPIPageTests). This is the headless unit-test project the W7 gate scopes to — see
+#   windows-page-admin-ApiLogsPage.log. The solution also contains TeslaSync.App.UITests (WinAppDriver/Appium UI
+#   automation): in this environment that runner is absent (nothing listening on http://127.0.0.1:4723/,
+#   UiAutomationUnavailableException), so its 147 cases cannot execute — a pre-existing environmental limitation,
+#   present on HEAD, that does not reference FleetAPIPage and is out of this parity unit's scope.
+TEST_EXIT=0
+PARITY_COVERED=81
+PARITY_REQUIRED=81
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/FleetAPIPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/FleetAPIPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-FleetAPIPage.log
+# git commit -m "feat(apps/windows): FleetAPIPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

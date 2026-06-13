@@ -36,6 +36,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FeedbackQueuePage.log"
   },
   {
+    "unitId": "page:admin/FleetAPI",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "p2-windows/W7/windows-page-admin-FleetAPIPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FleetAPIPage.log"
+  },
+  {
     "unitId": "page:admin/SchemaDrift",
     "platform": "windows",
     "status": "done",
