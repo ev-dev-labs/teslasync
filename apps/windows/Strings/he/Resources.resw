@@ -888,6 +888,12 @@
   <data name="translation.a11y.toggleSidebar" xml:space="preserve">
     <value>Toggle sidebar</value>
   </data>
+  <data name="translation.account.twoFactor.subtitle" xml:space="preserve">
+    <value>Add a second factor to your sign-in. Required for sensitive admin actions.</value>
+  </data>
+  <data name="translation.account.twoFactor.title" xml:space="preserve">
+    <value>Two-factor authentication</value>
+  </data>
   <data name="translation.achievements.celebrationSettings" xml:space="preserve">
     <value>Celebration</value>
   </data>

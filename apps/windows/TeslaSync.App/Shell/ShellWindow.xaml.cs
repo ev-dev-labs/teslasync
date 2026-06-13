@@ -293,6 +293,12 @@ public sealed partial class ShellWindow : Window
             page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
             return page;
         });
+        // Settings / Account / Two-factor auth page (P2/W7) — parity port of web TwoFactorAuthPage at route
+        // /account/2fa. Hosts the native TOTPEnrollmentSection inside the shared PageContainer (title + subtitle +
+        // copy-link); RouteTable already maps Page("TwoFactorAuth","account/2fa").
+        _viewModel.PageFactory.Register(
+            "TwoFactorAuth",
+            static () => new FeatureViews.Settings.TwoFactorAuthPage());
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;

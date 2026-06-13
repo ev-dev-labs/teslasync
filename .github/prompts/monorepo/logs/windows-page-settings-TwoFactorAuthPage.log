@@ -1,0 +1,95 @@
+=== p2-windows · W7 · page:settings/TwoFactorAuth (WinUI 3 / Fluent) ===
+Parity unit : page:settings/TwoFactorAuth   kind=page   web route=/account/2fa
+Web source  : web/src/features/settings/pages/TwoFactorAuthPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/TwoFactorAuthPage/** (+ shell registration, Strings/*.resw, tests)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repo's WinUI app is code-first C# (no per-page .xaml). Every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (Microsoft.UI-free Registration / value
+  types / projection / controller seam / diagnostics — unit-tested headlessly), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view). The generated prompt's
+  idealized "TwoFactorAuthPage.xaml + ViewModel.cs under TeslaSync/Features/Settings" is mapped onto these real
+  conventions; the surface registers with the W4 ShellPageFactory by route name ("TwoFactorAuth"), which RouteTable
+  already maps to account/2fa.
+- The web page is a thin PageContainer hosting <TOTPEnrollmentSection/>. Ported 1:1 as a thin TwoFactorAuthPage
+  (shared PageContainer: title + subtitle + copy-link) hosting a native TotpEnrollmentSection that reproduces the
+  web component's glass panel and EVERY render branch — loading / open-mode / not-enrolled / active — plus the three
+  dialog flows (enroll QR + manual secret + 6-digit verify, one-time backup-codes reveal, typed-confirmation disable)
+  as Fluent TsModal / TsConfirmDialog surfaces.
+- Manifest models this unit as "no API data sources — renders from local state" (requiredCount=2, the two page-tier
+  strings). The generated C# client (ADR-004) exposes no per-user TOTP endpoint, so the section view-model reads
+  through an injected ITotpEnrollmentController whose default OpenModeTotpController resolves the open-mode notice —
+  the web component's own no-backend default (the RequiresAuth-gated branch) — rather than a fabricated client call,
+  mirroring the EmptyXSource → repository-backed source convention the sibling pages (QuietHours /
+  BrowserNotifications) use. A host behind forward-auth injects a client-backed controller. No non-SI fields exist on
+  this authentication surface, so the P1/S5 converters are N/A here.
+- Pre-existing blocker repaired: ShellWindow.xaml.cs Register("Locations", …) lambda had lost its closing
+  `return page; });` (a .gitattributes merge=union artifact), producing CS1026/CS1002/CS1513 at the constructor
+  brace; that broke the C# compile, left the XAML MarkupCompilePass2 with no LocalAssembly (WMC1509) and cascaded
+  into 84 errors (WMC9999 + every Components.UI Ts* "unknown type"). Restored the one missing close — the
+  whole-solution build returns to 0 errors. Same class of merge repair the ApiLogsPage gate documented for the
+  Tests csproj.
+- Strings: the section's settings.totp.* keys (35) already exist in Strings/*.resw; the two page-tier keys were
+  absent (not in the web i18n source — only TSX inline fallbacks), so account.twoFactor.title/subtitle were added to
+  Strings/{en,he,ar}/Resources.resw as translation.account.twoFactor.* (the translation.{web-key} convention the
+  sibling pages use). Every label resolves through the ILocalizer facade with the web key names; the four
+  Microsoft.UI-free sources are Compile-linked into TeslaSync.App.Tests for headless coverage.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - account.twoFactor.subtitle -> TwoFactorAuthPageRegistration.SubtitleKey="account.twoFactor.subtitle"
+      GetString(...,"Add a second factor to your sign-in. Required for sensitive admin actions."); rendered
+      TwoFactorAuthPage.cs PageContainer.Subtitle; resw translation.account.twoFactor.subtitle (en/he/ar)
+[x] string - account.twoFactor.title    -> TwoFactorAuthPageRegistration.TitleKey="account.twoFactor.title"
+      GetString(...,"Two-factor authentication"); rendered TwoFactorAuthPage.cs PageContainer title; resw
+      translation.account.twoFactor.title (en/he/ar)
+
+PARITY_COVERED=2
+# Coverage asserted headlessly: TwoFactorAuthPageTests.ViewModel_resolves_every_required_string_key records both
+# keys through a RecordingLocalizer; Registration_resolves_the_two_page_strings_with_web_defaults asserts the web
+# English defaults; Registration_uses_the_web_key_names_for_the_two_page_strings pins the key names verbatim.
+
+# Beyond the 2 required page-tier strings, the hosted TotpEnrollmentSection reproduces every region of the web
+# source (web/src/features/settings/components/TOTPEnrollmentSection.tsx), each verified headlessly:
+#   Panel   — one glass panel (web GlassPanel) with the header (shield icon + title + subtitle + status pill).
+#   States  — loading / open-mode / not-enrolled / active (web render branches), each a visible region (never blank):
+#             Open_mode_controller_resolves_the_open_state / Forward_auth_not_activated_resolves_the_not_enrolled_state /
+#             Forward_auth_activated_resolves_the_active_state_* / A_failed_status_read_degrades_to_the_open_mode_notice.
+#   Dialogs — enroll (QR + manual secret + 6-digit verify), backup-codes reveal, typed-confirmation disable:
+#             Start_enroll_opens_the_enroll_modal_* / Verify_* (length + 4 error kinds + success->backup) /
+#             Disable_flow_revokes_and_re_reads_the_status / Regenerate_reveals_the_new_codes_*.
+#   Strings — 35 settings.totp.* keys all resolve from Strings/translation.settings.totp.* via ILocalizer; asserted by
+#             TotpEnrollmentSectionTests.Projection_resolves_every_section_string_key.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TwoFactorAuthPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Settings path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27032, Failed: 0, Skipped: 0
+#   (headless xUnit project — the solution's WinAppDriver UI tests are the separate W9 runner concern, as in the
+#   sibling page gates)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TwoFactorAuthPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/TwoFactorAuthPageTests.cs \
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/TotpEnrollmentSectionTests.cs \
+#   apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#   apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#   apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-settings-TwoFactorAuthPage.log
+# git commit -m "feat(apps/windows): TwoFactorAuthPage at web parity (W7 settings)"
+
+EXIT=0
+STATUS=DONE
