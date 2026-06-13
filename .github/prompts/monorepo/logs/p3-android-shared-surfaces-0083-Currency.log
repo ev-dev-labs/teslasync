@@ -1,0 +1,60 @@
+=== P3 Shared surface 0083 Currency (Android) ===
+module: this repo's app module Gradle path is ':android' (settings.gradle.kts L33-36).
+The prompt template's ':app' alias does not exist here; every P3/A* gate addresses ':android:'.
+web source: components/data-display/format/Currency.tsx
+native output: apps/android/app/src/main/java/com/teslasync/shared-surfaces/Currency/{Currency,CurrencyModel,CurrencySource,CurrencyViewModel}.kt
+
+--- :android:assembleRelease ---
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 10s
+70 actionable tasks: 7 executed, 63 up-to-date
+BUILD_EXIT=0
+
+--- :android:testReleaseUnitTest ---
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 3m 5s
+45 actionable tasks: 4 executed, 41 up-to-date
+TEST_EXIT=0
+
+--- :android:ktlintCheck :android:detekt ---
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 36s
+13 actionable tasks: 13 up-to-date
+LINT_EXIT=0
+
+--- check-placeholders (apps/android/app/src/main/java/com/teslasync/shared-surfaces/Currency) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+--- unit test result (testReleaseUnitTest) ---
+CurrencyModelTest: tests=19 failures=0 errors=0 skipped=0
+
+--- androidTest (NOT in the gate; verification only) ---
+compileDebugAndroidTestKotlin type-checks the whole androidTest source set.
+CurrencyUiTest.kt compiles CLEAN: 0 of the 20 compiler errors reference this file (mine=0).
+The task as a whole fails ONLY on PRE-EXISTING, untouched, out-of-scope UI test files that import
+assertExists / assertDoesNotExist / assert / onAllNodes as top-level functions; in Compose 1.11.0
+these are MEMBERS of SemanticsNodeInteraction. This surface's UiTest uses the member form + only the
+real top-level androidx.compose.ui.test extensions (assertIsDisplayed/onNodeWith*), so it is NOT among
+them. Fixing those pre-existing files is outside this prompt's allowed files (Currency.* + the log).
+ANDROIDTEST_MY_FILE_ERRORS=0
+
+=== GATE SUMMARY ===
+BUILD_EXIT=0
+TEST_EXIT=0
+LINT_EXIT=0
+PLACEHOLDER_EXIT=0
+# EXIT=0 only when every gate step above is 0.
+EXIT=0
+STATUS=DONE
