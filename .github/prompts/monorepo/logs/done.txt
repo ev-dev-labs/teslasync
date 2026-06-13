@@ -710,3 +710,4 @@ p3-android/shared-meaningful/A-0122-GuardedLink.prompt.md
 p3-android/shared-meaningful/A-0125-InstallPrompt.prompt.md
 p3-android/shared-meaningful/A-0119-EmptyStateThreshold.prompt.md
 p3-android/shared-meaningful/A-0120-ErrorDisplay.prompt.md
+p3-android/shared-meaningful/A-0123-ImpersonationBanner.prompt.md
