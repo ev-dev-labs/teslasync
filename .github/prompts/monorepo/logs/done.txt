@@ -701,3 +701,4 @@ p3-android/shared-meaningful/A-0114-BrowserCompatBanner.prompt.md
 p3-android/shared-meaningful/A-0112-AchievementUnlockListener.prompt.md
 p3-android/shared-meaningful/A-0113-AlertBanner.prompt.md
 p3-android/shared-meaningful/A-0116-DraftRecoveryBanner.prompt.md
+p3-android/shared-meaningful/A-0124-InlineCallout.prompt.md
