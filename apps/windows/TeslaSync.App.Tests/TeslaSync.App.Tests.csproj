@@ -1446,6 +1446,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.Model.cs" Link="SharedSurfaces\PrintButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.Source.cs" Link="SharedSurfaces\PrintButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\PrintButton.ViewModel.cs" Link="SharedSurfaces\PrintButton.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ProgressRing.Model.cs" Link="SharedSurfaces\ProgressRing.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\ProgressRing.ViewModel.cs" Link="SharedSurfaces\ProgressRing.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Model.cs" Link="SharedSurfaces\QueryError.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.Source.cs" Link="SharedSurfaces\QueryError.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\QueryError.ViewModel.cs" Link="SharedSurfaces\QueryError.ViewModel.cs" />
