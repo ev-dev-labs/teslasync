@@ -167,6 +167,9 @@ public sealed partial class ShellWindow : Window
         // RouteGroup.AdminDevTools). The vehicle picker (web useVehicles) drives the page-local scope; the
         // per-second live snapshot (web useVehicleLiveSignals) is owned by the composed LiveSignalsTable.
         _viewModel.PageFactory.Register("LiveSignalInspector", static () => new FeatureViews.Admin.LiveSignalInspectorPage());
+        // Admin / Ingest X-Ray page (P2/W7) — parity port of web IngestXRayPage at route /admin/ingest-xray.
+        // RouteTable already maps Page("IngestXRay","admin/ingest-xray",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("IngestXRay", static () => new FeatureViews.Admin.IngestXRayPage());
 
         // Admin / Feature Flags page (P2/W7) — parity port of web FeatureFlagsPage at route /admin/flags.
         // RouteTable already maps Page("FeatureFlagsAdmin","admin/flags",RouteGroup.AdminDevTools).
