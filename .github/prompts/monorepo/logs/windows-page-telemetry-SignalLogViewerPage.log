@@ -1,0 +1,193 @@
+================================================================================
+ p2-windows · W7 · page:telemetry/SignalLogViewer
+ Native WinUI 3 / Windows App SDK / .NET 10 / Fluent parity port of the web page
+ web/src/features/telemetry/pages/SignalLogViewerPage.tsx  (route /signal-log)
+================================================================================
+
+HONESTY COVENANT (binding — verbatim)
+ 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+ 5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+ 9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ ENVIRONMENT
+--------------------------------------------------------------------------------
+ dotnet              : 10.0.300
+ solution            : apps/windows/TeslaSync.sln
+ runner available    : YES (.NET 10 / Windows App SDK build succeeded)
+
+--------------------------------------------------------------------------------
+ ARTIFACTS (repo uses C#-markup pages — Page.cs + Page.ViewModel.cs + Page.Model.cs
+ + Page.Source.cs; NO per-page XAML. The prompt's literal "TeslaSync/Features/
+ Telemetry/SignalLogViewerPage.xaml" path does not exist in this repo — the
+ established convention is apps/windows/TeslaSync.App/feature-views/<Page>/.
+ Mapped accordingly; template = sibling CommandHistoryPage.)
+--------------------------------------------------------------------------------
+ NEW  apps/windows/TeslaSync.App/feature-views/SignalLogViewerPage/SignalLogViewerPage.Model.cs
+ NEW  apps/windows/TeslaSync.App/feature-views/SignalLogViewerPage/SignalLogViewerPage.Source.cs
+ NEW  apps/windows/TeslaSync.App/feature-views/SignalLogViewerPage/SignalLogViewerPage.ViewModel.cs
+ NEW  apps/windows/TeslaSync.App/feature-views/SignalLogViewerPage/SignalLogViewerPage.cs
+ NEW  apps/windows/TeslaSync.App.Tests/FeatureViews/SignalLogViewerPageTests.cs  (32 tests)
+ EDIT apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs       (PageFactory.Register "SignalLogViewer")
+ EDIT apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (link Model/Source/ViewModel for headless tests)
+ EDIT apps/windows/Strings/en/Resources.resw   (+12 keys)
+ EDIT apps/windows/Strings/ar/Resources.resw   (+12 keys)
+ EDIT apps/windows/Strings/he/Resources.resw   (+12 keys)
+ EDIT apps/parity/windows-ledger.json          (+ page:telemetry/SignalLogViewer row, 17/17 done)
+ NOTE RouteTable already maps Page("SignalLogViewer","signal-log",TelemetrySignals,"Signal Log")
+      (apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs:237) — only the PageFactory
+      registration was missing; added.
+
+--------------------------------------------------------------------------------
+ DATA SOURCES (manifest) — bound through the generated C# IApiClient via an
+ ObservableObject-equivalent INotifyPropertyChanged ViewModel (P1/S8)
+--------------------------------------------------------------------------------
+ useSignals  GET /signals/{vehicleId}/available
+   -> SignalLogViewerClientFeed.FetchAvailableSignalsAsync (operation
+      get_api_v1_signals_vehicleID_available) + ParseAvailableSignals (rich-catalogue,
+      bare string[], and {signals:string[]} legacy shapes — web useSignals reducer).
+ (supporting, faithful to the web page's two extra reads — not separate manifest units)
+   useSelectedVehicle GET /vehicles  -> FetchVehiclesAsync (get_api_v1_vehicles)
+   deferred history   GET /signals/{vehicleId}/{signal}/history -> FetchHistoryAsync
+      (get_api_v1_signals_vehicleID_signalName_history, one request/signal, from/to/limit
+      query pass-through, flattened newest-first — web useQuery + Promise.all).
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=17 — each item below carries binding evidence (file + symbol).
+================================================================================
+
+[1/17] panel — GlassPanel1
+   VIEW  SignalLogViewerPage.cs · BuildControlsPanel() -> _controlsPanel : TsGlassPanel
+         (SignalSelector + Time-Range TsRangePicker + Per-Page TsSelect + Query TsButton
+          + records Caption); Render() -> _controlsPanel.Visibility = Show(display.ShowControls)
+   PROJ  SignalLogViewerProjection.Project -> SignalLogViewerDisplay.ShowControls
+   TEST  Projection_with_vehicle_shows_controls_and_pre_query_empty  [PASS]
+
+[2/17] state — loading
+   PROJ  SignalLogViewerProjection.ResolveState -> SignalLogViewerState.Loading;
+         SignalLogViewerDisplay.ShowLoading
+   VIEW  SignalLogViewerPage.cs · _loadingSkeleton : TsPageLoadSkeleton (Fluent shimmer)
+   TEST  Projection_loading_is_the_loading_state ; ViewModel_initial_state_is_loading  [PASS]
+
+[3/17] state — empty
+   PROJ  SignalLogViewerState.Empty ; SignalLogViewerDisplay.ShowNoVehicle
+   VIEW  SignalLogViewerPage.cs · _noVehicleEmpty : TsEmptyState (ContentUnavailable/EmptyState)
+   TEST  Projection_no_vehicle_is_the_empty_state ;
+         ViewModel_empty_feed_is_the_no_vehicle_empty_state  [PASS]
+
+[4/17] state — error
+   PROJ  SignalLogViewerState.Error ; SignalLogViewerDisplay.HasError / ErrorBannerText
+         (SignalLogViewerProjection.BuildErrorBannerText -> "error.loadFailed")
+   VIEW  SignalLogViewerPage.cs · _errorBanner : TsAlertBanner (CalloutVariant.Danger, InfoBar)
+   TEST  Projection_error_is_the_error_state_with_the_load_failed_banner ;
+         ViewModel_history_failure_is_the_error_state  [PASS]
+
+[5/17] state — success
+   PROJ  SignalLogViewerState.Success ; SignalLogViewerDisplay.ShowControls / ShowResults
+   VIEW  SignalLogViewerPage.cs · _controlsPanel + _resultsPanel (TsDataTable of history rows)
+   TEST  ViewModel_loads_into_success_and_selects_the_first_vehicle ;
+         Projection_after_query_with_rows_shows_the_table_and_records  [PASS]
+
+ strings — every visible literal resolves through ILocalizer.GetString(webKey, default);
+ all 12 keys added verbatim to Strings/{en,ar,he}/Resources.resw (translation.<key>).
+ Resolution proven by Projection_resolves_every_required_string_key +
+ Registration_exposes_route_and_operations.
+
+[ 6/17] string — "Choose one or more signals, set a date range, then hit Query to browse signal history."
+        PROJ SignalLogViewerProjection.Project -> Display.PreQueryEmptyMessage  · resw: translation."Choose one or more signals, set a date range, then hit Query to browse signal history."
+[ 7/17] string — "Per Page"
+        PROJ Display.PerPageLabel (localizer.GetString("Per Page"))  · resw: translation."Per Page"
+[ 8/17] string — "Query"
+        PROJ Display.QueryLabel (localizer.GetString("Query"))  · resw: translation."Query"
+[ 9/17] string — "Query signal history from Postgres"
+        PROJ SignalLogViewerRegistration.Subtitle -> Display.Subtitle  · resw: translation."Query signal history from Postgres"
+[10/17] string — "Select signals and click Query"
+        PROJ Display.PreQueryEmptyTitle  · resw: translation."Select signals and click Query"
+[11/17] string — "Signal Log"
+        REG  SignalLogViewerRegistration.PageTitle (web usePageTitle(t('Signal Log')); RouteTable nav label)  · resw: translation."Signal Log"
+[12/17] string — "Signal Log Viewer"
+        REG  SignalLogViewerRegistration.Title -> Display.Title  · resw: translation."Signal Log Viewer"
+[13/17] string — "Time Range"
+        PROJ Display.TimeRangeLabel (localizer.GetString("Time Range"))  · resw: translation."Time Range"
+[14/17] string — "error.loadFailed"
+        PROJ SignalLogViewerProjection.BuildErrorBannerText (GetString("error.loadFailed","Failed to load data"))  · resw: translation."error.loadFailed"
+[15/17] string — "records"
+        PROJ Display.RecordsText (GetString("records"))  · resw: translation."records"
+[16/17] string — "signalLog.noVehicle"
+        PROJ Display.NoVehicleTitle (GetString("signalLog.noVehicle","Select a vehicle to begin"))  · resw: translation."signalLog.noVehicle"
+[17/17] string — "signalLog.noVehicleDesc"
+        PROJ Display.NoVehicleMessage (GetString("signalLog.noVehicleDesc",...))  · resw: translation."signalLog.noVehicleDesc"
+
+ PARITY_COVERED=17
+ PARITY_REQUIRED=17
+
+--------------------------------------------------------------------------------
+ SPEC CONFORMANCE (Fluent / WinUI 3 guidelines)
+--------------------------------------------------------------------------------
+ nav            : ShellWindow PageFactory.Register("SignalLogViewer", ...); RouteTable deep-link /signal-log
+ scaffold       : SignalLogViewerPage : UserControl + SignalLogViewerPageViewModel : INotifyPropertyChanged
+                  (CommunityToolkit-style observable holder); LoadAsync()/RefreshAsync()/QueryAsync();
+                  zero business logic in code-behind (thin renderer over SignalLogViewerDisplay projection)
+ panels/tokens  : Mica/Acrylic TsGlassPanel; design-token brushes (TsColor*Brush) via TypographyTokens —
+                  no hardcoded colors/typography (PageTitle/Subhead/PanelTitle/Caption roles)
+ data states    : loading (TsPageLoadSkeleton) / empty (TsEmptyState) / error (TsAlertBanner) / success
+                  for the useSignals source; + faithful results region (TsTableSkeleton / TsDataTable /
+                  TsEmptyState) for the deferred history read
+ i18n           : every string via ILocalizer + .resw, web key names preserved (ADR-014)
+ a11y           : AutomationProperties.SetName on page/picker/controls/panels; FontIcons marked
+                  AccessibilityView.Raw; keyboard + pointer through native Fluent controls (ADR-015)
+ units          : SI read straight from the API; values formatted at the display boundary
+                  (DateTimeFormatting) — no non-SI stored/computed (P1/S5)
+ reuse          : shared SignalSelector feature-view reused (not re-implemented)
+
+--------------------------------------------------------------------------------
+ GATE  (windows triad: build + lint + test + placeholder scan)
+--------------------------------------------------------------------------------
+ $ check-placeholders.ps1 -Path .../feature-views/SignalLogViewerPage -Language csharp
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+   PLACEHOLDER_EXIT=0
+
+ $ dotnet build apps/windows/TeslaSync.sln -c Release
+   Build succeeded.  0 Warning(s)  0 Error(s)
+   BUILD_EXIT=0
+
+ $ dotnet format apps/windows/TeslaSync.sln --include <this unit's 5 files> --verify-no-changes
+   (verifies THIS unit's contribution is format-clean)
+   LINT_SCOPED_EXIT=0
+
+ $ dotnet format apps/windows/TeslaSync.sln --verify-no-changes   (whole solution)
+   LINT_FULL_EXIT=2
+   NOTE: the 2344 reported issues are ALL "ENDOFLINE" (CRLF->LF) and ALL confined to a
+   DIFFERENT, pre-existing unit — apps/windows/TeslaSync.App/feature-views/SharedDrivePage/*
+   and TeslaSync.App.Tests/FeatureViews/SharedDrivePageTests.cs — committed with CRLF at
+   HEAD c0478bbf ("feat(apps/windows): SharedDrivePage at web parity (W7 sharing)").
+   ZERO of this unit's files are flagged (SignalLogViewer flagged count = 0). Per covenant
+   #2 (no scope narrowing) AND the prompt's allowed-files list + "Out of Scope: Other pages",
+   SharedDrivePage is NOT touched — normalizing its EOL would inject a ~2344-line unrelated
+   whitespace diff into another unit's files. This unit's commit contains only LF-clean files
+   (covenant #8 "no commit on red" holds for the committed changeset).
+
+ $ dotnet test apps/windows/TeslaSync.App.Tests (filter SignalLogViewerPageTests)
+   Passed!  Failed: 0, Passed: 32, Skipped: 0, Total: 32
+ $ dotnet test apps/windows/TeslaSync.App.Tests (full suite — regression check)
+   Passed!  Failed: 0, Passed: 27519, Skipped: 0, Total: 27519
+   TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+ ACCEPTANCE
+--------------------------------------------------------------------------------
+ [x] GlassPanel1 implemented; every anonymous web region reproduced (header+picker, banner,
+     no-vehicle empty, controls panel, pre-query empty, results table+loading+no-data)
+ [x] All 17 parity items render from the bound C# state holder (SignalLogViewerDisplay)
+ [x] loading / empty / error / success implemented for the useSignals data source
+ [x] All visible strings from .resw; zero hardcoded literals; web key names preserved
+ [x] Dark mode + a11y + SI units honored; Fluent-native (no web pixel-cloning)
+ [x] placeholder=0, build=0, this-unit lint=0, tests=0 ; PARITY_COVERED==PARITY_REQUIRED==17
+ [x] windows ledger row page:telemetry/SignalLogViewer set covered (17/17, done)
+ [!] full-solution dotnet format reports pre-existing out-of-scope CRLF in SharedDrivePage
+     (different unit, outside allowed files) — documented above; not this unit's regression.
+
+EXIT=0
+STATUS=DONE

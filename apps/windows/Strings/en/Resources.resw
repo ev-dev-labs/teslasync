@@ -24781,4 +24781,40 @@
   <data name="translation.locations.retry" xml:space="preserve">
     <value>Retry</value>
   </data>
+  <data name="translation.Choose one or more signals, set a date range, then hit Query to browse signal history." xml:space="preserve">
+    <value>Choose one or more signals, set a date range, then hit Query to browse signal history.</value>
+  </data>
+  <data name="translation.Per Page" xml:space="preserve">
+    <value>Per Page</value>
+  </data>
+  <data name="translation.Query" xml:space="preserve">
+    <value>Query</value>
+  </data>
+  <data name="translation.Query signal history from Postgres" xml:space="preserve">
+    <value>Query signal history from Postgres</value>
+  </data>
+  <data name="translation.Select signals and click Query" xml:space="preserve">
+    <value>Select signals and click Query</value>
+  </data>
+  <data name="translation.Signal Log" xml:space="preserve">
+    <value>Signal Log</value>
+  </data>
+  <data name="translation.Signal Log Viewer" xml:space="preserve">
+    <value>Signal Log Viewer</value>
+  </data>
+  <data name="translation.Time Range" xml:space="preserve">
+    <value>Time Range</value>
+  </data>
+  <data name="translation.error.loadFailed" xml:space="preserve">
+    <value>Failed to load data</value>
+  </data>
+  <data name="translation.records" xml:space="preserve">
+    <value>records</value>
+  </data>
+  <data name="translation.signalLog.noVehicle" xml:space="preserve">
+    <value>Select a vehicle to begin</value>
+  </data>
+  <data name="translation.signalLog.noVehicleDesc" xml:space="preserve">
+    <value>Pick a vehicle from the picker above to query its signal history.</value>
+  </data>
 </root>
