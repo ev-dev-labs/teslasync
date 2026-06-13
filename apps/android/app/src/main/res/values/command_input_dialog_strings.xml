@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the CommandInputDialog modal/dialog
+  (com/teslasync/modals-dialogs/CommandInputDialog), the native port of
+  web/src/features/system/components/CommandInputDialog.tsx (the vehicle-command
+  parameter prompt).
+
+  The web component resolves its title / prompt / field labels / Cancel / Send copy
+  through t() (common.cancel, common.send, and the caller-supplied def/inputConfig
+  keys), all of which already exist in the auto-generated translation_* catalog
+  (web/src/i18n -> apps/shared/i18n -> values/strings.xml: translation_common_cancel,
+  translation_common_send) or are caller-localized and passed in as plain strings
+  (exactly like the sibling ConfirmDialog surface).
+
+  Its inline-validation messages, however, are RAW English literals returned by the
+  component's local validateField() helper (return 'Required', 'Enter a 4-digit PIN',
+  'Enter a whole number', 'Enter a valid number', `Minimum: ${min}`, `Maximum: ${max}`)
+  — they are NOT wrapped in t(), so the catalog carries no key for them. These keys
+  provide that copy so the native dialog resolves every string through stringResource
+  (no English literals in Kotlin, P1/S10), using the same hand-authored *_strings.xml
+  mechanism as confirm_dialog_strings.xml / incident_form_strings.xml. Values are
+  verbatim from the web source's validateField() return literals; the %1$s placeholder
+  carries the numeric bound (web `${min}` / `${max}`).
+-->
+<resources>
+    <string name="translation_commandInput_error_required">Required</string>
+    <string name="translation_commandInput_error_pin">Enter a 4-digit PIN</string>
+    <string name="translation_commandInput_error_wholeNumber">Enter a whole number</string>
+    <string name="translation_commandInput_error_validNumber">Enter a valid number</string>
+    <string name="translation_commandInput_error_min">Minimum: %1$s</string>
+    <string name="translation_commandInput_error_max">Maximum: %1$s</string>
+</resources>
