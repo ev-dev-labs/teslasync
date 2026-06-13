@@ -519,6 +519,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Model.cs" Link="FeatureViews\CronParser\CronParser.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.Source.cs" Link="FeatureViews\CronParser\CronParser.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\CronParser\CronParser.ViewModel.cs" Link="FeatureViews\CronParser\CronParser.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.Model.cs" Link="FeatureViews\DataExportPage\DataExportPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.Projection.cs" Link="FeatureViews\DataExportPage\DataExportPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.Source.cs" Link="FeatureViews\DataExportPage\DataExportPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.ViewModel.cs" Link="FeatureViews\DataExportPage\DataExportPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.Model.cs" Link="FeatureViews\DetailCards\DetailCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.Source.cs" Link="FeatureViews\DetailCards\DetailCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.ViewModel.cs" Link="FeatureViews\DetailCards\DetailCards.ViewModel.cs" />

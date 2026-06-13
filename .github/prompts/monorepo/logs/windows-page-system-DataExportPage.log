@@ -1,0 +1,148 @@
+=== p2-windows · W7 · page:system/DataExport (WinUI 3 / Fluent) ===
+Parity unit : page:system/DataExport   kind=page   web route=/data-export
+Web source  : web/src/features/system/pages/DataExportPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs + <Name>.Projection.cs (pure,
+  Microsoft.UI-free projection, unit-tested headlessly), <Name>.Source.cs (generated-client feed, ADR-004),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable observable state holder — the established testable
+  pattern, see ExportsPageViewModel) and <Name>.cs (the Fluent view). The generated prompt's idealized
+  "DataExportPage.xaml + DataExportPageViewModel.cs under TeslaSync/Features/System" is mapped onto these real
+  conventions; the surface registers itself with the W4 ShellPageFactory by route name ("DataExport").
+- Namespace: the page lives in TeslaSync.App.FeatureViews.SystemOps (NOT ".System" — a ".System" leaf shadows the
+  global System namespace and breaks every sibling feature-view's System.* references; CS0234). RouteTable already
+  maps Page("DataExport","data-export",RouteGroup.SystemOps,"Data Export","\uEDE1"), so the route name is exact.
+- Data sources bound to the generated C# client (ADR-004) through the DataExportClientFeed in DataExportPage.Source.cs:
+  useCreateAccountExport -> POST /export/jobs/account (post_api_v1_export_jobs_account),
+  useExportColumns        -> GET  /exports/columns?type= (get_api_v1_exports_columns),
+  plus the export-jobs history (get_api_v1_export_jobs), vehicles (get_api_v1_vehicles) and the generic submit
+  (post_api_v1_export_jobs) the page composes to render every panel. The default EmptyDataExportFeed resolves the
+  empty state (the shell uses the parameterless ctor); the view-model is exercised in tests with a FakeDataExportFeed
+  driving the loading/empty/error/success matrix.
+- SI: the page carries no unit-bearing render fields beyond byte sizes (binary KB/MB/GB, web formatBytes) and
+  ms durations (web formatDurationMsLong); both formatters are ported 1:1 in DataExportRegistration. Counts flow
+  through the shared NumberFormatting port; timestamps through DateTimeFormatting (Full / Relative variants).
+- Strings: 37 dataExport.* keys already existed verbatim in Strings/en/Resources.resw. The 11 bare manifest keys
+  (All Vehicles, By Count, Export Failed[, Msg], Export Started[, Msg], Last Export, Most Exported, Start Export,
+  Total Exports, Total Size) were absent from the windows catalog (the web renders them via i18next key-fallback,
+  no default arg), so they were added as translation.<key>=<key> rows in ordinal-sorted position (XML re-validated,
+  8235 -> 8246 data rows). Every C# call site passes the exact web key + English fallback through ILocalizer, so the
+  page renders correct English even where the resw lookup misses.
+
+=== PARITY ===
+PARITY_REQUIRED=75
+
+# Panels (12) — every named panel + every anonymous GlassPanel region from the web source
+[x] panel  - GlassPanel1   -> DataExportPage.cs#_typeSelector (AutomationProperties "GlassPanel1") + BuildTypeTile; Projection WizardDisplay.Types = 7x ExportTypeOptionDisplay (web ExportTypeSelector tiles)
+[x] panel  - GlassPanel2   -> DataExportPage.cs#_csvCard (AutomationProperties "GlassPanel2") + BuildFormatCard; Projection DataExportDisplay.CsvCard (FormatInfoCardDisplay, web FormatInfoCards CSV)
+[x] panel  - GlassPanel3   -> DataExportPage.cs#_jsonCard (AutomationProperties "GlassPanel3"); Projection DataExportDisplay.JsonCard (web FormatInfoCards JSON)
+[x] panel  - GlassPanel4   -> DataExportPage.cs#_overviewPanel (AutomationProperties "GlassPanel4") + RenderOverview; Projection DataExportProjection.BuildOverview (OverviewDisplay, web DataOverviewCard)
+[x] panel  - Total-Exports -> DataExportPage.cs#_totalExports (TsStatCard, AutomationProperties "Total-Exports"); Projection StatTiles[0] (fmtInt jobs.length); test StatTiles_format_values_like_the_web_helpers
+[x] panel  - Total-Size    -> DataExportPage.cs#_totalSize (TsStatCard, "Total-Size"); Projection StatTiles[1] (FormatBytes sum file_size, zeroAsEmpty)
+[x] panel  - Most-Exported -> DataExportPage.cs#_mostExported (TsStatCard, "Most-Exported"); Projection StatTiles[2] (mode type, underscores->spaces, By Count sublabel); test Most_exported_underscore_token_is_spaced_like_web
+[x] panel  - Last-Export   -> DataExportPage.cs#_lastExport (TsStatCard, "Last-Export"); Projection StatTiles[3] (DateTimeVariant.Relative of newest created_at)
+[x] panel  - GlassPanel9   -> DataExportPage.cs#_wizardPanel (AutomationProperties "GlassPanel9") + BuildWizardPanel/RenderWizard; Projection WizardDisplay (web ExportWizard: steps 1-4 + column picker + submit)
+[x] panel  - GlassPanel10  -> DataExportPage.cs#_historyLoading (AutomationProperties "GlassPanel10", 5x TsSkeleton); shown on Display.ShowLoading (web ExportHistoryTable loading GlassPanel)
+[x] panel  - GlassPanel11  -> DataExportPage.cs#_historyPanel (AutomationProperties "GlassPanel11") + _historyTable + RenderHistoryRows; Projection HistoryDisplay (web ExportHistoryTable table GlassPanel)
+[x] panel  - GlassPanel12  -> DataExportPage.cs#_accountPanel (AutomationProperties "GlassPanel12") + RenderAccount; Projection AccountPanelDisplay (web AccountExportPanel "Download my data")
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> DataExportState.Loading + DataExportDisplay.ShowLoading/StatsLoading (Projection.Project precedence); rendered _statsSkeleton + _historyLoading; test State_loading_when_jobs_in_flight
+[x] state  - empty         -> DataExportState.Empty + ShowEmpty + History.ShowEmpty; rendered _historyEmpty (TsEmptyState, ContentUnavailableView-equivalent); test State_empty_when_resolved_with_no_jobs
+[x] state  - error         -> DataExportState.Error + ShowError + ErrorText; rendered _historyError (TsErrorDisplay, InfoBar-equivalent + Retry via RefreshAsync); test State_error_when_jobs_failed
+[x] state  - success       -> DataExportState.Success + ShowSuccess + History.Rows; rendered _historyTable; test State_success_when_jobs_present
+
+# Strings (59) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - All Vehicles                        -> DataExportStrings.Resolve GetString("All Vehicles","All Vehicles") (wizard vehicle option head)
+[x] string - By Count                            -> DataExportStrings.Resolve GetString("By Count","By Count") (Most-Exported sublabel)
+[x] string - Download                            -> DataExportStrings.Resolve GetString("Download","Download") (history row action)
+[x] string - Duration                            -> DataExportStrings.Resolve GetString("Duration","Duration") (history column header)
+[x] string - End                                 -> DataExportStrings.Resolve GetString("End","End") (custom-range end label)
+[x] string - Export Failed                       -> DataExportStrings.Resolve GetString("Export Failed","Export Failed") (submit error toast title)
+[x] string - Export Failed Msg                   -> DataExportStrings.Resolve GetString("Export Failed Msg","Export Failed Msg") (submit error toast body)
+[x] string - Export Started                      -> DataExportStrings.Resolve GetString("Export Started","Export Started") (submit success toast title)
+[x] string - Export Started Msg                  -> DataExportStrings.Resolve GetString("Export Started Msg","Export Started Msg") (submit success toast body)
+[x] string - Format                              -> DataExportStrings.Resolve GetString("Format","Format") (history column header)
+[x] string - Last Export                         -> DataExportStrings.Resolve GetString("Last Export","Last Export") (stat tile label)
+[x] string - Most Exported                       -> DataExportStrings.Resolve GetString("Most Exported","Most Exported") (stat tile label)
+[x] string - Records                             -> DataExportStrings.Resolve GetString("Records","Records") (history column header)
+[x] string - Size                                -> DataExportStrings.Resolve GetString("Size","Size") (history column header)
+[x] string - Start                               -> DataExportStrings.Resolve GetString("Start","Start") (custom-range start label)
+[x] string - Start Export                        -> DataExportStrings.Resolve GetString("Start Export","Start Export") (wizard submit button)
+[x] string - Status                              -> DataExportStrings.Resolve GetString("Status","Status") (history column header)
+[x] string - Time                                -> DataExportStrings.Resolve GetString("Time","Time") (history column header)
+[x] string - Total Exports                       -> DataExportStrings.Resolve GetString("Total Exports","Total Exports") (stat tile label)
+[x] string - Total Size                          -> DataExportStrings.Resolve GetString("Total Size","Total Size") (stat tile label)
+[x] string - Type                                -> DataExportStrings.Resolve GetString("Type","Type") (history column header)
+[x] string - Vehicle                             -> DataExportStrings.Resolve GetString("Vehicle","Vehicle") (history column header + account label)
+[x] string - dataExport.account.allVehicles      -> DataExportStrings.Resolve GetString("dataExport.account.allVehicles","All vehicles") (account vehicle option head)
+[x] string - dataExport.account.endDate          -> DataExportStrings.Resolve GetString("dataExport.account.endDate","End date (optional)")
+[x] string - dataExport.account.start            -> DataExportStrings.Resolve GetString("dataExport.account.start","Start full export") (account submit button)
+[x] string - dataExport.account.startDate        -> DataExportStrings.Resolve GetString("dataExport.account.startDate","Start date (optional)")
+[x] string - dataExport.account.subtitle         -> DataExportStrings.Resolve GetString("dataExport.account.subtitle", <ZIP backup copy>)
+[x] string - dataExport.account.title            -> DataExportStrings.Resolve GetString("dataExport.account.title","Download my data")
+[x] string - dataExport.account.vehicle          -> DataExportStrings.Resolve GetString("dataExport.account.vehicle","Vehicle")
+[x] string - dataExport.account.warning          -> DataExportStrings.Resolve GetString("dataExport.account.warning", <signal-history cap copy>)
+[x] string - dataExport.active                   -> DataExportStrings.Resolve GetString("dataExport.active","Active") (history active-jobs badge)
+[x] string - dataExport.allVehicles              -> DataExportStrings.Resolve GetString("dataExport.allVehicles","All Vehicles") (wizard vehicle select prompt)
+[x] string - dataExport.chargingSessions         -> DataExportStrings.Resolve GetString("dataExport.chargingSessions","Charging Sessions") (overview)
+[x] string - dataExport.columns.alwaysIncluded   -> DataExportStrings.Resolve GetString("dataExport.columns.alwaysIncluded","Required") (column-row required chip)
+[x] string - dataExport.columns.clear            -> DataExportStrings.Resolve GetString("dataExport.columns.clear","Clear") (column picker)
+[x] string - dataExport.columns.helperText       -> DataExportStrings.Resolve GetString("dataExport.columns.helperText", <picker helper>)
+[x] string - dataExport.columns.selectAll        -> DataExportStrings.Resolve GetString("dataExport.columns.selectAll","Select all")
+[x] string - dataExport.columns.title            -> DataExportStrings.Resolve GetString("dataExport.columns.title","STEP 2\u00bd \u2014 Columns")
+[x] string - dataExport.csvDesc                  -> DataExportStrings.Resolve GetString("dataExport.csvDesc", <CSV desc>)
+[x] string - dataExport.csvPreview               -> DataExportStrings.Resolve GetString("dataExport.csvPreview","CSV Preview")
+[x] string - dataExport.customRange              -> DataExportStrings.Resolve GetString("dataExport.customRange","Custom Range")
+[x] string - dataExport.dataOverview             -> DataExportStrings.Resolve GetString("dataExport.dataOverview","Data Overview")
+[x] string - dataExport.drives                   -> DataExportStrings.Resolve GetString("dataExport.drives","Drives") (overview)
+[x] string - dataExport.exportHistory            -> DataExportStrings.Resolve GetString("dataExport.exportHistory","Export History")
+[x] string - dataExport.jsonDesc                 -> DataExportStrings.Resolve GetString("dataExport.jsonDesc", <JSON desc>)
+[x] string - dataExport.jsonPreview              -> DataExportStrings.Resolve GetString("dataExport.jsonPreview","JSON Preview")
+[x] string - dataExport.noExports                -> DataExportStrings.Resolve GetString("dataExport.noExports","No Exports Yet") (history empty title)
+[x] string - dataExport.noExportsMessage         -> DataExportStrings.Resolve GetString("dataExport.noExportsMessage","Create your first export above to get started.")
+[x] string - dataExport.noJobs                   -> DataExportStrings.Resolve GetString("dataExport.noJobs","No export jobs")
+[x] string - dataExport.refresh                  -> DataExportStrings.Resolve GetString("dataExport.refresh","Refresh") (header + history refresh + retry)
+[x] string - dataExport.scheduled.feature        -> DataExportStrings.Resolve GetString("dataExport.scheduled.feature","Scheduled exports") (scheduled note)
+[x] string - dataExport.subtitle                 -> DataExportStrings.Resolve GetString("dataExport.subtitle","Export vehicle data in CSV or JSON format")
+[x] string - dataExport.title                    -> DataExportStrings.Resolve GetString("dataExport.title","Data Export") (page title)
+[x] string - dataExport.unavailable              -> DataExportStrings.Resolve GetString("dataExport.unavailable","Unavailable") (overview no-data)
+[x] string - dataExport.wizard.step1             -> DataExportStrings.Resolve GetString("dataExport.wizard.step1","STEP 1 \u2014 Select Data Type")
+[x] string - dataExport.wizard.step2             -> DataExportStrings.Resolve GetString("dataExport.wizard.step2","STEP 2 \u2014 Choose Format")
+[x] string - dataExport.wizard.step3             -> DataExportStrings.Resolve GetString("dataExport.wizard.step3","STEP 3 \u2014 Select Vehicle")
+[x] string - dataExport.wizard.step4             -> DataExportStrings.Resolve GetString("dataExport.wizard.step4","STEP 4 \u2014 Date Range")
+[x] string - dataExport.wizardTitle              -> DataExportStrings.Resolve GetString("dataExport.wizardTitle","New Export")
+
+PARITY_COVERED=75
+# Coverage asserted headlessly: DataExportPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests +
+# StatTiles/Wizard/Account/Overview/History/Registration/ViewModel tests assert each panel + state renders from the
+# bound DataExportDisplay state holder (36 tests).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DataExportPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27112, Failed: 0, Skipped: 0 (incl. 36 new)
+TEST_EXIT=0
+PARITY_COVERED=75
+PARITY_REQUIRED=75
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DataExportPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DataExportPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-DataExportPage.log
+# git commit -m "feat(apps/windows): DataExportPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE

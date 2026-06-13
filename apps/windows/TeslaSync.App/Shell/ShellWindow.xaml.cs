@@ -241,6 +241,8 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // System / Data Export page (P2/W7) — parity port of web DataExportPage at route /data-export.
+        _viewModel.PageFactory.Register("DataExport", static () => new FeatureViews.SystemOps.DataExportPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
         // Maps / Locations page (P2/W7) — parity port of web LocationsPage at route /locations. The empty-state
