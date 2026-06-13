@@ -596,3 +596,4 @@ p3-android/shared-meaningful/A-0007-AIAutoTripNameSuggestion.prompt.md
 p3-android/modals-dialogs/A-0028-ShareDriveDialog.prompt.md
 p3-android/shared-meaningful/A-0008-AIBatteryHealthForecastNarrative.prompt.md
 p3-android/shared-meaningful/A-0011-AIChargingDiagnosis.prompt.md
+p3-android/shared-meaningful/A-0012-AIChatbotIndicator.prompt.md
