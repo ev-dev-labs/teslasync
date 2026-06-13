@@ -172,6 +172,10 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("FeatureFlagsAdmin","admin/flags",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("FeatureFlagsAdmin", static () => new FeatureViews.Admin.FeatureFlagsPage());
 
+        // Admin / RBAC matrix page (P2/W7) — parity port of web RbacMatrixPage. Unrouted in web App.tsx; reachable
+        // here as a deep link. RouteTable maps Hidden("RbacMatrix","admin/rbac",RouteGroup.AdminDevTools).
+        _viewModel.PageFactory.Register("RbacMatrix", static () => new FeatureViews.Admin.RbacMatrixPage());
+
         // System / DB Health page (P2/W7) — parity port of web DBHealthPage at route /db-health (group Diagnostics).
         _viewModel.PageFactory.Register("DBHealthDashboard", static () => new FeatureViews.Diagnostics.DBHealthPage());
         // System / Diagnostic page (P2/W7) — parity port of web DiagnosticPage (the operator self-test wizard). The web
