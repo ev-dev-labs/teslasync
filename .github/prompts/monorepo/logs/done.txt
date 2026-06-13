@@ -675,3 +675,4 @@ p3-android/shared-meaningful/A-0086-Pressure.prompt.md
 p3-android/shared-meaningful/A-0088-Speed.prompt.md
 p3-android/shared-meaningful/A-0090-FreshnessIndicator.prompt.md
 p3-android/shared-meaningful/A-0087-Range.prompt.md
+p3-android/shared-meaningful/A-0089-Temperature.prompt.md
