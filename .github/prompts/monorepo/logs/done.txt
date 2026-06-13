@@ -780,3 +780,4 @@ p2-windows/pages/sharing/SharingTripsPage.prompt.md
 p2-windows/pages/system/HelpPage.prompt.md
 p2-windows/pages/system/DataExportPage.prompt.md
 p2-windows/pages/system/DBHealthPage.prompt.md
+p2-windows/pages/system/DiagnosticPage.prompt.md
