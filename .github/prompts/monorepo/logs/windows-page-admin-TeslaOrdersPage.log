@@ -1,0 +1,99 @@
+=== p2-windows · W7 · page:admin/TeslaOrders (WinUI 3 / Fluent) ===
+Parity unit : page:admin/TeslaOrders   kind=page   web route=/tesla-orders
+Web source  : web/src/features/admin/pages/TeslaOrdersPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WindowsAppSDK builds the full
+              solution (verified BUILD_EXIT=0). The WinAppDriver UI-automation runner (W9 scope) is absent, so the
+              W7 test gate runs the headless TeslaSync.App.Tests project (the sibling-W7 convention).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), optionally <Name>.Source.cs, <Name>.ViewModel.cs (the state holder) and <Name>.cs (the
+  Fluent view) — exactly as the sibling W7 DevToolsPage / FeatureFlagsPage / TeslaChargingSessionsPage do. The
+  generated prompt's idealized "TeslaOrdersPage.xaml + TeslaOrdersPageViewModel.cs under TeslaSync/Features/Admin"
+  is mapped onto these real conventions; the surface registers with the W4 ShellPageFactory by route name
+  ("TeslaOrders", already in RouteTable.cs → /tesla-orders, RouteGroup.AdminDevTools).
+- The web page is a thin wrapper — `<PageContainer title={t('orders.title')} subtitle={t('orders.subtitle')}>
+  <ActiveOrdersSection /></PageContainer>`. The native port reproduces that shell exactly: the page HOSTS the
+  shared W3 ActiveOrdersSection surface (already implemented under feature-views/ActiveOrdersSection, namespace
+  TeslaSync.App.FeatureViews.Settings — the web also imports the section from features/settings/components) inside
+  the native shared-surfaces PageContainer (the parity port of web/src/components/layout/PageContainer.tsx,
+  constructed `new PageContainer(localizer, title) { Subtitle, PageContent }`, the DevToolsPage host precedent).
+  The ActiveOrdersSection owns every order card and ALL of its loading / empty / error / populated + stale/offline
+  states; the page owns only the title + subtitle chrome — the two parity strings.
+- Data binding (ADR-004): the page parity unit declares NO API data sources of its own (the manifest record:
+  "renders from navigation params / local state"); the order data belongs to the hosted ActiveOrdersSection (its
+  own W3 unit, bound to get_api_v1_tesla_user_orders / post_api_v1_tesla_user_orders_refresh). Following the
+  established host-injection precedent (every feature page's parameterless ctor defaults to an Empty feed; an
+  explicit ctor accepts the generated-client source for tests/DI), the page hosts the section over
+  EmptyActiveOrdersSource by default — a single successful-but-empty snapshot so the section renders its honest
+  pre-fetch empty body ("No order data yet. Click Refresh to fetch from Tesla."), with the explicit
+  TeslaOrdersPage(IActiveOrdersSource, ILocalizer) ctor for the live source. No HTTP touches the page.
+- The two parity strings resolve through the ILocalizer facade with the web key names + English defaults
+  (TeslaOrdersRegistration.Title/Subtitle → translation.orders.title / translation.orders.subtitle). These are
+  the SAME web i18n keys the hosted ActiveOrdersSection uses (the web repeats t('orders.title') / t('orders.subtitle')
+  in both the page and the section), and they already exist verbatim in Strings/{en,he,ar}/Resources.resw — so NO
+  string-catalog change was needed. The TeslaOrdersPageViewModel exposes Title/Subtitle and a Reload() that
+  re-resolves them after a language change (react-i18next parity).
+- a11y (ADR-015): the page is an AutomationControlType.Group with an AutomationProperties.Name of the resolved
+  title; the hosted PageContainer renders the title at heading-level 1 and the section carries its own Narrator
+  names. Dark/light theming + tokens come from the composed shared surfaces (no hardcoded colors). SI units N/A
+  for this admin chrome (the order cards' fields are model/status/VIN/dates — no unit-bearing quantities).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - orders.title    -> TeslaOrdersRegistration.Title (TeslaOrdersPage.Model.cs) localizer.GetString(
+             "translation.orders.title", "Active Orders"); bound to the PageContainer header via
+             TeslaOrdersPageViewModel.Title (TeslaOrdersPage.ViewModel.cs) → TeslaOrdersPage.cs `new PageContainer(
+             localizer, _viewModel.Title)`. resw entry name="translation.orders.title" present in en/he/ar. Tests
+             Registration_resolves_the_two_parity_strings + Registration_routes_every_string_through_the_localizer
+             + ViewModel_exposes_the_resolved_title_and_subtitle (TeslaOrdersPageTests.cs).
+[x] string - orders.subtitle -> TeslaOrdersRegistration.Subtitle (TeslaOrdersPage.Model.cs) localizer.GetString(
+             "translation.orders.subtitle", "Vehicle orders and delivery tracking from Tesla"); bound via
+             TeslaOrdersPageViewModel.Subtitle → TeslaOrdersPage.cs `PageContainer { Subtitle = _viewModel.Subtitle }`.
+             resw entry name="translation.orders.subtitle" present in en/he/ar. Same tests as above assert the value,
+             the localizer key and the VM projection.
+
+PARITY_COVERED=2
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaOrdersPageTests.cs (9 tests):
+# - Registration_resolves_the_two_parity_strings + Registration_keeps_the_web_orders_keys_and_route_name +
+#   Registration_routes_every_string_through_the_localizer (RecordingLocalizer captures both translation.orders.*
+#   keys) + Registration_rejects_a_null_localizer assert the two parity strings, their web keys and null-safety.
+# - ViewModel_exposes_the_resolved_title_and_subtitle + ViewModel_reload_raises_title_and_subtitle +
+#   ViewModel_rejects_a_null_localizer assert the page-chrome binding source the thin view reads.
+# - EmptySource_streams_a_single_empty_snapshot (LoadStatus.Empty) + EmptySource_refresh_is_a_noop_success assert
+#   the default local-state source the page hosts (so the section's pre-fetch empty body renders).
+# The Fluent view (TeslaOrdersPage.cs) is a thin renderer compiled by the app build and exercised by the W9
+# UI-automation tier; the headless project links only the Microsoft.UI-free Model + ViewModel.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/TeslaOrdersPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only;
+#   TeslaSync.App builds with TreatWarningsAsErrors and is warning-clean for the new TeslaOrdersPage sources)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (TeslaOrdersPage Model/ViewModel/view +
+#   TeslaOrdersPageTests + ShellWindow registration + TeslaSync.App.Tests.csproj links + windows-ledger.json, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29566, Failed: 0, Skipped: 0 (incl. 9 TeslaOrdersPageTests)
+#   (W7 test gate = the headless TeslaSync.App.Tests project, the sibling-W7 convention; the WinAppDriver UI-automation
+#    tests under TeslaSync.App.UITests are W9 scope and require the absent WinAppDriver runner.)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/TeslaOrdersPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/TeslaOrdersPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log
+# git commit -m "feat(apps/windows): TeslaOrdersPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is the deterministically-regenerated, git-ignored W1 client — intentionally not committed.)
+
+EXIT=0
+STATUS=DONE
