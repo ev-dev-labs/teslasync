@@ -788,3 +788,4 @@ p2-windows/pages/system/SearchPage.prompt.md
 p2-windows/pages/system/StatusApiDocsPage.prompt.md
 p2-windows/pages/system/ScheduledExportsPanel.prompt.md
 p2-windows/pages/telemetry/MQTTInspectorPage.prompt.md
+p2-windows/pages/trips/TripReplayPage.prompt.md
