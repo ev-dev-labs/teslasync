@@ -543,3 +543,4 @@ p3-android/feature-views/A-0295-QuickStatsGrid.prompt.md
 p3-android/feature-views/A-0298-SecuritySection.prompt.md
 p3-android/feature-views/A-0297-RecentDrivesSection.prompt.md
 p3-android/feature-views/A-0299-TirePressureSection.prompt.md
+p3-android/feature-views/A-0302-VehicleCard.prompt.md
