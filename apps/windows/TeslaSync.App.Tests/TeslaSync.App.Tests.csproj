@@ -1389,6 +1389,8 @@
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Model.cs" Link="SharedSurfaces\HealthRow\HealthRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.Source.cs" Link="SharedSurfaces\HealthRow\HealthRow.Source.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HealthRow\HealthRow.ViewModel.cs" Link="SharedSurfaces\HealthRow\HealthRow.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HelpSegment.Model.cs" Link="SharedSurfaces\HelpSegment.Model.cs" />
+    <Compile Include="..\TeslaSync.App\shared-surfaces\HelpSegment.ViewModel.cs" Link="SharedSurfaces\HelpSegment.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HelpTooltip\HelpTooltip.Model.cs" Link="SharedSurfaces\HelpTooltip\HelpTooltip.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.Model.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.Model.cs" />
     <Compile Include="..\TeslaSync.App\shared-surfaces\HistoryListRow\HistoryListRow.ViewModel.cs" Link="SharedSurfaces\HistoryListRow\HistoryListRow.ViewModel.cs" />
