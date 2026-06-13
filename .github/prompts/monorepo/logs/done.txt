@@ -588,3 +588,4 @@ p3-android/modals-dialogs/A-0030-CommandInputDialog.prompt.md
 p3-android/modals-dialogs/A-0031-CommandSelectDialog.prompt.md
 p3-android/shared-meaningful/A-0003-VisuallyHidden.prompt.md
 p3-android/shared-meaningful/A-0005-AIAnomalyExplanations.prompt.md
+p3-android/shared-meaningful/A-0004-AIAlertTuningSuggestions.prompt.md
