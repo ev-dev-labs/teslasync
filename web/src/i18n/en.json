@@ -9280,6 +9280,14 @@
     "statusIdle": "Idle",
     "statusOffline": "Offline"
   },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "title": "Helix triage advisor",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "button": "Suggest triage",
+      "badge": "Helix"
+    }
+  },
   "feedback": {
     "title": "Report a bug / Send feedback",
     "openShort": "Report bug",
