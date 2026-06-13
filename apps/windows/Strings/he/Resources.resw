@@ -24686,4 +24686,94 @@
   <data name="translation.admin.auditLog.verifying" xml:space="preserve">
     <value>Verifying…</value>
   </data>
+  <data name="translation.admin.gdprExport.bytesLabel" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadButton" xml:space="preserve">
+    <value>Download bundle</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadExpired" xml:space="preserve">
+    <value>This artifact has expired and is no longer downloadable.</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadFailed" xml:space="preserve">
+    <value>No bundle available — see the error above.</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadHint" xml:space="preserve">
+    <value>The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadTitle" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="translation.admin.gdprExport.downloadWait" xml:space="preserve">
+    <value>Download becomes available once the export completes.</value>
+  </data>
+  <data name="translation.admin.gdprExport.emptyMessage" xml:space="preserve">
+    <value>Enter an artifact ID above to look up its status. The page will keep refreshing until the export completes.</value>
+  </data>
+  <data name="translation.admin.gdprExport.emptyTitle" xml:space="preserve">
+    <value>No artifact selected</value>
+  </data>
+  <data name="translation.admin.gdprExport.errorTitle" xml:space="preserve">
+    <value>Export failed</value>
+  </data>
+  <data name="translation.admin.gdprExport.formatLabel" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="translation.admin.gdprExport.idLabel" xml:space="preserve">
+    <value>Artifact ID</value>
+  </data>
+  <data name="translation.admin.gdprExport.idPlaceholder" xml:space="preserve">
+    <value>e.g. 8f4c…</value>
+  </data>
+  <data name="translation.admin.gdprExport.lookupButton" xml:space="preserve">
+    <value>Look up</value>
+  </data>
+  <data name="translation.admin.gdprExport.lookupHint" xml:space="preserve">
+    <value>IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running.</value>
+  </data>
+  <data name="translation.admin.gdprExport.lookupTitle" xml:space="preserve">
+    <value>Lookup artifact</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaExpires" xml:space="preserve">
+    <value>Expires</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaId" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaSha256" xml:space="preserve">
+    <value>SHA-256</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaTitle" xml:space="preserve">
+    <value>Artifact details</value>
+  </data>
+  <data name="translation.admin.gdprExport.metaUser" xml:space="preserve">
+    <value>User</value>
+  </data>
+  <data name="translation.admin.gdprExport.notConfigured" xml:space="preserve">
+    <value>GDPR export subsystem is not configured on this deployment.</value>
+  </data>
+  <data name="translation.admin.gdprExport.notFoundMessage" xml:space="preserve">
+    <value>No artifact with that id exists, or it has been purged. Check the id and try again.</value>
+  </data>
+  <data name="translation.admin.gdprExport.notFoundTitle" xml:space="preserve">
+    <value>Artifact not found</value>
+  </data>
+  <data name="translation.admin.gdprExport.pageTitle" xml:space="preserve">
+    <value>GDPR Export</value>
+  </data>
+  <data name="translation.admin.gdprExport.statusLabel" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="translation.admin.gdprExport.storageLabel" xml:space="preserve">
+    <value>Storage</value>
+  </data>
+  <data name="translation.admin.gdprExport.subtitle" xml:space="preserve">
+    <value>Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.</value>
+  </data>
 </root>
