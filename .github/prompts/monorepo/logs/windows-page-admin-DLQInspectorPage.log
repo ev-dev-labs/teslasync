@@ -1,0 +1,136 @@
+=== p2-windows · W7 · page:admin/DLQInspector (WinUI 3 / Fluent) ===
+Parity unit : page:admin/DLQInspector   kind=page   web route=/admin/dlq
+Web source  : web/src/features/admin/pages/DLQInspectorPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked. WindowsAppSDK 2.1 workload
+              builds the full solution (verified BUILD_EXIT=0). WinAppDriver UI-automation runner (W9 scope) is
+              absent, so the W7 test gate runs the headless TeslaSync.App.Tests project (the sibling-W7 convention).
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SchemaDriftPage / ApiLogsPage do. The generated prompt's idealized "DLQInspectorPage.xaml +
+  DLQInspectorPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers with the W4 ShellPageFactory by route name ("DLQInspector", already in RouteTable.cs → /admin/dlq).
+- The page COMPOSES the four DLQ sub-surfaces that already exist (W3): StatusHeader, EntriesTable, AuditPanel
+  (feature-views/, namespace TeslaSync.App.FeatureViews.DlqInspector) and the EntryDrawer side-sheet
+  (modals-dialogs/, namespace TeslaSync.App.ModalsDialogs). The page owns the orchestration the web page owns:
+  the selected row drives the drawer + the scoped useDLQEntry fetch; the pendingReplay row drives the confirm
+  dialog; the replay outcome (or its 403) toggles the replay-blocked banner.
+- Data binding (ADR-004): the four manifest data sources are the web hooks useDLQList / useDLQEntry / useDLQAudit /
+  useDLQReplay. The view-model reads through four injected ports (IDlqListFeed / IDlqEntryFeed / IDlqAuditFeed /
+  IDlqReplayService, DLQInspectorPage.Model.cs); the default Empty* feeds resolve the empty state (the
+  SchemaDriftPage/ApiLogsPage host-injection precedent), and the generated-client-backed DlqListClientFeed /
+  DlqEntryClientFeed / DlqAuditClientFeed / DlqReplayClientService (DLQInspectorPage.Source.cs) bind to the
+  generated OpenAPI contract client operations get_api_v1_system_dlq / get_api_v1_system_dlq_id /
+  get_api_v1_system_dlq_audit (+ _id_audit) / post_api_v1_system_dlq_id_replay, asserted against the generated
+  endpoint table + the FakeApiClient in tests. No HTTP touches the view. A hard DLQ_REPLAY_ENABLED=false gate
+  surfaces as ApiException StatusCode==403, mapped to the replay-blocked banner (web error.status === 403).
+  The generated C# client (W1) is regenerated deterministically from api/openapi/teslasync.openapi.json via
+  apps/tools/codegen/gen-clients.ts (it is git-ignored, not committed); Generated/Generated.csproj wraps it.
+- The web page passes PageContainer only `query={list}` (not loading/error/empty), so the body always renders the
+  children; the list data states surface per ADR-006 as visible Fluent regions: loading -> the page-tier
+  TsDataFreshness chip (IsFetching → "Updating…") + the StatusHeader em-dash tiles + the EntriesTable/AuditPanel
+  "Loading…" bodies; error -> the freshness chip (IsError → "Error") + a TsQueryError InfoBar + Retry; success ->
+  populated tiles + the entries table + the audit table. Never a blank region.
+- SI units N/A (this admin surface bears no unit fields — DLQ ids, topics, parse reasons, payload byte sizes and
+  replay-audit rows only); counts/sizes/timestamps format through the shared NumberFormatting / DateTimeFormatting
+  ports inside the composed sub-surfaces at the display boundary.
+- All 10 i18n keys already exist verbatim (web key names) in Strings/{en,he,ar}/Resources.resw under the
+  translation.* prefix (admin.dlq.pageTitle/subtitle/panels.entries/panels.audit/banners.replayBlockedTitle/
+  banners.replayBlockedMessage/confirm.title/confirm.message/confirm.confirm + common.cancel); the surface resolves
+  them through the ILocalizer facade with the web English defaults as fallbacks. confirm.message is stored with the
+  positional {0} marker (the web {{id}} template); ConfirmMessage interpolates the pending entry id.
+
+=== PARITY ===
+PARITY_REQUIRED=15
+
+# Panels (2) — every web <GlassPanel> reproduced as a Fluent Mica region (TsGlassPanel), each a visible branch
+[x] panel  - GlassPanel1   -> dead-letter-entries panel: DLQInspectorPage.cs#BuildPanel(EntriesGlyph, _entriesTitle,
+             _entriesTable) — a TsGlassPanel hosting the AlertOctagon FontIcon + _entriesTitle PanelTitle
+             (DlqInspectorRegistration.PanelEntries) + the EntriesTable surface bound to
+             DlqInspectorPageViewModel.EntriesModel (web <GlassPanel><AlertOctagon/><PanelTitle>Dead-letter
+             entries</PanelTitle><EntriesTable rows={list.data?.entries ?? []} loading={list.isLoading} onInspect=
+             {handleInspect}/></GlassPanel>); inspect wired DLQInspectorPage.cs#OnInspect → ViewModel.Inspect; test
+             LoadAsync_Success_ReachesReadyState_AndProjectsChildModels (EntriesModel.Rows) + Inspect_OpensTheDrawer_AndLoadsTheFullEntry
+[x] panel  - GlassPanel2   -> recent-replay-activity panel: DLQInspectorPage.cs#BuildPanel(AuditGlyph, _auditTitle,
+             _auditPanel) — a TsGlassPanel hosting the History FontIcon + _auditTitle PanelTitle
+             (DlqInspectorRegistration.PanelAudit) + the AuditPanel surface bound to
+             DlqInspectorPageViewModel.AuditModel (global feed, scopedDlqId null) (web <GlassPanel><History/>
+             <PanelTitle>Recent replay activity</PanelTitle><AuditPanel rows={audit.data?.rows ?? []} loading=
+             {audit.isLoading}/></GlassPanel>); test LoadAsync_Success_ReachesReadyState_AndProjectsChildModels
+             (AuditModel.Rows single, AuditModel.Loading false)
+
+# Data states (3) — loading / error / success, each a visible region (never blank)
+[x] state  - loading       -> DlqInspectorState.Loading (the VM initial state + while the list query is in flight):
+             DLQInspectorPage.cs#Render maps it to _freshness.IsFetching (TsDataFreshness "Updating…") and the child
+             surfaces' own loading bodies via StatusModel.Loading / EntriesModel.Loading / AuditModel.Loading
+             (DlqInspectorPageViewModel); test InitialState_IsLoading_WithLoadingChildModels
+[x] state  - error         -> DlqInspectorState.Error (list query failed): DlqInspectorPageViewModel.ShowListError +
+             IsListError → DLQInspectorPage.cs#Render shows _listError (TsQueryError InfoBar + Retry via ActionInvoked
+             → RefreshAsync) and the freshness chip IsError ("Error"); the HTTP-403 replay gate raises the
+             replay-blocked TsAlertBanner (DlqInspectorPageViewModel.ReplayDisabledBannerVisible); tests
+             LoadAsync_ListFailure_ReachesErrorState + Replay_Http403_RaisesTheBanner + DismissReplayBanner_HidesIt
+[x] state  - success       -> DlqInspectorState.Ready (list resolved): DLQInspectorPage.cs#Render populates the
+             StatusHeader tiles + the entries table + the audit table from the bound StatusModel/EntriesModel/
+             AuditModel, ListUpdatedAt drives the freshness chip ("Live"); tests
+             LoadAsync_Success_ReachesReadyState_AndProjectsChildModels + Inspect_OpensTheDrawer_AndLoadsTheFullEntry
+             + Replay_RequestRaisesConfirm_AndOkOutcomeClosesDrawer_NoBanner
+
+# Strings (10) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.dlq.banners.replayBlockedMessage -> DlqInspectorRegistration.BannerBlockedMessage localizer.GetString("translation.admin.dlq.banners.replayBlockedMessage", "The server rejected the replay because DLQ_REPLAY_ENABLED is not set. …")
+[x] string - admin.dlq.banners.replayBlockedTitle   -> DlqInspectorRegistration.BannerBlockedTitle localizer.GetString("translation.admin.dlq.banners.replayBlockedTitle", "Replay blocked")
+[x] string - admin.dlq.confirm.confirm              -> DlqInspectorRegistration.ConfirmLabel localizer.GetString("translation.admin.dlq.confirm.confirm", "Replay")
+[x] string - admin.dlq.confirm.message              -> DlqInspectorRegistration.ConfirmMessage localizer.GetString("translation.admin.dlq.confirm.message", "This will republish entry #{0} to its source topic. …") (id interpolated)
+[x] string - admin.dlq.confirm.title                -> DlqInspectorRegistration.ConfirmTitle localizer.GetString("translation.admin.dlq.confirm.title", "Replay DLQ entry?")
+[x] string - admin.dlq.pageTitle                    -> DlqInspectorRegistration.Title localizer.GetString("translation.admin.dlq.pageTitle", "DLQ Inspector")
+[x] string - admin.dlq.panels.audit                 -> DlqInspectorRegistration.PanelAudit localizer.GetString("translation.admin.dlq.panels.audit", "Recent replay activity")
+[x] string - admin.dlq.panels.entries               -> DlqInspectorRegistration.PanelEntries localizer.GetString("translation.admin.dlq.panels.entries", "Dead-letter entries")
+[x] string - admin.dlq.subtitle                     -> DlqInspectorRegistration.Subtitle localizer.GetString("translation.admin.dlq.subtitle", "Dead-letter queue — inspect failed ingests and replay them back to their source topic.")
+[x] string - common.cancel                          -> DlqInspectorRegistration.CancelLabel localizer.GetString("translation.common.cancel", "Cancel")
+
+PARITY_COVERED=15
+# Coverage asserted headlessly by apps/windows/TeslaSync.App.Tests/FeatureViews/DLQInspectorPageTests.cs (23 tests):
+# - Registration_ResolvesEveryRequiredCatalogKey records all 10 keys through a RecordingLocalizer;
+#   ConfirmMessage_InterpolatesTheEntryId asserts the {0} → #id interpolation.
+# - InitialState_IsLoading_WithLoadingChildModels (loading), LoadAsync_ListFailure_ReachesErrorState (error),
+#   LoadAsync_Success_ReachesReadyState_AndProjectsChildModels (success) assert the three data states + the
+#   GlassPanel1/GlassPanel2 bound child models.
+# - Inspect_OpensTheDrawer_AndLoadsTheFullEntry + Replay_RequestRaisesConfirm_AndOkOutcomeClosesDrawer_NoBanner +
+#   Replay_DisabledOutcome_RaisesTheBanner_AndKeepsTheDrawerOpen + Replay_Http403_RaisesTheBanner +
+#   DismissReplayBanner_HidesIt assert the inspect → drawer → entry-load + replay confirm flow's three branches.
+# - Operations_ResolveAgainstTheGeneratedEndpointTable + the four *ClientFeed/*ClientService request-shaping tests
+#   (ListClientFeed/AuditClientFeed[global+scoped]/EntryClientFeed/ReplayClientService) assert the generated-client
+#   binding (web hook → operation id, path/query params, tolerant parsing); ResultCodes_MapEveryWireCode covers
+#   the replay-result code map.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DLQInspectorPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (DLQInspectorPage Model/Source/ViewModel/view
+#   + DLQInspectorPageTests + ShellWindow registration + Generated/Generated.csproj + windows-ledger.json, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29264, Failed: 0, Skipped: 0 (incl. 23 DLQInspectorPageTests)
+#   (W7 test gate = the headless TeslaSync.App.Tests project, the sibling-W7 convention; the WinAppDriver UI-automation
+#    tests under TeslaSync.App.UITests are W9 scope and require the WinAppDriver runner, which is absent in this
+#    environment — they BLOCK at WinAppDriverSession.EnsureReady by design and are not part of the W7 gate.)
+TEST_EXIT=0
+PARITY_COVERED=15
+PARITY_REQUIRED=15
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DLQInspectorPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DLQInspectorPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-DLQInspectorPage.log
+# git commit -m "feat(apps/windows): DLQInspectorPage at web parity (W7 admin)"
+# (apps/windows/Generated/ is the deterministically-regenerated, git-ignored W1 client — intentionally not committed.)
+
+EXIT=0
+STATUS=DONE

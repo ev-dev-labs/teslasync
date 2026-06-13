@@ -876,6 +876,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DBHealthPage\DBHealthPage.Model.cs" Link="FeatureViews\DBHealthPage\DBHealthPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DBHealthPage\DBHealthPage.Source.cs" Link="FeatureViews\DBHealthPage\DBHealthPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DBHealthPage\DBHealthPage.ViewModel.cs" Link="FeatureViews\DBHealthPage\DBHealthPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DLQInspectorPage\DLQInspectorPage.Model.cs" Link="FeatureViews\DLQInspectorPage\DLQInspectorPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DLQInspectorPage\DLQInspectorPage.Source.cs" Link="FeatureViews\DLQInspectorPage\DLQInspectorPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DLQInspectorPage\DLQInspectorPage.ViewModel.cs" Link="FeatureViews\DLQInspectorPage\DLQInspectorPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Model.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Source.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" />
