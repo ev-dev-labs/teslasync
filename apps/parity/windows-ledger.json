@@ -133,5 +133,14 @@
     "requiredCount": 4,
     "promptId": "p2-windows/W7/windows-page-system-StatusApiDocsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-StatusApiDocsPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalsWorkspace",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 58,
+    "requiredCount": 58,
+    "promptId": "p2-windows/W7/windows-page-telemetry-SignalsWorkspacePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-SignalsWorkspacePage.log"
   }
 ]
