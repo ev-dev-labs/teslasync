@@ -234,6 +234,9 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
         // System / Exports page (P2/W7) — parity port of web ExportsPage at route /exports.
         _viewModel.PageFactory.Register("Exports", static () => new FeatureViews.Exports.ExportsPage());
+        // System / Scheduled exports panel (P2/W7) — parity port of web ScheduledExportsPanel (mounted on the Data
+        // Export page; web is unrouted). Registered as a deep-link-only surface (RouteTable Hidden "scheduled-exports").
+        _viewModel.PageFactory.Register("ScheduledExports", static () => new FeatureViews.Exports.ScheduledExportsPanel());
         // System / Commands page (P2/W7) — parity port of web CommandsPage at route /commands. The header
         // "View History" link navigates to the command-history page (web Link to="/command-history").
         _viewModel.PageFactory.Register("Commands", () =>

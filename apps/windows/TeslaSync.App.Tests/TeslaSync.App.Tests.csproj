@@ -405,6 +405,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.Model.cs" Link="FeatureViews\ExportsPage\ExportsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.Source.cs" Link="FeatureViews\ExportsPage\ExportsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ExportsPage\ExportsPage.ViewModel.cs" Link="FeatureViews\ExportsPage\ExportsPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ScheduledExportsPanel\ScheduledExportsPanel.Model.cs" Link="FeatureViews\ScheduledExportsPanel\ScheduledExportsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ScheduledExportsPanel\ScheduledExportsPanel.Source.cs" Link="FeatureViews\ScheduledExportsPanel\ScheduledExportsPanel.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ScheduledExportsPanel\ScheduledExportsPanel.ViewModel.cs" Link="FeatureViews\ScheduledExportsPanel\ScheduledExportsPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveSessionsPage\ActiveSessionsPage.Model.cs" Link="FeatureViews\ActiveSessionsPage\ActiveSessionsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveSessionsPage\ActiveSessionsPage.Source.cs" Link="FeatureViews\ActiveSessionsPage\ActiveSessionsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ActiveSessionsPage\ActiveSessionsPage.ViewModel.cs" Link="FeatureViews\ActiveSessionsPage\ActiveSessionsPage.ViewModel.cs" />

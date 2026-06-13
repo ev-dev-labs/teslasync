@@ -270,6 +270,9 @@ public static class RouteTable
         Page("Maintenance", "maintenance", RouteGroup.VehicleSystems, "Maintenance", "\uE90F"),
         Page("DataExport", "data-export", RouteGroup.SystemOps, "Data Export", "\uEDE1"),
         Page("Exports", "exports", RouteGroup.SystemOps, "Exports", "\uEDE1"),
+        // Web ScheduledExportsPanel is mounted on the Data Export page (unrouted); exposed here as a deep-link-only
+        // surface so the native shell can navigate to it directly (P2/W7).
+        Hidden("ScheduledExports", "scheduled-exports", RouteGroup.SystemOps, "Scheduled Exports"),
         Page("EnergyFlow", "energy-flow", RouteGroup.BatteryEnergy, "Energy Flow", "\uE945"),
         Page("PowerFlowDashboard", "power-flow", RouteGroup.BatteryEnergy, "Power Flow", "\uE945"),
         Page("EnergyProducts", "energy-products", RouteGroup.BatteryEnergy, "Energy Products", "\uE945"),
