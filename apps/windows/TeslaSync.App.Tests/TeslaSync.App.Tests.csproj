@@ -617,6 +617,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Model.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.Source.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\HttpStatusTool\HttpStatusTool.ViewModel.cs" Link="FeatureViews\HttpStatusTool\HttpStatusTool.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ArchivedPage\ArchivedPage.Model.cs" Link="FeatureViews\ArchivedPage\ArchivedPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ArchivedPage\ArchivedPage.Source.cs" Link="FeatureViews\ArchivedPage\ArchivedPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ArchivedPage\ArchivedPage.ViewModel.cs" Link="FeatureViews\ArchivedPage\ArchivedPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Model.cs" Link="FeatureViews\InboxBody\InboxBody.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.Source.cs" Link="FeatureViews\InboxBody\InboxBody.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InboxBody\InboxBody.ViewModel.cs" Link="FeatureViews\InboxBody\InboxBody.ViewModel.cs" />

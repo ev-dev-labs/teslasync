@@ -188,6 +188,19 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
         // Driving / Regen Efficiency page (P2/W7) — parity port of web RegenEfficiencyPage at route /regen-efficiency.
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
+
+        // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
+        // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
+        // CTA map to the inbox / alert-rule studio (web Link targets). RouteTable already maps
+        // Page("NotificationsArchived","notifications/archived",Notifications).
+        _viewModel.PageFactory.Register("NotificationsArchived", () =>
+        {
+            var page = new FeatureViews.Notifications.ArchivedPage();
+            page.BackToInboxRequested += (_, _) => NavigateTo(FeatureViews.Notifications.ArchivedRegistration.InboxRoute);
+            page.ViewContextRequested += (_, _) => NavigateTo(FeatureViews.Notifications.ArchivedRegistration.InboxRoute);
+            page.ConfigureAlertRulesRequested += (_, _) => NavigateTo("notifications/studio");
+            return page;
+        });
         ReauthBannerHost.Content = _authBanner;
         PushBannerHost.Content = _pushBanner;
         AppAuth.Service.StateChanged += OnAuthStateChanged;
