@@ -664,3 +664,4 @@ p3-android/shared-meaningful/A-0073-SmallMultiplesChart.prompt.md
 p3-android/shared-meaningful/A-0075-AnimatedNumber.prompt.md
 p3-android/shared-meaningful/A-0076-Avatar.prompt.md
 p3-android/shared-meaningful/A-0078-BulkActionsToolbar.prompt.md
+p3-android/shared-meaningful/A-0080-DateGroupedList.prompt.md
