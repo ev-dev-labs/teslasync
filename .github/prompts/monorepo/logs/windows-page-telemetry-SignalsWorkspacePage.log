@@ -1,0 +1,155 @@
+p2-windows/W7 — page:telemetry/SignalsWorkspace — native WinUI 3 SignalsWorkspacePage at web parity
+====================================================================================================
+Web source : web/src/features/telemetry/pages/SignalsWorkspacePage.tsx
+Web route  : /signals  (nav name "Signals")
+Output     : apps/windows/TeslaSync.App/feature-views/SignalsWorkspacePage/{SignalsWorkspacePage.cs,
+             SignalsWorkspacePage.Model.cs, SignalsWorkspacePage.Source.cs, SignalsWorkspacePage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path
+              does not exist — the Windows app is TeslaSync.App with C#-markup feature-views, not
+              XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json.)
+
+Shape of the parity unit (apps/parity/parity-manifest.json id=page:telemetry/SignalsWorkspace)
+----------------------------------------------------------------------------------------------
+requiredCount=58 = 11 panels + 4 data-states + 43 strings. 0 charts, 0 maps. Data sources (4):
+usePinned (GET /pinned), useSignalDiffServer (GET /signals/{id}/diff), useSignals (GET
+/signals/{id}/available), useTogglePin (POST /pinned + DELETE /pinned/{id}). The web page is a thin
+orchestrator composing seven shared telemetry components inside a PageContainer; the native port
+reproduces the whole tree and composes the already-ported shared surfaces (SignalSelector,
+SignalCompareControls, SignalStatsPanel, SignalChartPanel) rather than re-implementing them.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011/013/014/015)
+--------------------------------------------------------------------------
+- SignalsWorkspacePage : UserControl — mounts the shared PageContainer (CopyLink="Share", the live
+  connection TsBadge in the header Actions) whose PageContent is the full workspace tree: the load-failed
+  TsAlertBanner, the no-vehicle TsEmptyState, the four headline TsStatCards, the "Add signals" TsAccordion
+  hosting the shared SignalSelector catalog, the workspace toolbar TsGlassPanel (Time Range / Per Page /
+  Run / Live / Compare + the live/compare TsHelpTooltip), the Compare section (SignalCompareControls, the
+  four diff TsStatCards, the bulk-actions toolbar, and the diff TsGlassPanel with its loading-skeleton /
+  no-changes / error / rows + pinned-chips branches), the Live/Historical section (SignalStatsPanel, the
+  chart-layout tabs, SignalChartPanel, and the "pick signals and run a query" empty TsGlassPanel) and the
+  catalog-refresh footer. Thin renderer: every label/value/visibility flows from SignalsWorkspaceDisplay;
+  PropertyChanged is marshalled onto the UI thread; Group automation peer; tokens only (no literal colours).
+- SignalsWorkspacePageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Reads the catalog
+  (useSignals) + pins (usePinned) through ISignalsWorkspaceFeed, fetches the diff on Compare mode
+  (useSignalDiffServer), owns the pin/unpin flow (useTogglePin) and the mutually-exclusive Live/Compare
+  toggles, exposes UpdateLiveState (the P1/S4 SSE seam feeding the live-rate card + connection badge), and
+  projects SignalsWorkspaceDisplay. LoadAsync/RefreshAsync/LoadDiffAsync + superseding CTS; no I/O in the view.
+- SignalsWorkspaceProjection / SignalsWorkspaceModel / SignalsWorkspaceDisplay — pure projection (no WinUI
+  types) resolving all 43 i18n keys on every call (the conditionally-rendered keys are pre-resolved so a
+  single projection requests the whole manifest set), the eight stat-card values (fmtInt port), the
+  window-span cell, the pinned-first diff rows (reusing the shared SignalDiffProjection), and the
+  catalog/diff data-state flags. SignalsWorkspaceRegistration — RouteName="SignalsWorkspace" (matches
+  RouteTable.cs Page("SignalsWorkspace","signals",TelemetrySignals)), Slug, the five generated operation
+  ids and the per-vehicle pin context. PII-safe SignalsWorkspaceDiagnostics (view.opened only).
+- ISignalsWorkspaceFeed / EmptySignalsWorkspaceFeed (no-backend default the shell-registered page mounts
+  against) / SignalsWorkspaceClientFeed (the generated-OpenAPI-client adapter, ADR-004). Like the sibling
+  SignalDiffTableSource, the diff + pinned reads omit the web query parameters because the generated
+  /pinned and /signals/{id}/diff descriptors declare none (the contract client rejects undeclared ones) —
+  the diff relies on the backend default trailing-hour window and the pinned list is filtered to signal
+  rows client-side; each pin write still carries the per-vehicle diff context.
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("SignalsWorkspace", () => new FeatureViews.Telemetry.SignalsWorkspacePage()).
+
+i18n note (R3/ADR-014)
+----------------------
+The 43 manifest keys are resolved through keyed ILocalizer.GetString(key, <web default>) flowing through
+ShellLocalizer -> shell Localization (resw lookup -> English fallback), exactly as the web resolves the
+inline t(key, default) fallbacks. Zero hardcoded literals; the auto-generated resw is left untouched.
+
+=== PARITY ===
+PARITY_REQUIRED=58
+# panels (11) — Display field (SignalsWorkspacePage.Model.cs) -> rendered control (SignalsWorkspacePage.cs)
+[x] panel - Selected             -> Display.SelectedLabel/SelectedValue            -> _statSelected (TsStatCard)
+[x] panel - Mode                 -> Display.ModeLabel/ModeValue                    -> _statMode
+[x] panel - Live-rate            -> Display.LiveRateLabel/LiveRateValue            -> _statLiveRate
+[x] panel - Pinned-signals       -> Display.PinnedLabel/PinnedValue                -> _statPinned
+[x] panel - GlassPanel5          -> workspace toolbar                              -> _toolbar (TsGlassPanel, BuildToolbar)
+[x] panel - Changed-signals      -> Display.ChangedSignalsLabel/Value             -> _statChanged
+[x] panel - Visible-after-filter -> Display.VisibleLabel/Value                    -> _statVisible
+[x] panel - Pinned               -> Display.DiffPinnedLabel/Value                 -> _statDiffPinned
+[x] panel - Window-span          -> Display.WindowSpanLabel/Value                 -> _statWindowSpan
+[x] panel - GlassPanel10         -> compare diff panel                            -> _diffPanel (TsGlassPanel, BuildDiffPanel)
+[x] panel - GlassPanel11         -> historical/live empty panel                   -> _historicalEmptyPanel (TsGlassPanel)
+# data states (4) — projection flag (Model.cs) + headless test (SignalsWorkspacePageTests.cs)
+[x] state - loading -> Display.ShowCatalogLoading (CatalogState.Loading)   :: State_loading_when_catalog_query_in_flight
+[x] state - empty   -> Display.ShowNoVehicle / ShowDiffEmpty               :: State_empty_when_no_vehicle_selected / Diff_states_drive_the_diff_panel_branches
+[x] state - error   -> Display.ShowCatalogError + ShowError                :: State_error_surfaces_the_load_failed_banner
+[x] state - success -> Display.ShowCatalogSuccess / ShowDiffRows           :: State_success_when_catalog_resolved_with_signals
+# strings (43) — SignalsWorkspaceProjection.Project resolves localizer.GetString("<key>", "<web default>");
+#   coverage asserted by Projection_resolves_all_43_manifest_string_keys_in_one_pass (RecordingLocalizer)
+[x] string - Per Page                          -> Display.PerPageLabel
+[x] string - Time Range                        -> Display.TimeRangeLabel
+[x] string - error.loadFailed                  -> Display.ErrorLoadFailed
+[x] string - help.signal.live.aria             -> Display.HelpLiveAria
+[x] string - liveMonitor.connected             -> Display.LiveBadgeText (connectedLabel)
+[x] string - liveMonitor.disconnected          -> Display.LiveBadgeText (disconnectedLabel)
+[x] string - liveMonitor.title                 -> Display.LiveTailTitle
+[x] string - signalDiff.bulk.addAlert          -> Display.BulkAddAlertLabel
+[x] string - signalDiff.bulk.csv               -> Display.BulkCsvLabel
+[x] string - signalDiff.bulk.pin               -> Display.BulkPinLabel
+[x] string - signalDiff.bulk.unpin             -> Display.BulkUnpinLabel
+[x] string - signalDiff.noChanges              -> Display.NoChangesMessage
+[x] string - signalDiff.pinnedCount            -> Display.DiffPinnedLabel
+[x] string - signalDiff.pinnedLabel            -> Display.PinnedChipsLabel
+[x] string - signalDiff.totalChanged           -> Display.ChangedSignalsLabel
+[x] string - signalDiff.visible                -> Display.VisibleLabel
+[x] string - signalDiff.windowSpan             -> Display.WindowSpanLabel
+[x] string - signalGap.refreshInterval         -> Display.RefreshHint
+[x] string - signalsWorkspace.addSignals       -> Display.AddSignalsLabel
+[x] string - signalsWorkspace.chartAuto        -> Display.ChartAutoLabel
+[x] string - signalsWorkspace.chartGrid        -> Display.ChartGridLabel
+[x] string - signalsWorkspace.chartMode        -> Display.ChartModeLabel
+[x] string - signalsWorkspace.chartOverlay     -> Display.ChartOverlayLabel
+[x] string - signalsWorkspace.compare          -> Display.CompareLabel (compareLabel)
+[x] string - signalsWorkspace.emptyDesc        -> Display.EmptyDesc
+[x] string - signalsWorkspace.emptyTitle       -> Display.EmptyTitle
+[x] string - signalsWorkspace.exitCompare      -> Display.ExitCompareLabel
+[x] string - signalsWorkspace.historical       -> Display.ModeValue (historicalLabel)
+[x] string - signalsWorkspace.historyTitle     -> Display.HistoryTitle
+[x] string - signalsWorkspace.live             -> Display.LiveLabel (liveLabel)
+[x] string - signalsWorkspace.liveRate         -> Display.LiveRateLabel
+[x] string - signalsWorkspace.mode             -> Display.ModeLabel
+[x] string - signalsWorkspace.noVehicle        -> Display.NoVehicleTitle
+[x] string - signalsWorkspace.noVehicleDesc    -> Display.NoVehicleDesc
+[x] string - signalsWorkspace.noneSelected     -> Display.SignalsSelectedBadge (noneSelectedLabel)
+[x] string - signalsWorkspace.pinned           -> Display.PinnedLabel
+[x] string - signalsWorkspace.run              -> Display.RunLabel
+[x] string - signalsWorkspace.selected         -> Display.SelectedLabel
+[x] string - signalsWorkspace.share            -> Display.ShareLabel
+[x] string - signalsWorkspace.signalsSelected  -> Display.SignalsSelectedBadge
+[x] string - signalsWorkspace.stopLive         -> Display.StopLiveLabel
+[x] string - signalsWorkspace.subtitle         -> Display.Subtitle
+[x] string - signalsWorkspace.title            -> Display.Title
+PARITY_COVERED=58
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/SignalsWorkspacePageTests.cs
+# (36 cases): the 43-key one-pass coverage (+ the in-live-mode pass), the 8 stat-card values, the GlassPanel
+# toolbar/diff/empty copy, the four data states (catalog + diff), the mode switch + chart-tab gate, the
+# view-model catalog/diff/pin/live flows, the generated-client request shaping (available/pinned/diff +
+# pin/unpin), every registered operation resolving against the generated table, and the diagnostics. All pass.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SignalsWorkspacePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Warning(s) 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 27571, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=58
+PARITY_REQUIRED=58
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SignalsWorkspacePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SignalsWorkspacePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-telemetry-SignalsWorkspacePage.log
+# git commit -m "feat(apps/windows): SignalsWorkspacePage at web parity (W7 telemetry)"
+
+EXIT=0
+STATUS=DONE

@@ -895,6 +895,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.Source.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" Link="FeatureViews\SignalSparklinePreview\SignalSparklinePreview.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalStatsPanel\SignalStatsPanel.Model.cs" Link="FeatureViews\SignalStatsPanel\SignalStatsPanel.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalsWorkspacePage\SignalsWorkspacePage.Model.cs" Link="FeatureViews\SignalsWorkspacePage\SignalsWorkspacePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalsWorkspacePage\SignalsWorkspacePage.Source.cs" Link="FeatureViews\SignalsWorkspacePage\SignalsWorkspacePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalsWorkspacePage\SignalsWorkspacePage.ViewModel.cs" Link="FeatureViews\SignalsWorkspacePage\SignalsWorkspacePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SlideRenderer\SlideRenderer.Model.cs" Link="FeatureViews\SlideRenderer\SlideRenderer.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SmartChargePage\SmartChargePage.Model.cs" Link="FeatureViews\SmartChargePage\SmartChargePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SmartChargePage\SmartChargePage.Source.cs" Link="FeatureViews\SmartChargePage\SmartChargePage.Source.cs" />
