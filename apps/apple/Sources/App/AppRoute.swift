@@ -29,7 +29,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
-    case gdprExport, rbacMatrix
+    case gdprExport, rbacMatrix, users
     case liveSignals, schemaDrift, slowQueries, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -96,6 +96,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .gdprExport: "tray.and.arrow.down.fill"
         case .rbacMatrix: "lock.shield.fill"
+        case .users: "person.2.fill"
         case .liveSignals: "waveform.path.ecg"
         case .schemaDrift: "tablecells.badge.ellipsis"
         case .slowQueries: "timer"
@@ -120,7 +121,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
-             .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .liveSignals, .schemaDrift, .slowQueries,
+             .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .liveSignals, .schemaDrift, .slowQueries,
              .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }

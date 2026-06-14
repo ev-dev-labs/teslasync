@@ -25,6 +25,8 @@ public enum AppRouteParser {
         "/admin/flags": .featureFlags,
         "/admin/rbac": .rbacMatrix,
         "/admin/rbac-matrix": .rbacMatrix,
+        "/admin/users": .users,
+        "/subjects": .users,
         "/account": .settings
     ]
 

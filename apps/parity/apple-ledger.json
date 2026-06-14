@@ -343,6 +343,24 @@
       "requiredCount": 22,
       "promptId": "p4-apple/P7/page:admin/SlowQueries",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SlowQueriesPage.log"
+    },
+    {
+      "unitId": "page:admin/Users",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 10,
+      "requiredCount": 10,
+      "promptId": "p4-apple/P7/page:admin/Users",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-UsersPage.log"
+    },
+    {
+      "unitId": "page:admin/Users",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 10,
+      "requiredCount": 10,
+      "promptId": "p4-apple/P7/page:admin/Users",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-UsersPage.log"
     }
   ]
 }
