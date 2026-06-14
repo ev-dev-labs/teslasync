@@ -568,6 +568,13 @@ public sealed partial class ShellWindow : Window
             page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
             return page;
         });
+        // Settings / Account / Safety settings page (P2/W7) — parity port of web SafetyPage at route /settings/safety.
+        // The AI-OFF-safe deterministic listing of every safety-related setting (quiet hours, alert digest mode,
+        // critical-flash + tab-badge signalling, API kill-switch) with each row's current value and a docs link.
+        // RouteTable already maps Page("SafetySettingsPage","settings/safety",SettingsAccountIntegrations).
+        _viewModel.PageFactory.Register(
+            FeatureViews.Settings.SafetyPageRegistration.RouteName,
+            static () => new FeatureViews.Settings.SafetyPage());
         // Settings / Account / Two-factor auth page (P2/W7) — parity port of web TwoFactorAuthPage at route
         // /account/2fa. Hosts the native TOTPEnrollmentSection inside the shared PageContainer (title + subtitle +
         // copy-link); RouteTable already maps Page("TwoFactorAuth","account/2fa").

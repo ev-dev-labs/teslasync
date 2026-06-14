@@ -961,6 +961,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.Source.cs" Link="FeatureViews\ResultPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ResultPanel.ViewModel.cs" Link="FeatureViews\ResultPanel.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteMapSection\RouteMapSection.Model.cs" Link="FeatureViews\RouteMapSection\RouteMapSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetyPage\SafetyPage.Model.cs" Link="FeatureViews\SafetyPage\SafetyPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetyPage\SafetyPage.Source.cs" Link="FeatureViews\SafetyPage\SafetyPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SafetyPage\SafetyPage.ViewModel.cs" Link="FeatureViews\SafetyPage\SafetyPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.Model.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.Source.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SafetySettingsPage\SafetySettingsPage.ViewModel.cs" Link="FeatureViews\SafetySettingsPage\SafetySettingsPage.ViewModel.cs" />
