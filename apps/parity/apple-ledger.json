@@ -57,6 +57,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-DiskForecastPage.log"
     },
     {
+      "unitId": "page:admin/FeatureFlags",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 16,
+      "requiredCount": 16,
+      "promptId": "p4-apple/P7/page:admin/FeatureFlags",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log"
+    },
+    {
+      "unitId": "page:admin/FeatureFlags",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 16,
+      "requiredCount": 16,
+      "promptId": "p4-apple/P7/page:admin/FeatureFlags",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log"
+    },
+    {
       "unitId": "page:admin/FleetTelemetryCoverage",
       "platform": "apple-macos",
       "status": "done",

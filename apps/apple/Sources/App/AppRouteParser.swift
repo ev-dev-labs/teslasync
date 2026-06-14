@@ -19,6 +19,7 @@ public enum AppRouteParser {
         "/admin/live-signals": .liveSignals,
         "/admin/schema-drift": .schemaDrift,
         "/admin/audit-log": .auditLog,
+        "/admin/flags": .featureFlags,
         "/account": .settings
     ]
 
