@@ -459,6 +459,16 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // Maps / Map Overview (Live Map) page (P2/W7) — parity port of web MapOverviewPage at route /live. The
+        // quick links navigate to the navigation-route / geofences / locations routes, and the no-vehicle
+        // onboarding call-to-action navigates to onboarding (web Link / navigate targets). RouteTable already
+        // maps Page("LiveMap","live",MapsLocation).
+        _viewModel.PageFactory.Register("LiveMap", () =>
+        {
+            var page = new FeatureViews.Maps.MapOverviewPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
 
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
