@@ -13,11 +13,11 @@ import org.junit.Test
 
 /**
  * On-device Compose UI + accessibility verification of [VehicleHeaderContent] across the branches the surface
- * renders: a loaded vehicle (status chip token + "model trim" chip + monospace VIN), a not-yet-loaded vehicle
- * (status chip + Wake action present, identity chrome collapsed but never a blank box), the back affordance's
- * TalkBack content description firing [onBack], and the Wake action firing [onWake]. The offline gate's
- * `testReleaseUnitTest` covers the pure projection + diagnostics; this covers render + a11y. Mirrors the web spec
- * (web/src/features/vehicles/components/vehicle-detail/VehicleHeader.tsx).
+ * renders: a loaded vehicle (bold title + capitalized status chip + "model trim · VIN" subtitle), a not-yet-loaded
+ * vehicle (the `common.vehicle` title fallback + the status chip + the Wake action present, subtitle collapsed but
+ * never a blank box), the back affordance's TalkBack content description firing [onBack], and the Wake action
+ * firing [onWake]. The offline gate's `testReleaseUnitTest` covers the pure projection + adapter + diagnostics;
+ * this covers render + a11y. Mirrors the web spec (web/src/features/vehicles/components/VehicleHeader.tsx).
  */
 class VehicleHeaderUiTest {
     @get:Rule
@@ -26,16 +26,17 @@ class VehicleHeaderUiTest {
     private fun loaded(status: String = "online"): VehicleHeaderUiModel =
         VehicleHeaderProjection.project(
             VehicleHeaderData(
-                model = "Model 3",
-                trimBadging = "Long Range",
+                displayName = "My Model 3",
                 vin = "5YJ3E1EA7KF000001",
+                model = "Model 3",
+                trim = "Long Range",
                 status = status,
             ),
         )
 
     private fun unloaded(): VehicleHeaderUiModel =
         VehicleHeaderProjection.project(
-            VehicleHeaderData(model = null, trimBadging = null, vin = null, status = "offline"),
+            VehicleHeaderData(displayName = null, vin = null, model = null, trim = null, status = "offline"),
         )
 
     private fun setContent(
@@ -52,17 +53,21 @@ class VehicleHeaderUiTest {
     }
 
     @Test
-    fun loadedVehicleRendersStatusDescriptorAndVin() {
+    fun loadedVehicleRendersTitleStatusDescriptorAndVin() {
         setContent(loaded())
-        compose.onNodeWithText("online").assertIsDisplayed()
-        compose.onNodeWithText("Model 3 Long Range").assertIsDisplayed()
+        compose.onNodeWithText("My Model 3").assertIsDisplayed()
+        // The shared StatusBadge capitalizes the raw token.
+        compose.onNodeWithText("Online").assertIsDisplayed()
+        compose.onNodeWithText("Model 3 Long Range", substring = true).assertIsDisplayed()
         compose.onNodeWithText("5YJ3E1EA7KF000001").assertIsDisplayed()
     }
 
     @Test
-    fun notYetLoadedVehicleStillRendersStatusChipAndWakeAction() {
+    fun notYetLoadedVehicleStillRendersTitleFallbackStatusChipAndWakeAction() {
         setContent(unloaded())
-        compose.onNodeWithText("offline").assertIsDisplayed()
+        // web `|| t('common.vehicle', 'Vehicle')`.
+        compose.onNodeWithText("Vehicle").assertIsDisplayed()
+        compose.onNodeWithText("Offline").assertIsDisplayed()
         compose.onNodeWithText("Wake Up").assertIsDisplayed()
     }
 
