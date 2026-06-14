@@ -602,6 +602,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.Projection.cs" Link="FeatureViews\DataExportPage\DataExportPage.Projection.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.Source.cs" Link="FeatureViews\DataExportPage\DataExportPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DataExportPage\DataExportPage.ViewModel.cs" Link="FeatureViews\DataExportPage\DataExportPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataRepairPage\DataRepairPage.Model.cs" Link="FeatureViews\DataRepairPage\DataRepairPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataRepairPage\DataRepairPage.Projection.cs" Link="FeatureViews\DataRepairPage\DataRepairPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataRepairPage\DataRepairPage.Source.cs" Link="FeatureViews\DataRepairPage\DataRepairPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DataRepairPage\DataRepairPage.ViewModel.cs" Link="FeatureViews\DataRepairPage\DataRepairPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.Model.cs" Link="FeatureViews\DetailCards\DetailCards.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.Source.cs" Link="FeatureViews\DetailCards\DetailCards.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DetailCards\DetailCards.ViewModel.cs" Link="FeatureViews\DetailCards\DetailCards.ViewModel.cs" />

@@ -518,6 +518,13 @@ public sealed partial class ShellWindow : Window
             static () => new FeatureViews.SystemOps.ChatbotPage());
         // System / Data Export page (P2/W7) — parity port of web DataExportPage at route /data-export.
         _viewModel.PageFactory.Register("DataExport", static () => new FeatureViews.SystemOps.DataExportPage());
+        // System / Data Repair page (P2/W7) — parity port of web DataRepairPage at route /data-repair.
+        // RouteTable already maps Page("DataRepair","data-repair",RouteGroup.SystemOps). The shell-registered page
+        // mounts against the no-backend EmptyDataRepairFeed (the generated-client feed is wired separately from the
+        // shared data layer), rendering the all-clear "All sessions are complete" empty state.
+        _viewModel.PageFactory.Register(
+            FeatureViews.SystemOps.DataRepairRegistration.RouteName,
+            static () => new FeatureViews.SystemOps.DataRepairPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
         // Maps / Navigation & Route page (P2/W7) — parity port of web NavigationRoutePage at route /navigation.
