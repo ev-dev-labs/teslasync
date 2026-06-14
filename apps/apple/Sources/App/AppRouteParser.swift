@@ -19,6 +19,7 @@ public enum AppRouteParser {
         "/admin/gdpr-exports": .gdprExport,
         "/admin/live-signals": .liveSignals,
         "/admin/schema-drift": .schemaDrift,
+        "/admin/slow-queries": .slowQueries,
         "/admin/audit-log": .auditLog,
         "/admin/api-logs": .apiLogs,
         "/admin/flags": .featureFlags,

@@ -1,0 +1,242 @@
+================================================================================
+p4-apple · P7 · page:admin/SlowQueries — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/SlowQueriesPage.tsx   (route /admin/slow-queries)
+  output     : apps/apple/Sources/Features/Admin/SlowQueries*.swift
+               (the live Xcode project — like the sibling DiskForecastPage /
+                SchemaDriftPage / RbacMatrixPage — hosts admin pages under
+                Sources/Features/Admin/; the prompt's nominal
+                TeslaSync/Features/Admin/** is the allowed-files alias, reconciled here)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI SlowQueriesPage at web parity: a pure @Observable
+state holder (ADR-004 — no networking in the view) over an injectable
+SlowQueriesDataSource seam whose value types mirror the web SlowQueryRow /
+SlowQueriesResponse / SlowQueryOrderBy 1:1 (production binds the KMP
+OperatorConfidenceStore.slowQueries feed, GET /admin/observability/slow-queries
+[order_by, limit], through the seam). The page is the operator-observability
+"top-N pg_stat_statements" surface: a sortable, limit-capped table of the slowest
+queries with the fingerprint, call count, mean/max/total ms timings, rows returned,
+and the shared-buffer cache-hit ratio so operators can tell "slow but cached" from
+"slow because of I/O".
+
+One query drives the page, so its data states are switched in place — never a blank
+region. The single web GlassPanel is reproduced:
+
+  GlassPanel1 — the top-queries panel (web `GlassPanel` p-6): a PanelTitle plus the
+    Order-by + Limit selects (web `ORDER_BY_OPTIONS` / `LIMIT_OPTIONS`), and the
+    body that switches loading skeleton ⇄ big EmptyState ⇄ 503 empty-table note ⇄
+    the adaptive DataTable. (SlowQueriesPage.swift > queriesPanel; the order/limit
+    pickers re-query via SlowQueriesPageModel.reload, web useSlowQueries(orderBy,limit)).
+
+The adaptive table (web `DataTable`, 7 columns) is a horizontally-aligned columnar
+Grid on macOS/iPad regular width and per-query cards on compact iPhone width
+(SlowQueriesPage.Table.swift > SlowQueriesTable). The pure web display logic was
+ported 1:1 + unit-tested: fmtNumber (en-US grouping, fixed precision — the web
+module default is 2), the total/mean/max decimal places, and cacheHitRatio
+(hit/(hit+read)*100 to 1 dp, em-dash when there were no buffer accesses), plus the
+fingerprint `|| '—'` fallback. The 503 SUBSYSTEM_NOT_CONFIGURED branch surfaces the
+web subsystem-unavailable AlertBanner + the DataTable empty message; a generic
+failure shows the PageContainer error panel + Retry.
+
+Files (all new unless noted):
+  Sources/Features/Admin/SlowQueriesModels.swift            (value types/result/seam/sample/state/formatters)
+  Sources/Features/Admin/SlowQueriesPageModel.swift         (@Observable model + reorder/limit re-query)
+  Sources/Features/Admin/SlowQueriesPage.swift              (chrome + 4 states + GlassPanel1 + controls)
+  Sources/Features/Admin/SlowQueriesPage.Table.swift        (adaptive 7-column table / cards)
+  Sources/Features/Admin/SlowQueriesRouteRegistration.swift (.slowQueries route)
+  Tests/Unit/Features/Admin/SlowQueriesPageModelTests.swift (state-machine + display-logic tests)
+  Sources/App/AppRoute.swift          (MOD: +.slowQueries case / pathSegment / icon / System group)
+  Sources/App/AppRouteParser.swift    (MOD: +"/admin/slow-queries" alias)
+  Sources/TeslaSyncApp.swift          (MOD: wire SlowQueriesRouteRegistration into routeHostRegistry)
+  Localization/Localizable.xcstrings  (MOD: +21 bare keys: 16 admin.slowQueries.* + 4 order-option
+                                       labels + route.slowQueries; admin.subsystem.unavailableTitle
+                                       already existed and was reused)
+  apps/parity/apple-ledger.json       (MOD: +2 rows page:admin/SlowQueries 22/22 macos+ios)
+
+Navigation reconciliation: the web route is the admin sub-path /admin/slow-queries,
+which AppRouteParser resolves to the dedicated .slowQueries route (pathSegment
+"slow-queries", System sidebar group, "timer" SF Symbol) via a path alias —
+mirroring the sibling .schemaDrift (/admin/schema-drift) pattern — reachable +
+deep-linkable without displacing other admin pages. The generated TeslaSync.xcodeproj
++ the built Frameworks/Shared.xcframework are git-ignored.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=22
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1 (top-queries panel)
+       SlowQueriesPage.swift > SlowQueriesPage.queriesPanel (TSGlassPanel) — PanelTitle +
+       order/limit controls + state-routed DataTable/EmptyState body
+[x] state  — loading
+       SlowQueriesPage.swift > queriesContent/.loading -> skeletonRows (TSSkeleton x8)
+       (model SlowQueriesState.loading; web PageContainer/table Skeleton)
+[x] state  — empty
+       SlowQueriesPage.swift > queriesContent/.empty -> TSEmptyState (systemImage "timer")
+       (model SlowQueriesState.empty when rows.isEmpty & !503; web rows.length===0 EmptyState)
+[x] state  — error
+       SlowQueriesPage.swift > stateContent/.error -> errorPanel (TSErrorDisplay + Retry)
+       (model SlowQueriesState.error(String); web PageContainer query error)
+[x] state  — success
+       SlowQueriesPage.swift > queriesContent/.loaded -> SlowQueriesTable
+       (model SlowQueriesState.loaded([SlowQueryRow]); web DataTable rows)
+[x] string — admin.slowQueries.colCache
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colCache") + compact labeledRow
+[x] string — admin.slowQueries.colCalls
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colCalls") + compact labeledRow
+[x] string — admin.slowQueries.colFingerprint
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colFingerprint")
+[x] string — admin.slowQueries.colMax
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colMax") + compact labeledRow
+[x] string — admin.slowQueries.colMean
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colMean") + compact labeledRow
+[x] string — admin.slowQueries.colRows
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colRows") + compact labeledRow
+[x] string — admin.slowQueries.colTotal
+       SlowQueriesPage.Table.swift > header("admin.slowQueries.colTotal") + compact labeledRow
+[x] string — admin.slowQueries.emptyMessage
+       SlowQueriesPage.swift > queriesContent/.empty (TSEmptyState message)
+[x] string — admin.slowQueries.emptyTable
+       SlowQueriesPage.swift > emptyTableNote (503 unavailable branch — web DataTable emptyMessage)
+[x] string — admin.slowQueries.emptyTitle
+       SlowQueriesPage.swift > queriesContent/.empty (TSEmptyState title)
+[x] string — admin.slowQueries.limit
+       SlowQueriesPage.swift > controls/labeledPicker(label: "admin.slowQueries.limit") + a11y label
+[x] string — admin.slowQueries.notConfigured
+       SlowQueriesPage.swift > subsystemBanner (TSAlertBanner message)
+[x] string — admin.slowQueries.orderBy
+       SlowQueriesPage.swift > controls/labeledPicker(label: "admin.slowQueries.orderBy") + a11y label
+[x] string — admin.slowQueries.pageTitle
+       SlowQueriesPage.swift > header (TSPageTitle "admin.slowQueries.pageTitle"); also
+       route.slowQueries sidebar label
+[x] string — admin.slowQueries.subtitle
+       SlowQueriesPage.swift > header (Text "admin.slowQueries.subtitle")
+[x] string — admin.slowQueries.tableTitle
+       SlowQueriesPage.swift > panelHeader (TSPanelTitle "admin.slowQueries.tableTitle") +
+       queriesPanel accessibilityLabel
+[x] string — admin.subsystem.unavailableTitle
+       SlowQueriesPage.swift > subsystemBanner (TSAlertBanner title) — pre-existing shared key reused
+--------------------------------------------------------------------------------
+PARITY_COVERED=22
+(All 17 required visible literals resolve from Localizable.xcstrings; key names match
+ the web verbatim. admin.subsystem.unavailableTitle already existed (shared with the
+ sibling DiskForecast/SchemaDrift pages) and was reused, not duplicated. Beyond the
+ required 17, the 4 web ORDER_BY_OPTIONS labels (admin.slowQueries.orderMean /
+ orderTotal / orderCalls / orderMax) + the route.slowQueries sidebar title were also
+ ported as bare keys so the order-by picker + sidebar render at full fidelity with
+ ZERO hardcoded strings. The only Text(verbatim:) calls render either backend data
+ (query fingerprints) or already-formatted numbers/percentages from the ported
+ fmtNumber/cacheHitRatio.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint / swiftformat / xcodegen /
+                    pwsh 7 / java 17. Xcode runner IS available.
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=7  PLACEHOLDER_COUNT=0  EXIT=0
+        (the 7 opt-outs are PRE-EXISTING sibling-page i18n key-name references; my
+         5 SlowQueries files + test carry ZERO opt-outs / stubs / TODO / FIXME.)
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (5 new sources + test + RouteRegistration)
+        -> 0/7 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint lint --strict --no-cache (my 5 SlowQueries + test +
+        AppRoute + AppRouteParser + TeslaSyncApp)
+        -> Found 0 violations, 0 serious in 10 files.
+
+[GREEN] XCODEGEN     xcodegen generate -> project created (EXIT=0); new files picked up
+        via the Sources glob (36 SlowQueries references in the generated pbxproj,
+        including the co-located test routed to the XCTest bundle).
+
+[GREEN] TYPE-CHECK (isolated, macOS)  swiftc -typecheck -sdk macosx
+        -target arm64-apple-macos15.0 -swift-version 6 -strict-concurrency=complete -D DEBUG
+        (my 5 SlowQueries files + the REAL Components UI/Feedback + Design + Tokens +
+         Theme + App routing — the same KMP-free shared layer the sibling pages use)
+        -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (isolated, iOS)    swiftc -typecheck -sdk iphoneos
+        -target arm64-apple-ios18.0 -swift-version 6 -strict-concurrency=complete -D DEBUG (same set)
+        -> EXIT=0, zero diagnostics — exercises the #if os(iOS) compact-size-class
+           branches in SlowQueriesPage.panelHeader + SlowQueriesTable.
+
+[GREEN] TYPE-CHECK (TEST, macOS vs real XCTest overlay)
+        SlowQueriesPageModelTests.swift + SlowQueriesModels + SlowQueriesPageModel +
+        XCTest (-F MacOSX.platform/Developer/Library/Frameworks
+        -I MacOSX.platform/Developer/usr/lib for the XCTest.swiftmodule overlay)
+        -> EXIT=0, zero diagnostics.
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, macOS) + EXECUTED the model logic
+        (SlowQueriesModels + SlowQueriesPageModel) with stub + sample sources:
+        all states (loading/empty/unavailable/error/loaded), reorder+limit re-query
+        (asserts the 2nd query carries the updated order_by/limit), fmtNumber grouping
+        + precision, percent, cacheHitRatio (90% / em-dash / nil-hit→0%), fingerprint
+        em-dash fallback, and SampleSource sort+truncate.
+        -> "ALL PASSED" (run exit 0). The XCTest peer is
+           Tests/Unit/Features/Admin/SlowQueriesPageModelTests.swift (16 cases).
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        The app target compiles the entire generated mega-surfaces codebase
+        (TeslaSync/feature-views + shared-surfaces + widget-primitives +
+        dashboard-widgets) and links the KMP Shared.xcframework. The full scheme is
+        blocked by a PRE-EXISTING, unrelated source error in
+        TeslaSync/shared-surfaces/Input.Previews.swift (explicit 'return' in a
+        ViewBuilder body, lines 32/39/46) — a generated sibling surface untouched by
+        this change (git status confirms) and the same blocker the sibling
+        RbacMatrixPage log records. ZERO of my files reference the KMP Shared
+        framework (verified: no `import Shared`), so my code's full compilation
+        correctness is proven by the isolated macOS+iOS type-checks against the REAL
+        shared component library above (zero diagnostics). NOT claimed green
+        (Covenant #1); fixing a pre-existing sibling surface is out-of-scope
+        (Covenant #7).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild
+                         is explicitly reported OUT-OF-SCOPE / not-greenable (a
+                         pre-existing Input.Previews.swift ViewBuilder error) and NOT
+                         dressed up as passing.
+ 2 No scope narrowing  : the web GlassPanel + every data state (loading/empty/error/
+                         success + the 503 unavailable variant) + both order-by & limit
+                         controls + all 7 table columns (both adaptive idioms) +
+                         cacheHitRatio implemented; not a minimum.
+ 3 No skip-and-assume  : web page + useSlowQueries hook + api/types read end-to-end;
+                         the order_by/limit re-query, the 503 SUBSYSTEM_NOT_CONFIGURED
+                         branch, and the cache-ratio/fmtNumber semantics all verified.
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; my files carry ZERO opt-outs. Complete
+                         code — loading/empty/error/unavailable each render distinct UI.
+ 5 No parity shortcuts : 4 states render distinctly; every string = a web key verbatim;
+                         the fmtNumber precision per column + cacheHitRatio em-dash edge
+                         + fingerprint fallback ported and unit-tested.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / other
+                         owners' files; only added the .slowQueries nav registration +
+                         21 strings + the ledger rows. The pre-existing Input.Previews
+                         build error was left to its owner (NOT worked around).
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder /
+                         swiftformat / swiftlint / xcodegen / macOS+iOS isolated
+                         type-check / test type-check / executed model harness). The
+                         only RED is the inherited, out-of-scope shared-surfaces
+                         ViewBuilder error — DEFERRED to its owner / the P99 gate.
+ 9 No silent drift     : changes confined to the files listed above + this log + the
+                         ledger. TeslaSyncApp gained one registry line; AppRoute /
+                         AppRouteParser gained one case / alias each.
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/SlowQueries*.swift \
+          apps/apple/Tests/Unit/Features/Admin/SlowQueriesPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/App/AppRouteParser.swift \
+          apps/apple/Sources/TeslaSyncApp.swift apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-SlowQueriesPage.log
+  git commit -m "feat(apps/apple): SlowQueriesPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE
