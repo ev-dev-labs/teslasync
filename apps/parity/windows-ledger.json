@@ -153,6 +153,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-TripPlannerPage.log"
   },
   {
+    "unitId": "page:maps/Geofences",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "p2-windows/W7/windows-page-maps-GeofencesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-maps-GeofencesPage.log"
+  },
+  {
     "unitId": "page:notifications/AlertRules",
     "platform": "windows",
     "status": "done",

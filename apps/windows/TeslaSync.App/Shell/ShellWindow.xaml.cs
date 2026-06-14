@@ -450,6 +450,10 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Maps / Geofences page (P2/W7) — parity port of web GeofencesPage at route /geofences. RouteTable already
+        // maps Page("Geofences","geofences",MapsLocation); the page owns its own create/edit + delete dialogs.
+        _viewModel.PageFactory.Register("Geofences", static () => new FeatureViews.Maps.GeofencesPage());
+
         // Notifications / Archived page (P2/W7) — parity port of web ArchivedPage at route /notifications/archived.
         // The header "Back to inbox" action maps to the inbox; the hosted InboxBody's "View context" / empty-state
         // CTA map to the inbox / alert-rule studio (web Link targets). RouteTable already maps
