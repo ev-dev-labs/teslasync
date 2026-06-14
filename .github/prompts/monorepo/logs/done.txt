@@ -829,3 +829,4 @@ p3-android/dashboard-widgets/A-0026-ClimateControlPanelWidget.prompt.md
 p3-android/dashboard-widgets/A-0027-ClimateHistoryWidget.prompt.md
 p3-android/dashboard-widgets/A-0033-DashboardStatsWidget.prompt.md
 p3-android/dashboard-widgets/A-0035-DigitalTwinMiniWidget.prompt.md
+p3-android/dashboard-widgets/A-0036-DigitalTwinWidget.prompt.md
