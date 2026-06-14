@@ -1,0 +1,24 @@
+/*
+  WidgetBigNumber.strings
+  TeslaSync — P4 widget primitive · 0001 · WidgetBigNumber (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetBigNumber.tsx` renders ZERO copy of its own — it is anonymous
+  (no `t()` calls). Its `value` / `unit` / `label` / `subtitle` / `badge.text` are caller-supplied,
+  already-localized props rendered verbatim, and `nullDisplay` defaults to the symbol "—". Every entry
+  below is therefore a native VoiceOver / HIG addition (no web `t()` key exists): the value-with-unit
+  join and the separator that stitches the combined reading.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("WidgetBigNumber") so each parallel surface prompt owns its own strings.
+  In test / preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Joins a formatted value with its optional unit affix — "{value} {unit}" — for the value's spoken
+   reading. Positional so translators can reorder the two parts. */
+"widgetBigNumber.valueUnit" = "%1$@ %2$@";
+
+/* The separator stitching the combined VoiceOver reading ("{value}, {label}, {subtitle}, {badge}"). */
+"widgetBigNumber.a11ySeparator" = ", ";
