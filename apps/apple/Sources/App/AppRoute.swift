@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
+    case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -43,6 +43,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetCompare: "vehicle-comparison"
         case .batteryCells: "battery-cells"
         case .powerUser: "power-user"
+        case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
         case .apiLogs: "api-logs"
         case .auditLog: "audit-log"
@@ -82,6 +83,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .telemetry: "dot.radiowaves.left.and.right"
         case .diagnostics: "stethoscope"
         case .admin: "person.badge.key.fill"
+        case .apiKeys: "key.fill"
         case .apiPlayground: "curlybraces"
         case .apiLogs: "doc.text.magnifyingglass"
         case .auditLog: "list.bullet.rectangle.portrait"
@@ -110,8 +112,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: .energy
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI, .fleetTelemetryCoverage,
-             .liveSignals, .schemaDrift, .powerUser, .system: .system
+        case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
+             .fleetTelemetryCoverage, .liveSignals, .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
     }

@@ -271,6 +271,24 @@
       "requiredCount": 81,
       "promptId": "p4-apple/P7/page:admin/FleetAPI",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FleetAPIPage.log"
+    },
+    {
+      "unitId": "page:admin/APIKeys",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 32,
+      "requiredCount": 32,
+      "promptId": "p4-apple/P7/page:admin/APIKeys",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-APIKeysPage.log"
+    },
+    {
+      "unitId": "page:admin/APIKeys",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 32,
+      "requiredCount": 32,
+      "promptId": "p4-apple/P7/page:admin/APIKeys",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-APIKeysPage.log"
     }
   ]
 }
