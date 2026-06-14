@@ -160,6 +160,12 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("RedisSignalViewer","redis-signals",RouteGroup.TelemetrySignals).
         _viewModel.PageFactory.Register("RedisSignalViewer", static () => new FeatureViews.Admin.RedisSignalViewerPage());
 
+        // System / State Machine Debugger page (P2/W7) — parity port of web StateMachineDebuggerPage at route
+        // /state-debugger. RouteTable already maps Page("StateMachineDebugger","state-debugger",TelemetrySignals).
+        // The shell-registered page mounts against the no-backend EmptyStateMachineDebuggerFeed (the FSM data feed
+        // is wired separately from the shared data layer), rendering the no-vehicles / no-transitions initial state.
+        _viewModel.PageFactory.Register("StateMachineDebugger", static () => new FeatureViews.Telemetry.StateMachineDebuggerPage());
+
         // Admin / Feedback queue page (P2/W7) — parity port of web FeedbackQueuePage at route /admin/feedback.
         _viewModel.PageFactory.Register("FeedbackQueue", static () => new FeatureViews.Admin.FeedbackQueuePage());
 

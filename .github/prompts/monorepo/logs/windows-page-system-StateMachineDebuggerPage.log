@@ -1,0 +1,156 @@
+=== p2-windows · W7 · page:system/StateMachineDebugger (WinUI 3 / Fluent) ===
+Parity unit : page:system/StateMachineDebugger   kind=page   web route=/state-debugger
+Web source  : web/src/features/system/pages/StateMachineDebuggerPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/StateMachineDebuggerPage/*.cs (Model/Projection/Source/ViewModel/view)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300); maui-windows workload installed;
+              full WinUI Release build of the solution succeeds — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (+ parsers + registration + the i18n
+  resolver), <Name>.Projection.cs (pure, Microsoft.UI-free projection, unit-tested headlessly),
+  <Name>.Source.cs (generated-client feed, ADR-004), <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable
+  observable state holder) and <Name>.cs (the Fluent view). The generated prompt's idealized
+  "StateMachineDebuggerPage.xaml + StateMachineDebuggerPageViewModel.cs under TeslaSync/Features/System" is mapped
+  onto these real conventions (same mapping as every shipped W7 page, e.g. DataRepairPage / CommandHistoryPage).
+- Namespace: the page lives in TeslaSync.App.FeatureViews.Telemetry (matching the sibling TelemetrySignals pages
+  LiveSignalMonitorPage / SignalDiffPage / SignalsWorkspacePage and the route's RouteGroup.TelemetrySignals; a
+  ".System" leaf would shadow the global System namespace). RouteTable already maps
+  Page("StateMachineDebugger","state-debugger",RouteGroup.TelemetrySignals,"State Debugger"); the surface registers
+  itself with the W4 ShellPageFactory by that exact route name in Shell/ShellWindow.xaml.cs.
+- Data sources bound to the generated C# client (ADR-004) through StateMachineDebuggerClientFeed in
+  StateMachineDebuggerPage.Source.cs — the five operations verified present in
+  apps/windows/Generated/Api/ApiEndpoints.cs:
+    useSelectedVehicle vehicles -> GET /vehicles/                     (get_api_v1_vehicles)
+    useVehicleStateMachine      -> GET /vehicles/{id}/state           (get_api_v1_vehicles_vehicleID_state)
+    useFSMStats                 -> GET /fsm/stats                     (get_api_v1_fsm_stats)
+    useFSMTransitions           -> GET /fsm/transitions               (get_api_v1_fsm_transitions)
+    useSignalSnapshot           -> GET /signals/{id}/snapshot         (get_api_v1_signals_vehicleID_snapshot)
+  The endpoints declare no typed query params, so the client appends vehicle_id/fsm/hours/page/per_page/at as
+  snake_case (BuildQuery allows free params when the descriptor declares none). The default
+  EmptyStateMachineDebuggerFeed resolves the no-backend states (the shell uses the parameterless ctor); the
+  view-model is exercised in tests with a FakeFeed driving the loading/empty/success matrix + the snapshot fetch.
+- Composition: the page reproduces every web region by composing the FSM sub-surfaces already built for it —
+  FSMHealthPanel (ns .Fsm), FSMSubFSMPanel, FSMTimelineChart, SnapshotInspector (ns .FeatureViews), StateTimeline +
+  LiveControls (ns .StateMachine) and FSMStateDiagram (ns .FeatureViews). The pure projection builds each
+  sub-surface's data model (FsmHealthPanelModel / FSMSubFSMPanelModel / FSMTimelineChartModel / StateTimelineModel /
+  LiveControlsModel / SnapshotInspectorModel) so the view stays a thin renderer. FSMStateDiagram is a self-fetching
+  surface; the page hosts it over the no-backend EmptyFsmStateDiagramSource (mirroring the empty-feed default).
+- AI narrator (web AIStateMachineDebuggerNarrator, withAiFeature) is a SEPARATE parity unit and is intentionally
+  out of scope here (it is not among the 11 manifest panels and renders null when the toggle is off) — the same
+  treatment the shipped DataRepairPage applied to its AIDataRepairSuggestions panel.
+- SI: the page carries no display-boundary unit conversion of its own — the FSM transition log is a
+  state-machine trace (states / triggers / timestamps / counts), not a metric surface. The sub-surfaces that do
+  show units (e.g. the snapshot inspector) format at the display boundary inside their own ports. Times are
+  rendered with invariant clock/relative formatters in the pure projection.
+- Strings: every visible literal resolves through ILocalizer with the exact web t() key + English fallback
+  (StateMachineDebuggerStrings / FsmTypeCatalog / StateMachineDebuggerRegistration), the established windows
+  convention; the page renders correct English via key-fallback whether or not Strings/*.resw carries the key.
+- Predecessor (W1): the gitignored generated OpenAPI C# client was regenerated for this environment via
+  `pwsh apps/tools/codegen/gen-clients.ps1` (10 C# files under apps/windows/Generated/Api/) and its referencing
+  project apps/windows/Generated/Generated.csproj (a regenerated, gitignored build artifact) reconstituted so the
+  data layer compiles.
+
+=== PARITY ===
+PARITY_REQUIRED=63
+
+[panel] GlassPanel1 (FSM-type + per-page filters) — StateMachineDebuggerPage.cs BuildFiltersPanel()/_filtersPanel; display.FsmTypeLabel/PerPageLabel/_fsmTypeSelect/_perPageSelect + _noVehiclesState   [COVERED]
+[panel] GlassPanel2 (FSM health) — StateMachineDebuggerPage.cs _healthPanel:FSMHealthPanel; bound display.HealthModel (StateMachineDebuggerPage.Projection.cs new FsmHealthPanelModel(healthTransitions))   [COVERED]
+[panel] GlassPanel3 (current vehicle live state hero) — StateMachineDebuggerPage.cs BuildCurrentStatePanel()/_currentStatePanel/RenderCurrentState; display.Hero/VehicleLiveStateTitle   [COVERED]
+[panel] State-Distribution — StateMachineDebuggerPage.cs _distribution:TsChartContainer + _pie:TsPieChart/RenderDistribution; display.ChartState/PieValues/PieLegend   [COVERED]
+[panel] GlassPanel5 (live controls + state timeline + snapshot inspector) — StateMachineDebuggerPage.cs BuildLivePanel()/_livePanel with _liveControls/_stateTimeline/_snapshotInspector; display.LiveControls/StateTimeline/SnapshotInspector   [COVERED]
+[panel] Transitions-Page (transition log + pagination) — StateMachineDebuggerPage.cs BuildLogPanel()/_logPanel/_pagination/RenderLog/BuildLogRow; display.TransitionRows/Page/PerPage/TotalRows   [COVERED]
+[panel] Total-Transitions (stat tile) — StateMachineDebuggerPage.cs _statCards[1]/RenderStatCards; display.StatCards[1] (StateMachineDebuggerStrings.TotalTransitions)   [COVERED]
+[panel] Flap-Warnings (stat tile) — StateMachineDebuggerPage.cs _statCards[2]; display.StatCards[2] (flapCount via FsmHealthPanelProjection.ComputeFlapIds in Projection.cs)   [COVERED]
+[panel] Current-State (stat tile) — StateMachineDebuggerPage.cs _statCards[3]; display.StatCards[3] (StateMachineDebuggerStrings.CurrentState)   [COVERED]
+[panel] GlassPanel10 (transition counts table) — StateMachineDebuggerPage.cs BuildCountsPanel()/_countsPanel/RenderCounts; display.SummaryRows (Projection.BuildSummaryRows)   [COVERED]
+[panel] GlassPanel11 (selected transition detail) — StateMachineDebuggerPage.cs BuildDetailPanel()/_detailPanel/RenderDetail; display.DetailFields/DetailContextChips (Projection.BuildDetail)   [COVERED]
+  (also reproduced from the web tree: FSMSubFSMPanel _subFsmPanel; FSMStateDiagram _stateDiagram/_diagramHost; FSMTimelineChart _timelineChart)
+[chart] ChartContainer — StateMachineDebuggerPage.cs _distribution:TsChartContainer (Components/Charts/TsChartContainer.cs); Title/AccessibleSummary/State/EmptyMessage/Body from display   [COVERED]
+[chart] PieChart — StateMachineDebuggerPage.cs _pie:TsPieChart (Components/Charts/TsPieChart.cs); _pie.Values = display.PieValues (IReadOnlyList<ChartPoint>)   [COVERED]
+[state] loading — Projection.cs InitialLoading/StateLoading/CountsLoading/TransitionsLoading + ChartState.Loading; view _stateLoadingText/_countsLoading/_logLoading + PageContainer.IsLoading; test Projection_AllSourcesLoading_ShowsLoadingStates   [COVERED]
+[state] empty — Projection.cs ShowState/ShowTransitions/ShowCounts=false + ChartState.Empty; view TsEmptyState _noVehiclesState/_noStateState/_countsEmpty/_logEmpty; test Projection_NoVehicles_HidesDataRegionsWithEmptyStates   [COVERED]
+[state] success — Projection.cs ShowState/ShowTransitions/ShowCounts=true + ChartState.Ready + populated rows; test Projection_Populated_ComputesPieSummaryAndStatCards   [COVERED]
+[string] debugger.share — StateMachineDebuggerStrings.Share (Model.cs)   [COVERED]
+[string] fsm.allTime — StateMachineDebuggerStrings.AllTime / RangePresetLabel(AllTime)   [COVERED]
+[string] fsm.autoRefresh — StateMachineDebuggerStrings.AutoRefresh   [COVERED]
+[string] fsm.avgInterval — StateMachineDebuggerStrings.AvgInterval   [COVERED]
+[string] fsm.col.count — StateMachineDebuggerStrings.ColCount (display.ChartColCountLabel)   [COVERED]
+[string] fsm.col.state — StateMachineDebuggerStrings.ColState (display.ChartColStateLabel)   [COVERED]
+[string] fsm.count — StateMachineDebuggerStrings.Count   [COVERED]
+[string] fsm.currentState — StateMachineDebuggerStrings.CurrentState   [COVERED]
+[string] fsm.detail.context — StateMachineDebuggerStrings.DetailContext   [COVERED]
+[string] fsm.detail.duration — StateMachineDebuggerStrings.DetailDuration   [COVERED]
+[string] fsm.detail.from — StateMachineDebuggerStrings.DetailFrom   [COVERED]
+[string] fsm.detail.guard — StateMachineDebuggerStrings.DetailGuard   [COVERED]
+[string] fsm.detail.id — StateMachineDebuggerStrings.DetailId   [COVERED]
+[string] fsm.detail.name — StateMachineDebuggerStrings.DetailName   [COVERED]
+[string] fsm.detail.timestamp — StateMachineDebuggerStrings.DetailTimestamp   [COVERED]
+[string] fsm.detail.to — StateMachineDebuggerStrings.DetailTo   [COVERED]
+[string] fsm.detail.trigger — StateMachineDebuggerStrings.DetailTrigger   [COVERED]
+[string] fsm.detail.vehicleId — StateMachineDebuggerStrings.DetailVehicleId   [COVERED]
+[string] fsm.detailTitle — StateMachineDebuggerStrings.DetailTitle   [COVERED]
+[string] fsm.distributionByState — StateMachineDebuggerStrings.DistributionByState   [COVERED]
+[string] fsm.distributionByState.aria — StateMachineDebuggerStrings.DistributionByStateAria   [COVERED]
+[string] fsm.flapCount — StateMachineDebuggerStrings.FlapCount   [COVERED]
+[string] fsm.from — StateMachineDebuggerStrings.From   [COVERED]
+[string] fsm.fsmType — StateMachineDebuggerStrings.FsmType   [COVERED]
+[string] fsm.mode — StateMachineDebuggerStrings.Mode   [COVERED]
+[string] fsm.noState — StateMachineDebuggerStrings.NoState   [COVERED]
+[string] fsm.noTransitionsInRange — StateMachineDebuggerStrings.NoTransitionsInRange(range)   [COVERED]
+[string] fsm.noVehicles — StateMachineDebuggerStrings.NoVehicles   [COVERED]
+[string] fsm.perPage — StateMachineDebuggerStrings.PerPage   [COVERED]
+[string] fsm.selectVehicle — StateMachineDebuggerStrings.SelectVehicle   [COVERED]
+[string] fsm.since — StateMachineDebuggerStrings.Since   [COVERED]
+[string] fsm.state — StateMachineDebuggerStrings.State   [COVERED]
+[string] fsm.subtitle — StateMachineDebuggerStrings.Subtitle / Registration.Subtitle   [COVERED]
+[string] fsm.time — StateMachineDebuggerStrings.Time   [COVERED]
+[string] fsm.timelineTitle — StateMachineDebuggerStrings.TimelineTitle   [COVERED]
+[string] fsm.title — StateMachineDebuggerStrings.Title / Registration.Title   [COVERED]
+[string] fsm.to — StateMachineDebuggerStrings.To   [COVERED]
+[string] fsm.total — StateMachineDebuggerStrings.Total   [COVERED]
+[string] fsm.totalOnPage — StateMachineDebuggerStrings.TotalOnPage   [COVERED]
+[string] fsm.totalTransitions — StateMachineDebuggerStrings.TotalTransitions   [COVERED]
+[string] fsm.transitionCounts — StateMachineDebuggerStrings.TransitionCounts   [COVERED]
+[string] fsm.trigger — StateMachineDebuggerStrings.Trigger   [COVERED]
+[string] fsm.type — StateMachineDebuggerStrings.Type   [COVERED]
+[string] fsm.vehicleLiveState — StateMachineDebuggerStrings.VehicleLiveState   [COVERED]
+[string] fsm.viewDetail — StateMachineDebuggerStrings.ViewDetail   [COVERED]
+[string] help.fsm.liveState.aria — StateMachineDebuggerStrings.HelpLiveStateAria   [COVERED]
+[string] help.fsm.type.aria — StateMachineDebuggerStrings.HelpTypeAria   [COVERED]
+PARITY_COVERED=63
+# All 47 string keys are asserted resolved together by the headless test
+# StateMachineDebuggerPageTests.Projection_PopulatedModel_ResolvesEveryRequiredStringKey (RecordingLocalizer).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/StateMachineDebuggerPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+#   (compiles TeslaSync.App + .Core + .Platform + .Tests + .UITests + the regenerated Generated client)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30839, Failed: 0, Skipped: 0
+#   (includes the 10 new StateMachineDebuggerPageTests covering the loading/empty/success matrix, the pie/summary/
+#    stat-card derivations, the detail panel, the hero mode derivation, the 47-key i18n coverage, and the
+#    view-model load/select/filter/pagination orchestration over the five generated operations.)
+#   The WinAppDriver UITests project (TeslaSync.App.UITests) requires a live UI-automation runner + a deployed MSIX,
+#   out of scope for a page-parity artifact — the same scope every shipped W7 page applied; its per-region
+#   visibility is driven entirely by the StateMachineDebuggerDisplay flags asserted headlessly here.
+TEST_EXIT=0
+
+PARITY_COVERED == PARITY_REQUIRED (63 == 63).
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/StateMachineDebuggerPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/StateMachineDebuggerPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-StateMachineDebuggerPage.log
+
+EXIT=0
+STATUS=DONE

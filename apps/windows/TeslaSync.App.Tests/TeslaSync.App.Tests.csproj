@@ -1083,6 +1083,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.Source.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" Link="FeatureViews\SpeedTrendChart\SpeedTrendChart.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatChartSlide\StatChartSlide.Model.cs" Link="FeatureViews\StatChartSlide\StatChartSlide.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StateMachineDebuggerPage\StateMachineDebuggerPage.Model.cs" Link="FeatureViews\StateMachineDebuggerPage\StateMachineDebuggerPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StateMachineDebuggerPage\StateMachineDebuggerPage.Projection.cs" Link="FeatureViews\StateMachineDebuggerPage\StateMachineDebuggerPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StateMachineDebuggerPage\StateMachineDebuggerPage.Source.cs" Link="FeatureViews\StateMachineDebuggerPage\StateMachineDebuggerPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StateMachineDebuggerPage\StateMachineDebuggerPage.ViewModel.cs" Link="FeatureViews\StateMachineDebuggerPage\StateMachineDebuggerPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StateTimeline\StateTimeline.Model.cs" Link="FeatureViews\StateTimeline\StateTimeline.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Model.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\StatHeroSlide\StatHeroSlide.Source.cs" Link="FeatureViews\StatHeroSlide\StatHeroSlide.Source.cs" />
