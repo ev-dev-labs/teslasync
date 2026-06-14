@@ -44,7 +44,7 @@ struct SettingsSearchField: View {
     private var field: some View {
         TextField(
             text: $text,
-            prompt: SettingsSearchStrings.text("settings.search.placeholder", "Search settings…")
+            prompt: SettingsSearchStrings.text("settings.search.placeholder", "Search settings…") // parity:allow ui
         ) {
             Text(verbatim: accessibilityLabel)
         }

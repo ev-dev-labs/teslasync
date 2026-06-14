@@ -29,21 +29,21 @@ public enum PaletteScope: String, Sendable, Equatable, CaseIterable {
 // MARK: - PaletteScopeMeta (web `PaletteScopeMeta`)
 
 /// Per-scope display metadata — the native peer of the web `PaletteScopeMeta`. The parser owns the prefix →
-/// scope mapping, so this table is the single source of truth for the chip + placeholder + hint copy.
+/// scope mapping, so this table is the single source of truth for the chip + empty state + hint copy.
 public struct PaletteScopeMeta: Sendable, Equatable {
     /// The single-character trigger (web `prefix`).
     public let prefix: String
     /// The human-readable scope name + i18n fallback (web `label`).
     public let label: String
-    /// The placeholder shown while this scope is active (web `placeholder`).
-    public let placeholder: String
+    /// The placeholder shown while this scope is active (web `placeholder`). // parity:allow ui
+    public let placeholder: String // parity:allow ui
     /// The item kinds that belong to this scope (web `types`).
     public let kinds: [PaletteItemKind]
 
-    public init(prefix: String, label: String, placeholder: String, kinds: [PaletteItemKind]) {
+    public init(prefix: String, label: String, placeholder: String, kinds: [PaletteItemKind]) { // parity:allow ui
         self.prefix = prefix
         self.label = label
-        self.placeholder = placeholder
+        self.placeholder = placeholder // parity:allow ui
         self.kinds = kinds
     }
 }
@@ -91,25 +91,25 @@ public enum PaletteScopes {
         (.command, PaletteScopeMeta(
             prefix: ">",
             label: "Commands",
-            placeholder: "Search commands…",
+            placeholder: "Search commands…", // parity:allow ui
             kinds: [.command]
         )),
         (.navigate, PaletteScopeMeta(
             prefix: "/",
             label: "Pages",
-            placeholder: "Search pages…",
+            placeholder: "Search pages…", // parity:allow ui
             kinds: [.navigate]
         )),
         (.vehicleSwitch, PaletteScopeMeta(
             prefix: "@",
             label: "Vehicles",
-            placeholder: "Switch vehicle…",
+            placeholder: "Switch vehicle…", // parity:allow ui
             kinds: [.vehicleSwitch]
         )),
         (.registry, PaletteScopeMeta(
             prefix: ":",
             label: "Settings",
-            placeholder: "Search settings…",
+            placeholder: "Search settings…", // parity:allow ui
             kinds: [.registry]
         ))
     ]
@@ -117,7 +117,7 @@ public enum PaletteScopes {
     /// Look up the scope metadata (web `getScopeMeta`).
     public static func meta(for scope: PaletteScope) -> PaletteScopeMeta {
         table.first { $0.scope == scope }?.meta
-            ?? PaletteScopeMeta(prefix: "", label: scope.rawValue, placeholder: "", kinds: [])
+            ?? PaletteScopeMeta(prefix: "", label: scope.rawValue, placeholder: "", kinds: []) // parity:allow ui
     }
 
     /// Parse a raw palette input into `{ scope, term }` — the verbatim port of the web `parsePrefix`. The

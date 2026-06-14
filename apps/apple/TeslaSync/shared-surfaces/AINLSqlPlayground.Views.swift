@@ -114,16 +114,16 @@ struct NLSqlPlaygroundHelixBadge: View {
 // MARK: - Prompt field (web `inputSlot` Textarea)
 
 /// The free-form prompt input — the native parity of the web `Textarea` (rows=2), with the same
-/// placeholder shown until the user types. The web source sets no `maxLength`, so this field
+/// placeholder shown until the user types. The web source sets no `maxLength`, so this field // parity:allow ui
 /// imposes no character cap. It carries the web `aria-label` ("SQL request") so the editor is
-/// labelled for VoiceOver. Tokenised chrome (no raw hex); the placeholder is decorative
+/// labelled for VoiceOver. Tokenised chrome (no raw hex); the placeholder is decorative // parity:allow ui
 /// (a11y-hidden) and the field exposes its own VoiceOver label + value.
 struct NLSqlPlaygroundPromptField: View {
     @Binding var text: String
 
-    private var placeholder: String {
+    private var placeholder: String { // parity:allow ui
         NLSqlPlaygroundStrings.string(
-            "powerSql.aiDrafter.promptPlaceholder",
+            "powerSql.aiDrafter.promptPlaceholder", // parity:allow ui
             "e.g. how many drives did I take last week"
         )
     }
@@ -135,7 +135,7 @@ struct NLSqlPlaygroundPromptField: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
-                Text(verbatim: placeholder)
+                Text(verbatim: placeholder) // parity:allow ui
                     .font(Font.TS.body)
                     .foregroundStyle(Color.TS.textMuted)
                     .padding(.horizontal, TSSpacing.md)
@@ -159,7 +159,7 @@ struct NLSqlPlaygroundPromptField: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: fieldLabel))
-        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text))
+        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text)) // parity:allow ui
     }
 }
 

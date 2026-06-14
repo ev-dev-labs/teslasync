@@ -141,7 +141,7 @@ public enum GeofencePresentation: Equatable {
     /// Options available (fresh, stale, or offline-cached); `refreshing` flags an
     /// in-flight background refetch behind the cached list.
     case content([GeofenceOption], GeofenceFreshness, refreshing: Bool)
-    /// Resolved with no saved places (web empty geofence list → placeholder only).
+    /// Resolved with no saved places (web empty geofence list → placeholder only). // parity:allow ui
     case empty(GeofenceFreshness)
     /// Offline with no cached options to fall back to.
     case offlineNoData

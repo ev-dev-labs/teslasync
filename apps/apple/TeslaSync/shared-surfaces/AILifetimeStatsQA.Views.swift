@@ -117,16 +117,16 @@ struct LifetimeStatsQAHelixBadge: View {
 // MARK: - Question field (web `inputSlot` Textarea)
 
 /// The free-form question input — the native parity of the web `Textarea`, with the same
-/// placeholder shown until the user types, the 1024-char cap enforced (web
+/// placeholder shown until the user types, the 1024-char cap enforced (web // parity:allow ui
 /// `maxLength={MaxQuestionChars}`), and the "Your question" accessibility label (web
-/// `aria-label`). Tokenised chrome (no raw hex); the placeholder is decorative (a11y-hidden)
+/// `aria-label`). Tokenised chrome (no raw hex); the placeholder is decorative (a11y-hidden) // parity:allow ui
 /// and the field exposes its own VoiceOver label + value so the editor reads correctly.
 struct LifetimeStatsQAQuestionField: View {
     @Binding var text: String
 
-    private var placeholder: String {
+    private var placeholder: String { // parity:allow ui
         LifetimeStatsQAStrings.string(
-            "lifetime.aiQA.placeholder",
+            "lifetime.aiQA.placeholder", // parity:allow ui
             "e.g. How far have I driven in total? How much have I saved on fuel?"
         )
     }
@@ -138,7 +138,7 @@ struct LifetimeStatsQAQuestionField: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
-                Text(verbatim: placeholder)
+                Text(verbatim: placeholder) // parity:allow ui
                     .font(Font.TS.body)
                     .foregroundStyle(Color.TS.textMuted)
                     .padding(.horizontal, TSSpacing.md)
@@ -170,7 +170,7 @@ struct LifetimeStatsQAQuestionField: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: fieldLabel))
-        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text))
+        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text)) // parity:allow ui
     }
 }
 

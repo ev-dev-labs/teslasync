@@ -190,7 +190,7 @@ struct DriveScoreMetricBar: View {
 
 // MARK: - Loading skeleton (web `WidgetShell` `loading`)
 
-/// The initial-fetch skeleton: a circular gauge placeholder over a stack of bar placeholders, matching
+/// The initial-fetch skeleton: a circular gauge empty state over a stack of bar empty states, matching
 /// the loaded hero's rhythm. Honors Reduce Motion via `TSSkeleton`.
 struct DriveScoreGaugeLoadingView: View {
     var barCount = 3

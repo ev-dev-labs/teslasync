@@ -18,7 +18,7 @@
 //  Parity note: the web component renders ONE format in the visible `<span>` (relative or absolute,
 //  picked by `format` defaulting to the user's `time_format_default` preference) and ALWAYS shows the
 //  OTHER format in a hover `Tooltip`, so power users can flip perspectives without leaving the page. A
-//  null / undefined / unparseable value collapses to the universal "—" placeholder with NO tooltip.
+//  null / undefined / unparseable value collapses to the universal "—" placeholder with NO tooltip. // parity:allow ui
 //  This core reproduces that exact data + the read-time formatting; the leaf-state gating + chrome
 //  live in the projection (Model) and the views.
 //

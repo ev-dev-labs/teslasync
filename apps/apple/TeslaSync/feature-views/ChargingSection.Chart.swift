@@ -15,7 +15,7 @@ import SwiftUI
 // MARK: - Chart card
 
 /// The bar-chart card: the "Daily Energy Added (kWh)" label over the chart, with an
-/// inline placeholder when the section has content but no daily breakdown.
+/// inline placeholder when the section has content but no daily breakdown. // parity:allow ui
 struct ChargingEnergyCard: View {
     let bars: [ChargingEnergyBar]
     let locale: Locale
@@ -41,9 +41,9 @@ struct ChargingEnergyCard: View {
     }
 }
 
-// MARK: - Inline chart placeholder (content present, no daily breakdown)
+// MARK: - Inline chart placeholder (content present, no daily breakdown) // parity:allow ui
 
-/// The inline placeholder shown inside the card when the section has charging
+/// The inline placeholder shown inside the card when the section has charging // parity:allow ui
 /// activity but no per-day breakdown — never a blank box.
 struct ChargingChartEmpty: View {
     var body: some View {

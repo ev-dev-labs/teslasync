@@ -184,7 +184,7 @@ import XCTest
         XCTAssertEqual(RAGHelpStrings.string("helix.askHelix", "Ask Helix"), "Ask Helix")
         XCTAssertEqual(
             RAGHelpStrings.string(
-                "help.aiHelp.placeholder",
+                "help.aiHelp.placeholder", // parity:allow ui
                 "e.g. How do I enable energy cost forecasting?"
             ),
             "e.g. How do I enable energy cost forecasting?"

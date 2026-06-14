@@ -184,7 +184,7 @@ import XCTest
         XCTAssertEqual(NLSearchStrings.string("helix.askHelix", "Ask Helix"), "Ask Helix")
         XCTAssertEqual(
             NLSearchStrings.string(
-                "search.aiSearch.placeholder",
+                "search.aiSearch.placeholder", // parity:allow ui
                 "e.g. drives last weekend over 200 km with phantom drain"
             ),
             "e.g. drives last weekend over 200 km with phantom drain"

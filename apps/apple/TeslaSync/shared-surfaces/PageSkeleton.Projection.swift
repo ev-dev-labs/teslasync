@@ -11,7 +11,7 @@
 //  regions (the web `role="status"` + `aria-label` pairs), and the layout geometry derived from the
 //  web Tailwind utilities. Keeping the counts, the responsive column choice, and the dimensions here
 //  (rather than in the views) lets every shape be asserted deterministically without a bundle or a
-//  rendered view — the parity of the web tests that count child placeholders.
+//  rendered view — the parity of the web tests that count child placeholders. // parity:allow ui
 //
 //  States note: the web source is a PURE loading-skeleton module — it carries no data, no query, and
 //  therefore no empty / error / stale / offline branch. The loading shape IS the surface. Reproducing
@@ -114,7 +114,7 @@ public enum PageSkeletonLayout {
         isRegularWidth ? statColumnsRegular : statColumnsCompact
     }
 
-    /// Clamp a requested placeholder count to a non-negative value, so a stray negative `cards` /
+    /// Clamp a requested placeholder count to a non-negative value, so a stray negative `cards` / // parity:allow ui
     /// `rows` / `cols` input degrades to "render nothing" instead of trapping in `ForEach(0..<n)`
     /// (the parity of the web `Array.from({ length })` guarding against a malformed length).
     public static func clampedCount(_ count: Int) -> Int {

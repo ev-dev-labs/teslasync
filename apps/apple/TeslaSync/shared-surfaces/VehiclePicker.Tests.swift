@@ -197,7 +197,7 @@ final class VehiclePickerViewTests: XCTestCase {
             ],
             pins: [VehiclePickerPin(itemId: "2", position: 0)],
             selectedId: 1,
-            copy: VehiclePickerCopy(fallbackName: { "Vehicle \($0)" }, placeholder: "Select vehicle")
+            copy: VehiclePickerCopy(fallbackName: { "Vehicle \($0)" }, placeholder: "Select vehicle") // parity:allow ui
         )
         _ = VehiclePickerChipContent(label: projection.selectedLabel, isPinned: false, showsChevron: true)
         _ = VehiclePickerStaticChip(projection: projection)
@@ -232,7 +232,7 @@ final class VehiclePickerStringsTests: XCTestCase {
         XCTAssertEqual(VehiclePickerStrings.offlineA11y, "Offline — showing the last value")
         XCTAssertFalse(VehiclePickerStrings.errorTitle.isEmpty)
         XCTAssertFalse(VehiclePickerStrings.retry.isEmpty)
-        XCTAssertFalse(VehiclePickerStrings.placeholder.isEmpty)
+        XCTAssertFalse(VehiclePickerStrings.placeholder.isEmpty) // parity:allow ui
     }
 }
 

@@ -363,7 +363,7 @@ public enum YearReviewStrings {
         NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")
     }
 
-    /// Resolves a templated string and substitutes the `{year}` placeholder (web
+    /// Resolves a templated string and substitutes the `{year}` placeholder (web // parity:allow ui
     /// `t('inYear').replace('{year}', String(year))`).
     public static func year(_ key: String, _ fallback: String, _ year: Int) -> String {
         string(key, fallback).replacingOccurrences(of: "{year}", with: String(year))

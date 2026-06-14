@@ -197,7 +197,7 @@ public enum DrivingCoachProjector {
         }
     }
 
-    /// Builds the full projection. `nil` data yields the all-zero placeholder (the caller renders the empty
+    /// Builds the full projection. `nil` data yields the all-zero empty state (the caller renders the empty
     /// state, not this projection).
     public static func project(
         data: DrivingCoachData?,

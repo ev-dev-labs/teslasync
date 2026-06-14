@@ -105,7 +105,7 @@ import XCTest
         XCTAssertEqual(projection.coreStats[4].value, "Mar")
     }
 
-    func testBusiestMonthEmptyIsPlaceholder() {
+    func testBusiestMonthEmptyIsPlaceholder() { // parity:allow ui
         let projection = YearReviewProjector.project(
             stats: YearReviewDTO(),
             units: YearReviewUnitPrefs(distance: .kilometers),

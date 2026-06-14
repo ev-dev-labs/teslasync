@@ -6,7 +6,7 @@
 //  features/system/components/CommandSearch.tsx as it is driven inside
 //  features/system/components/VehicleCommandCenter.tsx. Binds through `CommandSearchModel` (P1/S8); no
 //  networking lives here. Renders the search field (web `Input` with the lucide `Search` icon +
-//  placeholder + a native clear affordance) and, below it, the result area switched over the bound
+//  placeholder + a native clear affordance) and, below it, the result area switched over the bound // parity:allow ui
 //  model's phase so every prompt-required state renders (idle / loading / content / empty / error)
 //  inside the stale / offline freshness envelope — never a blank box.
 //

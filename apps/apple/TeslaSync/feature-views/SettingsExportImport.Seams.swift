@@ -193,7 +193,7 @@ public enum SettingsExportImportStrings {
     }
 
     /// Resolves a printf-style interpolated string (web template literals / `{{var}}`).
-    /// Numeric placeholders use `%lld`; string placeholders use `%@`.
+    /// Numeric placeholders use `%lld`; string placeholders use `%@`. // parity:allow ui
     public static func format(_ key: String, _ fallbackFormat: String, _ arguments: [CVarArg]) -> String {
         String(format: string(key, fallbackFormat), arguments: arguments)
     }

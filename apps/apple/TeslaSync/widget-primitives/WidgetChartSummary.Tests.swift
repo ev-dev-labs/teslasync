@@ -49,11 +49,11 @@ final class WidgetChartSummaryStatTests: XCTestCase {
     }
 
     func testEquatable() {
-        let a = ChartSummaryStat(label: "A", value: "1", unit: "u")
-        let b = ChartSummaryStat(label: "A", value: "1", unit: "u")
-        let c = ChartSummaryStat(label: "A", value: "2", unit: "u")
-        XCTAssertEqual(a, b)
-        XCTAssertNotEqual(a, c)
+        let first = ChartSummaryStat(label: "A", value: "1", unit: "u")
+        let second = ChartSummaryStat(label: "A", value: "1", unit: "u")
+        let third = ChartSummaryStat(label: "A", value: "2", unit: "u")
+        XCTAssertEqual(first, second)
+        XCTAssertNotEqual(first, third)
     }
 }
 

@@ -31,7 +31,7 @@ private func utcCalendar() -> Calendar {
 private let cronReference = Date(timeIntervalSince1970: 1_767_268_800)
 
 /// English-fallback localizer (bundle-free): returns each key's web default.
-private let echoLocalize: (String, String) -> String = { _, fallback in fallback }
+private let echoLocalize: @Sendable (String, String) -> String = { _, fallback in fallback }
 
 // MARK: - Adapter: describe (parity with web describeCron)
 

@@ -121,7 +121,7 @@ import XCTest
         XCTAssertEqual(projection.stats.map(\.accent), [.cyan, .emerald, .amber, .purple])
     }
 
-    /// The interpolated cost label resolves the `{{unit}}` placeholder with the distance symbol.
+    /// The interpolated cost label resolves the `{{unit}}` placeholder with the distance symbol. // parity:allow ui
     func testCostLabelInterpolation() {
         let km = AnalyticsSummaryProjector.project(
             summary: sample,

@@ -86,7 +86,7 @@ public struct SettingsImportSectionResult: Sendable, Equatable {
 }
 
 /// The top-level import response shared by the dry-run preview and apply (web
-/// `SettingsImportResult`). Absent keys render as the em-dash placeholder in the diff list.
+/// `SettingsImportResult`). Absent keys render as the em-dash placeholder in the diff list. // parity:allow ui
 public struct SettingsImportResult: Sendable, Equatable {
     public let dryRun: Bool
     public let sections: [SettingsBundleSectionKey: SettingsImportSectionResult]

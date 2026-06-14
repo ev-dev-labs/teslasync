@@ -265,7 +265,7 @@ extension ChargingSessionDetailWidget {
                 )
                 ChargingSessionDetailLegend()
             } else {
-                chartPlaceholder
+                chartPlaceholder // parity:allow ui
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -273,7 +273,7 @@ extension ChargingSessionDetailWidget {
 
     /// The muted note shown in the chart region when the session has resolved but
     /// carries no telemetry yet (web renders an empty chart area) — never a blank box.
-    private var chartPlaceholder: some View {
+    private var chartPlaceholder: some View { // parity:allow ui
         let message = ChargingSessionDetailStrings.string(
             "widget.chargingSessionDetail.noTelemetry",
             "No charge telemetry"

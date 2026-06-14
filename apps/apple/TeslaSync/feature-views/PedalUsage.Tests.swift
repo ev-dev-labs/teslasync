@@ -91,7 +91,7 @@ import XCTest
         XCTAssertEqual(throttle?.unit, "—")
         XCTAssertFalse(throttle?.hasReading ?? true)
         XCTAssertEqual(throttle?.fraction ?? -1, 0, accuracy: 1e-9)
-        // VoiceOver speaks the localized phrase rather than the visual placeholder.
+        // VoiceOver speaks the localized phrase rather than the visual placeholder. // parity:allow ui
         XCTAssertEqual(throttle?.spokenValue, "No reading")
     }
 

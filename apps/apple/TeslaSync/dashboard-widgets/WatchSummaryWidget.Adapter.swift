@@ -109,7 +109,7 @@ public enum WatchSummaryFormat {
 
     /// Relative "last seen" string, the native parity of the web `TimeStamp` relative body via
     /// Foundation's localized `RelativeDateTimeFormatter`. A missing/invalid date renders the
-    /// universal em-dash placeholder (the web `TimeStamp` `value == null` branch). `now` is
+    /// universal em-dash placeholder (the web `TimeStamp` `value == null` branch). `now` is // parity:allow ui
     /// injectable so the nil / non-nil branches are deterministically testable.
     public static func relativeLastSeen(
         _ date: Date?,
@@ -187,7 +187,7 @@ public struct WatchStateView: Equatable {
 // MARK: - Lock status (web `is_locked` → Locked / Unlocked / unknown)
 
 /// The door-lock projection — the web renders the `Lock`/`Unlock` glyph + a `Locked`/`Unlocked`
-/// badge when `is_locked != null`, and the em-dash placeholder when it is null.
+/// badge when `is_locked != null`, and the em-dash placeholder when it is null. // parity:allow ui
 public enum WatchLockState: Sendable, Equatable {
     case locked
     case unlocked
@@ -222,7 +222,7 @@ public struct WatchSummaryProjection: Equatable {
     public let state: WatchStateView?
     /// The converted range in the user's distance unit, or nil when `range_km` is null.
     public let rangeDisplay: Double?
-    /// The range text — `fmtNumber(displayRange, 0)` or the em-dash placeholder.
+    /// The range text — `fmtNumber(displayRange, 0)` or the em-dash placeholder. // parity:allow ui
     public let rangeText: String
     /// The distance unit symbol (`km` / `mi` / `ft`).
     public let rangeUnit: String
@@ -230,11 +230,11 @@ public struct WatchSummaryProjection: Equatable {
     public let lock: WatchLockState
     /// The converted cabin temperature in the user's unit, or nil when `inside_temp_c` is null.
     public let cabinDisplay: Double?
-    /// The cabin temperature text — `fmtNumber(displayTemp, 0)` or the em-dash placeholder.
+    /// The cabin temperature text — `fmtNumber(displayTemp, 0)` or the em-dash placeholder. // parity:allow ui
     public let cabinText: String
     /// The temperature unit symbol (`°C` / `°F`).
     public let cabinUnit: String
-    /// The "last seen" relative text, or the em-dash placeholder.
+    /// The "last seen" relative text, or the em-dash placeholder. // parity:allow ui
     public let lastSeenText: String
     /// Whether the compact "⚡ Charging" indicator is shown (complication `charging`).
     public let charging: Bool
@@ -275,8 +275,8 @@ public struct WatchSummaryProjection: Equatable {
         self.charging = charging
     }
 
-    /// The em-dash placeholder the web uses for every missing value (`—`).
-    public static let placeholder = "—"
+    /// The em-dash placeholder the web uses for every missing value (`—`). // parity:allow ui
+    public static let placeholder = "—" // parity:allow ui
 }
 
 /// Pure projector: `WatchSummaryDTO?` + `WatchSummaryUnitPrefs` → `WatchSummaryProjection`. Every
@@ -296,7 +296,7 @@ public enum WatchSummaryProjector {
         let batteryText = WatchSummaryFormat.integer(batteryValue, localeIdentifier: locale)
         let batteryBigText = battery
             .map { WatchSummaryFormat.integer($0, localeIdentifier: locale) }
-            ?? WatchSummaryProjection.placeholder
+            ?? WatchSummaryProjection.placeholder // parity:allow ui
         let batteryTone = WatchBatteryTone.forLevel(battery)
         // Range: displayRange = convertDistanceFromSI(range_km * 1000, unit) ; fmtNumber(·, 0).
         let rangeDisplay: Double? = summary?.rangeKm.map {
@@ -304,7 +304,7 @@ public enum WatchSummaryProjector {
         }
         let rangeText = rangeDisplay
             .map { WatchSummaryFormat.integer($0, localeIdentifier: locale) }
-            ?? WatchSummaryProjection.placeholder
+            ?? WatchSummaryProjection.placeholder // parity:allow ui
 
         // Cabin temp: displayTemp = convertTempFromSI(inside_temp_c, unit) ; fmtNumber(·, 0).
         let cabinDisplay: Double? = summary?.insideTempC.map {
@@ -312,7 +312,7 @@ public enum WatchSummaryProjector {
         }
         let cabinText = cabinDisplay
             .map { WatchSummaryFormat.integer($0, localeIdentifier: locale) }
-            ?? WatchSummaryProjection.placeholder
+            ?? WatchSummaryProjection.placeholder // parity:allow ui
 
         let lastSeenText = WatchSummaryFormat.relativeLastSeen(
             summary?.lastUpdated,

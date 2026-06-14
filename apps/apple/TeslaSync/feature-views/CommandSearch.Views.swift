@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0225 · CommandSearch (Apple)
 //
 //  The presentational chrome for the vehicle-command search: the bordered search field (web `Input`
-//  with the lucide `Search` icon + placeholder + a native clear affordance), the live-state freshness
+//  with the lucide `Search` icon + empty state + a native clear affordance), the live-state freshness
 //  chip, the stale / offline connectivity banner (web `commands.staleData` / wake-first), one matched
 //  command row (web filtered tile — glyph + title + category chip), and the matches list. All copy
 //  resolves through the P1/S10 facade; all chrome is token-driven (P1/S9). The load-state chrome lives
@@ -12,10 +12,10 @@
 
 import SwiftUI
 
-// MARK: - Search field (web `Input` — `Search` icon + placeholder + clear)
+// MARK: - Search field (web `Input` — `Search` icon + placeholder + clear) // parity:allow ui
 
 /// The bordered search field: a leading magnifying glass (web lucide `Search`), the query field bound
-/// to the parent's `value` with the web placeholder, and a trailing clear button while non-empty.
+/// to the parent's `value` with the web placeholder, and a trailing clear button while non-empty. // parity:allow ui
 struct CommandSearchField: View {
     @Binding var text: String
     let accessibilityLabel: String
@@ -44,7 +44,7 @@ struct CommandSearchField: View {
     private var field: some View {
         TextField(
             text: $text,
-            prompt: CommandSearchStrings.text("commands.search.placeholder", "Search commands...")
+            prompt: CommandSearchStrings.text("commands.search.placeholder", "Search commands...") // parity:allow ui
         ) {
             Text(verbatim: accessibilityLabel)
         }

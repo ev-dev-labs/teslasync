@@ -281,7 +281,7 @@ import XCTest
 // MARK: - Telemetry spy
 
 /// Records the surfaces a model reports as opened. Single-threaded test use only.
-final class SpyStateTimelineTelemetry: StateTimelineTelemetry, @unchecked Sendable {
+private final class SpyStateTimelineTelemetry: StateTimelineTelemetry, @unchecked Sendable {
     private(set) var surfaces: [String] = []
 
     func viewOpened(surface: String) {

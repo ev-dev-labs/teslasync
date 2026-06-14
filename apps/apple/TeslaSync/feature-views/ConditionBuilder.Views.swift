@@ -194,7 +194,7 @@ struct CBFreshnessChip: View {
 
 // MARK: - Geofence picker (web geofence `<UiSelect>`, every source state)
 
-/// The geofence select bound to the `useGeofences` source. Renders the placeholder +
+/// The geofence select bound to the `useGeofences` source. Renders the placeholder + // parity:allow ui
 /// loaded options (web `geofenceOptions`) and, per the P4 states contract, the
 /// loading / empty / error / stale / offline chrome of the geofence query.
 struct GeofencePickerField: View {
@@ -273,10 +273,10 @@ struct GeofencePickerField: View {
     }
 
     private func pickerOptions(_ options: [GeofenceOption]) -> [TSSelectOption<String>] {
-        let placeholder = TSSelectOption(
+        let placeholder = TSSelectOption( // parity:allow ui
             "", CBView.key("automations.builder.selectGeofence", "Select geofence...")
         )
-        return [placeholder] + options.map { TSSelectOption($0.id, CBView.key($0.name)) }
+        return [placeholder] + options.map { TSSelectOption($0.id, CBView.key($0.name)) } // parity:allow ui
     }
 
     private var selectionBinding: Binding<String> {

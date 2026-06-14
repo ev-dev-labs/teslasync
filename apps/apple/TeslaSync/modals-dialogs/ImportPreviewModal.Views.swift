@@ -195,7 +195,7 @@ struct ImportPreviewPastePanel: View {
                 .overlay(alignment: .topLeading) {
                     if model.pastedJSON.isEmpty {
                         Text(verbatim: model.localize(
-                            "import.pastePlaceholder",
+                            "import.pastePlaceholder", // parity:allow ui
                             #"{"name": "My Dashboard", "widgets": [...], "layouts": {...}}"#
                         ))
                         .font(.system(.caption, design: .monospaced))
@@ -234,7 +234,7 @@ struct ImportPreviewURLPanel: View {
                     "",
                     text: $model.importURL,
                     prompt: Text(verbatim: model.localize(
-                        "import.urlPlaceholder",
+                        "import.urlPlaceholder", // parity:allow ui
                         "https://teslasync.example.com/dashboard#import=..."
                     ))
                 )

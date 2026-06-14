@@ -39,8 +39,17 @@ if [ ! -d "$SRC" ]; then
     exit 1
 fi
 
-echo "▸ Staging $SRC → $DEST"
+# Idempotent staging: the scheme runs this pre-action for BOTH the `build` and
+# `test` actions, so an unconditional `rm -rf && cp -R` re-stamps every file's
+# mtime and makes Xcode needlessly rebuild the whole app target between build and
+# test. Only re-copy when the framework actually changed, preserving mtimes
+# otherwise so `xcodebuild build test` doesn't compile the app twice.
 mkdir -p "$(dirname "$DEST")"
-rm -rf "$DEST"
-cp -R "$SRC" "$DEST"
-echo "✓ Shared.xcframework staged"
+if [ -d "$DEST" ] && diff -rq "$SRC" "$DEST" >/dev/null 2>&1; then
+    echo "✓ Shared.xcframework already staged (unchanged) — skipping copy"
+else
+    echo "▸ Staging $SRC → $DEST"
+    rm -rf "$DEST"
+    cp -R "$SRC" "$DEST"
+    echo "✓ Shared.xcframework staged"
+fi

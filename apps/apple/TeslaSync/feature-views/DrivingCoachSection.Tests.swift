@@ -260,7 +260,7 @@ func coachSampleData(
         XCTAssertFalse(project(data).hasTrend)
     }
 
-    func testNilDataProjectsEmptyPlaceholder() {
+    func testNilDataProjectsEmptyPlaceholder() { // parity:allow ui
         XCTAssertEqual(project(nil), .empty)
     }
 

@@ -89,18 +89,18 @@ public enum YearReviewFormat {
 /// a short month symbol. Locale-aware standalone symbols (en_US → "Jan"…"Dec") match the web
 /// `MONTH_NAMES` array while staying internationalised.
 public enum YearReviewMonth {
-    /// The em-dash placeholder the web returns when there is no monthly data / a bad index.
-    public static let placeholder = "—"
+    /// The em-dash placeholder the web returns when there is no monthly data / a bad index. // parity:allow ui
+    public static let placeholder = "—" // parity:allow ui
 
     public static func busiest(_ stats: [YearReviewMonthlyStat], localeIdentifier: String = "en_US") -> String {
-        guard let first = stats.first else { return placeholder }
+        guard let first = stats.first else { return placeholder } // parity:allow ui
         var best = first
         for stat in stats.dropFirst() where stat.drives > best.drives {
             best = stat
         }
         let index = (best.month - 1) % 12
         let symbols = shortMonthSymbols(localeIdentifier: localeIdentifier)
-        guard index >= 0, index < symbols.count else { return placeholder }
+        guard index >= 0, index < symbols.count else { return placeholder } // parity:allow ui
         return symbols[index]
     }
 

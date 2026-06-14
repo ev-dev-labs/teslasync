@@ -54,11 +54,11 @@ public struct CommandDTO: Sendable, Equatable, Identifiable {
 // MARK: - Injected, pre-localized copy (P1/S10) for the pure projector
 
 /// The pre-localized strings the projector needs: the search field's VoiceOver label (the web `Input`
-/// carries the placeholder `t('commands.search.placeholder', 'Search commands...')`) and the role
+/// carries the placeholder `t('commands.search.placeholder', 'Search commands...')`) and the role // parity:allow ui
 /// word spoken before each result. Injected so the projection stays Foundation-only and host-testable
 /// (the view resolves the real catalog copy through the P1/S10 facade).
 public struct CommandSearchCopy: Sendable, Equatable {
-    /// The search field's VoiceOver label (the un-elided form of the web placeholder).
+    /// The search field's VoiceOver label (the un-elided form of the web placeholder). // parity:allow ui
     public var fieldLabel: String
     /// The VoiceOver role spoken before each matched command's title (native a11y enrichment).
     public var commandRole: String

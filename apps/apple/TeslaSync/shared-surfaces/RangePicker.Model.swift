@@ -99,7 +99,7 @@ public enum RangePickerStrings {
         string("rangePicker.dayInRange", "In selected range")
     }
 
-    /// "{{count}} days" with the i18next placeholder interpolated (web `date.range.summaryDays`).
+    /// "{{count}} days" with the i18next placeholder interpolated (web `date.range.summaryDays`). // parity:allow ui
     public static func summaryDays(_ count: Int) -> String {
         string("date.range.summaryDays", "{{count}} days")
             .replacingOccurrences(of: "{{count}}", with: String(count))

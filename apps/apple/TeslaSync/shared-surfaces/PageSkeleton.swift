@@ -55,9 +55,9 @@ public struct PageHeaderSkeleton: View {
 
 // MARK: - StatGridSkeleton (web `StatGridSkeleton`)
 
-/// A responsive grid of stat-card placeholders — 2 columns in a compact width and 4 in a regular
+/// A responsive grid of stat-card placeholders — 2 columns in a compact width and 4 in a regular // parity:allow ui
 /// width (iPad / macOS), the parity of the web `grid-cols-2 md:grid-cols-4`. `cards` (default 4) sets
-/// how many placeholders render.
+/// how many placeholders render. // parity:allow ui
 public struct StatGridSkeleton: View {
     private let cards: Int
     @State private var model: PageSkeletonModel
@@ -108,7 +108,7 @@ public struct StatGridSkeleton: View {
 
 // MARK: - ChartBlockSkeleton (web `ChartBlockSkeleton`)
 
-/// A single rectangular placeholder sized to a chart container — the parity of the web full-width
+/// A single rectangular placeholder sized to a chart container — the parity of the web full-width // parity:allow ui
 /// `<Skeleton rounded-xl height={height} />`. `height` (default 320) sets the box height.
 public struct ChartBlockSkeleton: View {
     private let height: CGFloat

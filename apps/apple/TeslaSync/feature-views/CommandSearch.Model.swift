@@ -156,7 +156,7 @@ public final class CommandSearchModel {
         recompute()
     }
 
-    /// The field's VoiceOver label (the un-elided web placeholder).
+    /// The field's VoiceOver label (the un-elided web placeholder). // parity:allow ui
     public var fieldAccessibilityLabel: String {
         copy.fieldLabel
     }

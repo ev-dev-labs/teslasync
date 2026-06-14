@@ -298,8 +298,8 @@ struct RangePickerErrorView: View {
 
 // MARK: - Empty (presetsOnly with no resolvable presets)
 
-/// The friendly empty content — a labelled placeholder shown in the popover when there is nothing to pick
-/// (web renders an empty group; the native HIG calls for a labelled placeholder, never a bare box).
+/// The friendly empty content — a labelled empty state shown in the popover when there is nothing to pick
+/// (web renders an empty group; the native HIG calls for a labelled placeholder, never a bare box). // parity:allow ui
 struct RangePickerEmptyContent: View {
     var body: some View {
         TSEmptyState(

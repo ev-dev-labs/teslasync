@@ -46,8 +46,8 @@ public enum SignalCompareStrings {
         string("signalDiff.presetsLabel", "Quick presets:")
     }
 
-    public static var filterPlaceholder: String {
-        string("signalDiff.filterPlaceholder", "Filter signals…")
+    public static var filterPlaceholder: String { // parity:allow ui
+        string("signalDiff.filterPlaceholder", "Filter signals…") // parity:allow ui
     }
 
     public static var clearCategory: String {

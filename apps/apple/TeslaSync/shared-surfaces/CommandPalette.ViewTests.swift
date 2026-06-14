@@ -116,7 +116,7 @@ final class CommandPaletteViewTests: XCTestCase {
 
     func testScopeCopyResolves() {
         XCTAssertEqual(CommandPaletteStrings.scopeLabel(.command), "Commands")
-        XCTAssertEqual(CommandPaletteStrings.scopePlaceholder(.navigate), "Search pages…")
+        XCTAssertEqual(CommandPaletteStrings.scopePlaceholder(.navigate), "Search pages…") // parity:allow ui
         XCTAssertEqual(CommandPaletteStrings.scopeEmpty(.registry), "No settings available")
     }
 

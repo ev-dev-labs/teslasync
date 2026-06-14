@@ -59,7 +59,7 @@ struct WidgetCatalogueSearchField: View {
             TextField(
                 text: text,
                 prompt: Text(verbatim: WidgetCatalogueStrings.string(
-                    "dashboard.catalogue.searchPlaceholder",
+                    "dashboard.catalogue.searchPlaceholder", // parity:allow ui
                     "Search widgets by name, description, or category…"
                 ))
             ) {

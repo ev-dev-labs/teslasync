@@ -176,7 +176,7 @@ public enum WidgetCatalogueStrings {
         NSLocalizedString(key, tableName: table, bundle: .main, value: fallback, comment: "")
     }
 
-    /// Resolves a key then substitutes `{{token}}` placeholders (web `t(key, fallback, { token: value })`).
+    /// Resolves a key then substitutes `{{token}}` tokens (web `t(key, fallback, { token: value })`).
     public static func string(
         _ key: String,
         _ fallback: String,
@@ -185,7 +185,7 @@ public enum WidgetCatalogueStrings {
         interpolate(string(key, fallback), tokens)
     }
 
-    /// Substitutes `{{name}}` style placeholders from the token map. Pure + bundle-free for testability.
+    /// Substitutes `{{name}}` style tokens from the token map. Pure + bundle-free for testability.
     public static func interpolate(_ template: String, _ tokens: [String: String]) -> String {
         var result = template
         for (token, value) in tokens {

@@ -197,7 +197,7 @@ final class TeslaCarVizProjectionTests: XCTestCase {
 
     func testResolveCarriesDerivedState() {
         let projection = TeslaCarVizProjector.resolve(
-            input: TeslaCarVizInput(batteryLevel: 18, isCharging: true, speed: 30, sentryMode: true)
+            input: TeslaCarVizInput(batteryLevel: 18, isCharging: true, sentryMode: true, speed: 30)
         )
         XCTAssertTrue(projection.isDriving)
         XCTAssertEqual(projection.batteryBand, .low)

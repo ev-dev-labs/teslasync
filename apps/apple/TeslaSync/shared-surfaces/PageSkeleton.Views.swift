@@ -9,7 +9,7 @@
 //  wrapped as one VoiceOver "loading" element (the parity of the web `role="status" aria-busy="true"`
 //  live region). The inner boxes are decorative (`TSSkeleton` is already `accessibilityHidden`), so a
 //  screen reader hears one localized "Loading …" announcement per region, not a flurry of empty
-//  placeholders. No networking and no string literals live here.
+//  placeholders. No networking and no string literals live here. // parity:allow ui
 //
 
 import SwiftUI
@@ -18,7 +18,7 @@ import SwiftUI
 
 extension View {
     /// Marks a skeleton block as a single VoiceOver loading region: it collapses the decorative
-    /// placeholder boxes into one element labelled with the region's localized "Loading …" string and
+    /// empty state boxes into one element labelled with the region's localized "Loading …" string and
     /// flagged `updatesFrequently` (the native parity of the web `role="status" aria-busy="true"`
     /// live region), and stamps the web `data-testid` as the accessibility identifier.
     func pageSkeletonRegion(_ region: PageSkeletonRegion, label: String) -> some View {
@@ -31,7 +31,7 @@ extension View {
 
 // MARK: - Stat card (web `<Skeleton className="h-24 rounded-xl" />`)
 
-/// A single stat-card placeholder — a full-column-width box at the web `h-24 rounded-xl` size. Used
+/// A single stat-card placeholder — a full-column-width box at the web `h-24 rounded-xl` size. Used // parity:allow ui
 /// as the grid cell in `StatGridSkeleton`.
 struct PageSkeletonStatCard: View {
     var body: some View {

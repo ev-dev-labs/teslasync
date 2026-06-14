@@ -182,7 +182,7 @@ public enum DraftRestoreRelativeTime {
 
 /// The web i18next `{{token}}` substitution — replaces `{{name}}` (with optional surrounding spaces,
 /// `{{ name }}`) in a resolved template. Used for the "Saved {{when}}" line and the "{{count}} unsaved
-/// draft(s)" body so the native facade strings carry the same placeholders the web catalog does.
+/// draft(s)" body so the native facade strings carry the same placeholders the web catalog does. // parity:allow ui
 public enum DraftRestoreInterpolation {
     public static func substitute(_ template: String, token: String, value: String) -> String {
         var out = template
@@ -198,7 +198,7 @@ public enum DraftRestoreInterpolation {
 /// The toast's body line — the port of the web i18next count plural
 /// (`defaultValue_one` / `defaultValue_other`): one draft → "You have 1 unsaved draft from a previous
 /// session."; otherwise "…drafts…". Selects the `.one` / `.other` key by count and substitutes the
-/// `{{count}}` placeholder. Pure so both branches are asserted.
+/// `{{count}}` placeholder. Pure so both branches are asserted. // parity:allow ui
 public enum DraftRestorePromptBody {
     public static func text(count: Int, resolve: DraftRestoreResolve) -> String {
         let template = count == 1

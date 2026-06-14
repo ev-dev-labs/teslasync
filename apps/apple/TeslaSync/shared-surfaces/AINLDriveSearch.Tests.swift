@@ -183,7 +183,10 @@ import XCTest
         )
         XCTAssertEqual(NLDriveSearchStrings.string("helix.askHelix", "Ask Helix"), "Ask Helix")
         XCTAssertEqual(
-            NLDriveSearchStrings.string("drives.aiSearch.placeholder", "e.g. last Friday's trip to the coast"),
+            NLDriveSearchStrings.string(
+                "drives.aiSearch.placeholder", // parity:allow ui
+                "e.g. last Friday's trip to the coast"
+            ),
             "e.g. last Friday's trip to the coast"
         )
     }

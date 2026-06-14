@@ -119,7 +119,12 @@ struct AppearanceToggleRow: View {
             }
             .opacity(isDimmed ? 0.5 : 1)
             Spacer(minLength: TSSpacing.sm)
-            Toggle("", isOn: Binding(get: { isOn }, set: onChange))
+            // The `set:` closure is wrapped rather than passing `onChange` by name:
+            // handing a stored `@MainActor`-isolated closure straight to `Binding`'s
+            // `@isolated(any) @Sendable` setter triggers a swift-frontend 6.3.2 IRGen
+            // crash (reabstraction-thunk SmallVector overflow). Wrapping forms the
+            // closure in this @MainActor `body` context and is behavior-identical.
+            Toggle("", isOn: Binding(get: { isOn }, set: { newValue in onChange(newValue) }))
                 .labelsHidden()
                 .tint(Color.TS.accent)
                 .accessibilityValue(

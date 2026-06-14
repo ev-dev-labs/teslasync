@@ -278,7 +278,7 @@ struct TempSectionLegend: View {
 // MARK: - Loading state (web `<Skeleton>` chrome)
 
 /// The initial-fetch skeleton chrome: a row of muted stat tiles over a chart
-/// placeholder, respecting Reduce Motion (via `TSSkeleton`).
+/// placeholder, respecting Reduce Motion (via `TSSkeleton`). // parity:allow ui
 struct TempSectionLoading: View {
     private let columns = Array(
         repeating: GridItem(.flexible(), spacing: TSSpacing.md),
