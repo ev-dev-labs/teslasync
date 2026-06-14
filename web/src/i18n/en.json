@@ -1,4 +1,21 @@
 {
+  "uptimeHeatmap": {
+    "title": "Uptime — last {{days}} days",
+    "uptimeSuffix": "{{percent}} uptime",
+    "listLabel": "Daily status history",
+    "dayLabel": "{{date}}: {{status}}",
+    "aria": "Uptime — daily status heatmap",
+    "status": {
+      "healthy": "Operational",
+      "degraded": "Degraded",
+      "unhealthy": "Outage",
+      "unknown": "Unknown",
+      "maintenance": "Maintenance"
+    },
+    "emptyTitle": "No uptime data",
+    "empty": "No status history to show yet.",
+    "resourceName": "Uptime history"
+  },
   "sortControl": {
     "ascending": "Ascending",
     "descending": "Descending",
