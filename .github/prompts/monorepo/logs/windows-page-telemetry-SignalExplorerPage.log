@@ -1,0 +1,115 @@
+p2-windows/W7 — page:telemetry/SignalExplorer — native WinUI 3 SignalExplorerPage at web parity
+====================================================================================================
+Web source : web/src/features/telemetry/pages/SignalExplorerPage.tsx
+Web route  : /signal-explorer  (nav name "Signal Explorer")
+Output     : apps/windows/TeslaSync.App/feature-views/SignalExplorerPage/{SignalExplorerPage.cs,
+             SignalExplorerPage.Model.cs, SignalExplorerPage.Source.cs, SignalExplorerPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path
+              does not exist — the Windows app is TeslaSync.App with C#-markup feature-views, not
+              XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json, e.g. the sibling
+              SignalLogViewerPage and SignalsWorkspacePage.)
+
+Shape of the parity unit (apps/parity/parity-manifest.json id=page:telemetry/SignalExplorer)
+----------------------------------------------------------------------------------------------
+requiredCount=20 = 1 panel (GlassPanel1) + 4 data-states + 15 strings. 0 charts, 0 maps. Data source (1):
+useSignals (GET /signals/{vehicleId}/available). The web page composes the shared telemetry components
+(SignalSelector, SignalStatsPanel, SignalChartPanel + the SignalHistoryTable region) inside a
+PageContainer with an Explore/Live workspace; the native port reproduces the whole tree and composes the
+already-ported shared surfaces rather than re-implementing them.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011/013/014/015)
+--------------------------------------------------------------------------
+- SignalExplorerPage : UserControl — the page header (PageTitle / Subhead, the vehicle TsSelect and the
+  live-connection TsBadge), the load-failed TsAlertBanner (web anyError = signalsError ?? historicalError),
+  the no-vehicle TsEmptyState, the explore-controls TsGlassPanel (GlassPanel1 — the shared SignalSelector
+  capped at 5, the TsRangePicker time-range, the Per Page TsSelect, the Explore TsButton, the Live TsButton
+  and the live TsHelpTooltip), the pre-explore TsEmptyState, and the results region (the shared
+  SignalStatsPanel + SignalChartPanel the subtitle promises, plus the SignalHistoryTable port — TsTableSkeleton
+  / TsDataTable / no-data TsEmptyState). Thin renderer: every label/value/visibility flows from
+  SignalExplorerDisplay; PropertyChanged is marshalled onto the UI thread; tokens only (no literal colours).
+  Exposes UpdateLiveState (the P1/S4 SSE seam feeding the connection badge).
+- SignalExplorerPageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Owns the URL-equivalent
+  state (vehicle, signals, range, per-page) + the latched exploreKey and the Live toggle, reads the fleet +
+  per-vehicle available catalogue through ISignalExplorerFeed, runs the deferred Explore history fetch
+  (one GET /signals/{id}/{signal}/history per signal), and projects SignalExplorerDisplay. LoadAsync /
+  SelectVehicleAsync (wipes explored, web useEffect(()=>setExploreKey(null),[vehicleId])) / SetSelectedSignals
+  (caps at 5) / SetRange / SetPerPage / ExploreAsync / ToggleLive / UpdateLiveState; superseding CTS; no I/O in the view.
+- SignalExplorerProjection / SignalExplorerModel / SignalExplorerDisplay — pure projection (no WinUI types)
+  resolving all 15 i18n keys on every call (the conditionally-rendered Live keys are pre-resolved so a single
+  projection requests the whole manifest set), the historicalStats (min/max/avg/count) and chartData
+  (timestamp-pivoted SignalChartSample) memos, the history-table rows, and the catalog data-state flags.
+  SignalExplorerRegistration — RouteName="SignalExplorer" (matches RouteTable.cs
+  Page("SignalExplorer","signal-explorer",TelemetrySignals)), the three generated operation ids and the
+  PerPage choices. PII-safe SignalExplorerDiagnostics (view.opened only).
+- ISignalExplorerFeed / EmptySignalExplorerFeed (no-backend default the shell-registered page mounts against) /
+  SignalExplorerClientFeed (the generated-OpenAPI-client adapter, ADR-004) binding GET /vehicles,
+  GET /signals/{vehicleID}/available and GET /signals/{vehicleID}/{signalName}/history with snake_case
+  from/to/limit query (never camelCase, never a double /api/v1 prefix).
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("SignalExplorer", () => new FeatureViews.Telemetry.SignalExplorerPage()).
+
+i18n note (ADR-014)
+-------------------
+The 15 manifest keys are resolved through keyed ILocalizer.GetString(key, <web default>) flowing through
+ShellLocalizer -> shell Localization (resw lookup -> English fallback), exactly as the web resolves the inline
+t(key, default) fallbacks. Zero hardcoded literals; the auto-generated resw is left untouched.
+
+=== PARITY ===
+PARITY_REQUIRED=20
+# panels (1) — Display field (SignalExplorerPage.Model.cs) -> rendered control (SignalExplorerPage.cs)
+[x] panel - GlassPanel1            -> Display.ShowControls -> _controlsPanel (TsGlassPanel, BuildControlsPanel)
+# data states (4) — projection flag (Model.cs) + headless test (SignalExplorerPageTests.cs)
+[x] state - loading -> Display.ShowLoading (SignalExplorerState.Loading)  :: Projection_loading_is_the_loading_state
+[x] state - empty   -> Display.ShowNoVehicle (State.Empty)                 :: Projection_no_vehicle_is_the_empty_state
+[x] state - error   -> Display.HasError (State.Error)                      :: Projection_error_is_the_error_state_with_the_load_failed_banner
+[x] state - success -> Display.ShowControls (State.Success)                :: Projection_with_vehicle_shows_controls_and_pre_explore_empty
+# strings (15) — SignalExplorerProjection.Project resolves localizer.GetString("<key>", "<web default>");
+#   coverage asserted by Projection_resolves_every_required_string_key_in_one_pass (RecordingLocalizer)
+[x] string - Signal Explorer                                                                                 -> Display.Title
+[x] string - Visualise signal history with chart and stats — or stream live                                  -> Display.Subtitle
+[x] string - error.loadFailed                                                                                -> Display.ErrorBannerText
+[x] string - signalExplorer.noVehicle                                                                        -> Display.NoVehicleTitle
+[x] string - signalExplorer.noVehicleDesc                                                                     -> Display.NoVehicleMessage
+[x] string - Time Range                                                                                      -> Display.TimeRangeLabel
+[x] string - Per Page                                                                                        -> Display.PerPageLabel
+[x] string - Explore                                                                                          -> Display.ExploreLabel
+[x] string - signalExplorer.live                                                                             -> Display.LiveLabel / LiveButtonText
+[x] string - signalExplorer.stopLive                                                                         -> Display.StopLiveLabel
+[x] string - help.signal.live.aria                                                                           -> Display.HelpLiveAria
+[x] string - liveMonitor.connected                                                                           -> Display.LiveBadgeText (connected)
+[x] string - liveMonitor.disconnected                                                                        -> Display.LiveBadgeText (disconnected)
+[x] string - Pick signals and click Explore                                                                  -> Display.PreExploreEmptyTitle
+[x] string - Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time. -> Display.PreExploreEmptyMessage
+PARITY_COVERED=20
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/SignalExplorerPageTests.cs
+# (45 cases): the 15-key one-pass coverage, the four data states, the GlassPanel1 controls + pre-explore /
+# results branches, the Live toggle + connection-badge + help-aria, the historicalStats / chartData memos,
+# the deferred-Explore history table, the view-model load/select/explore/live/per-page flows, the
+# generated-client request shaping (vehicles/available/history), the registration and the diagnostics. All pass.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SignalExplorerPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing Core analyzer warnings)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30592, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=20
+PARITY_REQUIRED=20
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SignalExplorerPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SignalExplorerPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-telemetry-SignalExplorerPage.log
+# git commit -m "feat(apps/windows): SignalExplorerPage at web parity (W7 telemetry)"
+
+EXIT=0
+STATUS=DONE
