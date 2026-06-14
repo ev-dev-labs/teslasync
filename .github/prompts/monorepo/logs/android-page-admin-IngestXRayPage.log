@@ -1,0 +1,90 @@
+================================================================================
+P3-ANDROID A7 — page:admin/IngestXRay  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/IngestXRayPage.tsx
+promptId: p3-android/pages/admin/IngestXRayPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPage.kt           (@Composable screen: IngestXRayPage + IngestXRayPageContent)
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPageViewModel.kt  (Hilt-free AndroidX ViewModel; StateFlow<UiState>; load()/refresh())
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPageSource.kt     (S8 data seam over VehiclesStore + IngestXRayStore)
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPageModel.kt      (framework-free model: enum reconciliation, response fan-out, UiState.deriveData)
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPageIcons.kt      (Activity glyph for the Field-statistics header)
+apps/android/app/src/main/kotlin/com/teslasync/admin/IngestXRayPageHost.kt       (PageHosts.register(adminIngestXray){ IngestXRayRoute() })
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt        (NavHost wiring: + ingestXRayStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt      (NavHost wiring: + IngestXRayPageHost.register())
+apps/parity/android-ledger.json                                                  (ledger row page:admin/IngestXRay)
+.github/prompts/monorepo/logs/android-page-admin-IngestXRayPage.log              (this log)
+
+Strings: all 5 page keys already present in res/values/strings.xml (+ values-ar / values-he); no catalog edit needed.
+Nav    : Destinations 'adminIngestXray' -> /admin/ingest-xray pre-existing (count unchanged: 137);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL (lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=12
+--------------------------------------------------------------------------------
+# panels (4) — each a Material 3 GlassPanel (Surface) ; bound state holder = IngestXRayPageViewModel
+[COVERED] panel  GlassPanel1   -> IngestXRayPage.kt:158 IngestXRayPageContent() GlassPanel(PanelPadding.Md){ XRayControls(...) }  (web <GlassPanel><XRayControls/>)
+[COVERED] panel  GlassPanel2   -> IngestXRayPage.kt:175 IngestXRayPageContent() GlassPanel(PanelPadding.Md){ EmptyState(...) }   (web vehicleId===null no-vehicle panel)
+[COVERED] panel  GlassPanel3   -> IngestXRayPage.kt:194 XRayBucketChart(state=...) -> XRayBucketChart.kt ChartContainer -> ChartContainer.kt:76 GlassPanel  (web <GlassPanel><XRayBucketChart/>)
+[COVERED] panel  GlassPanel4   -> IngestXRayPage.kt:207 XRayFieldsTable(state=...) -> XRayFieldsTable.kt:157 GlassPanel(PanelPadding.Md)  (web <GlassPanel><XRayFieldsTable/>)
+# (+ web XRayHeader StatCards strip reproduced: IngestXRayPage.kt:185 XRayHeader(state=...) — the bare <Grid> of three <StatCard>)
+
+# data states (3 required) — bound to IngestXRayPageViewModel.xrayState/vehiclesState : StateFlow<UiState<...>>
+[COVERED] state  loading       -> IngestXRayPageViewModel.kt asUiState -> UiState.loading(); IngestXRayPageModel.deriveData preserves UiPhase.Loading; sub-views render loading (XRayHeader skeleton / ChartStatus.Loading / fields "Loading…")
+[COVERED] state  empty         -> IngestXRayPage.kt:175 EmptyState (no-vehicle) + per-slice deriveData isEmpty (IngestXRayPage.kt:186/195/208) -> UiPhase.Empty (IngestXRayPageModel.isEmptyXRay)
+[COVERED] state  success       -> IngestXRayPage.kt:186/195/208 deriveData -> UiPhase.Content; sub-views render content (StatCard triad / BarChartWrapper / DataTable)
+# (+ error state additionally implemented: deriveData preserves UiPhase.Error / stale+offline; each sub-view renders ErrorDisplay+Retry — IngestXRayPageViewModel.retry/refreshVehicles)
+
+# strings (5) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string admin.xray.noVehicle.message -> IngestXRayPage.kt:178 EmptyState(message=translation_admin_xray_noVehicle_message)
+[COVERED] string admin.xray.noVehicle.title   -> IngestXRayPage.kt:177 EmptyState(title=translation_admin_xray_noVehicle_title)
+[COVERED] string admin.xray.pageTitle         -> IngestXRayPage.kt:221 IngestXRayHeader() PageTitle(translation_admin_xray_pageTitle)
+[COVERED] string admin.xray.panels.fields     -> IngestXRayPage.kt:242 FieldStatisticsTitle() PanelTitle(translation_admin_xray_panels_fields)
+[COVERED] string admin.xray.subtitle          -> IngestXRayPage.kt:223 IngestXRayHeader() BodyText(translation_admin_xray_subtitle)
+
+PARITY_COVERED=12
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : IngestXRayPageViewModel binds shared S8 VehiclesStore.vehicles() (web useVehicles) + IngestXRayStore.xray(id,window,bucket) (web useIngestXRay)
+               via ingestXRaySourceOf(); Vehicle->XRayVehicle + IngestXRayResponse->{summary,buckets,fields} fan-out in IngestXRayPageModel; no HTTP in the view.
+si/units     : X-Ray payload carries no unit-bearing fields (signal names, integer counts, ISO timestamps, value_kind enum) — round-trips verbatim, no SI conversion.
+a11y/theme   : sub-views supply Modifier.semantics content descriptions, >=48dp targets, dynamic-color + dark theme via MaterialTheme (A2 tokens); Compose-native (no webview).
+nav          : Destinations 'adminIngestXray' -> /admin/ingest-xray (pre-existing) wired to IngestXRayRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(12) == PARITY_REQUIRED(12)
+[PASS] all android triad gates green; parity 12/12; android ledger row page:admin/IngestXRay status=done.
+EXIT=0
+STATUS=DONE
