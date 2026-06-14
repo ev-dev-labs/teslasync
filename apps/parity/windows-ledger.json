@@ -189,6 +189,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-SettingsPage.log"
   },
   {
+    "unitId": "page:system/DataRepair",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 53,
+    "requiredCount": 53,
+    "promptId": "p2-windows/W7/windows-page-system-DataRepairPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-DataRepairPage.log"
+  },
+  {
     "unitId": "page:system/Help",
     "platform": "windows",
     "status": "done",

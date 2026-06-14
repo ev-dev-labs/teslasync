@@ -1,0 +1,132 @@
+=== p2-windows · W7 · page:system/DataRepair (WinUI 3 / Fluent) ===
+Parity unit : page:system/DataRepair   kind=page   web route=/data-repair
+Web source  : web/src/features/system/pages/DataRepairPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300), maui-windows workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs + <Name>.Projection.cs (pure,
+  Microsoft.UI-free projection, unit-tested headlessly), <Name>.Source.cs (generated-client feed, ADR-004),
+  <Name>.ViewModel.cs (INotifyPropertyChanged + IDisposable observable state holder) and <Name>.cs (the Fluent
+  view). The generated prompt's idealized "DataRepairPage.xaml + DataRepairPageViewModel.cs under
+  TeslaSync/Features/System" is mapped onto these real conventions (same mapping as every shipped W7 page, e.g.
+  DataExportPage); the surface registers itself with the W4 ShellPageFactory by route name ("DataRepair").
+- Namespace: the page lives in TeslaSync.App.FeatureViews.SystemOps (NOT ".System" — a ".System" leaf shadows the
+  global System namespace). RouteTable already maps Page("DataRepair","data-repair",RouteGroup.SystemOps,
+  "Data Repair","\uE90F"), so the registered route name is exact.
+- Data sources bound to the generated C# client (ADR-004) through DataRepairClientFeed in DataRepairPage.Source.cs.
+  The manifest classes this page as "local state", but the web page does fetch + mutate, so the feed binds the seven
+  generated operations verified in apps/windows/Generated/Api/ApiEndpoints.cs:
+    useQuery(['stale-sessions']) -> GET    /data-repair/stale-sessions       (get_api_v1_data_repair_stale_sessions)
+    charging updateMut           -> PUT    /data-repair/charging/{id}         (put_api_v1_data_repair_charging_id)
+    charging closeMut            -> POST   /data-repair/charging/{id}/close   (post_api_v1_data_repair_charging_id_close)
+    charging discardMut          -> DELETE /data-repair/charging/{id}         (delete_api_v1_data_repair_charging_id)
+    drive updateMut              -> PUT    /data-repair/drive/{id}            (put_api_v1_data_repair_drive_id)
+    drive closeMut               -> POST   /data-repair/drive/{id}/close      (post_api_v1_data_repair_drive_id_close)
+    drive discardMut             -> DELETE /data-repair/drive/{id}            (delete_api_v1_data_repair_drive_id)
+  The default EmptyDataRepairFeed resolves the empty state (the shell uses the parameterless ctor); the view-model is
+  exercised in tests with a FakeDataRepairFeed driving the loading/empty/error/success matrix and the six mutations.
+- The opt-in AI repair suggestions panel (web AIDataRepairSuggestions, withAiFeature) is a SEPARATE parity unit and is
+  intentionally out of scope here (it is not among the 8 manifest panels); the deterministic stale-session list + per-row
+  edit forms are the canonical baseline reproduced natively.
+- SI: the page carries no display-boundary unit conversion — the web admin tool shows raw stored values and labels them
+  verbatim ("Distance (m)"/"Duration (s)"/"Max Speed (m/s)" are SI; "Energy Added (kWh)"/"Charger Power (kW)"/
+  "Duration (min)" are the web's literal field labels), so the native port matches them 1:1 (DataRepairProjection /
+  DataRepairRegistration.NumberField/Percent). Battery % and counts flow through invariant formatting; "hours open" and
+  the row timestamp are ported from the web hoursOpen/formatDateTime helpers.
+- Strings: every visible literal resolves through ILocalizer with the exact web t() key + English fallback
+  (DataRepairStrings.Resolve), the established windows convention; the page renders correct English via key-fallback.
+
+=== PARITY ===
+PARITY_REQUIRED=53
+
+# Panels (8) — every named tile + every GlassPanel region from the web source
+[x] panel  - GlassPanel1   -> DataRepairPage.cs#BuildChargingForm + BuildFormPanel (TsGlassPanel, web ChargingEditForm); Projection RepairRowDisplay.ChargingForm (ChargingFormDisplay); test Expanded_charging_row_carries_the_prefilled_form
+[x] panel  - GlassPanel2   -> DataRepairPage.cs#BuildDriveForm + BuildFormPanel (TsGlassPanel, web DriveEditForm); Projection RepairRowDisplay.DriveForm (DriveFormDisplay); test Expanded_drive_row_carries_the_prefilled_form
+[x] panel  - Total-Stale   -> DataRepairPage.cs#_totalStale (TsMetricCard, amber rail); Projection DataRepairDisplay.TotalStale (MetricDisplay, charging+drives count); test Stat_tiles_count_each_bucket_and_flag_needs_repair
+[x] panel  - Stale-Charging-> DataRepairPage.cs#_staleCharging (TsMetricCard, cyan rail); Projection DataRepairDisplay.StaleCharging (charging.Count); test Stat_tiles_count_each_bucket_and_flag_needs_repair
+[x] panel  - Stale-Drives  -> DataRepairPage.cs#_staleDrives (TsMetricCard, purple rail); Projection DataRepairDisplay.StaleDrives (drives.Count); test Stat_tiles_count_each_bucket_and_flag_needs_repair
+[x] panel  - Status        -> DataRepairPage.cs#_statusCard (TsMetricCard, green/red rail); Projection DataRepairDisplay.StatusCard (Clean | Needs Repair); test Status_tile_is_clean_when_no_stale_records
+[x] panel  - GlassPanel7   -> DataRepairPage.cs#BuildRow/BuildRowHeader charging branch (TsGlassPanel clickable header); Projection DataRepairProjection.BuildChargingRows -> RepairRowDisplay; test Charging_row_header_is_formatted
+[x] panel  - GlassPanel8   -> DataRepairPage.cs#BuildRow/BuildRowHeader drive branch (TsGlassPanel clickable header); Projection DataRepairProjection.BuildDriveRows -> RepairRowDisplay; test Drive_row_battery_shows_dash_when_absent
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading       -> DataRepairState.Loading + DataRepairDisplay.ShowLoading; rendered _loadingHost (TsSpinner + caption); test State_loading_on_first_paint
+[x] state  - empty         -> DataRepairState.Empty + ShowEmpty; rendered _emptyState (TsEmptyState, ContentUnavailableView-equivalent, "All sessions are complete"); test State_empty_when_resolved_with_no_records_in_tab
+[x] state  - error         -> DataRepairState.Error + ShowError + ErrorText; rendered _errorState (TsErrorDisplay, InfoBar-equivalent + Retry via RefreshAsync); test State_error_when_query_failed
+[x] state  - success       -> DataRepairState.Success + ShowSuccess + Rows; rendered _rowsHost (RepairRowDisplay list); test State_success_when_records_present
+
+# Strings (41) — every visible literal resolves from Strings/*.resw via ILocalizer with the exact web key names
+[x] string - All sessions are complete         -> DataRepairStrings.Resolve GetString("All sessions are complete",…) (empty-state title)
+[x] string - Cancel                            -> DataRepairStrings.Resolve GetString("Cancel",…) (edit-form cancel button)
+[x] string - Charger Power (kW)                -> DataRepairStrings.Resolve GetString("Charger Power (kW)",…) (charging form field)
+[x] string - Charging Sessions                 -> DataRepairStrings.Resolve GetString("Charging Sessions",…) (charging tab label)
+[x] string - Clean                             -> DataRepairStrings.Resolve GetString("Clean",…) (Status tile value, no stale)
+[x] string - Close Drive                       -> DataRepairStrings.Resolve GetString("Close Drive",…) (drive form close button)
+[x] string - Close Session                     -> DataRepairStrings.Resolve GetString("Close Session",…) (charging form close button)
+[x] string - Cost ($)                          -> DataRepairStrings.Resolve GetString("Cost ($)",…) (charging form field)
+[x] string - Data Repair                       -> DataRepairStrings.Resolve GetString("Data Repair",…) (page title; DataRepairRegistration.Title)
+[x] string - Discard                           -> DataRepairStrings.Resolve GetString("Discard",…) (edit-form discard button)
+[x] string - Distance (m)                      -> DataRepairStrings.Resolve GetString("Distance (m)",…) (drive form field)
+[x] string - Drive closed                      -> DataRepairStrings.Resolve GetString("Drive closed",…) (drive close success toast; ViewModel.CloseDriveAsync)
+[x] string - Drive discarded                   -> DataRepairStrings.Resolve GetString("Drive discarded",…) (drive discard success toast); test ViewModel_discard_drive_calls_feed_and_toasts
+[x] string - Drive updated                     -> DataRepairStrings.Resolve GetString("Drive updated",…) (drive update success toast)
+[x] string - Drives                            -> DataRepairStrings.Resolve GetString("Drives",…) (drives tab label)
+[x] string - Duration (min)                    -> DataRepairStrings.Resolve GetString("Duration (min)",…) (charging form field)
+[x] string - Duration (s)                      -> DataRepairStrings.Resolve GetString("Duration (s)",…) (drive form field)
+[x] string - End Battery %                     -> DataRepairStrings.Resolve GetString("End Battery %",…) (both edit forms field)
+[x] string - End Date (ISO)                    -> DataRepairStrings.Resolve GetString("End Date (ISO)",…) (both edit forms field)
+[x] string - Energy Added (kWh)                -> DataRepairStrings.Resolve GetString("Energy Added (kWh)",…) (charging form field)
+[x] string - Failed to close drive             -> DataRepairStrings.Resolve GetString("Failed to close drive",…) (drive close error toast)
+[x] string - Failed to close session           -> DataRepairStrings.Resolve GetString("Failed to close session",…) (charging close error toast); test ViewModel_mutation_failure_raises_error_toast_and_keeps_row
+[x] string - Failed to discard drive           -> DataRepairStrings.Resolve GetString("Failed to discard drive",…) (drive discard error toast)
+[x] string - Failed to discard session         -> DataRepairStrings.Resolve GetString("Failed to discard session",…) (charging discard error toast)
+[x] string - Failed to update drive            -> DataRepairStrings.Resolve GetString("Failed to update drive",…) (drive update error toast)
+[x] string - Failed to update session          -> DataRepairStrings.Resolve GetString("Failed to update session",…) (charging update error toast)
+[x] string - Fix incomplete or stale sessions  -> DataRepairStrings.Resolve GetString("Fix incomplete or stale sessions",…) (subtitle when none stale); test Subtitle_pluralizes_like_web
+[x] string - Max Speed (m/s)                    -> DataRepairStrings.Resolve GetString("Max Speed (m/s)",…) (drive form field)
+[x] string - Needs Repair                      -> DataRepairStrings.Resolve GetString("Needs Repair",…) (Status tile value, stale present); test Stat_tiles_count_each_bucket_and_flag_needs_repair
+[x] string - Open                              -> DataRepairStrings.Resolve GetString("Open",…) (row open badge; DataRepairDisplay.OpenLabel)
+[x] string - Save                              -> DataRepairStrings.Resolve GetString("Save",…) (edit-form save button)
+[x] string - Session closed                    -> DataRepairStrings.Resolve GetString("Session closed",…) (charging close success toast)
+[x] string - Session discarded                 -> DataRepairStrings.Resolve GetString("Session discarded",…) (charging discard success toast)
+[x] string - Session updated                   -> DataRepairStrings.Resolve GetString("Session updated",…) (charging update success toast); test ViewModel_update_charging_sends_only_edited_fields_and_reloads
+[x] string - Stale Charging                    -> DataRepairStrings.Resolve GetString("Stale Charging",…) (stat tile label)
+[x] string - Stale Drives                      -> DataRepairStrings.Resolve GetString("Stale Drives",…) (stat tile label)
+[x] string - Status                            -> DataRepairStrings.Resolve GetString("Status",…) (Status stat tile label)
+[x] string - Total Stale                       -> DataRepairStrings.Resolve GetString("Total Stale",…) (stat tile label)
+[x] string - Vehicle                           -> DataRepairStrings.Resolve GetString("Vehicle",…) (row vehicle label; RepairRowDisplay.VehicleLabel)
+[x] string - found                             -> DataRepairStrings.Resolve GetString("found",…) (subtitle suffix when stale present)
+[x] string - incomplete session                -> DataRepairStrings.Resolve GetString("incomplete session",…) (subtitle noun, +'s' when count!=1); test Subtitle_pluralizes_like_web
+
+PARITY_COVERED=53
+# Coverage asserted headlessly in TeslaSync.App.Tests/FeatureViews/DataRepairPageTests.cs (32 tests):
+# Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) records all 41 keys through a
+# RecordingLocalizer; the four state tests + stat-tile/subtitle/tab/row/form/registration/parser/view-model tests
+# assert each panel + state renders from the bound DataRepairDisplay state holder.
+
+=== GATE ===
+# pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DataRepairPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30829, Failed: 0, Skipped: 0 (incl. 32 new)
+TEST_EXIT=0
+PARITY_COVERED=53
+PARITY_REQUIRED=53
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DataRepairPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DataRepairPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-DataRepairPage.log
+# git commit -m "feat(apps/windows): DataRepairPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
