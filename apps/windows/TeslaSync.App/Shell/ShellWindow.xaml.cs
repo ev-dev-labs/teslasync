@@ -379,6 +379,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
         // Driving / Regen Efficiency page (P2/W7) — parity port of web RegenEfficiencyPage at route /regen-efficiency.
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
+        // Driving / Driving Dynamics page (P2/W7) — parity port of web DrivingDynamicsPage at route /driving-dynamics.
+        // RouteTable already maps Page("DrivingDynamics","driving-dynamics",TripsDriving). The default-feed ctor renders
+        // the loading/empty surfaces until a DI host supplies the generated-client source via DrivingDynamicsPage.Create.
+        _viewModel.PageFactory.Register("DrivingDynamics", static () => new FeatureViews.Driving.DrivingDynamicsPage());
         // Analytics / Mileage page (P2/W7) — parity port of web MileagePage at route /mileage.
         _viewModel.PageFactory.Register("Mileage", static () => new FeatureViews.Analytics.MileagePage());
         // Vehicle Systems / Media Player page (P2/W7) — parity port of web MediaPlayerPage at route /media-player.

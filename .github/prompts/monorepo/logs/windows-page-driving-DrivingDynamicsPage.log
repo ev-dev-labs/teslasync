@@ -1,0 +1,132 @@
+P2-WINDOWS W7 — page:driving/DrivingDynamics — WinUI 3 / Fluent parity port
+==========================================================================
+Web source : web/src/features/driving/pages/DrivingDynamicsPage.tsx (route /driving-dynamics)
+             + its 11 children under web/src/features/driving/components/driving-dynamics/
+             (LiveMotorStatus, GForcePanel, PedalUsage, SpeedGearPanel, AutopilotSection,
+              MotorHistoryCharts, MotorEfficiencyInsights, SummaryStats, DrivingCoachSection,
+              DriveAnalyticsSection, DrivingTips) + helpers.ts (computeMotorStats/getThrottleStyle).
+Output     : apps/windows/TeslaSync.App/feature-views/DrivingDynamicsPage/
+             (repo convention = C#-markup feature-views, NOT Features/*.xaml; see sibling done pages
+              RegenEfficiencyPage / BatteryHealthPage / TripPlannerPage. The generated prompt's path
+              apps/windows/TeslaSync/Features/Driving/DrivingDynamicsPage.xaml does not exist in-repo;
+              there is no XAML-page project — every done page is a split C#-markup feature-view.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register("DrivingDynamics", static () => new FeatureViews.Driving.DrivingDynamicsPage())
+             (RouteTable.cs already maps Page("DrivingDynamics","driving-dynamics",TripsDriving,…) — no route added)
+Strings    : every visible literal is sourced by key through ILocalizer.GetString(key, fallback). The platform
+             catalog apps/windows/Strings/{en,he,ar}/Resources.resw carries ZERO page-level keys for EVERY one of
+             the 25 done W7 pages (verified: tripPlanner.*, settings.*, help.*, battery.*, onboarding.* and even
+             common.retry/common.loading all return 0 matches) — the established, accepted convention is the
+             ILocalizer English-fallback path, NOT per-page resw edits. This page follows that precedent verbatim;
+             the two manifest keys (dynamics.title, dynamics.subtitle) and all section keys keep the web key names.
+
+Architecture decision (inline page, not surface composition):
+  The shell registers pages via a parameterless ctor and does NOT inject the data layer (IApiClient /
+  CacheThenNetworkEngine / IWidgetVehicleSource) into pages — confirmed in ShellWindow.xaml.cs. Every done page
+  (RegenEfficiencyPage, BatteryHealthPage, …) is therefore a SELF-CONTAINED inline renderer over its own feed
+  (Empty default + a .Create(IApiClient, vehicleId, …) DI-host entry), fully unit-testable via a mock feed. Pages
+  and surfaces are independent parity units (RegenEfficiencyWidget and RegenEfficiencyPage both exist, each with a
+  full implementation). This page reproduces all 11 web regions inline in that same convention rather than composing
+  the pre-built FeatureViews.Driving surfaces (which would require data-layer wiring the page does not receive).
+
+Files:
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.Model.cs       (7 tolerant JSON parsers: MotorReading,
+      DriveRow, DriveDynamicsReading, AutopilotReading, CoachData, MotorStats(computeMotorStats) + snapshot + feed + EmptyFeed + state enum)
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.Display.cs     (all 11 region display records + DrivingDynamicsDisplay + DrivingDynamicsModel)
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.Projection.cs  (pure projection of all 11 regions + Registration + Diagnostics)
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.Source.cs      (DrivingDynamicsClientFeed — generated C# client, 7 reads)
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.ViewModel.cs   (INotifyPropertyChanged holder, loading/error/success + freshness + date range)
+  feature-views/DrivingDynamicsPage/DrivingDynamicsPage.cs             (WinUI 3 UserControl, Fluent + design tokens, all 11 regions)
+  TeslaSync.App.Tests/FeatureViews/DrivingDynamicsPageTests.cs         (37 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                       (link the 5 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client, web hook names kept at the C# call sites):
+  useMotorLatest          -> ApiRequest("get_api_v1_motor_latest", Query{vehicle_id})            — PRIMARY (gates loading→success, web motorLoading)
+  useMotorHistory         -> ApiRequest("get_api_v1_motor", Query{vehicle_id, limit})            — best-effort
+  useDrives               -> ApiRequest("get_api_v1_drives", Query{vehicle_id})                  — best-effort
+  useDrivingCoach         -> ApiRequest("get_api_v1_analytics_driving_coach", Query{vehicle_id}) — best-effort
+  useDriveDynamicsLatest  -> ApiRequest("get_api_v1_drive_dynamics_latest", Query{vehicle_id})   — GForce + Pedal children (best-effort)
+  useVehicleState         -> ApiRequest("get_api_v1_vehicles_vehicleID_state", Path{vehicleID})  — Autopilot child (best-effort)
+  useSignalObservations   -> ApiRequest("get_api_v1_signals_observations", Query{vehicle_id, field, limit}) — Autopilot cruise/follow (best-effort)
+  Failure semantics: the primary motor read propagates ApiException (page error surface); every other read is
+  independently fault-tolerant (BestEffortAsync) — mirroring the web's separate React-Query hooks.
+Units (P1/S5): SI read from the API; converted only at the display boundary in DrivingDynamicsProjection via
+  UnitFormatters.FormatTemperature/FormatSpeed/FormatDistance + UnitConverters.SpeedFromSi/TemperatureFromSi +
+  ScalarFormatters (power_kw/regen_kw/torque/RPM are rendered verbatim with their unit suffix, exactly as web).
+Live data: the web children use polling React-Query (refetchInterval), not useLiveX/SSE; the page VM exposes a
+  TsDataFreshness chip (UpdatedAt/IsFetching/IsError). No SSE subscription required (ADR-013 staleness n/a here).
+
+=== PARITY ===
+PARITY_REQUIRED=5
+
+[1/5]  state  loading
+       DrivingDynamicsState.Loading (Model.cs) ; DrivingDynamicsProjection.Project state logic
+       (model.Loading && !snapshot.Loaded) ; DrivingDynamicsDisplay.ShowLoading ;
+       DrivingDynamicsPage.cs::Render → _loadingSkeleton (TsSkeleton grid) visibility ; ViewModel _loading flag.
+       evidence-test: State_loading_when_query_in_flight, Projection_resolves_the_manifest_string_keys_in_the_loading_state
+[2/5]  state  error
+       DrivingDynamicsState.Error ; DrivingDynamicsProjection.Project (model.ErrorDetail is not null) ;
+       DrivingDynamicsDisplay.ShowError + ErrorText ; DrivingDynamicsPage.cs::_errorState (TsQueryError + Retry,
+       ActionInvoked → RefreshAsync) ; ViewModel.SetError / IsError.
+       evidence-test: State_error_when_primary_query_failed, ViewModel_feed_failure_is_the_error_state, ClientFeed_propagates_a_failed_primary_read
+[3/5]  state  success
+       DrivingDynamicsState.Success ; DrivingDynamicsDisplay.ShowContent ; DrivingDynamicsPage.cs::BuildContent
+       renders the 11 web regions (each with its own empty state) from the bound display.
+       evidence-test: State_success_when_loaded, ViewModel_loads_into_the_success_state, Empty_snapshot_resolves_to_success_with_empty_sections
+[4/5]  string dynamics.subtitle
+       DrivingDynamicsProjection.Project subtitle = localizer.GetString("dynamics.subtitle",
+       "Live motor telemetry, G-forces & driving analysis") ; DrivingDynamicsPage.cs::_subtitle (Subhead).
+       evidence-test: Projection_resolves_the_manifest_string_keys_in_success, Title_and_subtitle_use_the_web_defaults
+[5/5]  string dynamics.title
+       DrivingDynamicsProjection.Project title + DrivingDynamicsRegistration.Title =
+       localizer.GetString("dynamics.title", "Driving Dynamics") ; DrivingDynamicsPage.cs::_title (PageTitle).
+       evidence-test: Projection_resolves_the_manifest_string_keys_in_success, Title_and_subtitle_use_the_web_defaults, Registration_exposes_route_and_operations
+
+# Every web region reproduced (beyond the 5 formal parity items — acceptance "reproduce every region"):
+#  1 LiveMotorStatus      Projection.BuildLiveMotor  -> Page.BuildLiveMotor (3 TsRadialGauge + shift TsBadge, empty state)  [LiveMotor_projects_three_gauges_and_the_shift_chip]
+#  2 GForcePanel          Projection.BuildGForce     -> Page.BuildGForce (3 TsStatCard, empty state)                       [GForce_combines_lateral_and_longitudinal]
+#  3 PedalUsage           Projection.BuildPedal      -> Page.BuildPedal (throttle/brake gauges + brake TsBadge, empty)     [Empty_snapshot_resolves_to_success_with_empty_sections]
+#  4 SpeedGearPanel       Projection.BuildSpeedGear  -> Page.BuildSpeedGear (shift + power + avg/top speed tiles)          [SpeedGear_converts_drive_speeds_at_the_display_boundary]
+#  5 AutopilotSection     Projection.BuildAutopilot  -> Page.BuildAutopilot (3 TsStatCard, follow-distance parse, empty)   [Autopilot_parses_follow_distance_and_current_speed]
+#  6 MotorHistoryCharts   Projection.BuildMotorCharts-> Page.BuildMotorCharts (3 TsChartContainer: area/line/line)        [MotorCharts_project_three_cards_with_series]
+#  7 MotorEfficiencyInsights Projection.BuildEfficiency -> Page.BuildEfficiency (3 glass panels + TsMetricBar + badges)    [Empty_snapshot_resolves_to_success_with_empty_sections]
+#  8 SummaryStats         Projection.BuildSummary    -> Page.BuildSummary (6 TsStatCard)                                   [Summary_projects_six_stat_cards]
+#  9 DrivingCoachSection  Projection.BuildCoach      -> Page.BuildCoach (gauge + style bar + weekly TsLineChart + patterns + recs + TsDataTable) [Coach_projects_gauge_style_patterns_and_table]
+# 10 DriveAnalyticsSection Projection.BuildAnalytics -> Page.BuildAnalytics (TsRangePicker + bar + scatter+ref-line + dual-area) [Analytics_buckets_speed_distribution_and_scatters_acceleration]
+# 11 DrivingTips          Projection.BuildTips       -> Page.BuildTips (avg-power-reactive tip list)                       [Tips_react_to_average_power]
+# computeMotorStats + getThrottleStyle ported: MotorStats.Compute / MotorStats.Style [MotorStats_compute_aggregates_history, MotorStats_is_null_for_empty_history]
+# tolerant parsers pinned: MotorReading/DriveRow/CoachData FromJson, ParseMotorHistory, ParseVehicleSpeed, FirstObservation, ParseFollowDistance
+# a11y: AutomationProperties.SetName on the page, every gauge/stat tile/table/chart; OnCreateAutomationPeer Group role.
+
+PARITY_COVERED=5
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Driving does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DrivingDynamicsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (the only warnings are the 17 pre-existing TeslaSync.App.Core CA* baseline warnings; TeslaSync.App = 0 warnings)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --no-restore  -> 0 issues (files normalized to LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30051, Failed: 0, Skipped: 0
+#   (incl. 37 DrivingDynamicsPageTests). This is the page-gate test scope used by every done W7 page
+#   (see windows-page-driving-TripPlannerPage.log: "dotnet test apps/windows/TeslaSync.App.Tests").
+#   NOTE: the separate TeslaSync.App.UITests project (147 WinAppDriver UI-automation tests, shell/a11y/auth — NOT
+#   this page) cannot run here: UiAutomationUnavailableException "WinAppDriver/Appium runner is absent
+#   (nothing listening on 127.0.0.1:4723)". That is an environment limitation identical on a clean checkout and is
+#   outside the page-gate scope (the done-page convention runs only TeslaSync.App.Tests). No code defect.
+TEST_EXIT=0
+PARITY_COVERED=5
+PARITY_REQUIRED=5
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DrivingDynamicsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DrivingDynamicsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-driving-DrivingDynamicsPage.log
+# git commit -m "feat(apps/windows): DrivingDynamicsPage at web parity (W7 driving)"
+
+EXIT=0
+STATUS=DONE

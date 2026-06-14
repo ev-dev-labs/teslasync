@@ -223,5 +223,14 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-admin-TeslaOrdersPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "page:driving/DrivingDynamics",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p2-windows/W7/windows-page-driving-DrivingDynamicsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-DrivingDynamicsPage.log"
   }
 ]

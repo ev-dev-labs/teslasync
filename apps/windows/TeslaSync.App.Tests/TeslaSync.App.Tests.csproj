@@ -488,6 +488,11 @@
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Model.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Display.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Display.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Projection.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Source.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.ViewModel.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.Model.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.Source.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.ViewModel.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.ViewModel.cs" />
