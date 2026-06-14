@@ -840,3 +840,4 @@ p3-android/feature-views/A-0011-Base64Tool.prompt.md
 p3-android/feature-views/A-0093-SummaryStatsGrid.prompt.md
 p3-android/feature-views/A-0005-FleetTelemetryHealth.prompt.md
 p3-android/feature-views/A-0305-VehicleHeader.prompt.md
+p3-android/shared-meaningful/A-0153-DensityToggle.prompt.md
