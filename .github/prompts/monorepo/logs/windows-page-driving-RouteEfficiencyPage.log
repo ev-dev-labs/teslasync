@@ -1,0 +1,147 @@
+P2-WINDOWS W7 — page:driving/RouteEfficiency — WinUI 3 / Fluent parity port
+============================================================================
+Web source : web/src/features/driving/pages/RouteEfficiencyPage.tsx (route /route-efficiency)
+Output     : apps/windows/TeslaSync.App/feature-views/RouteEfficiencyPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling done pages
+              RegenEfficiencyPage / TripPlannerPage. The generated prompt's path
+              apps/windows/TeslaSync/Features/Driving does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register("RouteEfficiency", static () => new FeatureViews.Driving.RouteEfficiencyPage())
+             (RouteTable already maps Page("RouteEfficiency","route-efficiency",TripsDriving,…) at
+              TeslaSync.App.Core/Navigation/RouteTable.cs:290 — no route entry added)
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry 18 of the 19 manifest
+             translation.routeEfficiency.* / translation.common.noData keys (catalog-generated). The one key the
+             web i18n itself never defines (routeEfficiency.comparison.aria — the web uses an inline t() English
+             fallback) resolves through ILocalizer's English-fallback path, the same precedent the sibling
+             TripPlannerPage (tripPlanner.disclaimer / tripPlanner.notFeasible) follows. Every visible literal is
+             sourced by key; none hardcoded.
+
+Files:
+  feature-views/RouteEfficiencyPage/RouteEfficiencyPage.Model.cs      (parsers + snapshot + feed iface + EmptyFeed + display records + projection + registration + diagnostics)
+  feature-views/RouteEfficiencyPage/RouteEfficiencyPage.Source.cs     (generated C# client GET adapter: RouteEfficiencyClientFeed)
+  feature-views/RouteEfficiencyPage/RouteEfficiencyPage.ViewModel.cs  (INotifyPropertyChanged data holder + state matrix + units)
+  feature-views/RouteEfficiencyPage/RouteEfficiencyPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/RouteEfficiencyPageTests.cs        (34 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                      (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client, web hook name kept at the C# call site):
+  useRouteEfficiency -> RouteEfficiencyClientFeed.FetchAsync, ApiRequest("get_api_v1_analytics_route_efficiency",
+                        Query{ vehicle_id, start?, end? }) — GET /analytics/route-efficiency
+                        (operation id = Operations.Analytics.RouteEfficiency)
+  useSelectedVehicle / range -> the feed is pre-scoped with vehicleId + start/end at construction (same seam as the
+                        sibling RegenEfficiencyClientFeed); the view binds only the resolved snapshot.
+Reused W3 component surfaces: TsGlassPanel, TsAnimatedNumber, TsStatCard-equivalent tiles, TsBadge, TsMetricBar,
+  TsChartContainer + TsBarChart (the native recharts BarChart wrapper), TsEmptyState, TsQueryError, TsSkeleton,
+  TsDataFreshness, TsFadeIn, PageTitle/Subhead/SectionTitle/Caption/Text typography.
+Units (P1/S5): SI read from the API (Wh/km efficiency, km distance); converted only at the display boundary in
+  RouteEfficiencyProjection — Wh/km→Wh/mi via *1.609344 (web toEfficiencyDisplay) and meters→display via
+  UnitConverters.DistanceFromSi + UnitLabels.Label (no non-SI stored/computed).
+Live data: none (web page uses a TanStack-Query read, no useLiveX/SSE), so no SSE subscription / staleness chip
+  beyond the standard data-freshness header (ADR-013 live path n/a).
+Scope note: the web page renders <AIRouteEfficiencySuggestions/> (an AI-gated, withAiFeature-wrapped surface). That
+  surface is its own already-shipped parity unit (shared-surfaces/AIRouteEfficiencySuggestions.*) and is NOT one of
+  this page's 29 manifest parity items (data sources = only useRouteEfficiency; panels = 4; charts = 2), so it is
+  out of scope here and intentionally not re-embedded — mirroring how TripPlannerPage delegated its sibling W3
+  surfaces rather than re-owning them.
+
+=== PARITY ===
+PARITY_REQUIRED=29
+
+[1/29]  panel  GlassPanel1 (summary stats — Routes / Total Trips / Best / Avg)
+        RouteEfficiencyPage.cs::BuildSummary (TsGlassPanel + four TsAnimatedNumber + Caption tiles) ;
+        RouteEfficiencyProjection.BuildSummary -> Display.SummaryStats (routes count, total trips, best & avg
+        efficiency rounded + unit-suffixed labels).
+        evidence-test: Summary_projects_four_tiles_routes_trips_best_avg, Summary_converts_efficiency_to_imperial_wh_per_mile
+[2/29]  panel  GlassPanel2 (per-route comparison cards)
+        RouteEfficiencyPage.cs::BuildRouteCards/BuildRouteCard (one TsGlassPanel card per route: map-pin + start→end
+        Text + efficiency TsBadge + meta Caption + avg TsMetricBar + best/avg/worst stat pairs) ;
+        RouteEfficiencyProjection.BuildCards -> Display.RouteCards.
+        evidence-test: RouteCards_project_one_per_route_with_badge_and_meta, RouteCard_distance_converts_to_imperial_miles
+[3/29]  panel  Route-Efficiency-Comparison (named ChartContainer panel)
+        RouteEfficiencyPage.cs::BuildComparisonChart (TsChartContainer title=routeEfficiency.comparison) ;
+        RouteEfficiencyProjection.BuildComparison -> Display.Comparison.
+        evidence-test: Comparison_sorts_by_avg_limits_to_ten_and_builds_three_series
+[4/29]  panel  GlassPanel4 (route-metrics strip)
+        RouteEfficiencyPage.cs::BuildMetricsStrip (TsGlassPanel + trending icon + SectionTitle + four TsMetricBar) ;
+        RouteEfficiencyProjection.BuildMetricBars -> Display.MetricBars (Best/Avg/Worst/Most-Driven, token brushes).
+        evidence-test: MetricBars_project_four_bars_with_token_brushes
+[5/29]  chart  ChartContainer
+        RouteEfficiencyPage.cs::BuildComparisonChart -> TsChartContainer{ State = Visible ? Ready : Empty,
+        AccessibleSummary = comparison.aria, EmptyMessage } ; web gate chartData.length>1 -> Display.Comparison.Visible.
+        evidence-test: Comparison_is_hidden_when_a_single_route_is_present
+[6/29]  chart  BarChart
+        RouteEfficiencyPage.cs::BuildComparisonChart -> TsBarChart{ Series } + BuildSeries (three ChartSeriesKind.Bar
+        series: best/avg/worst, per-route category labels) ; RouteEfficiencyProjection.BuildComparison.Series.
+        evidence-test: Comparison_sorts_by_avg_limits_to_ten_and_builds_three_series, Comparison_truncates_long_route_names_to_ten_characters_per_side
+[7/29]  state  loading
+        RouteEfficiencyState.Loading ; RouteEfficiencyPageViewModel.LoadAsync sets _loading while no data ;
+        Display.ShowLoading ; RouteEfficiencyPage.cs _loadingSkeleton (TsSkeleton shimmer).
+        evidence-test: State_loading_when_query_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[8/29]  state  empty
+        RouteEfficiencyState.Empty ; snapshot.HasData==false ; Display.ShowEmpty ; RouteEfficiencyPage.cs _emptyState
+        (TsEmptyState, message common.noData).
+        evidence-test: State_empty_when_resolved_with_no_routes, Snapshot_is_empty_for_non_object_or_missing_routes
+[9/29]  state  error
+        RouteEfficiencyState.Error ; RouteEfficiencyPageViewModel.SetError ; Display.ShowError ;
+        RouteEfficiencyPage.cs _errorState (TsQueryError + Retry common.retry, ActionInvoked -> RefreshAsync).
+        evidence-test: State_error_when_query_failed, ViewModel_surfaces_the_error_state_on_feed_failure, ClientFeed_propagates_a_failed_read
+[10/29] state  success
+        RouteEfficiencyState.Success ; snapshot.HasData==true ; Display.ShowContent ; the summary + comparison chart +
+        route cards + metrics render from the bound RouteEfficiencySnapshot.
+        evidence-test: State_success_when_routes_present, ViewModel_loads_success_from_the_feed, ViewModel_reprojects_when_units_change
+[11/29] string common.noData                    RouteEfficiencyStrings.Resolve NoData = GetString("common.noData", "No data available")
+[12/29] string routeEfficiency.avg              RouteEfficiencyStrings.Resolve Avg = GetString("routeEfficiency.avg", "avg")
+[13/29] string routeEfficiency.avgEfficiency    RouteEfficiencyStrings.Resolve AvgEfficiency = GetString("routeEfficiency.avgEfficiency", "Avg")
+[14/29] string routeEfficiency.avgLabel         RouteEfficiencyStrings.Resolve AvgLabel = GetString("routeEfficiency.avgLabel", "Avg")
+[15/29] string routeEfficiency.best             RouteEfficiencyStrings.Resolve Best = GetString("routeEfficiency.best", "Best")
+[16/29] string routeEfficiency.bestEfficiency   RouteEfficiencyStrings.Resolve BestEfficiency = GetString("routeEfficiency.bestEfficiency", "Best")
+[17/29] string routeEfficiency.bestLabel        RouteEfficiencyStrings.Resolve BestLabel = GetString("routeEfficiency.bestLabel", "Best Efficiency")
+[18/29] string routeEfficiency.col.route        RouteEfficiencyStrings.Resolve ColRoute = GetString("routeEfficiency.col.route", "Route")
+[19/29] string routeEfficiency.comparison       RouteEfficiencyStrings.Resolve Comparison = GetString("routeEfficiency.comparison", "Route Efficiency Comparison")
+[20/29] string routeEfficiency.comparison.aria  RouteEfficiencyStrings.Resolve ComparisonAria = GetString("routeEfficiency.comparison.aria", "Per-route best, average, and worst efficiency comparison bar chart") (English-fallback; web has no translation key)
+[21/29] string routeEfficiency.metrics          RouteEfficiencyStrings.Resolve Metrics = GetString("routeEfficiency.metrics", "Route Metrics")
+[22/29] string routeEfficiency.mostDrivenLabel  RouteEfficiencyStrings.Resolve MostDrivenLabel = GetString("routeEfficiency.mostDrivenLabel", "Most Driven Route")
+[23/29] string routeEfficiency.routes           RouteEfficiencyStrings.Resolve Routes = GetString("routeEfficiency.routes", "Routes")
+[24/29] string routeEfficiency.subtitle         RouteEfficiencyStrings.Resolve Subtitle = GetString("routeEfficiency.subtitle", "Compare efficiency across your most-driven routes")
+[25/29] string routeEfficiency.title            RouteEfficiencyStrings.Resolve Title = GetString("routeEfficiency.title", "Route Efficiency")
+[26/29] string routeEfficiency.totalTrips       RouteEfficiencyStrings.Resolve TotalTrips = GetString("routeEfficiency.totalTrips", "Total Trips")
+[27/29] string routeEfficiency.trips            RouteEfficiencyStrings.Resolve Trips = GetString("routeEfficiency.trips", "trips")
+[28/29] string routeEfficiency.worst            RouteEfficiencyStrings.Resolve Worst = GetString("routeEfficiency.worst", "Worst")
+[29/29] string routeEfficiency.worstLabel       RouteEfficiencyStrings.Resolve WorstLabel = GetString("routeEfficiency.worstLabel", "Worst Efficiency")
+# All 19 manifest string keys asserted resolved headlessly via a RecordingLocalizer:
+#   RouteEfficiencyPageTests.Projection_resolves_every_required_string_key_in_success (single Project() call resolves
+#   every key unconditionally) + Projection_resolves_all_keys_even_in_the_loading_state +
+#   Required_string_key_set_has_exactly_nineteen_unique_keys.
+# All four data states + the four panels + two charts assert their render from the bound RouteEfficiencyDisplay /
+#   RouteEfficiencySnapshot (State_* + Summary_* + Comparison_* + RouteCards_* + MetricBars_* tests). The GET feed's
+#   request shaping (operation id, snake_case vehicle_id, optional start/end) is pinned by
+#   ClientFeed_requests_route_efficiency_scoped_to_the_vehicle + ClientFeed_appends_the_range_to_the_query. The
+#   tolerant parser is pinned by Snapshot_* tests. efficiencyVariant bands by EfficiencyStatus_follows_the_web_color_bands.
+
+PARITY_COVERED=29
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Driving does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RouteEfficiencyPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 0 Warning(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <RouteEfficiencyPage Model/Source/ViewModel/view
+#   + RouteEfficiencyPageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30083, Failed: 0, Skipped: 0
+#   (incl. 34 RouteEfficiencyPageTests)
+TEST_EXIT=0
+PARITY_COVERED=29
+PARITY_REQUIRED=29
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/RouteEfficiencyPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/RouteEfficiencyPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-driving-RouteEfficiencyPage.log
+# git commit -m "feat(apps/windows): RouteEfficiencyPage at web parity (W7 driving)"
+
+EXIT=0
+STATUS=DONE
