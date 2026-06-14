@@ -1,0 +1,122 @@
+=== P3 Dashboard widget 0032 CostForecastWidget (Android) ===
+Capability: Jetpack Compose + Material 3, Kotlin (repo pins 2.x; prompt floor 2.2.x) — AVAILABLE
+  (JDK 21 JetBrains JBR, Android SDK at %LOCALAPPDATA%\Android\Sdk, gradlew 8.14.5). :android:assembleRelease
+  produced a Release APK (see gate below), so the platform capability is present — this gate is NOT a
+  platform-capability block (STATUS=DONE, not BLOCKED).
+
+Predecessor materialization (P1/S2 generated client): this fresh worktree had no
+  apps/shared/core/src/commonMain/.../api/generated/*.kt — that directory is .gitignored (confirmed via
+  `git check-ignore`) and is produced by the P1/S2 OpenAPI emitter, not committed. Without it the shared
+  :core module cannot resolve Vehicle / ChargingSession / Drive / etc. and the whole :android module fails
+  to compile. Ran the sanctioned generator `pwsh apps/tools/codegen/gen-clients.ps1` (GEN_EXIT=0 — wrote 10
+  Kotlin + 10 C# files from api/openapi/teslasync.openapi.json). This materializes the predecessor (Honesty
+  Covenant #7 — USE the predecessor, do not bypass it); it writes ONLY into the .gitignored generated dir,
+  so `git status --short` still shows just this artifact's three new directories (proof below).
+P3 core prerequisites reused: A1 theme/tokens (TeslaSyncTheme/Spacing/GlassPanel/PanelPadding), shared
+  component library (ui/charts[BarChartWrapper,ChartSeries,ChartFormat]/datadisplay[DataFreshness]/feedback
+  [QueryError,EmptyState,Skeleton,StatGridSkeleton]/motion), S7/S8 data layer (VehiclesRepository/Store,
+  ChargingRepository/Store [costForecast], SettingsRepository/Store), S10 i18n catalog (res/values*), S11
+  diagnostics (Logger via LocalDataContainer).
+
+Surface files (allowed): apps/android/app/src/main/java/com/teslasync/dashboard-widgets/CostForecastWidget/
+ - CostForecastModel.kt            (registration, size, currency-symbol prefs, raw-JSON decode of
+                                    historical/forecast, trailing-6 bar build, next/last/trend derivation,
+                                    currency formatting via ChartFormat.number)
+ - CostForecastSource.kt           (vehicles()+costForecast()+settings() seam + Repository & Store adapters;
+                                    costForecast bound to ChargingRepository/ChargingStore — web useCostForecast
+                                    is declared in useCharging.ts, endpoint /analytics/cost-forecast)
+ - CostForecastWidgetViewModel.kt  (BaseFeedViewModel; resolves vehicleId/first vehicle -> cost-forecast
+                                    UiState<JsonElement>; settings -> displayPrefs; refresh; view.opened)
+ - CostForecastWidget.kt           (stateful + stateless Content; loading/error/empty/compact/standard;
+                                    Vico bar chart; Next Month / Avg $/kWh / Trend stats; trend icon;
+                                    freshness chip + refresh; self-contained TrendingUp/Down/Refresh glyphs)
+Tests: src/test/.../costforecast/{CostForecastProjectionTest(16), CostForecastWidgetViewModelTest(12)};
+       src/androidTest/.../costforecast/CostForecastWidgetUiTest(7).
+
+Documented deviations (Honesty Covenant #9 — no silent drift):
+ 1. Gradle module is ':android' (settings.gradle.kts: rootProject 'teslasync-android', projectDir=app); the
+    prompt gate's ':app:' does not exist in this build. The gate below uses ':android:' (the same skew every
+    sibling P3/A* log documents, e.g. the 0031/CostBreakdownWidget log).
+ 2. Production files live in the mandated dir com/teslasync/dashboard-widgets/CostForecastWidget/ but declare
+    package io.teslasync.android.dashboard.widgets.costforecast — a valid Kotlin package cannot contain a
+    hyphen or a PascalCase segment, so detekt InvalidPackageDeclaration + MatchingDeclarationName are
+    @file-suppressed with justification (mirrors the CostBreakdownWidget/MonthlyMileageWidget siblings at the
+    identical path).
+ 3. Tests live in the standard src/test + src/androidTest source sets, scoped to this surface (the same
+    layout the 0031 sibling committed). The offline gate runs JVM unit tests; the Compose UI/a11y tests are
+    instrumented (connectedAndroidTest, device-only) — authored + ktlint/detekt-clean on the proven
+    MonthlyMileageWidgetUiTest pattern.
+ 4. Host wiring (grid placement / choosing vehicleId) is outside allowed files; the widget binds the shared
+    S7/S8 feeds via an injected CostForecastSource (Vehicles + Charging + Settings adapters, host-ready) and
+    derives the currency symbol from the live /settings feed (web useFormatting). The cost-forecast feed is
+    raw JSON (/analytics/cost-forecast?vehicle_id=&months=6) decoded in CostForecastModel.
+ 5. Clean baseline — NO pre-existing repo breakage at this worktree's HEAD (ca3c28c2c). The full module
+    compiles and the entire repo-wide unit suite is green here (unlike the 0031 sibling's wt-07 HEAD, which
+    documented a resolveVehicleId overload conflict — that conflict is NOT present at this HEAD).
+    `git status --short` shows ONLY the three new costforecast directories as untracked additions; no tracked
+    file is modified (the regenerated api/generated client is .gitignored).
+
+=== GATE (':android:'; full repo-wide suite, clean baseline) ===
+git status --short:
+?? apps/android/app/src/androidTest/java/io/teslasync/android/dashboard/widgets/costforecast/
+?? apps/android/app/src/main/java/com/teslasync/dashboard-widgets/CostForecastWidget/
+?? apps/android/app/src/test/java/io/teslasync/android/dashboard/widgets/costforecast/
+
+--- predecessor: pwsh apps/tools/codegen/gen-clients.ps1 ---
+[GEN] wrote 10 Kotlin + 10 C# files from api/openapi/teslasync.openapi.json.
+GEN_EXIT=0
+
+--- :android:assembleRelease ---
+BUILD SUCCESSFUL in 2m 50s
+70 actionable tasks: 27 executed, 6 from cache, 37 up-to-date
+assembleRelease_EXIT=0
+
+--- :android:testReleaseUnitTest (full module suite, unfiltered) ---
+BUILD SUCCESSFUL in 2m 42s
+testReleaseUnitTest_EXIT=0
+  full-suite tally (build/test-results/testReleaseUnitTest): 1243 classes, 15898 tests, 0 failures, 0 errors.
+  this surface: CostForecastProjectionTest=16 + CostForecastWidgetViewModelTest=12 = 28 PASS (0 fail / 0 error).
+
+--- :android:ktlintCheck :android:detekt ---
+BUILD SUCCESSFUL in 4m 3s
+ktlintCheck+detekt_EXIT=0
+  (main + test + androidTest source sets scanned; 0 violations introduced.)
+
+--- check-placeholders (CostForecastWidget) ---
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+=== SUMMARY ===
+Artifact gate (':android:'): assembleRelease=0  testReleaseUnitTest(full)=0  ktlintCheck+detekt=0  check-placeholders=0  -> all 0.
+This surface's unit tests (ran green): CostForecastProjectionTest=16 + CostForecastWidgetViewModelTest=12 = 28 PASS.
+Repo-wide unit suite (ran green): 15898 tests, 0 failures, 0 errors — this change introduces 0 new failures.
+Instrumented Compose UI + a11y (device-only via connectedAndroidTest): CostForecastWidgetUiTest=7
+  (loading-skeleton / error+retry / standard title+stats+chart-a11y / refresh-a11y / compact stats-no-title /
+   empty "No forecast data" / offline-stale).
+
+Parity with web/src/features/dashboard/widgets/CostForecastWidget.tsx:
+  - States loading(Skeleton) / error(QueryError + retry) / empty("No forecast data") / stale / offline
+    reproduced; plus the two web bodies: compact (Next Month + Trend) two-stat summary and standard
+    (Next Month + Avg $/kWh + Trend) stat row over the bar chart.
+  - Data: shared useVehicles (default = first vehicle id) + useCostForecast (GET /analytics/cost-forecast?
+    vehicle_id=&months=6, declared in useCharging.ts) decoded from raw JSON {historical[],forecast[]};
+    currency symbol from /settings (useFormatting).
+  - buildChartData parity: every historical month (isForecast=false) then every forecast month
+    (isForecast=true), `.slice(-6)` trailing window; bars render in the web indigo #6366f1.
+  - Stats parity: Next Month = formatCurrency(forecast[0].cost, 0); Avg $/kWh = formatCurrency(last
+    historical.cost_per_kwh, 2) or em-dash when no historical; Trend = (nextCost>=lastCost) ? "↑ Δ" : "↓ Δ"
+    (compact: arrow only). trendUp drives the header TrendingUp(amber #FBBF24)/TrendingDown(emerald #34D399).
+  - Y-axis formatter = currencySymbol + integer (web `${currencySymbol}${fmt(v,0)}`); currency/number
+    formatting reproduces web useFormatting formatCurrency via shared ChartFormat.number (locale grouping).
+  - Registry: id "cost-forecast", category "charging", default 2x4, min 1x2, max 4x40 (CostForecastRegistration).
+  - i18n: translation_widget_costForecast_{title,noData,nextMonth,trend,avgPerKwh,costLabel} (all already
+    present in the S10 catalog res/values*) + translation_common_refresh + translation_a11y_loading.
+    No hardcoded English in native code.
+  - Diagnostics: view.opened with slug=CostForecastWidget (PII-safe, emitted exactly once).
+  - Accessibility: refresh control + bar chart (month-range contentDescription) + loading skeleton carry
+    TalkBack labels; stat labels/values are real text nodes.
+
+EXIT=0
+STATUS=DONE
