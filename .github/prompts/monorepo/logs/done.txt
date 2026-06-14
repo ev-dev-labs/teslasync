@@ -923,3 +923,4 @@ p2-windows/pages/admin/SecurityAccessPage.prompt.md
 p2-windows/pages/admin/TeslaFeatureFlagsPage.prompt.md
 p2-windows/pages/admin/UsersPage.prompt.md
 p2-windows/pages/analytics/LifetimeStatsPage.prompt.md
+p2-windows/pages/analytics/AnalyticsPage.prompt.md
