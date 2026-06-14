@@ -11,12 +11,14 @@ import io.teslasync.android.data.vehicles.VehiclesListViewModel
 import io.teslasync.shared.core.cache.CacheStore
 import io.teslasync.shared.core.cache.Clock
 import io.teslasync.shared.core.cache.SystemClock
+import io.teslasync.shared.core.data.repo.HttpAdminRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
+import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
@@ -60,6 +62,7 @@ class DataContainer(
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
     private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
+    private val adminRepository = HttpAdminRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -80,6 +83,12 @@ class DataContainer(
 
     /** App-scoped active-vehicle selection, self-healing from the live vehicle list. */
     val selectedVehicleStore = SelectedVehicleStore()
+
+    /**
+     * Shared Admin/operational control-plane state holder (web `useAdmin` port) — the memoized, multi-observer
+     * raw-JSON feeds (`/api-logs`, `/api-logs/stats`, `/system/health`, …) every A7 admin surface binds to.
+     */
+    val adminStore = AdminStore(adminRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

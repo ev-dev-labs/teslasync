@@ -1,0 +1,11 @@
+[
+  {
+    "unitId": "page:admin/ApiLogs",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p3-android/pages/admin/ApiLogsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-ApiLogsPage.log"
+  }
+]
