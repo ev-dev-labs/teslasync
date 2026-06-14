@@ -108,6 +108,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:battery/PowerFlowDashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p2-windows/W7/windows-page-battery-PowerFlowDashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-PowerFlowDashboardPage.log"
+  },
+  {
     "unitId": "page:charging/TeslaChargingSessionsMap",
     "platform": "windows",
     "status": "done",

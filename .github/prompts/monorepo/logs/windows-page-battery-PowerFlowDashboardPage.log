@@ -1,0 +1,187 @@
+=== p2-windows · W7 · page:battery/PowerFlowDashboard (WinUI 3 / Fluent) ===
+Parity unit : page:battery/PowerFlowDashboard   kind=page   web route=/power-flow
+Web source  : web/src/features/battery/pages/PowerFlowDashboardPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/PowerFlowDashboardPage/{PowerFlowDashboardPage.Model.cs, .Source.cs, .ViewModel.cs, .cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --info → 10.0.300; WinUI x64 toolchain builds) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent UserControl view), exactly as the
+  sibling W7 EnergyFlowPage does. The generated prompt's idealized "PowerFlowDashboardPage.xaml +
+  PowerFlowDashboardPageViewModel.cs under TeslaSync/Features/Battery" is mapped onto these real conventions; the
+  surface registers itself with the W4 ShellPageFactory by route name ("PowerFlowDashboard", already in
+  RouteTable.cs L280 → /power-flow, group BatteryEnergy) via ShellWindow.xaml.cs.
+- Data binding (ADR-004): the three manifest data sources are the web hooks useTeslaEnergyLiveStatus,
+  useTeslaEnergyLiveStatusHistory and useRefreshTeslaEnergyLiveStatus. PowerFlowClientFeed
+  (PowerFlowDashboardPage.Source.cs) binds to the generated OpenAPI contract client operations
+  get_api_v1_tesla_energy_sites_siteID_live_status (path siteID), get_api_v1_tesla_energy_sites_siteID_live_status_history
+  (path siteID + snake_case since/until/limit query, matching the web hook) and
+  post_api_v1_tesla_energy_sites_siteID_live_status_refresh (path siteID). All three operation ids resolve against
+  the generated endpoint table (Generated/Api/ApiEndpoints.cs L475/L476/L477) — asserted by
+  ClientFeed_operations_resolve_against_the_generated_endpoint_table + the FakeApiClient request-shaping tests. The
+  descriptors declare zero query params, so GeneratedApiClient.BuildQuery permits the trailing since/until/limit
+  params (allowed.Count==0 path). The default PowerFlowDashboardPage() ctor uses EmptyPowerFlowFeed (the empty data
+  state), mirroring EnergyFlowPage; the client feed is exercised by tests. No HTTP touches the view.
+- The live-status query is the PRIMARY source that drives the page state. The backend returns either a real
+  snapshot (with an `id`) or a {message:…} notice when nothing has been fetched yet — the web reads this as
+  hasLiveData = liveStatus && 'id' in liveStatus, reproduced by PowerFlowLiveReading.FromJson (HasData = the JSON
+  has an `id` member). The history query is a BEST-EFFORT overlay independent of the page state: a history failure
+  leaves the two charts on their empty body, never erroring the page (web hooks are independent;
+  ViewModel_history_failure_does_not_error_the_page). Refresh POSTs a fresh snapshot then, on success, re-reads both
+  queries (web onSuccess invalidation; ViewModel_refresh_posts_then_reloads_through_the_feed).
+- These data sources are REST queries (the web uses TanStack refetchInterval polling, NOT an SSE stream), so no SSE
+  client is wired (ADR-009/S4 applies only to live SSE surfaces). Freshness (ADR-013) is surfaced on the "Updated:"
+  badge: PowerFlowProjection.IsStale flags a snapshot older than 2 minutes and tints the badge Warning instead of
+  Neutral (Last_update_badge_is_warning_when_snapshot_is_stale).
+- The web renders its states inside the PageContainer body, so the native port reproduces them as visible Fluent
+  regions per ADR-006: loading → TsStatGridSkeleton(4) + TsChartBlockSkeleton shimmer; error → TsQueryError
+  (InfoBar-equivalent) + Retry; empty/success → the always-visible scaffold (header, refresh, four status chips,
+  four current-power tiles, battery-state panel, power-flow diagram, two charts). In the empty data state the
+  battery/flow panels render their own TsEmptyState ("No battery data — refresh to fetch" / "No power flow data
+  yet") and the tiles show the em dash, exactly as the web composes it; the two charts cover a missing history with
+  TsChartContainer.State = Empty/Loading. Never a blank region.
+- SI units (ADR-002): all DB/API/struct/TS values are SI (watts, watt-hours). The web page formats power/energy at
+  the render boundary with its own magnitude-adaptive fmtWatts / fmtWh helpers (W below 1 kW, kW above; Wh below
+  1 kWh, kWh above) — reproduced verbatim in PowerFlowProjection.FormatWatts / FormatWattHours via
+  NumberFormatting.Format (the fmtNumber port), pinned by FormatWatts_matches_web + FormatWattHours_matches_web.
+  SOC is fmtNumber(soc,1)+"%". History timestamps render through DateTimeFormatting (formatDateShort/formatDateTime
+  ports).
+- i18n (ADR-014): this web page uses dotted i18next keys (t('powerFlow.title'), …). All 33 manifest strings flow
+  through ILocalizer.GetString("powerFlow.<key>", "<English default>") in PowerFlowProjection.Project, resolved
+  UNCONDITIONALLY at the top of Project so every key is recorded in every data state (tests
+  Projection_resolves_every_required_string_key_in_success + _in_the_loading_state + _in_the_empty_state). 31 of the
+  33 keys already existed in Strings/{en,ar,he}/Resources.resw; the 2 chart-aria keys (powerFlow.powerOverTime.aria,
+  powerFlow.socOverTime.aria) are NOT in web en.json (the web relies on i18next inline-default fallback for them,
+  which ILocalizer.GetString reproduces). To satisfy the "every visible literal sourced from .resw" criterion I
+  added those 2 keys verbatim (web key names, "translation.powerFlow.*.aria") to all three catalogs in JS-ordinal
+  sorted position (LF/UTF-8-no-BOM preserved). NOTE: the resw is generator-owned and sources from web en.json; these
+  2 hand-added keys would not be re-emitted by gen-i18n until the same keys land in web en.json — documented here,
+  not silent. The resw is not part of the dotnet build, so this does not affect the build gate.
+- The four current-power tiles use the shared TsStatCard (web StatCard: accent glyph + label + value + state
+  sub-line) — its Sublabel carries the Charging/Discharging/Importing/Exporting state word. The SOC gauge bar uses
+  the shared TsMetricBar (web gradient progress bar). The flow arrows (web FlowArrow) render as tokenized Border
+  chips with an up/down direction glyph (web ArrowUp/ArrowDown) dimmed when inactive. Charts use the W3 native
+  wrappers (never a web canvas): TsAreaChart (power-over-time, four overlaid SI-watt series) and TsLineChart (SOC),
+  both inside a TsChartContainer with title/subtitle/AccessibleSummary + DataView for screen-reader access.
+- a11y (ADR-015): AutomationProperties.Name on the page (Group peer), every panel, both charts (the .aria strings),
+  the error/empty surfaces and the flow chips; the refresh button and Retry are keyboard-focusable TsButtons; the
+  light/dark/high-contrast token brushes drive all color (no hardcoded brushes).
+- Out of scope: the web RangePicker on the history header is not a manifest parity item; the native port computes a
+  fixed trailing 7-day window (web preset '7d') via PowerFlowProjection.WindowSince/WindowUntil with limit=1000,
+  preserving the since/until/limit data-source contract without adding an out-of-scope interactive control.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0   (apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/PowerFlowDashboardPage -Language csharp → PLACEHOLDER_COUNT=0; tests file → PLACEHOLDER_COUNT=0)
+BUILD_EXIT=0         (dotnet build apps/windows/TeslaSync.sln -c Release → Build succeeded, 0 Error(s))
+LINT_EXIT=0          (dotnet format apps/windows/TeslaSync.sln --verify-no-changes → exit 0, whole solution clean)
+TEST_EXIT=0          (dotnet test apps/windows/TeslaSync.App.Tests -c Release → Failed: 0, Passed: 29726, Total: 29726; PowerFlowDashboardPageTests = 54 passed)
+
+=== PARITY ===
+PARITY_REQUIRED=48
+
+[panel 1/8]  Solar-Production
+  evidence: PowerFlowDashboardPage.cs::_solarCard (TsStatCard) ← PowerFlowDisplay.SolarCard
+            ← PowerFlowProjection.Project solarCard (label "powerFlow.solarPower", value FormatWatts(solarW))
+  test: Current_power_tiles_format_watts_and_state_sublabels  → COVERED
+[panel 2/8]  Battery
+  evidence: PowerFlowDashboardPage.cs::_batteryCard (TsStatCard) ← PowerFlowDisplay.BatteryCard
+            ← Project batteryCard (label "powerFlow.batteryPower", sublabel Charging/Discharging via BatteryStateWord)
+  test: Current_power_tiles_format_watts_and_state_sublabels + Battery_and_grid_sublabels_flip_for_discharging_and_importing  → COVERED
+[panel 3/8]  Home-Consumption
+  evidence: PowerFlowDashboardPage.cs::_homeCard (TsStatCard) ← PowerFlowDisplay.HomeCard
+            ← Project homeCard (label "powerFlow.homeConsumption", value FormatWatts(loadW))
+  test: Current_power_tiles_format_watts_and_state_sublabels  → COVERED
+[panel 4/8]  Grid
+  evidence: PowerFlowDashboardPage.cs::_gridCard (TsStatCard) ← PowerFlowDisplay.GridCard
+            ← Project gridCard (label "powerFlow.gridPower", sublabel Importing/Exporting via GridFlowWord)
+  test: Current_power_tiles_format_watts_and_state_sublabels + Battery_and_grid_sublabels_flip_for_discharging_and_importing  → COVERED
+[panel 5/8]  GlassPanel5 (battery state)
+  evidence: PowerFlowDashboardPage.cs::_batteryPanel (TsGlassPanel) + _socBar (TsMetricBar) + _batteryEmpty (TsEmptyState)
+            ← PowerFlowDisplay.{BatteryStateTitle,HasBatteryData,StateOfChargeLabel,SocValueText,SocPercent,EnergyLeftValue,TotalCapacityValue,NoBatteryDataMessage}
+  test: Battery_state_panel_projects_soc_energy_and_capacity + Battery_state_panel_is_null_safe_when_soc_missing + Soc_bar_is_clamped_to_one_hundred  → COVERED
+[panel 6/8]  GlassPanel6 (power-flow diagram)
+  evidence: PowerFlowDashboardPage.cs::_flowPanel (TsGlassPanel) + BuildArrowRow + _flowEmpty (TsEmptyState)
+            ← PowerFlowDisplay.{FlowDiagramTitle,HasFlowData,FlowArrows,NoFlowDataMessage} ← Project arrows (PowerFlowArrow list)
+  test: Flow_diagram_has_three_arrows_when_no_grid_services + Flow_diagram_adds_grid_services_arrow_when_non_zero + Flow_arrow_is_inactive_when_no_power  → COVERED
+[panel 7/8]  Power-Over-Time
+  evidence: PowerFlowDashboardPage.cs::_powerContainer (TsChartContainer, Body=_powerChart) ← PowerFlowDisplay.{PowerOverTimeTitle,PowerOverTimeDesc,PowerOverTimeAria,PowerChartState}
+  test: Power_over_time_chart_has_four_area_series_one_point_per_sample  → COVERED
+[panel 8/8]  Battery-State-of-Charge
+  evidence: PowerFlowDashboardPage.cs::_socContainer (TsChartContainer, Body=_socChart) ← PowerFlowDisplay.{SocOverTimeTitle,SocOverTimeDesc,SocOverTimeAria,SocChartState}
+  test: Soc_over_time_chart_has_one_line_series  → COVERED
+
+[chart 1/4]  ChartContainer (power)
+  evidence: PowerFlowDashboardPage.cs::_powerContainer = new TsChartContainer() (W3 native wrapper, title/subtitle/AccessibleSummary/DataView)  → COVERED
+[chart 2/4]  AreaChart
+  evidence: PowerFlowDashboardPage.cs::_powerChart = new TsAreaChart() ← PowerFlowDisplay.PowerSeries
+            ← Project powerSeries (4 ChartSeries Kind=Area: Solar/Battery/Grid/Home, SI watts plotted)
+  test: Power_over_time_chart_has_four_area_series_one_point_per_sample (4 series, Kind=Area, 3 pts each)  → COVERED
+[chart 3/4]  ChartContainer (soc)
+  evidence: PowerFlowDashboardPage.cs::_socContainer = new TsChartContainer() (W3 native wrapper)  → COVERED
+[chart 4/4]  LineChart
+  evidence: PowerFlowDashboardPage.cs::_socChart = new TsLineChart() ← PowerFlowDisplay.SocSeries
+            ← Project socSeries (1 ChartSeries Kind=Line "State of Charge")
+  test: Soc_over_time_chart_has_one_line_series (Kind=Line, 3 pts)  → COVERED
+
+[state 1/3]  loading
+  evidence: PowerFlowState.Loading → PowerFlowDisplay.ShowLoading → PowerFlowDashboardPage.cs::_loadingPanel (TsStatGridSkeleton(4)+TsChartBlockSkeleton); charts → ChartState.Loading
+  test: State_loading_when_live_query_in_flight + Charts_are_in_loading_state_while_history_loads + ViewModel_* (initial Loading)  → COVERED
+[state 2/3]  empty
+  evidence: PowerFlowState.Empty → PowerFlowDisplay.ShowContent w/ HasLive=false → _batteryEmpty/_flowEmpty (TsEmptyState) + em-dash tiles; charts → ChartState.Empty
+  test: State_empty_when_resolved_with_no_snapshot + State_empty_shows_dash_for_every_current_power_tile + Charts_are_empty_when_no_history + ViewModel_empty_feed_is_the_empty_state  → COVERED
+[state 3/3]  success
+  evidence: PowerFlowState.Success → PowerFlowDisplay.ShowContent w/ HasLive=true → live tiles/panels/charts bound
+  test: State_success_shows_scaffold + ViewModel_loads_live_and_history_into_the_success_state  → COVERED
+  (extra) error state → PowerFlowState.Error → ShowError → TsQueryError + Retry (State_error_when_live_query_failed; ViewModel_live_failure_is_the_error_state)
+
+[string 01/33] powerFlow.backupCapable     → Project backupCapableLabel (GetString) → backupBadge.Text (Backup_badge_only_visible_when_backup_capable)  → COVERED
+[string 02/33] powerFlow.batteryLabel      → Project batteryArrowLabel → flow arrow + power chart series name (Flow_diagram_* / Power_over_time_*)  → COVERED
+[string 03/33] powerFlow.batteryPower      → Project batteryPowerLabel → batteryCard.Label (Current_power_tiles_*)  → COVERED
+[string 04/33] powerFlow.batteryState      → Project batteryStateLabel → BatteryStateTitle (Battery_state_panel_*)  → COVERED
+[string 05/33] powerFlow.charging          → Project chargingLabel → BatteryStateWord (Current_power_tiles_*)  → COVERED
+[string 06/33] powerFlow.discharging       → Project dischargingLabel → BatteryStateWord (Battery_and_grid_sublabels_flip_*)  → COVERED
+[string 07/33] powerFlow.energyLeft        → Project energyLeftLabel → EnergyLeftLabel (Battery_state_panel_*)  → COVERED
+[string 08/33] powerFlow.exporting         → Project exportingLabel → GridFlowWord (Current_power_tiles_*)  → COVERED
+[string 09/33] powerFlow.flowDiagram       → Project flowDiagramLabel → FlowDiagramTitle (Flow_diagram_*)  → COVERED
+[string 10/33] powerFlow.grid              → Project gridLabel → grid badge + grid flow arrow + grid chart series (Grid_badge_* / Flow_diagram_*)  → COVERED
+[string 11/33] powerFlow.gridPower         → Project gridPowerLabel → gridCard.Label (Current_power_tiles_*)  → COVERED
+[string 12/33] powerFlow.gridServices      → Project gridServicesLabel → grid-services arrow (Flow_diagram_adds_grid_services_arrow_when_non_zero)  → COVERED
+[string 13/33] powerFlow.history           → Project historyLabel → HistoryTitle (History_section_title_is_resolved)  → COVERED
+[string 14/33] powerFlow.home              → Project homeLabel → flow arrows "to" + home chart series (Flow_diagram_* / Power_over_time_*)  → COVERED
+[string 15/33] powerFlow.homeConsumption   → Project homeConsumptionLabel → homeCard.Label (Current_power_tiles_*)  → COVERED
+[string 16/33] powerFlow.importing         → Project importingLabel → GridFlowWord (Battery_and_grid_sublabels_flip_*)  → COVERED
+[string 17/33] powerFlow.lastUpdate        → Project lastUpdateLabel → lastUpdateBadge.Text (Last_update_badge_visible_with_snapshot_and_hidden_when_empty)  → COVERED
+[string 18/33] powerFlow.noBatteryData     → Project noBatteryDataMessage → NoBatteryDataMessage (State_empty_when_resolved_with_no_snapshot)  → COVERED
+[string 19/33] powerFlow.noFlowData        → Project noFlowDataMessage → NoFlowDataMessage (State_empty_when_resolved_with_no_snapshot)  → COVERED
+[string 20/33] powerFlow.powerOverTime     → Project powerOverTimeTitle → PowerOverTimeTitle (Power_over_time_chart_*)  → COVERED
+[string 21/33] powerFlow.powerOverTime.aria→ Project powerOverTimeAria → PowerOverTimeAria → _powerContainer.AccessibleSummary (Power_over_time_chart_*); resw added (en/ar/he)  → COVERED
+[string 22/33] powerFlow.powerOverTimeDesc → Project powerOverTimeDesc → PowerOverTimeDesc (Power_over_time_chart_*)  → COVERED
+[string 23/33] powerFlow.refresh           → Project refreshLabel → RefreshLabel → _refreshButton.Text (Header_resolves_title_subtitle_and_refresh)  → COVERED
+[string 24/33] powerFlow.socOverTime       → Project socOverTimeTitle → SocOverTimeTitle (Soc_over_time_chart_*)  → COVERED
+[string 25/33] powerFlow.socOverTime.aria  → Project socOverTimeAria → SocOverTimeAria → _socContainer.AccessibleSummary (Soc_over_time_chart_*); resw added (en/ar/he)  → COVERED
+[string 26/33] powerFlow.socOverTimeDesc   → Project socOverTimeDesc → SocOverTimeDesc (Soc_over_time_chart_*)  → COVERED
+[string 27/33] powerFlow.solar             → Project solarLabel → solar flow arrow + solar chart series (Flow_diagram_* / Power_over_time_*)  → COVERED
+[string 28/33] powerFlow.solarPower        → Project solarPowerLabel → solarCard.Label (Current_power_tiles_*)  → COVERED
+[string 29/33] powerFlow.stateOfCharge     → Project stateOfChargeLabel → StateOfChargeLabel + soc chart series name (Battery_state_panel_* / Soc_over_time_chart_*)  → COVERED
+[string 30/33] powerFlow.stormMode         → Project stormModeLabel → stormBadge.Text (Storm_badge_only_visible_when_storm_mode_active)  → COVERED
+[string 31/33] powerFlow.subtitle          → Project subtitle → Subtitle (Header_resolves_title_subtitle_and_refresh)  → COVERED
+[string 32/33] powerFlow.title             → Project title → Title (Header_resolves_title_subtitle_and_refresh + Registration_exposes_route_and_operations)  → COVERED
+[string 33/33] powerFlow.totalCapacity     → Project totalCapacityLabel → TotalCapacityLabel (Battery_state_panel_*)  → COVERED
+  (all 33 resolved unconditionally in every state: Projection_resolves_every_required_string_key_in_success + _in_the_loading_state + _in_the_empty_state)
+
+PARITY_COVERED=48
+
+=== ACCEPTANCE ===
+[x] Every named panel implemented; the four StatCard panels + two GlassPanels + two chart panels all render from PowerFlowDisplay.
+[x] All 48 parity items render from the bound C# state holder (PowerFlowDashboardPageViewModel.Display).
+[x] loading / empty / error implemented for both data sources (live → page state machine; history → TsChartContainer.State Loading/Empty/Ready).
+[x] All visible strings sourced from .resw; zero hardcoded literals; key names match web (powerFlow.*).
+[x] Dark mode + accessibility + SI units honored; Fluent-native only (TsStatCard/TsGlassPanel/TsMetricBar/TsAreaChart/TsLineChart/TsChartContainer; no web pixel-cloning).
+[x] build + lint + test + placeholder gates green; PARITY_COVERED==PARITY_REQUIRED (48==48).
+[x] windows ledger row for page:battery/PowerFlowDashboard set covered (coveredCount=48, requiredCount=48, status=done).
+
+EXIT=0
+STATUS=DONE
