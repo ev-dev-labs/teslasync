@@ -268,5 +268,14 @@
     "requiredCount": 4,
     "promptId": "p2-windows/W7/windows-page-telemetry-LiveSignalMonitorPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-LiveSignalMonitorPage.log"
+  },
+  {
+    "unitId": "page:vehicles/VehicleList",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 37,
+    "requiredCount": 37,
+    "promptId": "p2-windows/W7/windows-page-vehicles-VehicleListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicles-VehicleListPage.log"
   }
 ]

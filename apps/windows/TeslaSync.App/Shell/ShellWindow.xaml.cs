@@ -326,6 +326,17 @@ public sealed partial class ShellWindow : Window
         // "ProjectedRange" route name.
         _viewModel.PageFactory.Register("ProjectedRange", static () => new FeatureViews.Battery.ProjectedRangePage());
 
+        // Vehicles / VehicleList page (P2/W7) — parity port of web VehicleListPage at route /vehicles.
+        // RouteTable already maps Page("Vehicles","vehicles",RouteGroup.Vehicles). The default empty-source ctor
+        // renders the page-level empty state until a DI host wires the generated-client-backed VehicleListSource via
+        // VehicleListPage.Create. The in-card name / view-details / compare affordances navigate via NavigationRequested.
+        _viewModel.PageFactory.Register("Vehicles", () =>
+        {
+            var page = new FeatureViews.Vehicles.VehicleListPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Vehicles / VehicleDetail page (P2/W7) — parity port of web VehicleDetailPage at route /vehicles/:id.
         // The route vehicle id is read from the live match; the web page has no in-body back affordance (the shell
         // NavigationView owns back navigation), so no BackRequested wiring is needed.

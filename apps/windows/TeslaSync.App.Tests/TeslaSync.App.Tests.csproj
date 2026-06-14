@@ -1180,6 +1180,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Source.cs" Link="FeatureViews\VehicleCard\VehicleCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.ViewModel.cs" Link="FeatureViews\VehicleCard\VehicleCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleListPage\VehicleListPage.Model.cs" Link="FeatureViews\VehicleListPage\VehicleListPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleListPage\VehicleListPage.Projection.cs" Link="FeatureViews\VehicleListPage\VehicleListPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleListPage\VehicleListPage.Source.cs" Link="FeatureViews\VehicleListPage\VehicleListPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\VehicleListPage\VehicleListPage.ViewModel.cs" Link="FeatureViews\VehicleListPage\VehicleListPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleConfigSection\VehicleConfigSection.Model.cs" Link="FeatureViews\VehicleConfigSection\VehicleConfigSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickStatsPage\QuickStatsPage.Model.cs" Link="FeatureViews\QuickStatsPage\QuickStatsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\QuickStatsPage\QuickStatsPage.Source.cs" Link="FeatureViews\QuickStatsPage\QuickStatsPage.Source.cs" />
