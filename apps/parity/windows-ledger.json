@@ -108,6 +108,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:charging/ChargingHeatmap",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 24,
+    "requiredCount": 24,
+    "promptId": "p2-windows/W7/windows-page-charging-ChargingHeatmapPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-ChargingHeatmapPage.log"
+  },
+  {
     "unitId": "page:charging/TeslaChargingSessionsMap",
     "platform": "windows",
     "status": "done",

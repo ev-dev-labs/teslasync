@@ -470,6 +470,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingCurvePage\ChargingCurvePage.Model.cs" Link="FeatureViews\ChargingCurvePage\ChargingCurvePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingCurvePage\ChargingCurvePage.Source.cs" Link="FeatureViews\ChargingCurvePage\ChargingCurvePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingCurvePage\ChargingCurvePage.ViewModel.cs" Link="FeatureViews\ChargingCurvePage\ChargingCurvePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingHeatmapPage\ChargingHeatmapPage.Model.cs" Link="FeatureViews\ChargingHeatmapPage\ChargingHeatmapPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingHeatmapPage\ChargingHeatmapPage.Source.cs" Link="FeatureViews\ChargingHeatmapPage\ChargingHeatmapPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingHeatmapPage\ChargingHeatmapPage.ViewModel.cs" Link="FeatureViews\ChargingHeatmapPage\ChargingHeatmapPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.Model.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.Source.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClimateControlPage\ClimateControlPage.ViewModel.cs" Link="FeatureViews\ClimateControlPage\ClimateControlPage.ViewModel.cs" />

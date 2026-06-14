@@ -1,0 +1,184 @@
+P2 · WINDOWS · W7 — page:charging/ChargingHeatmap (WinUI 3 / Fluent)
+====================================================================
+
+Goal: native WinUI 3 / Windows App SDK / .NET 10 / Fluent parity port of the web
+page ChargingHeatmapPage (web/src/features/charging/pages/ChargingHeatmapPage.tsx,
+route /charging-heatmap, nav name ChargingHeatmap) at full panel / chart / state /
+string parity. Delegation FORBIDDEN — implemented in this session. No placeholders
+(ADR-011). SI read directly from the API; display-boundary scaling only.
+
+Repo-convention note: the p2-windows feature surfaces are authored as C#-markup
+UserControl views with a four-file split (.Model.cs / .Source.cs / .ViewModel.cs
+/ .cs), NOT a hand-written .xaml + ViewModel pair. The manifest's hypothetical
+output path apps/windows/TeslaSync/Features/Charging/ does not exist in this repo;
+this port follows the actual sibling-page pattern (ChargingCurvePage,
+ChargingDetailPage) verbatim: output dir
+apps/windows/TeslaSync.App/feature-views/ChargingHeatmapPage/, namespace
+TeslaSync.App.FeatureViews.Charging, nav registered in Shell/ShellWindow.xaml.cs.
+The platform string catalog (Strings/en/Resources.resw) already carries all twelve
+manifest keys (auto-generated from the web i18n), so no catalog edit was needed.
+
+Honesty Covenant (binding): no red-as-green; no scope narrowing; no skip-and-assume;
+no stubs as final; no parity shortcuts; no delegation; no predecessor bypass; no
+commit on red; no silent drift; log ends with EXIT/STATUS.
+
+Artifacts produced
+------------------
+  apps/windows/TeslaSync.App/feature-views/ChargingHeatmapPage/
+    ChargingHeatmapPage.Model.cs     (ChargingHeatmapSession + tolerant JSON parser,
+                                      ChargingHeatmapSnapshot, ChargingHeatmapState,
+                                      ChargingHeatColor [ported heatColor buckets +
+                                      legend], ChargingHeatCell / ChargingHeatRow,
+                                      ChargingHeatmapLocation, ChargingHeatmapModel,
+                                      ChargingHeatmapDisplay, ChargingHeatmapProjection
+                                      — ported buildGrid / durationMinutes / stats /
+                                      locationData — ChargingHeatmapStats,
+                                      ChargingHeatmapGrid, Registration, Diagnostics)
+    ChargingHeatmapPage.Source.cs    (IChargingHeatmapFeed, EmptyChargingHeatmapFeed,
+                                      ChargingHeatmapClientFeed [GET /charging-sessions,
+                                      generated op get_api_v1_charging_sessions, scoped
+                                      by snake_case vehicle_id + limit=2000])
+    ChargingHeatmapPage.ViewModel.cs (INotifyPropertyChanged state holder; LoadAsync /
+                                      RefreshAsync / NotifyOpened; loading/empty/
+                                      success/error; freshness flags; display-zone binning)
+    ChargingHeatmapPage.cs           (thin WinUI 3 UserControl renderer: header +
+                                      freshness, loading skeleton, retriable error
+                                      surface, four summary stat GlassPanels, favorite
+                                      GlassPanel, 7×24 heatmap-grid GlassPanel with
+                                      hour header / day rows / tooltips / Less→More
+                                      legend, and the top-locations GlassPanel hosting
+                                      the TsBarChart vs TsEmptyState)
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+    + PageFactory.Register("ChargingHeatmap", () => new …Charging.ChargingHeatmapPage())
+      (RouteTable already maps Page("ChargingHeatmap","charging-heatmap",Charging,…))
+  apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingHeatmapPageTests.cs  (32 tests)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj  (link the three headless
+    page files — Model/Source/ViewModel — for the headless test compile, matching the
+    sibling-page pattern; the bare WinUI view file is exercised by the app build)
+  apps/parity/windows-ledger.json  (page:charging/ChargingHeatmap → done, 24/24)
+
+=== PARITY ===
+PARITY_REQUIRED=24
+
+  [x] panel  — GlassPanel1 (Total Sessions stat)
+        ChargingHeatmapPage.cs:62 field `_sessionsPanel` (TsGlassPanel, BuildStatCard
+        glow=Cyan); RenderStats() sets `_sessionsValue`/`_sessionsLabel` from
+        Display.TotalSessionsValue/Label. Mica/glass card, never blank.
+  [x] panel  — GlassPanel2 (Total Energy stat)
+        ChargingHeatmapPage.cs:65 field `_energyPanel` (TsGlassPanel, glow=Green);
+        RenderStats() → Display.TotalEnergyValue ("{kWh} kWh", SI Wh ÷1000 at boundary).
+  [x] panel  — GlassPanel3 (Total Cost stat)
+        ChargingHeatmapPage.cs:68 field `_costPanel` (TsGlassPanel, glow=Purple);
+        RenderStats() → Display.TotalCostValue (ScalarFormatters.FormatCurrency).
+  [x] panel  — GlassPanel4 (Avg Duration stat)
+        ChargingHeatmapPage.cs:71 field `_durationPanel` (TsGlassPanel); RenderStats()
+        → Display.AvgDurationValue ("{min} min", ported durationMinutes mean).
+  [x] panel  — GlassPanel5 (Favorite Charging Time)
+        ChargingHeatmapPage.cs:74 field `_favoritePanel` (TsGlassPanel, glow=Cyan);
+        RenderFavorite() shows FavoriteMain+FavoriteCount when HasFavorite else the
+        common.noData placeholder — always rendered (web hides at maxCount==0; native
+        keeps the panel per ADR-011 / prohibited-pattern #6).
+  [x] panel  — GlassPanel6 (Weekly Charging Heatmap grid)
+        ChargingHeatmapPage.cs:82 field `_gridPanel` (TsGlassPanel); RenderGrid()
+        builds the hour header + 7 day rows of 24 cells (BuildCell tints each with the
+        ported ChargingHeatColor.ForCount), RenderLegend() the Less→More swatches.
+  [x] panel  — GlassPanel7 (Top Charging Locations)
+        ChargingHeatmapPage.cs:95 field `_locationsPanel` (TsGlassPanel); RenderLocations()
+        toggles the bar chart vs the TsEmptyState (common.noData).
+  [x] chart  — BarChart
+        ChargingHeatmapPage.cs:97 field `_locationsChart` (TsBarChart — the W3 native
+        chart wrapper, never a web canvas); bound to Display.LocationSeries
+        (ChartSeriesKind.Bar) in RenderLocations(); web recharts BarChart over the
+        top-10 ≥2-visit places. Empty branch → TsEmptyState.
+  [x] state  — loading
+        ChargingHeatmapState.Loading (Model.cs); Display.ShowLoading (Model.cs:408);
+        view `_loadingSkeleton` (cs:54, toggled cs:336) — Fluent TsSkeleton shimmer,
+        redacted. Never a blank region.
+  [x] state  — empty
+        ChargingHeatmapState.Empty; ShowContent = Empty|Success (Model.cs:410) renders
+        the zeroed layout exactly as the web (stats 0, all-empty grid, favorite
+        placeholder, and the locations TsEmptyState/common.noData) — never blank.
+  [x] state  — error
+        ChargingHeatmapState.Error; Display.ShowError (Model.cs:409); view `_errorState`
+        (TsQueryError + Retry, cs:55, toggled cs:338; ActionInvoked → RefreshAsync).
+  [x] state  — success
+        ChargingHeatmapState.Success; ShowContent (Model.cs:410); content host
+        `_contentPanel` toggled cs:343, RenderStats/Favorite/Grid/Legend/Locations cs:344.
+  [x] string — charging.heatmap.avgDuration
+        ChargingHeatmapProjection.Project Model.cs:364 → Display.AvgDurationLabel;
+        rendered `_durationLabel.Value`. resw key translation.charging.heatmap.avgDuration.
+  [x] string — charging.heatmap.favorite
+        Project Model.cs:365 → Display.FavoriteLabel; rendered `_favoriteLabel.Value`.
+        resw key translation.charging.heatmap.favorite.
+  [x] string — charging.heatmap.gridTitle
+        Project Model.cs:366 → Display.GridTitle; rendered `_gridTitle.Value` (PanelTitle).
+        resw key translation.charging.heatmap.gridTitle.
+  [x] string — charging.heatmap.less
+        Project Model.cs:368 → Display.LessLabel; rendered `_lessLabel.Value` on the
+        legend. resw key translation.charging.heatmap.less.
+  [x] string — charging.heatmap.more
+        Project Model.cs:369 → Display.MoreLabel; rendered `_moreLabel.Value` on the
+        legend. resw key translation.charging.heatmap.more.
+  [x] string — charging.heatmap.subtitle
+        Project Model.cs:360 → Display.Subtitle; rendered header `_subtitle.Value`
+        (Subhead). resw key translation.charging.heatmap.subtitle.
+  [x] string — charging.heatmap.title
+        Project Model.cs:359 + Registration.Title Model.cs:767 → Display.Title; rendered
+        header `_title.Value` (PageTitle). resw key translation.charging.heatmap.title.
+  [x] string — charging.heatmap.topLocations
+        Project Model.cs:367 → Display.TopLocationsTitle; rendered `_locationsTitle.Value`
+        + chart title. resw key translation.charging.heatmap.topLocations.
+  [x] string — charging.heatmap.totalCost
+        Project Model.cs:363 → Display.TotalCostLabel; rendered `_costLabel.Value`.
+        resw key translation.charging.heatmap.totalCost.
+  [x] string — charging.heatmap.totalEnergy
+        Project Model.cs:362 → Display.TotalEnergyLabel; rendered `_energyLabel.Value`.
+        resw key translation.charging.heatmap.totalEnergy.
+  [x] string — charging.heatmap.totalSessions
+        Project Model.cs:361 → Display.TotalSessionsLabel; rendered `_sessionsLabel.Value`.
+        resw key translation.charging.heatmap.totalSessions.
+  [x] string — common.noData
+        Project Model.cs:370 → Display.NoDataMessage / FavoriteEmptyMessage; rendered on
+        the locations TsEmptyState and the favorite placeholder. resw key
+        translation.common.noData.
+
+PARITY_COVERED=24
+
+i18n: every visible literal resolves through the ILocalizer facade with the web key
+names; all twelve required keys are resolved up front in the projection (so they are
+requested in BOTH the empty and success states) — ChargingHeatmapPageTests asserts
+this via a RecordingLocalizer in both states.
+units: SI read directly from the API (total_energy_added_wh stays watt-hours on the
+model); display scaling (÷1000 → kWh via UnitConverters.EnergyFromSi) happens only in
+the projection / stats reduction at the render boundary, mirroring the web's
+convertEnergyFromSI(wh,'kWh'). The 7×24 grid bins each session by its start instant in
+the display TimeZoneInfo (web browser-local new Date(...).getDay()/.getHours()).
+
+=== GATE ===
+# placeholder / stub scan (ADR-011) — actual output dir (the manifest's hypothetical
+# apps/windows/TeslaSync/Features/Charging does not exist in this repo).
+./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargingHeatmapPage -Language csharp
+  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+dotnet build apps/windows/TeslaSync.sln -c Release
+  TeslaSync.App -> …\bin\x64\Release\net10.0-windows10.0.19041.0\TeslaSync.App.dll
+  TeslaSync.App.Tests -> …\bin\Release\net10.0\TeslaSync.App.Tests.dll
+  Build succeeded. 0 Warning(s) 0 Error(s)   (TreatWarningsAsErrors=true; analyzers on)
+BUILD_EXIT=0
+
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (whole solution; LF + style + analyzers clean, including the four new page files,
+  the test file and the ShellWindow registration)
+LINT_EXIT=0
+
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 29767, Skipped: 0, Total: 29767
+  ChargingHeatmapPageTests: 32 passed (tolerant parse, projection state matrix, the
+  twelve i18n keys in both empty + success, the ported heatColor buckets / buildGrid /
+  durationMinutes / stats / top-locations reduction, the data state-holder, and the
+  client feed's get_api_v1_charging_sessions request shaping with vehicle_id + limit).
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE

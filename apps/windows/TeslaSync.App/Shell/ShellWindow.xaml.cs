@@ -320,6 +320,8 @@ public sealed partial class ShellWindow : Window
         });
         // Charging / Charging Curve page (P2/W7) — parity port of web ChargingCurvePage at route /charging-curve.
         _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
+        // Charging / Charging Heatmap page (P2/W7) — parity port of web ChargingHeatmapPage at route /charging-heatmap.
+        _viewModel.PageFactory.Register("ChargingHeatmap", static () => new FeatureViews.Charging.ChargingHeatmapPage());
         // Charging / Powershare page (P2/W7) — parity port of web PowersharePage at route /powershare.
         _viewModel.PageFactory.Register("Powershare", static () => new FeatureViews.Charging.PowersharePage());
         // Charging / Smart Charge page (P2/W7) — parity port of web SmartChargePage at routes /charging/schedule + /smart-charge.
