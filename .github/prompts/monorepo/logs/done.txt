@@ -813,3 +813,4 @@ p3-android/shared-meaningful/A-0233-VehicleHeroCard.prompt.md
 p3-android/widget-primitives/A-0001-WidgetBigNumber.prompt.md
 p3-android/shared-meaningful/A-0234-VehiclePaintPicker.prompt.md
 p3-android/widget-primitives/A-0003-WidgetComparisonCard.prompt.md
+p3-android/widget-primitives/A-0004-WidgetDetailCard.prompt.md
