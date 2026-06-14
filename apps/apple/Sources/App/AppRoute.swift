@@ -29,7 +29,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
-    case gdprExport
+    case gdprExport, rbacMatrix
     case liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -52,6 +52,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetAPI: "fleet-api"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .gdprExport: "gdpr-exports"
+        case .rbacMatrix: "rbac-matrix"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
         case .teslaOrders: "tesla-orders"
@@ -93,6 +94,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetAPI: "antenna.radiowaves.left.and.right"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .gdprExport: "tray.and.arrow.down.fill"
+        case .rbacMatrix: "lock.shield.fill"
         case .liveSignals: "waveform.path.ecg"
         case .schemaDrift: "tablecells.badge.ellipsis"
         case .teslaOrders: "cart.fill"
@@ -116,7 +118,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
-             .fleetTelemetryCoverage, .gdprExport, .liveSignals, .schemaDrift, .powerUser, .system: .system
+             .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .liveSignals, .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
     }

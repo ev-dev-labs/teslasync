@@ -1,5 +1,5 @@
 {
-  "ledger": "P4 apple program \u2014 page parity rows (apple-macos + apple-ios)",
+  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
   "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
   "rows": [
     {
@@ -73,6 +73,24 @@
       "requiredCount": 16,
       "promptId": "p4-apple/P7/page:admin/FeatureFlags",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log"
+    },
+    {
+      "unitId": "page:admin/RbacMatrix",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:admin/RbacMatrix",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-RbacMatrixPage.log"
+    },
+    {
+      "unitId": "page:admin/RbacMatrix",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:admin/RbacMatrix",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-RbacMatrixPage.log"
     },
     {
       "unitId": "page:admin/FleetTelemetryCoverage",
