@@ -95,6 +95,17 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Dashboard / Explore page (P2/W7) — parity port of web ExplorePage at route /explore.
+        // RouteTable already maps Page("Explore","explore",RouteGroup.DashboardExplore). The feature hub renders the
+        // categorised catalogue of every navigable destination; card / recently-visited / "did you mean" activations
+        // navigate through the shell router.
+        _viewModel.PageFactory.Register("Explore", () =>
+        {
+            var page = new FeatureViews.Explore.ExplorePage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Battery / Energy page (P2/W7) — parity port of web EnergyPage at route /energy.
         _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
 

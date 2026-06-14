@@ -1,0 +1,149 @@
+p2-windows — W7 — page:explore/Explore — native WinUI 3 / Fluent parity port — artifact log
+
+Artifact unit : page:explore/Explore  (web /explore, nav name "Explore")
+Web source    : web/src/features/explore/pages/ExplorePage.tsx  (+ web/src/features/explore/featureCatalog.ts)
+Output        : apps/windows/TeslaSync.App/feature-views/ExplorePage/  (repo-canonical feature-views layout +
+                C# code-behind view, matching every sibling W7 page e.g. SignalExplorerPage; the prompt's idealized
+                "TeslaSync/Features/Explore/ExplorePage.xaml" maps to this established pure-C# page convention so the
+                page compiles into TeslaSync.sln alongside the other 34 completed pages).
+  ExplorePage.Model.cs      — ExploreState, ExploreCatalogEntry/Section/Anchor/RecentEntry/Suggestion, ExploreModel,
+                              ExploreDisplay, ExploreProjection (the render projection — resolves all 13 strings),
+                              ExploreCatalog (reuses shared LayoutNavCatalog + RouteTable verbatim, gates, filters,
+                              groups, recent, Levenshtein "did you mean"), ExploreDescriptions (web DESCRIPTIONS port),
+                              ExploreRegistration, ExploreDiagnostics.
+  ExplorePage.Source.cs     — IExploreFeed (web useVehicles + useIsForwardAuth) + EmptyExploreFeed + ExploreClientFeed
+                              (GET /vehicles count, GET /system/auth-mode mode==forward_auth, generated client / ADR-004);
+                              IExploreRecentSource (web getRecentPages) + Static/Empty implementations.
+  ExplorePage.ViewModel.cs  — ExplorePageViewModel : INotifyPropertyChanged + IDisposable (P1/S8 state holder):
+                              LoadAsync/RefreshAsync (gating reads, failure→open-mode), SetQuery/ClearQuery, recent
+                              subscription, projects via ExploreProjection.
+  ExplorePage.cs            — WinUI 3 UserControl view: header, recently-visited strip, GlassPanel1 (search + anchor
+                              strip), categorised section bands (VariableSizedWrapGrid of feature cards), GlassPanel2
+                              (empty result + "did you mean" + clear). NavigationRequested → shell router.
+Registration  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Explore", …) wired to
+                NavigateTo(route); RouteTable already maps Page("Explore","explore",RouteGroup.DashboardExplore).
+Tests         : apps/windows/TeslaSync.App.Tests/FeatureViews/ExplorePageTests.cs (28 headless tests) + the three
+                UI-free sources added to TeslaSync.App.Tests.csproj.
+ADR refs      : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015.
+
+Pre-req note  : W1 generated C# client (apps/windows/Generated/, namespace TeslaSync.Windows.Generated.Api) is a
+                git-ignored regenerated artifact (.gitignore: apps/**/generated/). This fresh worktree had no copy,
+                so it was regenerated from the committed spec via the committed tool:
+                  npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts   → wrote 10 C# + 10 Kotlin files.
+                Its in-box net10 project wrapper (apps/windows/Generated/Generated.csproj, also git-ignored) was
+                provisioned to match the verify csproj so TeslaSync.App.Core + the headless test host resolve the
+                client, exactly as the sibling W7 pages' green builds required.
+
+=== GATE ===
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ExplorePage -Language csharp
+  PLACEHOLDER_ALLOWED=1   (the i18n key literal "explore.searchPlaceholder" — ported verbatim from web, // parity:allow)
+  PLACEHOLDER_COUNT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/ExplorePageTests.cs -Language csharp
+  PLACEHOLDER_ALLOWED=1
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+  Generated -> TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> TeslaSync.App.Core.dll        (pre-existing CA warnings in Core only; Core has no TreatWarningsAsErrors)
+  TeslaSync.App.Platform -> TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> TeslaSync.App.Tests.dll
+  TeslaSync.App -> TeslaSync.App.dll                  (TreatWarningsAsErrors=true — clean)
+  Build succeeded.  17 Warning(s) [all pre-existing TeslaSync.App.Core CA10xx/CA17xx]  0 Error(s)
+BUILD_EXIT=0
+
+  Root-cause fix recorded for honesty: the first view drafts crashed the WinUI XAML markup compiler
+  (WMC9999 "Object reference not set", cascading WMC0001/WMC0110 across unrelated pre-existing XAML). Bisected to a
+  `using Windows.System;` (added for VirtualKey) that made `DispatcherQueue` ambiguous with
+  Microsoft.UI.Dispatching.DispatcherQueue (CS0104); the markup compiler null-refs on the unresolved type instead of
+  reporting cleanly. Fixed by dropping the using and fully-qualifying Windows.System.VirtualKey. Verified by a
+  pristine-tree build (0/0) and incremental re-introduction.
+
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes   (new + edited files; LF-normalized per apps/.editorconfig)
+  (clean)
+LINT_EXIT=0
+
+$ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  - Failed: 0, Passed: 30857, Skipped: 0, Total: 30857
+  (includes the 28 ExplorePageTests: i18n 13-key coverage x2 states, success/empty state matrix, filtered subset,
+   search/empty panel strings, anchor counts+aria, minVehicles + requiresAuth gating, filter/group/recent/closest,
+   slugify, auth-mode parser, view-model load + setQuery/clearQuery + feed-failure→open-mode.)
+TEST_EXIT=0
+
+# NOTE: apps/windows/TeslaSync.App.UITests is the WinAppDriver/Appium E2E suite; it is environment-gated
+# (no WinAppDriver listening on 127.0.0.1:4723). This repo-wide E2E-runner gap is pre-existing and NOT introduced by
+# this change; the per-page completion gate is the headless TeslaSync.App.Tests suite above, exactly as every sibling
+# W7 page recorded. The native WinUI view compiles in the Release solution build (BUILD_EXIT=0); its per-state branch
+# selection is driven entirely by the asserted ExploreDisplay projection.
+
+=== PARITY ===
+
+PARITY_REQUIRED=17
+
+[x] panel  - GlassPanel1
+      ExplorePage.cs → BuildSearchPanel() → _searchPanel (TsGlassPanel) hosting _searchInput (TsInput) + _anchorRow
+      (the section anchor strip). Sticky filter panel; web <GlassPanel> search panel.
+[x] panel  - GlassPanel2
+      ExplorePage.cs → BuildEmptyPanel() → _emptyPanel (TsGlassPanel) hosting _emptyIcon/_emptyTitle/_emptyBody/
+      _didYouMean/_suggestions/_clearButton. Web <GlassPanel> EmptyResult.
+[x] state  - empty data state
+      ExplorePage.Model.cs → ExploreState.Empty; ExploreProjection.Project sets State=Empty + ShowEmpty when the
+      filter matches nothing (web grouped.length===0); ExplorePage.cs Render → _emptyPanel visible, suggestions built.
+[x] state  - success data state
+      ExplorePage.Model.cs → ExploreState.Success; Display.ShowSections + Sections/Anchors; ExplorePage.cs Render →
+      _sectionsHost rebuilt with section bands of feature cards (web SectionBand grid).
+[x] string - explore.anchorCountAria
+      ExploreProjection.Project → anchorCountTemplate = localizer.GetString("explore.anchorCountAria","{{count}} features");
+      interpolated per ExploreAnchor.CountAria.
+[x] string - explore.empty.body
+      ExploreProjection.Project → emptyBody = localizer.GetString("explore.empty.body", …) → Display.EmptyBody.
+[x] string - explore.empty.clear
+      ExploreProjection.Project → clearLabel = localizer.GetString("explore.empty.clear","Clear filter") → Display.EmptyClear → _clearButton.
+[x] string - explore.empty.didYouMean
+      ExploreProjection.Project → didYouMean = localizer.GetString("explore.empty.didYouMean","Did you mean") → Display.EmptyDidYouMean.
+[x] string - explore.empty.title
+      ExploreProjection.Project → emptyTitle = Interpolate(localizer.GetString("explore.empty.title", …),query) → Display.EmptyTitle.
+[x] string - explore.pageTitle
+      ExploreProjection.Project → windowTitle = localizer.GetString("explore.pageTitle","Explore features") → Display.WindowTitle
+      (also ExploreRegistration.WindowTitle).
+[x] string - explore.recent.heading
+      ExploreProjection.Project → recentHeading = localizer.GetString("explore.recent.heading","Recently visited") → Display.RecentHeading → _recentHeading.
+[x] string - explore.searchLabel
+      ExploreProjection.Project → searchLabel = localizer.GetString("explore.searchLabel","Filter features") → Display.SearchLabel.
+[x] string - explore.searchPlaceholder
+      ExploreProjection.Project → searchHint = localizer.GetString("explore.searchPlaceholder", …) → Display.SearchHint → _searchInput.Hint
+      (key ported verbatim from web; // parity:allow on the literal line).
+[x] string - explore.sectionsAriaLabel
+      ExploreProjection.Project → sectionsAria = localizer.GetString("explore.sectionsAriaLabel","Jump to section") → Display.SectionsAriaLabel → _anchorRow name.
+[x] string - explore.subtitle.all
+      ExploreProjection.Project → subtitleAll = Interpolate(localizer.GetString("explore.subtitle.all", …),total) → Display.Subtitle (no query).
+[x] string - explore.subtitle.filtered
+      ExploreProjection.Project → subtitleFiltered = Interpolate(localizer.GetString("explore.subtitle.filtered", …),matches,total,query) → Display.Subtitle (with query).
+[x] string - explore.title
+      ExploreProjection.Project → title = localizer.GetString("explore.title","Explore features") → Display.Title/AutomationName → _title.
+
+  Verification: ExplorePageTests.Projection_resolves_every_required_string_key_in_one_pass and
+  Projection_resolves_required_keys_even_in_the_empty_state assert all 13 keys flow through a RecordingLocalizer in a
+  single Project() pass (success + empty). Both green in the 30857-test run.
+
+PARITY_COVERED=17
+
+=== Acceptance Criteria ===
+
+[x] Every named panel implemented (GlassPanel1 search+anchors, GlassPanel2 empty result); every anonymous web region
+    reproduced (header, recently-visited strip, categorised section bands of feature cards w/ highlight-free icon+
+    label+description, "did you mean" Levenshtein suggestions, clear affordance, "/" focus shortcut).
+[x] All 17 parity items render from the bound C# state holder (ExplorePageViewModel → ExploreDisplay).
+[x] empty + success implemented for the catalogue; the two gating reads (vehicles, auth-mode) degrade to open mode on
+    failure exactly as the web treats unresolved queries (no spurious error banner — faithful to the web page).
+[x] All visible strings sourced through the ILocalizer seam (Strings/*.resw bridge via ShellLocalizer); zero hardcoded
+    literals on the render path; web key names matched verbatim (13/13).
+[x] Dark mode + accessibility (AutomationProperties name/help/AccessibilityView on cards/chips/anchors/suggestions,
+    keyboard + pointer, live strips) honored; design tokens only (no ad-hoc colors); Fluent-native (no web pixel-clone).
+[x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (17).
+[x] windows ledger row for page:explore/Explore set covered (17/17, status=done).
+
+EXIT=0
+STATUS=DONE
