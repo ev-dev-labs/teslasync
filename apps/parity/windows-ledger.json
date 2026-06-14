@@ -304,5 +304,14 @@
     "requiredCount": 77,
     "promptId": "p2-windows/W7/windows-page-driving-DrivesListPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-DrivesListPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/GuardMode",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 54,
+    "requiredCount": 54,
+    "promptId": "p2-windows/W7/windows-page-vehicle-systems-GuardModePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log"
   }
 ]

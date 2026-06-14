@@ -387,6 +387,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\GeofencesPage\GeofencesPage.Model.cs" Link="FeatureViews\GeofencesPage\GeofencesPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeofencesPage\GeofencesPage.Source.cs" Link="FeatureViews\GeofencesPage\GeofencesPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\GeofencesPage\GeofencesPage.ViewModel.cs" Link="FeatureViews\GeofencesPage\GeofencesPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GuardModePage\GuardModePage.Model.cs" Link="FeatureViews\GuardModePage\GuardModePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GuardModePage\GuardModePage.Source.cs" Link="FeatureViews\GuardModePage\GuardModePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GuardModePage\GuardModePage.ViewModel.cs" Link="FeatureViews\GuardModePage\GuardModePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.Model.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.Source.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.ViewModel.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.ViewModel.cs" />
