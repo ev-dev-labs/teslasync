@@ -1,0 +1,22 @@
+/*
+  DateRangeFilter.strings
+  TeslaSync — P4 shared surface · 0152 · DateRangeFilter (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peers of the web `t(key, default)` keys
+  in `components/forms/DateRangeFilter.tsx`. Every key/fallback pair below is byte-identical to the web source
+  so the field and the Apply action read the same on both platforms. (The composed preset row's keys —
+  date.preset.* + date.preset.label — are owned by the DatePresetChips surface table, not duplicated here.)
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in
+  a per-surface table ("DateRangeFilter") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* The start date field's accessible name (web `t('date.range.start', 'Start date')`). */
+"date.range.start" = "Start date";
+
+/* The end date field's accessible name (web `t('date.range.end', 'End date')`). */
+"date.range.end" = "End date";
+
+/* The Apply button's title (web `t('date.range.apply', 'Apply')`). */
+"date.range.apply" = "Apply";
