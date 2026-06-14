@@ -219,6 +219,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-TrueCostPage.log"
     },
     {
+      "unitId": "page:automations/ActionBuilder",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:automations/ActionBuilder",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-ActionBuilder.log"
+    },
+    {
+      "unitId": "page:automations/ActionBuilder",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:automations/ActionBuilder",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-ActionBuilder.log"
+    },
+    {
       "unitId": "page:automations/AutomationActivityFeed",
       "platform": "apple-macos",
       "status": "done",
