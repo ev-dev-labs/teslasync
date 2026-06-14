@@ -684,6 +684,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.Model.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.Source.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyProductsPage\EnergyProductsPage.ViewModel.cs" Link="FeatureViews\EnergyProductsPage\EnergyProductsPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ExplorePage\ExplorePage.Model.cs" Link="FeatureViews\ExplorePage\ExplorePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ExplorePage\ExplorePage.Source.cs" Link="FeatureViews\ExplorePage\ExplorePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ExplorePage\ExplorePage.ViewModel.cs" Link="FeatureViews\ExplorePage\ExplorePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyPage\EnergyPage.Model.cs" Link="FeatureViews\EnergyPage\EnergyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyPage\EnergyPage.Source.cs" Link="FeatureViews\EnergyPage\EnergyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\EnergyPage\EnergyPage.ViewModel.cs" Link="FeatureViews\EnergyPage\EnergyPage.ViewModel.cs" />
