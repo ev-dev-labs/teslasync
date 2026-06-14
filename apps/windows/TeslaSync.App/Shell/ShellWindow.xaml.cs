@@ -230,6 +230,8 @@ public sealed partial class ShellWindow : Window
         // already maps Page("Statistics","statistics",RouteGroup.Analytics). The default empty-source ctor renders
         // the page-level empty state until a DI host wires the generated-client-backed StatisticsSource.
         _viewModel.PageFactory.Register("Statistics", static () => new FeatureViews.Analytics.StatisticsPage());
+        // Analytics / Period comparison page (P2/W7) — parity port of web PeriodComparePage at route /period-compare.
+        _viewModel.PageFactory.Register("PeriodCompare", static () => new FeatureViews.Analytics.PeriodComparePage());
         // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
         _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 
