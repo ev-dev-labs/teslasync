@@ -237,6 +237,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationActivityFeed.log"
     },
     {
+      "unitId": "page:automations/AutomationCard",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:automations/AutomationCard",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationCard.log"
+    },
+    {
+      "unitId": "page:automations/AutomationCard",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:automations/AutomationCard",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationCard.log"
+    },
+    {
       "unitId": "page:automations/AutomationsList",
       "platform": "apple-macos",
       "status": "done",
