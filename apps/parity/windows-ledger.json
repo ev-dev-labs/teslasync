@@ -241,5 +241,14 @@
     "requiredCount": 79,
     "promptId": "p2-windows/W7/windows-page-maps-NavigationRoutePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-maps-NavigationRoutePage.log"
+  },
+  {
+    "unitId": "page:power-user/SqlPlayground",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 14,
+    "requiredCount": 14,
+    "promptId": "p2-windows/W7/windows-page-power-user-SqlPlaygroundPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-power-user-SqlPlaygroundPage.log"
   }
 ]

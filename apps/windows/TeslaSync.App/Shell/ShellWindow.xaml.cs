@@ -127,6 +127,13 @@ public sealed partial class ShellWindow : Window
         // Utilities and Reference sections in the web order.
         _viewModel.PageFactory.Register("DevTools", static () => new FeatureViews.Admin.DevToolsPage());
 
+        // Power User / SQL Playground page (P2/W7) — parity port of web SqlPlaygroundPage at route /power/sql.
+        // RouteTable already maps Page("PowerSqlPlayground","power/sql",RouteGroup.PowerUser). The page is a thin
+        // renderer: a manual SQL editor panel (GlassPanel1) plus the curated schema-catalog viewer (GlassPanel2),
+        // driven entirely by SqlPlaygroundPageViewModel's projection. The opt-in AI drafter (web AINLSqlPlayground,
+        // wrapped in withAiFeature) is a separate parity unit and is intentionally out of scope here.
+        _viewModel.PageFactory.Register("PowerSqlPlayground", static () => new FeatureViews.PowerUser.SqlPlaygroundPage());
+
         // Admin / Gas Price Auto-Poll page (P2/W7) — parity port of web GasPriceAutoPollPage at route /gas-price.
         // RouteTable already maps Page("GasPriceAutoPoll","gas-price",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("GasPriceAutoPoll", static () => new FeatureViews.Admin.GasPriceAutoPollPage());

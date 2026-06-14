@@ -1,0 +1,182 @@
+=== p2-windows · W7 · page:power-user/SqlPlayground (WinUI 3 / Fluent) ===
+Parity unit : page:power-user/SqlPlayground   kind=page   web route=/power/sql
+Web source  : web/src/features/power-user/pages/SqlPlaygroundPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/SqlPlaygroundPage/ (+ NavigationView registration, test, ledger)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- Layout mapping: the repository's WinUI app is code-first C# (no .xaml page files). Every feature surface lives
+  under apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.ViewModel.cs (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent
+  view), exactly as the sibling W7 ApiPlaygroundPage / StatusApiDocsPage do. The generated prompt's idealized
+  "Features/PowerUser/SqlPlaygroundPage.xaml + SqlPlaygroundPageViewModel.cs" is mapped onto these real
+  conventions. Namespace = TeslaSync.App.FeatureViews.PowerUser (aligns with RouteGroup.PowerUser).
+- Data binding (ADR-004): the manifest declares NO API data sources ("renders from navigation params / local
+  state"). The web page hand-writes read-only SQL against an install-wide-static curated catalog and never calls a
+  SQL-execution endpoint. So the page is driven entirely by SqlPlaygroundPageViewModel over local state (the SQL
+  text + the last Run message) with no generated-client call. The curated catalog is ported verbatim from the web
+  CURATED_CATALOG (and mirrors the Go nlSqlPlaygroundCuratedCatalog) as SqlCatalog.Default; every numeric column is
+  SI-canonical (distance_m / duration_s / energy_used_wh / avg_speed_mps / max_power_w), never a legacy unit suffix.
+- Draft persistence (web localStorage['ai.sqlPlayground.draft']): represented by an injected
+  ISqlPlaygroundDraftStore; the default InMemorySqlPlaygroundDraftStore.Shared reproduces survive-navigation drafts
+  for the app session. VM.SetSql persists; the ctor loads the persisted draft.
+- One data state (manifest: success). The page has no API source, so SqlPlaygroundProjection.Project always yields
+  SqlPlaygroundState.Success and renders the editor + catalog (never a blank region, ADR-011). The deterministic
+  Run notices (runEmpty / runUnavailable) are modelled as SqlRunMessageKind so the copy is re-resolved through the
+  localizer on every projection (i18n re-render on language change) rather than frozen at click time.
+- Panels (ADR-005), the manifest's two GlassPanel slots (web SqlPlaygroundPage.tsx, the two <GlassPanel>s):
+  · GlassPanel1 = the manual SQL editor. A TsGlassPanel (SqlPlaygroundPage._editorPanel) hosting a PanelTitle
+    (powerSql.editor.title), a multi-line TsTextarea (Hint = powerSql.editor.placeholder, AutomationName =
+    powerSql.editor.label, spell-check off, rows≈10), a Run TsButton (Primary) + Clear TsButton (Secondary) both
+    gated on canRun (web disabled={!canRun}), and a warning-toned run-message status line (web text-amber-300,
+    role=status → AutomationLiveSetting.Polite).
+  · GlassPanel2 = the curated schema catalog. A TsGlassPanel (_catalogPanel) hosting a PanelTitle
+    (powerSql.catalog.title), an intro paragraph (powerSql.catalog.intro) and the sorted table list
+    (BuildCatalogList → BuildTableCard → BuildColumnLine) from SqlCatalog.Sorted: each table a bordered card with a
+    mono cyan name, a muted description and per-column "name · type — description" lines (mono emerald name).
+  No hardcoded colours/typography — PageTitle/PanelTitle (Typography) + DisplayTokens (TsColorText*/Border,
+  TsColorInfoBrush=cyan, TsColorSuccessBrush=emerald, TsColorWarningBrush=amber) drive light/dark/high-contrast
+  from W1; mono = TypographyTokens.Mono.
+- Scope note: the web page also mounts the opt-in AI drafter <AINLSqlPlayground onApply=…/> (wrapped in
+  withAiFeature, absent in off-mode). The manifest scopes this unit to GlassPanel1+GlassPanel2 only; AINLSqlPlayground
+  is a SEPARATE parity unit and is intentionally out of scope here (documented in SqlPlaygroundPage.cs).
+- Navigation entry: RouteTable.cs already maps Page("PowerSqlPlayground","power/sql",RouteGroup.PowerUser)
+  — unchanged. ShellWindow.xaml.cs registers the page factory next to the dev/power tooling cluster
+  (new FeatureViews.PowerUser.SqlPlaygroundPage()). This page introduces NO new route.
+- i18n (ADR-014): all eleven manifest keys (powerSql.title/intro, powerSql.editor.title/placeholder/label/run/clear/
+  runEmpty/runUnavailable, powerSql.catalog.title/intro) are resolved through ILocalizer.GetString("powerSql.<key>",
+  englishFallback) using the bare web key names with the verbatim web English defaults, exactly as the established
+  ApiPlaygroundPage/StatusApiDocsPage precedent. The Strings/en|ar|he/Resources.resw catalog is AUTO-GENERATED
+  ("do not edit by hand"); absent/locale keys resolve to the verbatim web English copy via the ShellLocalizer →
+  ResourceLoader bridge (key '.'→'/'). Zero hardcoded UI text; zero hand-edit of the generated catalog.
+- a11y (ADR-015): AutomationProperties names on the page (title), the editor panel (Main landmark + editor title),
+  the catalog panel (Custom landmark + catalog title); the TsTextarea carries the powerSql.editor.label Narrator
+  name; the run message is an AutomationLiveSetting.Polite status region; each catalog table/column line carries a
+  composed Narrator name; a Group automation peer; light/dark/high-contrast via the W1 tokens; TsTextarea/TsButton
+  keyboard + pointer for free.
+- Units (ADR-005/P1-S5): the page renders no measured quantities (it documents SI schema columns as text), so no
+  unit conversion is involved; the catalog is SI-canonical by construction.
+
+=== PARITY ===
+PARITY_REQUIRED=14
+- [x] panel — GlassPanel1 (the manual SQL editor)
+      evidence: SqlPlaygroundPage.cs → _editorPanel (TsGlassPanel) + BuildEditorColumn (_editorTitle PanelTitle,
+      _editor TsTextarea, _runButton/_clearButton TsButton, _runMessage), gated by SqlPlaygroundDisplay.CanRun
+      (SqlPlaygroundProjection.Project → sql.Trim().Length>0); Run/Clear wired to SqlPlaygroundPageViewModel.Run/Clear.
+      headless asserts: CanRun_is_false_for_empty_and_whitespace_sql, CanRun_is_true_for_non_empty_sql,
+      Run_message_is_empty_when_no_run_yet, ViewModel_set_sql_updates_and_persists_the_draft,
+      ViewModel_clear_resets_sql_and_run_message_and_draft, ViewModel_typing_does_not_clear_an_existing_run_message.
+- [x] panel — GlassPanel2 (the curated schema catalog)
+      evidence: SqlPlaygroundPage.cs → _catalogPanel (TsGlassPanel) + BuildCatalogColumn (_catalogTitle PanelTitle,
+      _catalogIntro) + BuildCatalogList → BuildTableCard → BuildColumnLine over SqlCatalog.Sorted (Model.cs:
+      CuratedTable / CuratedColumn, 5 tables).
+      headless asserts: Catalog_exposes_the_five_curated_tables_sorted_by_name, Catalog_table_names_are_unique,
+      Drives_table_carries_the_si_canonical_columns, Catalog_never_exposes_a_legacy_unit_suffixed_column,
+      Catalog_columns_all_carry_a_type_and_description.
+- [x] state — success data state
+      evidence: SqlPlaygroundState.Success (Model.cs) always returned by SqlPlaygroundProjection.Project; surfaced by
+      SqlPlaygroundPageViewModel.State; the editor + catalog always render.
+      headless asserts: Projection_is_always_success_state, ViewModel_starts_empty_with_success_state.
+- [x] string — powerSql.catalog.intro
+      evidence: SqlPlaygroundProjection.CatalogIntroKey → Display.CatalogIntro → SqlPlaygroundPage._catalogIntro.
+      Default "These tables are the only tables the curated catalog exposes. …outside this list."
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.catalog.title
+      evidence: SqlPlaygroundProjection.CatalogTitleKey → Display.CatalogTitle → _catalogTitle (PanelTitle).
+      Default "Curated schema catalog".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.editor.clear
+      evidence: SqlPlaygroundProjection.ClearKey → Display.ClearLabel → _clearButton.Text. Default "Clear".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.editor.label
+      evidence: SqlPlaygroundProjection.EditorLabelKey → Display.EditorLabel → AutomationProperties.SetName(_editor)
+      (the textarea's Narrator name; web aria-label). Default "SQL query editor".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.editor.placeholder
+      evidence: SqlPlaygroundProjection.EditorHintKey ("powerSql.editor.placeholder", // parity:allow) → Display.EditorHint
+      → _editor.Hint (the TsTextarea empty-field hint). Default "SELECT COUNT(*) FROM drives WHERE started_at >= NOW() - INTERVAL '7 days'".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.editor.run
+      evidence: SqlPlaygroundProjection.RunKey → Display.RunLabel → _runButton.Text. Default "Run".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.editor.runEmpty
+      evidence: SqlPlaygroundProjection.RunEmptyKey → Display.RunMessage when SqlRunMessageKind.Empty
+      (VM.Run on blank SQL) → _runMessage. Default "Type or paste a SELECT/WITH query above before running."
+      headless asserts: Projection_resolves_every_manifest_string_key, Run_empty_kind_resolves_the_empty_notice,
+      ViewModel_run_with_empty_sql_surfaces_the_empty_notice.
+- [x] string — powerSql.editor.runUnavailable
+      evidence: SqlPlaygroundProjection.RunUnavailableKey → Display.RunMessage when SqlRunMessageKind.Unavailable
+      (VM.Run on non-blank SQL) → _runMessage. Default "Read-only execution from the browser is not enabled in this
+      build. Copy the query into your preferred database client (psql, DBeaver, TablePlus) and run it there."
+      headless asserts: Projection_resolves_every_manifest_string_key, Run_unavailable_kind_resolves_the_unavailable_notice,
+      ViewModel_run_with_sql_surfaces_the_unavailable_notice.
+- [x] string — powerSql.editor.title
+      evidence: SqlPlaygroundProjection.EditorTitleKey → Display.EditorTitle → _editorTitle (PanelTitle).
+      Default "Manual SQL editor".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.intro
+      evidence: SqlPlaygroundProjection.IntroKey → Display.Intro → _intro (intro paragraph). Default "Write read-only
+      SELECT or WITH queries against the curated schema catalog below. …copy your query into your preferred database client."
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults.
+- [x] string — powerSql.title
+      evidence: SqlPlaygroundProjection.TitleKey → Display.Title → _title (PageTitle); SqlPlaygroundRegistration.Title.
+      Default "SQL Playground".
+      headless asserts: Projection_resolves_every_manifest_string_key, Manifest_strings_resolve_the_web_defaults,
+      Registration_exposes_route_slug_and_title.
+PARITY_COVERED=14
+
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/SqlPlaygroundPageTests.cs — 24 tests, all passing).
+# All eleven manifest string keys are pinned by Projection_resolves_every_manifest_string_key through a
+# RecordingLocalizer; the web English defaults by Manifest_strings_resolve_the_web_defaults + the two run-notice
+# asserts; the editor canRun/run/clear/persist flow + the curated catalog (5 tables, sorted, SI columns) + the
+# registration (slug=SqlPlaygroundPage, route=PowerSqlPlayground) + PII-safe Diagnostics
+# (view.opened slug=SqlPlaygroundPage) round it out. The WinUI view itself is exercised by the app build.
+
+=== GATE ===
+# Note: the generated gate scopes -Path to apps/windows/TeslaSync/Features/PowerUser and builds
+# apps/windows/TeslaSync.sln. The real layout is apps/windows/TeslaSync.App/feature-views/SqlPlaygroundPage/ and
+# apps/windows/TeslaSync.sln; the commands below are the faithful real-path equivalents.
+
+# 1) Placeholder / stub scan (ADR-011) — scoped to the new feature subtree + the new test file:
+#    pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SqlPlaygroundPage -Language csharp
+#    pwsh apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/SqlPlaygroundPageTests.cs -Language csharp
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+#    (1 allow = the verbatim web i18n key "powerSql.editor.placeholder", marked `// parity:allow`; the test array
+#    entry carries the same marker.)
+
+# 2) Build (solution) — dotnet build apps/windows/TeslaSync.sln -c Release
+#    Result: Build succeeded. 0 Error(s). The only warnings on a full rebuild are 17 PRE-EXISTING CA* analyzer
+#    warnings in TeslaSync.App.Core (GeneratedApiClient / SseEventDecoder / RepositoryResult / VehicleOption /
+#    LiveEvent / DateTimeFormatting) — none from this prompt's files.
+BUILD_EXIT=0
+
+# 3) Lint / format — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+#    Whole-solution verify is clean (all files LF / utf-8, no changes). Also re-verified scoped to this
+#    changeset's files (the page subtree + SqlPlaygroundPageTests.cs) = no changes.
+LINT_EXIT=0
+
+# 4) Test — dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+#    Passed: 30330, Failed: 0, Skipped: 0 (incl. the 24 new SqlPlaygroundPageTests; no regressions — the
+#    ShellWindow registration is a WinUI view file not linked into the headless test project, validated by the
+#    Release build). TeslaSync.App.UITests is WinAppDriver/packaged-app gated (environment-skipped — 147 tests
+#    throw UiAutomationUnavailableException because nothing listens on http://127.0.0.1:4723/ and WinAppDriver.exe
+#    is absent); this change adds no UI-automation test, exactly as the sibling W7 page gates record.
+TEST_EXIT=0
+
+PARITY_COVERED=14
+PARITY_REQUIRED=14
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SqlPlaygroundPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SqlPlaygroundPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-power-user-SqlPlaygroundPage.log
+# git commit -m "feat(apps/windows): SqlPlaygroundPage at web parity (W7 power-user)"
+
+EXIT=0
+STATUS=DONE
