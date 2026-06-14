@@ -185,6 +185,10 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // Notifications / Alert Studio page (P2/W7) — parity port of web AlertStudioPage at route
+        // /notifications/studio. The rules list, the "Open Alert Studio" affordances on sibling pages and the
+        // legacy /alert-studio redirect all resolve here.
+        _viewModel.PageFactory.Register("NotificationsStudio", static () => new FeatureViews.Notifications.AlertStudioPage());
 
         // Vehicles / Vehicle Access page (P2/W7) — parity port of web VehicleAccessPage at route
         // /vehicles/:id/access. The route id is read from the live match and feeds the drivers + invitations

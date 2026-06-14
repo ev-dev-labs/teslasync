@@ -1,0 +1,274 @@
+================================================================================
+p2-windows · W7 · page:notifications/AlertStudio · WinUI 3 / Fluent parity port
+================================================================================
+Parity unit : page:notifications/AlertStudio
+Web source  : web/src/features/notifications/pages/AlertStudioPage.tsx
+Web route   : /notifications/studio
+Output      : apps/windows/TeslaSync.App/feature-views/AlertStudioPage/
+                AlertStudioPage.cs            (WinUI 3 view, C# markup — 8 panels, 4 states)
+                AlertStudioPage.ViewModel.cs  (UI-thread-free state holder; 11 hooks; editor + mutations)
+                AlertStudioPage.Projection.cs (model + AlertStudioDisplay projection + canSave + diagnostics)
+                AlertStudioPage.Model.cs      (records + tolerant JSON parsers)
+                AlertStudioPage.Strings.cs    (AlertStudioStrings — the 125 keyed i18n call sites)
+                AlertStudioPage.Catalog.cs    (registration + 47-template catalog + signal catalog + helpers)
+                AlertStudioPage.Source.cs     (IAlertStudioFeed + EmptyFeed + generated-client feed)
+Nav reg     : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+                PageFactory.Register("NotificationsStudio", () => new AlertStudioPage())
+                (RouteTable already maps NotificationsStudio -> notifications/studio; sibling pages + the
+                 legacy /alert-studio redirect resolve here.)
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/AlertStudioPageTests.cs (54 tests)
+                + 6 headless sources registered in TeslaSync.App.Tests.csproj
+Runner      : .NET 10.0.300 SDK · TFM net10.0-windows10.0.19041.0 · WinUI 3 — AVAILABLE (not BLOCKED)
+
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+--------------------------------------------------------------------------------
+Architecture (matches the established sibling W7 page AlertRulesPage)
+--------------------------------------------------------------------------------
+- MVVM, no business logic in code-behind. The view binds AlertStudioPageViewModel and renders the
+  pure AlertStudioDisplay projection; all branch selection / formatting / i18n happen in the headless
+  Model/Projection. State changes are marshalled onto the UI thread (DispatcherQueue).
+- Data port IAlertStudioFeed (the eleven web hooks) -> generated C# OpenAPI client (ADR-004):
+    useAlertRules           -> get_api_v1_alerts_rules                 GET    /alerts/rules
+    useNotificationChannels -> get_api_v1_notifications               GET    /notifications
+    useVehicles             -> get_api_v1_vehicles                    GET    /vehicles
+    useAlertMetrics         -> get_api_v1_alerts_metrics              GET    /alerts/metrics
+    useSaveAlertRule        -> post_api_v1_alerts_rules               POST   /alerts/rules        (create)
+                               put_api_v1_alerts_rules_ruleID         PUT    /alerts/rules/{id}   (update)
+    useDeleteAlertRule      -> delete_api_v1_alerts_rules_ruleID      DELETE /alerts/rules/{id}
+    useToggleAlertRule      -> put_api_v1_alerts_rules_ruleID         PUT    /alerts/rules/{id}   { enabled }
+    useSnoozeAlertRule      -> post_api_v1_alerts_rules_ruleID_snooze POST   /alerts/rules/{id}/snooze { minutes }
+    useTestAlertRule        -> post_api_v1_alerts_test                POST   /alerts/test
+    useBulkEnableRules      -> post_api_v1_alerts_rules_bulk_enable   POST   /alerts/rules/bulk/enable  { ids }
+    useBulkDisableRules     -> post_api_v1_alerts_rules_bulk_disable  POST   /alerts/rules/bulk/disable { ids }
+  (all eleven operation ids cross-checked against apps/windows/Generated ApiEndpoints — all present.)
+- Shared Fluent components reused (no web pixel-cloning, ADR-005/006): TsGlassPanel, PageTitle, Subhead,
+  PanelTitle, Caption, Text, Label, ErrorText, TsButton, TsSelect, TsInput, TsToggle, TsCheckbox,
+  TsSearchInput, TsBadge, TsSeverityBadge, TsStatusDot, TsEmptyState, TsErrorDisplay, TsSkeleton,
+  TsAlertBanner, TsModal, and the BulkActionsToolbar shared surface (enable/disable + rule item-noun).
+- i18n: every visible literal flows through ILocalizer.GetString("<key>","<English fallback>") via the
+  single AlertStudioStrings.Resolve site (125 keyed calls). Per the established W7 contract the keys
+  resolve through the WinUI resource bridge and fall back to the verbatim web English copy (sibling DONE
+  pages add no resw rows; the keyed call site IS the resolution path). The headless test
+  Resolve_requests_every_required_string_key asserts all 125 keys are requested (RecordingLocalizer),
+  and Resolve_requests_exactly_125_keys pins the count.
+- Units: this page has no SI-unit display fields (rule editor over raw signal names/operators); nothing
+  is stored or computed non-SI. The numeric operands are opaque user-typed thresholds (web parity).
+- Live data: the web page is TanStack queries only (no SSE source), so no >2min staleness chrome is
+  applicable — matches the web source.
+- The per-rule message body + the computed-metric operand are owned by the separately-gated W7 units
+  AlertMessageEditor / ComputedMetricEditor; none of THIS unit's 125 strings belong to them, so the
+  builder panel renders its own 125-string-bearing fields and the kind switch, faithfully reproducing
+  the web region without duplicating those gated sub-units.
+
+--------------------------------------------------------------------------------
+Gate (windows triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AlertStudioPage -Language csharp
+PLACEHOLDER_ALLOWED=10   # 10 verbatim web i18n keys whose name contains "Placeholder" (e.g. namePlaceholder)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release   -> Build succeeded, 0 Error(s) (17 pre-existing Core/Generated CA warnings)
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> no changes required
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30290, Failed: 0, Skipped: 0
+#   (includes the 54 new AlertStudioPageTests; same headless-unit-suite target the sibling W7 page gate
+#    logs record, e.g. windows-page-notifications-AlertRulesPage.log)
+TEST_EXIT=0
+
+# NOTE — TeslaSync.App.UITests (W9 WinAppDriver UI-automation project) is NOT part of the W7 page gate
+#   contract and is excluded here exactly as the sibling DONE pages do. The W7 gate target
+#   (TeslaSync.App.Tests) is fully green above. No red-as-green.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=137
+--------------------------------------------------------------------------------
+[x] panel  · GlassPanel1
+      AlertStudioPage.cs · RenderTypedValue() — AnyChangeDescription TsGlassPanel (web L1307 any-change value editor)
+
+[x] panel  · GlassPanel2
+      AlertStudioPage.cs · BuildTemplatesPanel()/RenderTemplates() — _templatesPanel TsGlassPanel (web L1361 template gallery)
+
+[x] panel  · GlassPanel3
+      AlertStudioPage.cs · BuildTemplateCard()/RebuildTemplateCards() — per-template TsGlassPanel (web L1414 template tile)
+
+[x] panel  · GlassPanel4
+      AlertStudioPage.cs · BuildRulesPanel()/RenderRules() — _rulesPanel TsGlassPanel (web L1454 rules column)
+
+[x] panel  · GlassPanel5
+      AlertStudioPage.cs · BuildRuleRow()/RebuildRuleRows() — per-rule TsGlassPanel (web L1512 rule card)
+
+[x] panel  · GlassPanel6
+      AlertStudioPage.cs · BuildEditorPanel()/RenderEditor() — _editorPanel TsGlassPanel (web L1659 alert-studio-builder)
+
+[x] panel  · GlassPanel7
+      AlertStudioPage.cs · BuildAllowedOperators() — _allowedOpsPanel TsGlassPanel (web L1880 allowed operators)
+
+[x] panel  · GlassPanel8
+      AlertStudioPage.cs · BuildChannels()/RenderChannels() — _channelsPanel TsGlassPanel (web L2183 alert-studio-channels)
+
+[x] state  · loading data state
+      AlertStudioPage.Projection.cs · AlertStudioProjection.SelectState=Loading (RulesLoading) + AlertStudioPage.cs RenderRules() _rulesLoading 3× TsSkeleton / RenderChannels() _channelsLoading shimmer
+
+[x] state  · empty data state
+      AlertStudioPage.Projection.cs · SelectState=Empty (RulesEmpty) + AlertStudioPage.cs _rulesEmpty TsEmptyState; channels ChannelsEmpty -> _channelsEmpty TsEmptyState; templates TemplatesEmpty -> _templatesEmpty
+
+[x] state  · error data state
+      AlertStudioPage.Projection.cs · SelectState=Error (RulesHasError, RulesErrorText) + AlertStudioPage.cs RenderChannels() _channelsError TsErrorDisplay
+
+[x] state  · success data state
+      AlertStudioPage.Projection.cs · SelectState=Success (RulesHasRows, RuleRows) + AlertStudioPage.cs RebuildRuleRows()/RebuildChannelChips() bound state
+
+[x] string · bulk.actions.disable                                               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · bulk.actions.enable                                                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · bulk.noun.rule_one                                                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · bulk.noun.rule_other                                               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · common.cancel                                                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · common.delete                                                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · draft.noun.rule                                                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.discard                                                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.keepEditing                                                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.unsavedRule                                                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.unsavedTitle                                                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.unsavedWarning                                               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · forms.validationFailed                                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.createRule                       AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.delete                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.newRule                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.reset                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.saving                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.templates                        AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.test                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.actions.updateRule                       AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.boolean.false                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.boolean.true                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.alertHistory                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.browserToast                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.emptyDescription                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.emptyTitle                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.externalChannels                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.channels.testTargetLabel                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.forceChoose         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.onceDesc            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.onceLabel           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.recommendBanner     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.recommendBannerAlt  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.repeatDesc          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehavior.repeatLabel         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehaviorLabel                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.alertBehaviorPlaceholder          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.allowedOperatorsLabel             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.allowedOperatorsPlaceholder       AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.anyChangeDescription              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.booleanValueLabel                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.cooldownLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.disabled                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.editTitle                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.enabled                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.enabledLabel                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationAfterLabel              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationAfterPlaceholder        AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationCheckboxLabel           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationHint                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationSeverityLabel           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.escalationSeverityPlaceholder     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.kindLabel                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.maxFiresHint                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.maxFiresLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.maxFiresPlaceholder               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.maxValueLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.minValueLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.nameLabel                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.namePlaceholder                   AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.newTitle                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.noSignalDescription               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.noSignalTitle                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.numericValueLabel                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.operatorLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.severityLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.signalNameLabel                   AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.signalNamePlaceholder             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.signalTypeHint                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.textValueLabel                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.textValuePlaceholder              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.typedValueLabel                   AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.editor.vehiclesLabel                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.kind.computedMetric                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.kind.computedMetricHint                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.kind.signal                              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.kind.signalHint                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.confirmDelete                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.confirmDeleteTitle                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.countMany                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.countOne                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.deleteRule                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.disable                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.disableRule                        AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.emptyDescription                   AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.emptyTitle                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.enable                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.enableRule                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.noMatches                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.noMatchesTitle                     AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.onceMode                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.onceModeHint                       AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.searchPlaceholder                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.selectRow                          AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.title                              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.rules.untitled                           AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.severity.critical                        AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.severity.info                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.severity.warn                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signalCategories.custom                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signalTypes.bool                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signalTypes.numeric                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signalTypes.text                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signals.customOptionLabel                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.signals.optionLabel                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.1h                                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.24h                               AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.4h                                AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.badge                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.button                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.cancel                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.currentlySnoozed                  AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.description                       AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.manage                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.snooze.title                             AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.subtitle                                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.allCategory                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.header                         AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.noMatches                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.noMatchesTitle                 AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.searchPlaceholder              AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.templates.use                            AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.test.defaultMessage                      AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+[x] string · notifications.alertStudio.title                                    AlertStudioPage.Strings.cs · AlertStudioStrings.Resolve
+
+PARITY_COVERED=137
+--------------------------------------------------------------------------------
+Coverage verification:
+  AlertStudioPageTests.Resolve_requests_every_required_string_key asserts all 125 required i18n keys are
+  requested by a single AlertStudioStrings.Resolve(recorder) call (RecordingLocalizer);
+  Resolve_requests_exactly_125_keys pins the distinct-key count at 125. The 4 data states are asserted by
+  State_loading/empty/error/success_* and Channels_loading_empty_error_and_list_states; the 8 panels are
+  driven by the AlertStudioDisplay flags asserted across the rules/templates/editor/channels tests. 54/54 pass.
+  PARITY_COVERED (137) == PARITY_REQUIRED (137).
+
+Acceptance criteria:
+  [x] Every named panel (GlassPanel1..8) implemented; no anonymous web region dropped.
+  [x] All 137 parity items render from the bound AlertStudioPageViewModel/AlertStudioDisplay.
+  [x] loading / empty / error / success implemented for the rules + channels data sources.
+  [x] All 125 visible strings sourced via keyed ILocalizer.GetString; key names match web verbatim; zero hardcoded literals.
+  [x] Dark mode + a11y (AutomationProperties names, keyboard, live regions) + Fluent-native only (Mica/Acrylic glass).
+  [x] SI units honored (no non-SI stored/computed; this unit has no unit-bearing display fields).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED.
+  [x] windows ledger row for page:notifications/AlertStudio set covered (137/137, status=done).
+
+EXIT=0
+STATUS=DONE
