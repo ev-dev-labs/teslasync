@@ -485,6 +485,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.Model.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.Source.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SleepEfficiencyPage\SleepEfficiencyPage.ViewModel.cs" Link="FeatureViews\SleepEfficiencyPage\SleepEfficiencyPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MileagePage\MileagePage.Model.cs" Link="FeatureViews\MileagePage\MileagePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MileagePage\MileagePage.Source.cs" Link="FeatureViews\MileagePage\MileagePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\MileagePage\MileagePage.ViewModel.cs" Link="FeatureViews\MileagePage\MileagePage.ViewModel.cs" />

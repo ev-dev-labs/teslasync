@@ -276,6 +276,8 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // Battery / Sleep Efficiency page (P2/W7) — parity port of web SleepEfficiencyPage at route /sleep-efficiency.
+        _viewModel.PageFactory.Register("SleepEfficiency", static () => new FeatureViews.Battery.SleepEfficiencyPage());
         // Vehicle Systems / Safety Settings page (P2/W7) — parity port of web SafetySettingsPage at route /safety-settings.
         _viewModel.PageFactory.Register("SafetySettings", static () => new FeatureViews.VehicleSystems.SafetySettingsPage());
         // Battery / Projected Range page (P2/W7) — parity port of web ProjectedRangePage at route /analytics/range
