@@ -232,5 +232,14 @@
     "requiredCount": 29,
     "promptId": "p2-windows/W7/windows-page-driving-RouteEfficiencyPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-RouteEfficiencyPage.log"
+  },
+  {
+    "unitId": "page:maps/MapOverview",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 55,
+    "requiredCount": 55,
+    "promptId": "p2-windows/W7/windows-page-maps-MapOverviewPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-maps-MapOverviewPage.log"
   }
 ]

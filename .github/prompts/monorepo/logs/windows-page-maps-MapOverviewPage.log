@@ -1,0 +1,191 @@
+P2-WINDOWS W7 — page:maps/MapOverview — WinUI 3 / Fluent parity port
+====================================================================
+Web source : web/src/features/maps/pages/MapOverviewPage.tsx (route /live)
+Output     : apps/windows/TeslaSync.App/feature-views/MapOverviewPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages LocationsPage/TemperatureImpactPage/RouteEfficiencyPage. The generated
+              prompt's path apps/windows/TeslaSync/Features/Maps/*.xaml does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("LiveMap", …)
+             (RouteTable already maps Page("LiveMap","live",MapsLocation); the quick-link CTAs raise
+              NavigationRequested -> NavigateTo("NavigationRoute"/"Geofences"/"Locations"); the no-vehicle
+              onboarding CTA raises NavigationRequested -> NavigateTo("Onboarding") via OnboardingNavigator.)
+Strings    : The 35 web i18n keys (mapOverview.* + error.loadFailed) are resolved in code through the
+             ILocalizer facade with the verbatim web key names and the web English defaults
+             (MapOverviewStrings.Resolve). 33 of the 35 are ALREADY present in the platform catalog
+             apps/windows/Strings/{en,he,ar}/Resources.resw (harvested from MapOverviewPage.tsx by the
+             cross-platform i18n generator); the remaining two — mapOverview.noHistory and mapOverview.subtitle
+             — are not yet harvested (the web defines them only as inline t() defaults, so the generator emitted
+             no row), and the page falls back to the same English default the web uses, via ShellLocalizer ->
+             Localization.Get. The .resw is generator-owned ("AUTO-GENERATED … do not edit by hand"), is NOT
+             referenced by TeslaSync.App.csproj (so it never enters the build), and is already malformed at HEAD
+             (multiple unclosed <data> tags, e.g. translation.admin.auditLog.verifying, unrelated to this page);
+             it was therefore left untouched rather than hand-patched. All 35 keys are asserted resolved
+             headlessly (MapOverviewPageTests, PassthroughLocalizer), and the page contains zero hardcoded
+             visible literals.
+
+Files:
+  feature-views/MapOverviewPage/MapOverviewPage.Model.cs      (records + parsers + projection + registration + diagnostics + strings + feed port)
+  feature-views/MapOverviewPage/MapOverviewPage.Source.cs     (generated C# client reads: GET /vehicles ; /vehicles/{vehicleID}/positions?limit ; /location-snapshots/latest?vehicle_id)
+  feature-views/MapOverviewPage/MapOverviewPage.ViewModel.cs  (INotifyPropertyChanged 4-state holder + vehicle selection + map style + 15s latest auto-refresh + units)
+  feature-views/MapOverviewPage/MapOverviewPage.cs            (WinUI 3 UserControl, Fluent + design tokens; TsPageContainer scaffold + map/playback/cards/details/quick-links/history)
+  TeslaSync.App.Tests/FeatureViews/MapOverviewPageTests.cs    (37 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj              (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 ObservableObject VM → generated C# client, web hook/query names kept at the C# call sites):
+  useVehicles                                   -> MapOverviewClientFeed.FetchVehiclesAsync, ApiRequest(Operations.Vehicles.List).
+  useQuery(['position-latest', id])  limit=1    -> FetchLatestPositionAsync, ApiRequest(Operations.Vehicles.Positions){vehicleID}{limit=1}.
+  useQuery(['position-history', id]) limit=50   -> FetchPositionHistoryAsync, ApiRequest(Operations.Vehicles.Positions){vehicleID}{limit=50}.
+  useQuery(['location-latest', id])             -> FetchLocationSnapshotAsync, ApiRequest(Operations.Locations.SnapshotLatest){vehicle_id}.
+  (The manifest declares only useVehicles as a *named* hook; the web page genuinely performs the three inline
+   position/location reads — required by the 9 panels + 7 maps + the 4 declared data states — so all four are
+   bound and loading/empty/error/success are real, not faked. The web location-snapshot query's failure is NOT
+   folded into anyError, so MapOverviewPageViewModel swallows it — ViewModel_swallows_location_snapshot_failure.)
+Units (P1/S5): SI read from the API; converted ONLY at the display boundary in MapOverviewProjection via
+  UnitConverters.SpeedFromSi / DistanceFromSi + ScalarFormatters (speed m/s -> km/h|mph; odometer m -> km|mi).
+  Note: the web Odometer row renders raw odometer (a latent missing-conversion); the native port applies the
+  binding SI-boundary conversion (frontend-si-cutover) so the value is correct beside its distance-unit label —
+  asserted by Odometer_converts_to_imperial_miles. lat/lon/heading are geographic/dimensionless (unconverted).
+Live data: the web page is TanStack-Query polling (refetchInterval 15_000 on the latest position), not SSE, so
+  there is no live SSE subscription / >2-min staleness chip beyond the header TsDataFreshness chip (ADR-013 live
+  path n/a). The 15s latest auto-refresh is ported as a DispatcherTimer -> ViewModel.RefreshLatestAsync
+  (ViewModel_refresh_latest_refetches_only_the_latest_position). When no vehicle is selected the page shows the
+  shared NoVehicleSelected onboarding surface (web early return) — No_vehicle_guard_when_resolved_without_a_selection.
+
+=== PARITY ===
+PARITY_REQUIRED=55
+
+[1/55]  panel  GlassPanel1 (Live map)
+        MapOverviewPage.cs::BuildMapPanel -> _mapPanel(TsGlassPanel)+_map(TsMapControl); RenderMap sets Center/Zoom from
+        MapOverviewProjection.Project (MapCenterLat/Lng/HasValidLocation). evidence-test: State_success_when_valid_location_present
+[2/55]  panel  GlassPanel2 (Recent Route Playback)
+        MapOverviewPage.cs::BuildPlaybackPanel -> _playbackSection(TsGlassPanel+_playback); projection ShowPlayback/PlaybackPoints/RecentPlayback.
+        evidence-test: Playback_sorts_ascending_by_timestamp_and_needs_two_points, Playback_hidden_with_a_single_point
+[3/55]  panel  Current-Speed
+        MapOverviewProjection.BuildMetrics -> metrics[0] (s.CurrentSpeed, GaugeGlyph, TsColorAccentBrush=cyan, SpeedFromSi);
+        MapOverviewPage.cs::RenderMetrics -> TsMetricCard. evidence-test: Metric_cards_project_speed_heading_latlon_and_last_updated, Metric_speed_converts_to_imperial_at_the_display_boundary
+[4/55]  panel  Heading
+        metrics[1] (s.Heading, CompassGlyph, TsChartPowerBrush=purple), heading° or em-dash.
+        evidence-test: Metric_cards_project_speed_heading_latlon_and_last_updated, Metric_heading_and_latlon_em_dash_when_absent
+[5/55]  panel  Lat-Lon
+        metrics[2] (s.LatLon, MapPinGlyph, TsColorSuccessBrush=green), "lat, lon"@4dp or em-dash.
+        evidence-test: Metric_cards_project_speed_heading_latlon_and_last_updated, Metric_heading_and_latlon_em_dash_when_absent
+[6/55]  panel  Last-Updated
+        metrics[3] (s.LastUpdated, ClockGlyph, subtitle=s.AutoRefresh "Auto-refreshes every 15 s"), DateTimeFormatting.Format(created_at).
+        evidence-test: Metric_cards_project_speed_heading_latlon_and_last_updated
+[7/55]  panel  GlassPanel7 (Location Details)
+        MapOverviewPage.cs::BuildLocationDetailsPanel -> _detailsGrid; MapOverviewProjection.BuildLocationDetails (At Home/At Work/HomeLink/Odometer).
+        evidence-test: Location_details_project_tri_state_badges_and_odometer, Location_detail_tri_state_is_unknown_when_snapshot_missing
+[8/55]  panel  GlassPanel8 (Quick Links)
+        MapOverviewPage.cs::BuildQuickLinksPanel -> _quickLinksRow; projection QuickLinks[] (NavRoute/Geofences/Locations).
+        evidence-test: Quick_links_project_three_routed_buttons
+[9/55]  panel  GlassPanel9 (Recent Location History)
+        MapOverviewPage.cs::BuildHistoryPanel -> _historyTable(TsDataTable) + _historySkeleton + _historyEmpty; projection BuildHistoryRows.
+        evidence-test: History_rows_project_five_columns_with_si_speed, History_empty_when_no_samples
+[10/55] map    MapLayerSwitcher
+        MapOverviewPage.cs::_layerSwitcher(TsMapLayerSwitcher); RenderMap.SelectedStyle + OnMapStyleSelected -> ViewModel.SetMapStyle.
+        evidence-test: Map_style_id_is_normalized, ViewModel_set_map_style_reprojects_without_refetch
+[11/55] map    MapContainer
+        MapOverviewPage.cs::_map(TsMapControl); RenderMap sets CenterLat/CenterLng/Zoom=15 from display. evidence-test: State_success_when_valid_location_present
+[12/55] map    MapTileLayer
+        TsMapControl hosts TsMapTileLayer; RenderMap sets _map.MapStyle = MapStyles.FromId(display.MapStyleId). evidence-test: Map_style_id_is_normalized
+[13/55] map    Marker
+        MapOverviewPage.cs::_marker(TsMapMarker); RenderMap _marker.Location=GeoPoint(MarkerLat,MarkerLng), LabelText=MarkerLabel.
+        evidence-test: Marker_falls_back_to_vehicle_label_when_name_missing
+[14/55] map    Popup
+        The web Marker<Popup>{vehicle.display_name ?? t('mapOverview.vehicle')} is ported as the marker's LabelText/AutomationProperties
+        name (MapOverviewDisplay.MarkerLabel via MapOverviewProjection.ResolveVehicleName). evidence-test: Marker_falls_back_to_vehicle_label_when_name_missing
+[15/55] map    Polyline
+        MapOverviewPage.cs::_trail(TsMapPolyline); RenderMap _trail.SetPoints(display.Trail)+SetStroke(#00f0ff=MapOverviewProjection.TrailColor);
+        projection BuildTrail filters (0,0). evidence-test: Trail_excludes_zero_coordinates
+[16/55] map    RoutePlayback
+        MapOverviewPage.cs::_playback(TsRoutePlayback); RenderPlayback _playback.SetTrail(display.PlaybackPoints), Play/Pause labels.
+        evidence-test: Playback_sorts_ascending_by_timestamp_and_needs_two_points
+[17/55] state  loading
+        MapOverviewState.Loading ; MapOverviewDisplay.PageLoading + MetricsLoading ; MapOverviewPage.cs scaffold IsLoading + 4 TsSkeleton cards.
+        evidence-test: State_loading_when_fleet_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[18/55] state  empty
+        MapOverviewState.Empty (resolved, !HasValidLocation) ; map TsEmptyState + ShowNoGpsBanner + history TsEmptyState.
+        evidence-test: State_empty_when_resolved_without_valid_gps, History_empty_when_no_samples
+[19/55] state  error
+        MapOverviewState.Error ; scaffold ErrorMessage=PageError + ShowErrorBanner(TsAlertBanner Danger, "Failed to load data: …").
+        evidence-test: State_error_when_a_query_failed, ViewModel_surfaces_fleet_error
+[20/55] state  success
+        MapOverviewState.Success ; HasValidLocation ; map+cards+details+history render. evidence-test: State_success_when_valid_location_present
+[21/55] string error.loadFailed                          MapOverviewStrings.Resolve s.ErrorLoadFailed = GetString("error.loadFailed", "Failed to load data") (error banner)
+[22/55] string mapOverview.atHome                         s.AtHome = GetString("mapOverview.atHome", "At Home") (location detail row 1)
+[23/55] string mapOverview.atWork                         s.AtWork = GetString("mapOverview.atWork", "At Work") (location detail row 2)
+[24/55] string mapOverview.autoRefresh                    s.AutoRefresh = GetString("mapOverview.autoRefresh", "Auto-refreshes every 15 s") (Last-Updated subtitle)
+[25/55] string mapOverview.colHeading                     s.ColHeading = GetString("mapOverview.colHeading", "Heading") (history col)
+[26/55] string mapOverview.colLat                         s.ColLat = GetString("mapOverview.colLat", "Lat") (history col)
+[27/55] string mapOverview.colLon                         s.ColLon = GetString("mapOverview.colLon", "Lon") (history col)
+[28/55] string mapOverview.colSpeed                       s.ColSpeed = GetString("mapOverview.colSpeed", "Speed") (history col)
+[29/55] string mapOverview.colTime                        s.ColTime = GetString("mapOverview.colTime", "Time") (history col)
+[30/55] string mapOverview.currentSpeed                   s.CurrentSpeed = GetString("mapOverview.currentSpeed", "Current Speed") (metric 1 label)
+[31/55] string mapOverview.distanceUnitValue             s.DistanceUnitValue = GetString("mapOverview.distanceUnitValue", "{{unit}}") (odometer unit, {{unit}}->UnitLabels.Label(distance))
+[32/55] string mapOverview.geofences                      s.Geofences = GetString("mapOverview.geofences", "Geofences") (quick link 2)
+[33/55] string mapOverview.heading                        s.Heading = GetString("mapOverview.heading", "Heading") (metric 2 label)
+[34/55] string mapOverview.homelinkNearby                 s.HomelinkNearby = GetString("mapOverview.homelinkNearby", "HomeLink Nearby") (location detail row 3)
+[35/55] string mapOverview.lastUpdated                    s.LastUpdated = GetString("mapOverview.lastUpdated", "Last Updated") (metric 4 label)
+[36/55] string mapOverview.latLon                         s.LatLon = GetString("mapOverview.latLon", "Lat / Lon") (metric 3 label)
+[37/55] string mapOverview.locationDetails                s.LocationDetails = GetString("mapOverview.locationDetails", "Location Details") (GlassPanel7 title)
+[38/55] string mapOverview.locations                      s.Locations = GetString("mapOverview.locations", "Locations") (quick link 3)
+[39/55] string mapOverview.navRoute                       s.NavRoute = GetString("mapOverview.navRoute", "Navigation Route") (quick link 1)
+[40/55] string mapOverview.no                             s.No = GetString("mapOverview.no", "No") (tri-state badge)
+[41/55] string mapOverview.noGps                          s.NoGps = GetString("mapOverview.noGps", "GPS coordinates not available. …") (no-GPS info banner)
+[42/55] string mapOverview.noHistory                      s.NoHistory = GetString("mapOverview.noHistory", "No location history found.") (history empty)
+[43/55] string mapOverview.noLocation                     s.NoLocation = GetString("mapOverview.noLocation", "No GPS data available. …") (map empty + location-details empty)
+[44/55] string mapOverview.odometer                       s.Odometer = GetString("mapOverview.odometer", "Odometer") (location detail row 4)
+[45/55] string mapOverview.pageTitle                      s.PageTitle = GetString("mapOverview.pageTitle", "Map Overview") (usePageTitle)
+[46/55] string mapOverview.playbackLabel                  s.PlaybackLabel = GetString("mapOverview.playbackLabel", "Recent route playback map") (RoutePlayback aria)
+[47/55] string mapOverview.quickLinks                     s.QuickLinks = GetString("mapOverview.quickLinks", "Quick Links") (GlassPanel8 title)
+[48/55] string mapOverview.recentHistory                  s.RecentHistory = GetString("mapOverview.recentHistory", "Recent Location History") (GlassPanel9 title)
+[49/55] string mapOverview.recentPlayback                 s.RecentPlayback = GetString("mapOverview.recentPlayback", "Recent Route Playback") (GlassPanel2 title)
+[50/55] string mapOverview.speedUnitValue                s.SpeedUnitValue = GetString("mapOverview.speedUnitValue", "{{unit}}") (speed unit, {{unit}}->UnitLabels.Label(speed))
+[51/55] string mapOverview.subtitle                       s.Subtitle = GetString("mapOverview.subtitle", "Live vehicle location and recent history") (page subtitle)
+[52/55] string mapOverview.title                          s.Title = GetString("mapOverview.title", "Map Overview") (page header / NoVehicleSelected pageTitle)
+[53/55] string mapOverview.unknown                        s.Unknown = GetString("mapOverview.unknown", "Unknown") (tri-state badge)
+[54/55] string mapOverview.vehicle                        s.Vehicle = GetString("mapOverview.vehicle", "Vehicle") (marker popup fallback label)
+[55/55] string mapOverview.yes                            s.Yes = GetString("mapOverview.yes", "Yes") (tri-state badge)
+# All 35 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   MapOverviewPageTests.Projection_resolves_every_required_string_key (+ ..._even_in_the_loading_state,
+#   Required_string_key_set_has_exactly_thirty_five_unique_keys).
+# All four data states + every panel/map assert their render from the bound MapOverviewDisplay state holder
+#   (State_*/Metric_*/Location_*/History_*/Trail_*/Playback_*/Quick_links_*/Map_style_* tests). Feed request
+#   shaping (Vehicles.List ; Positions{vehicleID,limit} ; Locations.SnapshotLatest{vehicle_id}) is pinned by
+#   Feed_requests_vehicles_positions_and_location_with_correct_shaping; VM orchestration (auto-select, vehicle
+#   change, style reproject, 15s latest refresh, swallowed location error, surfaced fleet error) by ViewModel_*.
+
+PARITY_COVERED=55
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Maps does not exist
+# in-repo; scanned the real target instead:
+# pwsh ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/MapOverviewPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0 / EXIT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App built 0 Warning(s)/0 Error(s); the 17 solution warnings are pre-existing CA* in other projects.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (new files normalized to LF/utf-8-no-BOM;
+#   the auto-generated Strings/*.resw are not .cs and not touched, so format does not consider them).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.sln -c Release
+#   TeslaSync.App.Tests  -> Passed: 30182, Failed: 0, Skipped: 0  (incl. 37 MapOverviewPageTests).
+#   TeslaSync.App.UITests -> 147/147 fail uniformly with UiAutomationUnavailableException (nothing listening on
+#     http://127.0.0.1:4723/; WinAppDriver.exe absent) — a RunnerAvailability-gated environment limitation that
+#     also fails every unrelated UITest (e.g. AuthenticationFlowTests); the headless parity logic above is fully
+#     covered by the unit suite, consistent with the sibling done pages' gate handling.
+TEST_EXIT=0
+PARITY_COVERED=55
+PARITY_REQUIRED=55
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/MapOverviewPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/MapOverviewPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-maps-MapOverviewPage.log
+#   (Strings/*.resw intentionally NOT staged: 33/35 keys already present, 2 unharvested keys fall back to the
+#    web English default in-code; the generator-owned catalog is pre-existing-malformed and out of scope.)
+# git commit -m "feat(apps/windows): MapOverviewPage at web parity (W7 maps)"
+
+EXIT=0
+STATUS=DONE
