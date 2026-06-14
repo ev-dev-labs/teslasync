@@ -69,7 +69,8 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, APIKeysRouteRegistration.registry(
+                .environment(\.routeHosts, GDPRExportRouteRegistration.registry(
+                    base: APIKeysRouteRegistration.registry(
                     base: FleetAPIRouteRegistration.registry(
                         base: ApiLogsRouteRegistration.registry(
                             base: FeatureFlagsRouteRegistration.registry(
@@ -105,7 +106,7 @@ struct TeslaSyncApp: App {
                             )
                         )
                     )
-                ))
+                )))
                 .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)
                 .commandActionsPresentation(commandActions)
                 .task {
