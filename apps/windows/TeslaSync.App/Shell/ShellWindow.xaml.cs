@@ -209,6 +209,9 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DigitalTwin", static () => new FeatureViews.Vehicles.DigitalTwinPage());
         // Battery / Energy flow page (P2/W7) — parity port of web EnergyFlowPage at route /energy-flow.
         _viewModel.PageFactory.Register("EnergyFlow", static () => new FeatureViews.Battery.EnergyFlowPage());
+        // Battery / Power flow dashboard (P2/W7) — parity port of web PowerFlowDashboardPage at route /power-flow.
+        // RouteTable already maps Page("PowerFlowDashboard","power-flow",RouteGroup.BatteryEnergy).
+        _viewModel.PageFactory.Register("PowerFlowDashboard", static () => new FeatureViews.Battery.PowerFlowDashboardPage());
         // Battery / Energy products page (P2/W7) — parity port of web EnergyProductsPage at route /energy-products.
         _viewModel.PageFactory.Register("EnergyProducts", static () => new FeatureViews.Battery.EnergyProductsPage());
         // Analytics / Timeline page (P2/W7) — parity port of web TimelinePage at route /timeline.

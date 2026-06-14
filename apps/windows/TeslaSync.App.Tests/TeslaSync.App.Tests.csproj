@@ -854,6 +854,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\PeriodComparePage\PeriodComparePage.Model.cs" Link="FeatureViews\PeriodComparePage\PeriodComparePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PeriodComparePage\PeriodComparePage.Source.cs" Link="FeatureViews\PeriodComparePage\PeriodComparePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PeriodComparePage\PeriodComparePage.ViewModel.cs" Link="FeatureViews\PeriodComparePage\PeriodComparePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowerFlowDashboardPage\PowerFlowDashboardPage.Model.cs" Link="FeatureViews\PowerFlowDashboardPage\PowerFlowDashboardPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowerFlowDashboardPage\PowerFlowDashboardPage.Source.cs" Link="FeatureViews\PowerFlowDashboardPage\PowerFlowDashboardPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PowerFlowDashboardPage\PowerFlowDashboardPage.ViewModel.cs" Link="FeatureViews\PowerFlowDashboardPage\PowerFlowDashboardPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerOutputChart\PowerOutputChart.Model.cs" Link="FeatureViews\PowerOutputChart\PowerOutputChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowerProfileChart\PowerProfileChart.Model.cs" Link="FeatureViews\PowerProfileChart\PowerProfileChart.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PowersharePage\PowersharePage.Model.cs" Link="FeatureViews\PowersharePage\PowersharePage.Model.cs" />

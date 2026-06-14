@@ -14773,6 +14773,9 @@
   <data name="translation.powerFlow.powerOverTime" xml:space="preserve">
     <value>Power Over Time</value>
   </data>
+  <data name="translation.powerFlow.powerOverTime.aria" xml:space="preserve">
+    <value>Solar, battery, grid, and home power flow stacked area chart over time</value>
+  </data>
   <data name="translation.powerFlow.powerOverTimeDesc" xml:space="preserve">
     <value>Solar, battery, and grid power flow</value>
   </data>
@@ -14781,6 +14784,9 @@
   </data>
   <data name="translation.powerFlow.socOverTime" xml:space="preserve">
     <value>Battery State of Charge</value>
+  </data>
+  <data name="translation.powerFlow.socOverTime.aria" xml:space="preserve">
+    <value>Battery state of charge percentage over time line chart</value>
   </data>
   <data name="translation.powerFlow.socOverTimeDesc" xml:space="preserve">
     <value>Battery percentage over time</value>
