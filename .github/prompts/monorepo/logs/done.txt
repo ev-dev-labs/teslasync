@@ -800,3 +800,4 @@ p3-android/shared-meaningful/A-0223-PrintButton.prompt.md
 p3-android/shared-meaningful/A-0222-PinButton.prompt.md
 p3-android/shared-meaningful/A-0226-Slider.prompt.md
 p3-android/shared-meaningful/A-0224-RangeSlider.prompt.md
+p3-android/shared-meaningful/A-0227-Tabs.prompt.md
