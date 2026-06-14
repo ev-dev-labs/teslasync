@@ -17938,6 +17938,9 @@
   <data name="translation.statistics.stateDistribution" xml:space="preserve">
     <value>State Distribution</value>
   </data>
+  <data name="translation.statistics.stateDistribution.aria" xml:space="preserve">
+    <value>Vehicle state distribution pie chart</value>
+  </data>
   <data name="translation.statistics.subtitle" xml:space="preserve">
     <value>Lifetime vehicle statistics and records</value>
   </data>
@@ -17961,6 +17964,9 @@
   </data>
   <data name="translation.statistics.vehicleComparison" xml:space="preserve">
     <value>Vehicle Comparison</value>
+  </data>
+  <data name="translation.statistics.vehicleComparison.aria" xml:space="preserve">
+    <value>Distance and energy bar chart comparing all vehicles in the fleet</value>
   </data>
   <data name="translation.statistics.yearlyProjection" xml:space="preserve">
     <value>Yearly Projection</value>

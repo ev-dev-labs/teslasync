@@ -1,0 +1,156 @@
+P2-WINDOWS W7 — page:analytics/Statistics — WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/analytics/pages/StatisticsPage.tsx (route /statistics)
+Output     : apps/windows/TeslaSync.App/feature-views/StatisticsPage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages QuickStatsPage/VehicleCostPage/TrueCostPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Statistics", …)
+             (RouteTable already maps Page("Statistics","statistics",RouteGroup.Analytics,"Statistics","\uE9D9"))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw — 30 translation.statistics.* keys already
+             present (catalog-generated); 2 added this prompt: statistics.stateDistribution.aria,
+             statistics.vehicleComparison.aria (resolved by key).
+
+Files:
+  feature-views/StatisticsPage/StatisticsPage.Model.cs      (parsers + projection + registration + diagnostics + source port)
+  feature-views/StatisticsPage/StatisticsPage.Source.cs     (generated C# client cache-then-network: vehicles+period+battery+mileage+states+fleet)
+  feature-views/StatisticsPage/StatisticsPage.ViewModel.cs  (INotifyPropertyChanged 4-state holder + units/currency)
+  feature-views/StatisticsPage/StatisticsPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/StatisticsPageTests.cs   (35 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj            (link the 3 UI-free files; the WinUI view is build-only)
+
+Data sources (P1/S8 ObservableObject VM → generated C# client; web hook names kept at the C# call sites):
+  statsQuery (period-stats)   -> StatisticsSource.FetchAsync step 2, ApiRequest("get_api_v1_analytics_period_stats", vehicle_id)  [PRIMARY → page state]
+  useBatteryHealthAnalytics   -> StatisticsSource secondary, ApiRequest(Operations.Analytics.BatteryHealth, vehicle_id)
+  useMileageStats             -> StatisticsSource secondary, ApiRequest("get_api_v1_mileage_stats", vehicle_id)
+  useStateSummary             -> StatisticsSource secondary, ApiRequest("get_api_v1_vehicle_states_summary", vehicle_id)
+  useFleetAnalytics(30,start)  -> StatisticsSource secondary, ApiRequest(Operations.Analytics.Fleet, start=today-1y)
+  (primary vehicle resolved from GET /vehicles[0]; secondary reads fault-tolerant via TryReadAsync → ApiException ⇒ section empty state.)
+Units (P1/S5): SI read from the API; converted only at the display boundary in StatisticsProjection via
+  UnitConverters.DistanceFromSi + the Wh/km→Wh/mi rescale + ScalarFormatters (no non-SI stored/computed).
+Live data: none (web page uses TanStack-Query hooks, no useLiveX/SSE), so no SSE subscription / staleness chip (ADR-013 n/a).
+
+=== PARITY ===
+PARITY_REQUIRED=61
+
+# ---- panels (20) — every metric tile + glass/chart region from the web source ----
+[1/61]  panel  Total-Distance        StatisticsProjection.ProjectPeriodMetrics key "totalDistance" (CyanAccentBrushKey); StatisticsPage.cs::_periodCards[0].
+                evidence-test: Projection_emits_eight_period_panels_in_order, Projection_converts_distance_to_metric_and_imperial
+[2/61]  panel  Total-Drives          ProjectPeriodMetrics key "totalDrives" (GreenAccentBrushKey); _periodCards[1]. evidence-test: Projection_emits_eight_period_panels_in_order
+[3/61]  panel  Total-Energy          ProjectPeriodMetrics key "totalEnergy" (AmberAccentBrushKey); _periodCards[2]. evidence-test: Projection_formats_energy_and_co2
+[4/61]  panel  Total-Cost            ProjectPeriodMetrics key "totalCost" (RedAccentBrushKey); _periodCards[3]. evidence-test: Projection_formats_cost_and_cost_per_km
+[5/61]  panel  CO2-Saved             ProjectPeriodMetrics key "co2Saved" (GreenAccentBrushKey); _periodCards[4]. evidence-test: Projection_formats_energy_and_co2
+[6/61]  panel  Avg-Drive-Distance    ProjectPeriodMetrics key "avgDriveDistance" (CyanAccentBrushKey); _periodCards[5]. evidence-test: Projection_computes_average_drive_distance
+[7/61]  panel  Avg-Efficiency        ProjectPeriodMetrics key "avgEfficiency" (GreenAccentBrushKey); _periodCards[6]. evidence-test: Projection_rescales_efficiency_to_wh_per_mile_in_imperial
+[8/61]  panel  Cost-per-km           ProjectPeriodMetrics key "costPerKm" (AmberAccentBrushKey); _periodCards[7]. evidence-test: Projection_formats_cost_and_cost_per_km, Projection_uses_em_dash_for_cost_per_km_without_distance
+[9/61]  panel  GlassPanel9 (Battery Health)  StatisticsPage.cs::BuildBatteryPanel/_batteryPanel (TsGlassPanel) + _batteryHost swap (gauge+tiles | _batteryEmpty); StatisticsDisplay.BatteryHealthTitle/HasBattery.
+                evidence-test: Projection_renders_the_battery_gauge_and_tiles, Projection_surfaces_the_no_battery_state
+[10/61] panel  Capacity              ProjectBatteryMetrics key "capacity"; _batteryCards[0]. evidence-test: Projection_renders_the_battery_gauge_and_tiles
+[11/61] panel  Degradation           ProjectBatteryMetrics key "degradation"; _batteryCards[1]. evidence-test: Projection_renders_the_battery_gauge_and_tiles
+[12/61] panel  Cycles                ProjectBatteryMetrics key "cycles"; _batteryCards[2]. evidence-test: Projection_renders_the_battery_gauge_and_tiles
+[13/61] panel  Age                   ProjectBatteryMetrics key "age"; _batteryCards[3]. evidence-test: Projection_renders_the_battery_gauge_and_tiles
+[14/61] panel  State-Distribution    StatisticsPage.cs::_stateContainer (TsChartContainer) RenderStateDistribution; StatisticsDisplay.StateDistributionTitle.
+                evidence-test: Projection_computes_state_distribution_percentages, Projection_surfaces_the_no_states_state
+[15/61] panel  GlassPanel15 (Mileage Summary)  StatisticsPage.cs::BuildStateAndMileageRow/_mileagePanel (TsGlassPanel) + _mileageHost swap (tiles | _mileageEmpty); StatisticsDisplay.MileageTitle/HasMileage.
+                evidence-test: Projection_renders_mileage_tiles, Projection_surfaces_the_no_mileage_state
+[16/61] panel  Total-Distance-2 (Total Mileage)  ProjectMileageMetrics key "totalMileage"; _mileageCards[0]. evidence-test: Projection_renders_mileage_tiles
+[17/61] panel  Daily-Average-30d     ProjectMileageMetrics key "dailyAvg"; _mileageCards[1]. evidence-test: Projection_renders_mileage_tiles
+[18/61] panel  Total-Drives-2        ProjectMileageMetrics key "totalDrives"; _mileageCards[2]. evidence-test: Projection_renders_mileage_tiles
+[19/61] panel  Yearly-Projection     ProjectMileageMetrics key "yearlyProjection"; _mileageCards[3]. evidence-test: Projection_renders_mileage_tiles
+[20/61] panel  Vehicle-Comparison    StatisticsPage.cs::_comparisonContainer (TsChartContainer) RenderComparison; StatisticsDisplay.VehicleComparisonTitle.
+                evidence-test: Projection_requires_more_than_one_vehicle_to_compare
+
+# ---- charts (5) — native W3 chart wrappers, never a web canvas ----
+[21/61] chart  RadialGauge           StatisticsPage.cs::_gauge (TsRadialGauge, Role=Battery); StatisticsDisplay.GaugeValue/GaugeLabel/GaugeUnit (web RadialGauge value=Math.round(current_soh)).
+                evidence-test: Projection_renders_the_battery_gauge_and_tiles
+[22/61] chart  ChartContainer (state)  StatisticsPage.cs::_stateContainer (TsChartContainer) Title=stateDistribution, AccessibleSummary=stateDistribution.aria, State=Ready|Empty.
+                evidence-test: Projection_computes_state_distribution_percentages
+[23/61] chart  PieChart              StatisticsPage.cs::_pie (TsPieChart) bound to StatisticsDisplay.StateSlices → ChartPoint(i, percentage, name) (web recharts PieChart/Pie/Cell).
+                evidence-test: Projection_computes_state_distribution_percentages, Projection_surfaces_the_no_states_state
+[24/61] chart  ChartContainer (vehicle)  StatisticsPage.cs::_comparisonContainer (TsChartContainer) Title=vehicleComparison, AccessibleSummary=vehicleComparison.aria, State=Ready|Empty.
+                evidence-test: Projection_requires_more_than_one_vehicle_to_compare
+[25/61] chart  BarChart              StatisticsPage.cs::_bar (TsBarChart) bound to BuildComparisonSeries → 2×ChartSeries{Kind=Bar} (distance+energy) (web recharts BarChart/Bar×2).
+                evidence-test: Projection_requires_more_than_one_vehicle_to_compare, Projection_converts_comparison_distance_to_imperial
+
+# ---- data states (4) — loading / empty / error / success, primary = web statsQuery ----
+[26/61] state  loading   StatisticsState.Loading ; StatisticsPageViewModel.SetLoading ; StatisticsDisplay.ShowLoading ;
+                StatisticsPage.cs::_loadingSkeleton (2×TsStatGridSkeleton + TsSkeleton + 2×TsChartBlockSkeleton mirroring web StatisticsSkeleton).
+                evidence-test: ViewModel_starts_loading_then_resolves_loaded
+[27/61] state  empty     StatisticsState.Empty ; StatisticsPageViewModel.SetEmpty (snapshot !HasData, web !stats) ; StatisticsDisplay.ShowEmpty ;
+                StatisticsPage.cs::_emptyState (TsEmptyState, statistics.noData/noDataMsg, BarChart3 glyph).
+                evidence-test: ViewModel_classifies_a_no_data_snapshot_as_empty, ViewModel_treats_a_snapshot_without_period_stats_as_empty
+[28/61] state  error     StatisticsState.Error ; StatisticsPageViewModel.SetError ; StatisticsDisplay.ShowError ;
+                StatisticsPage.cs::_errorState (TsQueryError + Retry, error.loadFailed/common.retry).
+                evidence-test: ViewModel_surfaces_the_error_state_on_failure
+[29/61] state  success   StatisticsState.Loaded ; StatisticsPageViewModel.ApplySnapshot ; StatisticsDisplay.ShowContent (8 period + battery + state + mileage + comparison).
+                evidence-test: ViewModel_starts_loading_then_resolves_loaded, ViewModel_reprojects_when_units_change
+# In-content empty affordances for the four secondary sources are also implemented (never a blank region):
+#   noBattery (TsEmptyState), noStates (TsChartContainer.Empty), noMileage (TsEmptyState), singleVehicle (TsChartContainer.Empty).
+#   evidence-test: Projection_surfaces_the_no_battery_state / _no_states_state / _no_mileage_state ; Projection_requires_more_than_one_vehicle_to_compare
+
+# ---- strings (32) — every visible literal resolves from Strings/*.resw via ILocalizer, web key names ----
+[30/61] string statistics.age                       StatisticsProjection.ProjectBatteryMetrics localizer.GetString("statistics.age", …)
+[31/61] string statistics.avgDriveDistance          ProjectPeriodMetrics localizer.GetString("statistics.avgDriveDistance", …)
+[32/61] string statistics.avgEfficiency             ProjectPeriodMetrics localizer.GetString("statistics.avgEfficiency", …)
+[33/61] string statistics.batteryHealth             Project localizer.GetString("statistics.batteryHealth", …)
+[34/61] string statistics.capacity                  ProjectBatteryMetrics localizer.GetString("statistics.capacity", …)
+[35/61] string statistics.co2Saved                  ProjectPeriodMetrics localizer.GetString("statistics.co2Saved", …)
+[36/61] string statistics.costPerKm                 ProjectPeriodMetrics localizer.GetString("statistics.costPerKm", …)
+[37/61] string statistics.cycles                    ProjectBatteryMetrics localizer.GetString("statistics.cycles", …)
+[38/61] string statistics.dailyAvg                  ProjectMileageMetrics localizer.GetString("statistics.dailyAvg", …)
+[39/61] string statistics.degradation               ProjectBatteryMetrics localizer.GetString("statistics.degradation", …)
+[40/61] string statistics.distance                  Project DistanceSeriesName localizer.GetString("statistics.distance", …)
+[41/61] string statistics.energy                    Project EnergySeriesName localizer.GetString("statistics.energy", …)
+[42/61] string statistics.health                    Project GaugeLabel localizer.GetString("statistics.health", …)
+[43/61] string statistics.mileage                   Project MileageTitle localizer.GetString("statistics.mileage", …)
+[44/61] string statistics.noBattery                 Project localizer.GetString("statistics.noBattery", …)
+[45/61] string statistics.noData                    Project NoDataTitle localizer.GetString("statistics.noData", …)
+[46/61] string statistics.noDataMsg                 Project NoDataMessage localizer.GetString("statistics.noDataMsg", …)
+[47/61] string statistics.noMileage                 Project localizer.GetString("statistics.noMileage", …)
+[48/61] string statistics.noStates                  Project localizer.GetString("statistics.noStates", …)
+[49/61] string statistics.singleVehicle             Project localizer.GetString("statistics.singleVehicle", …)
+[50/61] string statistics.stateDistribution         Project StateDistributionTitle localizer.GetString("statistics.stateDistribution", …)
+[51/61] string statistics.stateDistribution.aria    Project StateDistributionAria localizer.GetString("statistics.stateDistribution.aria", …)  (resw key added this prompt)
+[52/61] string statistics.subtitle                  Project Subtitle localizer.GetString("statistics.subtitle", …)
+[53/61] string statistics.title                     Project/Registration Title localizer.GetString("statistics.title", …)
+[54/61] string statistics.totalCost                 ProjectPeriodMetrics localizer.GetString("statistics.totalCost", …)
+[55/61] string statistics.totalDistance             ProjectPeriodMetrics localizer.GetString("statistics.totalDistance", …)
+[56/61] string statistics.totalDrives               ProjectPeriodMetrics + ProjectMileageMetrics localizer.GetString("statistics.totalDrives", …)
+[57/61] string statistics.totalEnergy               ProjectPeriodMetrics localizer.GetString("statistics.totalEnergy", …)
+[58/61] string statistics.totalMileage              ProjectMileageMetrics localizer.GetString("statistics.totalMileage", …)
+[59/61] string statistics.vehicleComparison         Project VehicleComparisonTitle localizer.GetString("statistics.vehicleComparison", …)
+[60/61] string statistics.vehicleComparison.aria    Project VehicleComparisonAria localizer.GetString("statistics.vehicleComparison.aria", …)  (resw key added this prompt)
+[61/61] string statistics.yearlyProjection          ProjectMileageMetrics localizer.GetString("statistics.yearlyProjection", …)
+# All 32 string keys asserted resolved headlessly via a RecordingLocalizer:
+#   StatisticsPageTests.Projection_resolves_every_required_string_key (RequiredStringKeys[] = the 32 manifest keys).
+# All four data states + the twenty panels + five charts assert their render from the bound StatisticsDisplay state holder
+#   (ViewModel_* + Projection_* tests). Source request shaping (period-stats/battery-health/mileage/state-summary/fleet)
+#   is pinned by StatisticsSource + Registration_mirrors_the_web_route_and_operations + Registration_computes_the_one_year_fleet_start_window.
+
+PARITY_COVERED=61
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Analytics does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/StatisticsPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s), 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <StatisticsPage Model/Source/ViewModel/view
+#   + StatisticsPageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29630, Failed: 0, Skipped: 0
+#   (incl. 35 StatisticsPageTests)
+TEST_EXIT=0
+PARITY_COVERED=61
+PARITY_REQUIRED=61
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/StatisticsPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/StatisticsPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/he/Resources.resw apps/windows/Strings/ar/Resources.resw \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-StatisticsPage.log
+# git commit -m "feat(apps/windows): StatisticsPage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE

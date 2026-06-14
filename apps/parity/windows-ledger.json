@@ -196,5 +196,14 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-admin-TeslaOrdersPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "page:analytics/Statistics",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 61,
+    "requiredCount": 61,
+    "promptId": "p2-windows/W7/windows-page-analytics-StatisticsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-StatisticsPage.log"
   }
 ]

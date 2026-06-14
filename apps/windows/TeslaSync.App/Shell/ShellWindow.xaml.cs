@@ -217,6 +217,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Analytics / Statistics page (P2/W7) — parity port of web StatisticsPage at route /statistics. RouteTable
+        // already maps Page("Statistics","statistics",RouteGroup.Analytics). The default empty-source ctor renders
+        // the page-level empty state until a DI host wires the generated-client-backed StatisticsSource.
+        _viewModel.PageFactory.Register("Statistics", static () => new FeatureViews.Analytics.StatisticsPage());
         // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
         _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 
