@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
 import io.teslasync.android.admin.apilogs.ApiLogsPageHost
 import io.teslasync.android.admin.feedback.FeedbackQueuePageHost
+import io.teslasync.android.admin.gasprice.GasPriceAutoPollPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -49,6 +50,8 @@ class TeslaSyncApplication : Application() {
         ApiLogsPageHost.register()
         // Register the native feedback-queue admin screen for the /admin/feedback route (P3/A7). Idempotent.
         FeedbackQueuePageHost.register()
+        // Register the native gas-price auto-poll admin screen for the /gas-price route (P3/A7). Idempotent.
+        GasPriceAutoPollPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
