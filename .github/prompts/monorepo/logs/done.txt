@@ -853,3 +853,4 @@ p3-android/shared-meaningful/A-0197-HealthRow.prompt.md
 p3-android/pages/admin/ApiPlaygroundPage.prompt.md
 p3-android/pages/admin/AuditLogPage.prompt.md
 p3-android/pages/admin/DevToolsPage.prompt.md
+p3-android/shared-meaningful/A-0198-ResourcesPanel.prompt.md
