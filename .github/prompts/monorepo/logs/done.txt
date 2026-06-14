@@ -844,3 +844,4 @@ p3-android/shared-meaningful/A-0153-DensityToggle.prompt.md
 p3-android/shared-meaningful/A-0189-SwipeRow.prompt.md
 p3-android/shared-meaningful/A-0190-CarAnimation.prompt.md
 p3-android/shared-meaningful/A-0100-RecentActivityFeed.prompt.md
+p3-android/shared-meaningful/A-0191-FadeIn.prompt.md
