@@ -259,5 +259,14 @@
     "requiredCount": 14,
     "promptId": "p2-windows/W7/windows-page-power-user-SqlPlaygroundPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-power-user-SqlPlaygroundPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalDiff",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "p2-windows/W7/windows-page-telemetry-SignalDiffPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-SignalDiffPage.log"
   }
 ]

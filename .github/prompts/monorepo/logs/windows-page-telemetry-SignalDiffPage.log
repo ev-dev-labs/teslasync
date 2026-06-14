@@ -1,0 +1,121 @@
+p2-windows/W7 — page:telemetry/SignalDiff — native WinUI 3 SignalDiffPage at web parity
+====================================================================================================
+Web source : web/src/features/telemetry/pages/SignalDiffPage.tsx
+Web route  : /signal-diff  (nav name "Signal Diff")
+Output     : apps/windows/TeslaSync.App/feature-views/SignalDiffPage/{SignalDiffPage.cs,
+             SignalDiffPage.Model.cs, SignalDiffPage.Source.cs, SignalDiffPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path
+              does not exist — the Windows app is TeslaSync.App with C#-markup feature-views, not
+              XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json, e.g. the sibling
+              SignalsWorkspacePage.)
+
+Shape of the parity unit (apps/parity/parity-manifest.json id=page:telemetry/SignalDiff)
+----------------------------------------------------------------------------------------------
+requiredCount=23 = 5 panels + 3 data-states + 15 strings. 0 charts, 0 maps. Data sources (5):
+useVehicles (GET /vehicles), useSignals (GET /signals/{id}/available), useSignalDiffServer
+(GET /signals/{id}/diff), usePinned (GET /pinned), useTogglePin (POST /pinned + DELETE /pinned/{id}).
+The web page is a thin orchestrator composing the shared SignalCompareControls + SignalDiffTable +
+BulkActionsToolbar inside a PageContainer; the native port reproduces the whole tree and composes the
+already-ported shared surfaces (SignalCompareControls, BulkActionsToolbar, PageContainer) and the shared
+SignalDiffProjection rather than re-implementing them.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011/013/014/015)
+--------------------------------------------------------------------------
+- SignalDiffPage : UserControl — mounts the shared SharedSurfaces.PageContainer (title / subtitle, the
+  "Share" TsCopyLinkButton in the header Actions) whose PageContent is the full diff tree: the shared
+  SignalCompareControls bar (Window A / Window B pickers + presets + name filter + the eight category
+  chips, with the page-local vehicle picker — a labelled TsSelect — mounted in its TopSlot), the four
+  diff TsStatCards (Changed-signals / Visible-after-filter / Pinned / Window-span), the shared
+  BulkActionsToolbar (Pin / Unpin / Copy CSV / Add-as-alert), the load-failed TsAlertBanner, and the diff
+  TsGlassPanel with its loading-skeleton / no-changes-empty / selectable pinned-first rows (a checkbox +
+  per-row pin toggle + name + Window A / Window B + coloured Δ + L1/L2/LOG source badges) + the
+  pinned-chips footer. Thin renderer: every label/value/visibility flows from SignalDiffPageDisplay;
+  PropertyChanged is marshalled onto the UI thread; Group automation peer; tokens only (no literal colours).
+- SignalDiffPageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Reads the fleet vehicles
+  (useVehicles) and auto-picks the first when none is selected, fetches the catalog (useSignals), the diff
+  (useSignalDiffServer) and the pins (usePinned) through ISignalDiffPageFeed, owns the name/category filter
+  + multi-row selection + the two compare windows, and the pin/unpin + bulk pin/unpin flow (useTogglePin).
+  LoadAsync/RefreshAsync/SetVehicleAsync/LoadVehicleDataAsync + superseding CTS; no I/O in the view.
+- SignalDiffPageProjection / SignalDiffPageModel / SignalDiffPageDisplay — pure projection (no WinUI types)
+  resolving all 15 i18n keys on every call, the four stat-card values (fmtInt + windowSpan ports reused
+  from SignalsWorkspaceProjection), the category-then-name filtered + pinned-first-sorted rows (reusing the
+  shared SignalDiffProjection so this page and the unified workspace stay in lockstep), and the
+  loading/empty/error/rows data-state flags. SignalDiffVehicle.ParseList ports useVehicles tolerantly.
+- ISignalDiffPageFeed / EmptySignalDiffPageFeed / SignalDiffPageClientFeed — the data port + the no-backend
+  default the shell-registered page hosts itself against + the generated-contract-client adapter (ADR-004):
+  GET /vehicles, GET /signals/{id}/available, GET /signals/{id}/diff, GET /pinned, POST /pinned,
+  DELETE /pinned/{id}. The diff read uses the backend's default trailing-hour window (the generated
+  /signals/{id}/diff descriptor declares no at_a/at_b query params — the same compromise as the sibling
+  SignalDiffTableSource and SignalsWorkspaceClientFeed); the window-span stat still reflects the user windows.
+- Navigation: RouteTable.cs already maps Page("SignalDiff","signal-diff",RouteGroup.TelemetrySignals,"Signal
+  Diff"); ShellWindow.xaml.cs registers PageFactory.Register("SignalDiff", () => new SignalDiffPage()).
+- i18n: the platform catalog (apps/windows/Strings/en/Resources.resw) already carries all 15 required keys;
+  the select-all checkbox Narrator name (signalDiff.selectAll) resolves through the in-code English fallback,
+  exactly as the already-shipped sibling SignalDiffTable surface does — no catalog change is required.
+
+=== PARITY ===
+PARITY_REQUIRED=23
+# panels (5) — Display field (SignalDiffPage.Model.cs) -> rendered control (SignalDiffPage.cs)
+[x] panel - Changed-signals      -> Display.ChangedSignalsLabel/Value -> _statChanged (TsStatCard)
+[x] panel - Visible-after-filter -> Display.VisibleLabel/Value        -> _statVisible (TsStatCard)
+[x] panel - Pinned               -> Display.PinnedLabel/Value          -> _statPinned (TsStatCard)
+[x] panel - Window-span          -> Display.WindowSpanLabel/Value      -> _statWindowSpan (TsStatCard)
+[x] panel - GlassPanel5          -> diff panel (banner/loading/empty/rows/pinned chips) -> _diffPanel (TsGlassPanel, BuildDiffPanel)
+# data states (3) — projection flag (Model.cs) + headless test (SignalDiffPageTests.cs)
+[x] state - loading -> Display.ShowDiffLoading (DiffState.Loading)        :: State_loading_drives_the_skeleton
+[x] state - empty   -> Display.ShowDiffEmpty (no changes, no filter)      :: State_empty_shows_the_no_changes_panel_when_nothing_changed_and_no_filter
+[x] state - success -> Display.ShowDiffRows (rows projected)              :: State_success_shows_the_rows_when_signals_changed
+#   (+ error -> Display.ShowError (signalDiff.error banner)              :: State_error_surfaces_the_failed_to_load_banner)
+# strings (15) — SignalDiffPageProjection.Project resolves localizer.GetString("<key>", "<web default>");
+#   coverage asserted by Projection_resolves_all_15_manifest_string_keys_in_one_pass (RecordingLocalizer)
+[x] string - signalDiff.bulk.addAlert -> Display.BulkAddAlertLabel
+[x] string - signalDiff.bulk.csv      -> Display.BulkCsvLabel
+[x] string - signalDiff.bulk.pin      -> Display.BulkPinLabel
+[x] string - signalDiff.bulk.unpin    -> Display.BulkUnpinLabel
+[x] string - signalDiff.error         -> Display.ErrorMessage
+[x] string - signalDiff.noChanges     -> Display.NoChangesMessage
+[x] string - signalDiff.pinnedCount   -> Display.PinnedLabel
+[x] string - signalDiff.pinnedLabel   -> Display.PinnedChipsLabel
+[x] string - signalDiff.share         -> Display.ShareLabel
+[x] string - signalDiff.subtitle      -> Display.Subtitle
+[x] string - signalDiff.title         -> Display.Title
+[x] string - signalDiff.totalChanged  -> Display.ChangedSignalsLabel
+[x] string - signalDiff.vehicle       -> Display.VehicleLabel
+[x] string - signalDiff.visible       -> Display.VisibleLabel
+[x] string - signalDiff.windowSpan    -> Display.WindowSpanLabel
+PARITY_COVERED=23
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/SignalDiffPageTests.cs
+# (37 cases): the 15-key one-pass coverage (+ the while-loading pass), the title/subtitle/share/vehicle copy,
+# the four stat-card values (+ the em-dash-while-loading + em-dash-no-window cases), the GlassPanel5 diff +
+# bulk copy, the three data states + the error banner, the filtered-to-zero rows branch, the category + search
+# filtering, the pinned chips sort/visibility, the selected-count, the vehicle-option label fallback +
+# selection, SignalDiffVehicle.ParseList, the view-model vehicles/auto-pick/diff/pin/unpin/bulk/set-vehicle/
+# search flows, the generated-client request shaping (vehicles/available/diff/pinned + pin/unpin), every
+# registered operation resolving against the generated table, and the diagnostics. All pass.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SignalDiffPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30584, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=23
+PARITY_REQUIRED=23
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SignalDiffPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SignalDiffPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-telemetry-SignalDiffPage.log
+# git commit -m "feat(apps/windows): SignalDiffPage at web parity (W7 telemetry)"
+
+EXIT=0
+STATUS=DONE

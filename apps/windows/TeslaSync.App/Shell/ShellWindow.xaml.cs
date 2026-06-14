@@ -146,6 +146,10 @@ public sealed partial class ShellWindow : Window
         // Telemetry / Signals workspace page (P2/W7) — parity port of web SignalsWorkspacePage at route /signals.
         _viewModel.PageFactory.Register("SignalsWorkspace", static () => new FeatureViews.Telemetry.SignalsWorkspacePage());
 
+        // Telemetry / Signal Diff page (P2/W7) — parity port of web SignalDiffPage at route /signal-diff.
+        // RouteTable already maps Page("SignalDiff","signal-diff",RouteGroup.TelemetrySignals).
+        _viewModel.PageFactory.Register("SignalDiff", static () => new FeatureViews.Telemetry.SignalDiffPage());
+
         // Admin / Redis Signal Viewer page (P2/W7) — parity port of web RedisSignalViewerPage at route /redis-signals.
         // RouteTable already maps Page("RedisSignalViewer","redis-signals",RouteGroup.TelemetrySignals).
         _viewModel.PageFactory.Register("RedisSignalViewer", static () => new FeatureViews.Admin.RedisSignalViewerPage());
