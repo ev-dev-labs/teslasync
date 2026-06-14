@@ -428,6 +428,10 @@ public sealed partial class ShellWindow : Window
             page.BackRequested += (_, _) => NavigateTo("charging");
             return page;
         });
+        // System / System Status page (P2/W7) — parity port of web SystemStatusPage at route /system-status
+        // (group System Ops). RouteTable already maps Page("SystemStatus","system-status",RouteGroup.SystemOps);
+        // this wires the native surface so the nav entry + deep link resolve.
+        _viewModel.PageFactory.Register("SystemStatus", static () => new FeatureViews.SystemOps.SystemStatusPage());
         // System / IncidentTimeline page (P2/W7) — parity port of web IncidentTimelinePage at route
         // /system-status/incidents/:id. The route incident id is read from the live match and the back
         // affordance maps to the System Status page.

@@ -1,0 +1,190 @@
+p2-windows · W7 · page:system/SystemStatus — native WinUI 3 / Fluent parity port
+================================================================================
+Web source : web/src/features/system/pages/SystemStatusPage.tsx  (route /system-status)
+Prompt     : .github/prompts/monorepo/p2-windows/pages/system/SystemStatusPage.prompt.md
+Severity   : Parity page · Delegation: none (implemented in-repo, no sub-agents)
+Parity     : PARITY_REQUIRED=82  (1 panel + 4 data states + 77 strings)
+
+ENVIRONMENT
+-----------
+- .NET SDK 10.0.300 present; WinUI 3 / Windows App SDK 2.1.x. The full solution
+  builds clean in Release (0 errors). The Windows runner IS available, so the gate
+  is NOT blocked.
+- The generated C# OpenAPI client (apps/windows/Generated/, namespace
+  TeslaSync.Windows.Generated.Api) is .gitignored + regenerated, not committed.
+  Regenerated via `npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts`
+  (10 C# files) and materialized apps/windows/Generated/Generated.csproj (mirrors
+  apps/tools/codegen/verify/csharp/Verify.csproj) so the Core + Tests project
+  references resolve. All seven SystemStatus operations are present in
+  Generated/Api/ApiEndpoints.cs:
+    get_api_v1_system_health        GET /system/health
+    get_api_v1_vehicles             GET /vehicles/
+    get_api_v1_notifications_stats  GET /notifications/stats
+    get_api_v1_auth_status          GET /auth/status
+    get_api_v1_backup_runs          GET /backup/runs
+    get_api_v1_backup_configs       GET /backup/configs
+    get_api_v1_admin_maintenance    GET /admin/maintenance/
+
+PATH / OUTPUT RECONCILIATION (no scope narrowing)
+-------------------------------------------------
+The generated prompt names `apps/windows/TeslaSync/Features/System/SystemStatusPage.xaml`
++ `SystemStatusPageViewModel.cs`. That literal path/shape does not exist in this repo:
+every shipped W7 page (DBHealthPage, IncidentTimelinePage, StatusApiDocsPage, …) lives
+under `apps/windows/TeslaSync.App/feature-views/<Page>/` authored as **C# markup**
+(no per-page .xaml), split into <Page>.cs / .Model.cs / .ViewModel.cs / .Source.cs in
+namespace TeslaSync.App.FeatureViews.SystemOps (the System-Ops group). The four files
+were authored to that convention; the prompt's literal path is an idealization of the
+generator, reconciled here without narrowing any required item.
+
+DATA SOURCES (7 hooks → generated ops; bound through an INotifyPropertyChanged VM, P1/S8)
+----------------------------------------------------------------------------------------
+  useSystemHealth       GET /system/health      -> SystemStatusClientFeed.FetchHealthAsync
+  useVehicles           GET /vehicles           -> SystemStatusClientFeed.FetchVehiclesAsync
+  useNotificationStats  GET /notifications/stats-> SystemStatusClientFeed.FetchNotificationsAsync
+  useAuthStatus         GET /auth/status        -> SystemStatusClientFeed.FetchAuthAsync
+  useBackupRuns         GET /backup/runs        -> SystemStatusClientFeed.FetchBackupRunsAsync
+  useBackupConfigs      GET /backup/configs     -> SystemStatusClientFeed.FetchBackupConfigsAsync
+  useMaintenanceState   GET /admin/maintenance  -> SystemStatusClientFeed.FetchMaintenanceAsync
+Each source has its own loading/error/data flags in SystemStatusPageViewModel and a
+SystemStatusState (Loading/Empty/Error/Success) in the projection. The web page also reads
+the `@/api/devtools` fetch helpers (workers / api-usage / errors / version / ext-health /
+backup-stats); those are NOT api/hooks and are NOT in this parity unit's declared
+dataSources, so their numeric values render as em-dash fallbacks while every associated
+string still resolves + renders (the same accepted pattern DBHealthPage uses for fields the
+backend does not return). No scope was narrowed: all 18 web regions are reproduced.
+
+FILES
+-----
+  apps/windows/TeslaSync.App/feature-views/SystemStatusPage/SystemStatusPage.Model.cs      (snapshots, projection, registration, JSON helpers)
+  apps/windows/TeslaSync.App/feature-views/SystemStatusPage/SystemStatusPage.Source.cs     (generated-client feed for the 7 ops)
+  apps/windows/TeslaSync.App/feature-views/SystemStatusPage/SystemStatusPage.ViewModel.cs  (per-source 4-state holder, LoadAsync/RefreshAsync)
+  apps/windows/TeslaSync.App/feature-views/SystemStatusPage/SystemStatusPage.cs            (WinUI view, all 18 regions, 30 s auto-refresh)
+  apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs                                     (NavigationView: PageFactory.Register("SystemStatus", …))
+  apps/windows/TeslaSync.App.Tests/FeatureViews/SystemStatusPageTests.cs                   (29 headless tests)
+  apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                              (link the 3 Microsoft.UI-free sources)
+Navigation: RouteTable.cs already maps Page("SystemStatus","system-status",RouteGroup.SystemOps);
+the shell registration wires the native surface so the nav entry + `/system-status` deep link resolve.
+
+i18n: every visible literal flows through the resw-backed ILocalizer
+(ShellLocalizer → Localization.Get → Strings/{lang}/Resources.resw) via
+localizer.GetString("systemStatus.<key>", "<web English default verbatim>"), the same
+i18n contract every sibling System page (DBHealthPage, StatusApiDocsPage, IncidentTimelinePage)
+satisfies (ADR-014). PassthroughLocalizer asserts each default headlessly. Web glyphs
+preserved verbatim (em-dash "—", middle-dot "·"); i18next {{var}} templates interpolated by
+SystemStatusProjection.Interpolate.
+
+=== PARITY ===
+PARITY_REQUIRED=82
+
+panel (1)
+[x] panel - GlassPanel1                 -> SystemStatusPage.cs _healthPanel (TsGlassPanel) / BuildHealthPanel(); title Display.HealthTitle ("Health")
+
+state (4) — SystemStatusState enum + SystemStatusProjection.SourceState(); per-source states asserted in SystemStatusPageTests
+[x] state - loading data state          -> SystemStatusState.Loading; Display.IsFirstLoad → TsPageLoadSkeleton; test State_loading_when_first_load_in_flight
+[x] state - empty data state            -> SystemStatusState.Empty;   RenderSourceBody → TsEmptyState;      test State_empty_when_every_source_resolved_without_data
+[x] state - error data state            -> SystemStatusState.Error;   _errorBanner (TsAlertBanner) + RenderSourceBody → TsErrorDisplay+Retry; test State_error_when_health_query_fails
+[x] state - success data state          -> SystemStatusState.Success; populated regions; test State_success_when_data_present
+
+string (77) — all resolved in SystemStatusProjection.Project / BuildActionItems (SystemStatusPage.Model.cs)
+[x] string - At-a-glance health for your TeslaSync instance -> "systemStatus.subtitle"
+[x] string - Background workers          -> "systemStatus.workersTitle"
+[x] string - Backups                     -> "systemStatus.backups"
+[x] string - CPU %, memory bytes, and disk usage need a new /system/resources endpoint (Phase 2). -> "systemStatus.resourcesFootnote" / "systemStatus.systemInfoCpuNote"
+[x] string - Channels                    -> "systemStatus.channels"
+[x] string - Configure a schedule or run one now -> "systemStatus.noBackupsDesc"
+[x] string - Configured schedules        -> "systemStatus.configuredSchedules"
+[x] string - Configured · no successful run yet -> "systemStatus.configuredNoRun"
+[x] string - Connect                     -> "systemStatus.connect"
+[x] string - Connect your Tesla account to fetch vehicle data -> "systemStatus.notConnectedDesc"
+[x] string - Current: v{{current}}       -> "systemStatus.currentVersion" (Interpolate)
+[x] string - Database                    -> "systemStatus.database"
+[x] string - Database & connections      -> "systemStatus.databaseTitle"
+[x] string - Failed                      -> "systemStatus.failed"
+[x] string - Failures (recent)           -> "systemStatus.failuresRecent"
+[x] string - Health                      -> "systemStatus.health"
+[x] string - Last backup is {{days}} days old -> "systemStatus.staleBackup" (Interpolate)
+[x] string - Last backup: today          -> "systemStatus.lastBackupToday"
+[x] string - Last backup: {{days}}d ago  -> "systemStatus.lastBackupDaysAgo" (Interpolate)
+[x] string - Last successful             -> "systemStatus.lastSuccessful"
+[x] string - Last successful size        -> "systemStatus.lastSuccessfulSize"
+[x] string - Latency                     -> "systemStatus.latency"
+[x] string - Maintenance mode is active  -> "systemStatus.maintenanceActive"
+[x] string - Manage                      -> "systemStatus.manage"
+[x] string - Manage backups              -> "systemStatus.manageBackups"
+[x] string - Needs your attention        -> "systemStatus.needsAttention"
+[x] string - No backups recorded         -> "systemStatus.noBackups"
+[x] string - No data                     -> "systemStatus.noData"
+[x] string - No errors recorded recently. -> "systemStatus.noErrors"
+[x] string - Not configured              -> "systemStatus.notConfigured"
+[x] string - Notifications               -> "systemStatus.notifications"
+[x] string - Notifications & audit       -> "systemStatus.notificationsTitle"
+[x] string - Open DB Health              -> "systemStatus.openDbHealth"
+[x] string - Open Live Monitor           -> "systemStatus.openLiveMonitor"
+[x] string - Open Notifications          -> "systemStatus.openNotifications"
+[x] string - Open Tesla API logs         -> "systemStatus.openApiLogs"
+[x] string - Open error logs             -> "systemStatus.openErrorLogs"
+[x] string - Pending                     -> "systemStatus.pending"
+[x] string - Pool acquired               -> "systemStatus.poolAcquired"
+[x] string - Pool idle                   -> "systemStatus.poolIdle"
+[x] string - Re-authenticate             -> "systemStatus.reauthenticate"
+[x] string - Recent errors               -> "systemStatus.recentErrors"
+[x] string - Refresh                     -> "systemStatus.refresh"
+[x] string - Refresh (R)                 -> "systemStatus.refreshAria"
+[x] string - Refresh to avoid disruption -> "systemStatus.tokenExpiringDesc"
+[x] string - Release notes               -> "systemStatus.releaseNotes"
+[x] string - Review polling cadence or vehicle subscriptions -> "systemStatus.apiOverBudgetDesc"
+[x] string - Run a backup or check the schedule -> "systemStatus.staleBackupDesc"
+[x] string - Run health check            -> "systemStatus.runHealthCheck"
+[x] string - Sent (lifetime)             -> "systemStatus.sentLifetime"
+[x] string - Services                    -> "systemStatus.services"
+[x] string - Services & components       -> "systemStatus.servicesTitle"
+[x] string - Set up backups              -> "systemStatus.setUpBackups"
+[x] string - Sign in again to resume Tesla-backed features -> "systemStatus.tokenExpiredDesc"
+[x] string - Stable Status API for your own dashboards -> "systemStatus.subscribe"
+[x] string - Storage used                -> "systemStatus.storageUsed"
+[x] string - System Status               -> "systemStatus.title"
+[x] string - System info                 -> "systemStatus.systemInfo"
+[x] string - System is in operator-set maintenance mode -> "systemStatus.maintenanceActiveDesc"
+[x] string - Tables                      -> "systemStatus.tables"
+[x] string - Telemetry                   -> "systemStatus.telemetry"
+[x] string - Telemetry pipeline          -> "systemStatus.telemetryTitle"
+[x] string - Tesla API estimated cost {{cost}} exceeds {{credit}} monthly credit -> "systemStatus.apiOverBudget" (Interpolate)
+[x] string - Tesla API usage             -> "systemStatus.apiUsageTitle"
+[x] string - Tesla account not connected -> "systemStatus.notConnected"
+[x] string - Tesla auth                  -> "systemStatus.teslaAuth"
+[x] string - Tesla token expired         -> "systemStatus.tokenExpired"
+[x] string - Tesla token expires in {{days}} day(s) -> "systemStatus.tokenExpiring" (Interpolate)
+[x] string - Today reflects the current status. Day-level historical data ships with the backend health-history endpoint in Phase 2. -> "systemStatus.uptimeFootnote"
+[x] string - Total rows                  -> "systemStatus.totalRows"
+[x] string - Total runs                  -> "systemStatus.totalRuns"
+[x] string - Update available — v{{version}} -> "systemStatus.updateAvailable" (Interpolate; web em-dash)
+[x] string - Version, build, runtime     -> "systemStatus.systemInfoDesc"
+[x] string - Workers                     -> "systemStatus.workers"
+[x] string - {{cost}} of {{credit}} estimated this period -> "systemStatus.apiUsageDesc" (Interpolate)
+[x] string - {{count}} since {{uptime}} ago -> "systemStatus.errorsSince" (Interpolate)
+[x] string - {{down}} of {{total}} workers unhealthy -> "systemStatus.workersUnhealthy" (Interpolate)
+
+PARITY_COVERED=82
+(SystemStatusPageTests.Projection_resolves_every_i18n_key_across_all_branches asserts all
+90 systemStatus.* keys — the 77 above + 13 derived helpers — flow through the localizer.)
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SystemStatusPage -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release   -> Build succeeded. 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> clean (full solution)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release   -> Passed: 30858, Failed: 0, Skipped: 0
+#   (includes the 29 new SystemStatusPageTests)
+TEST_EXIT=0
+# Note: TeslaSync.App.UITests (147 WinAppDriver/Appium E2E tests) cannot run here —
+#   `UiAutomationUnavailableException: nothing is listening on http://127.0.0.1:4723/`.
+#   This is a pre-existing environmental prerequisite (WinAppDriver absent) that blocks the
+#   E2E layer for ALL pages, not a regression from this change; the headless unit-test
+#   project is the green gate, matching every prior shipped W7 page log.
+
+EXIT=0
+STATUS=DONE

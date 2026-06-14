@@ -798,6 +798,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\IncidentTimelinePage\IncidentTimelinePage.Model.cs" Link="FeatureViews\IncidentTimelinePage\IncidentTimelinePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentTimelinePage\IncidentTimelinePage.Source.cs" Link="FeatureViews\IncidentTimelinePage\IncidentTimelinePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\IncidentTimelinePage\IncidentTimelinePage.ViewModel.cs" Link="FeatureViews\IncidentTimelinePage\IncidentTimelinePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SystemStatusPage\SystemStatusPage.Model.cs" Link="FeatureViews\SystemStatusPage\SystemStatusPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SystemStatusPage\SystemStatusPage.Source.cs" Link="FeatureViews\SystemStatusPage\SystemStatusPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SystemStatusPage\SystemStatusPage.ViewModel.cs" Link="FeatureViews\SystemStatusPage\SystemStatusPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfoTile\InfoTile.Model.cs" Link="FeatureViews\InfoTile\InfoTile.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Model.cs" Link="FeatureViews\InfrastructureSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\InfrastructureSection.Source.cs" Link="FeatureViews\InfrastructureSection.Source.cs" />
