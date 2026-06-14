@@ -193954,6 +193954,237 @@
           }
         }
       }
+    },
+    "admin.slowQueries.colCache" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache hit ratio"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colCalls" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colFingerprint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Query fingerprint"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colMax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max (ms)"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colMean" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mean (ms)"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colRows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rows"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.colTotal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total (ms)"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pg_stat_statements is empty or has been reset recently. Slow queries will accumulate here as the system processes load."
+          }
+        }
+      }
+    },
+    "admin.slowQueries.emptyTable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No slow queries"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No slow queries"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.limit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.notConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page."
+          }
+        }
+      }
+    },
+    "admin.slowQueries.orderBy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Order by"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.orderCalls" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calls"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.orderMax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max time"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.orderMean" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mean time"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.orderTotal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total time"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slow Queries"
+          }
+        }
+      }
+    },
+    "admin.slowQueries.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate."
+          }
+        }
+      }
+    },
+    "admin.slowQueries.tableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top queries"
+          }
+        }
+      }
+    },
+    "route.slowQueries" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slow Queries"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
