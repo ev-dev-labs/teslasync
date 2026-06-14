@@ -72,6 +72,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-VehicleCostPage.log"
   },
   {
+    "unitId": "page:analytics/Mileage",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 29,
+    "requiredCount": 29,
+    "promptId": "p2-windows/W7/windows-page-analytics-MileagePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-MileagePage.log"
+  },
+  {
     "unitId": "page:automations/AutomationActivityFeed",
     "platform": "windows",
     "status": "done",
