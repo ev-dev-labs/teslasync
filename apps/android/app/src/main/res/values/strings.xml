@@ -4489,6 +4489,14 @@
   <string name="translation_nav_unknown">Unknown</string>
   <string name="translation_nav_unpinCurrent">Remove current page from pinned</string>
   <string name="translation_nav_unpinPage">Unpin %1$s</string>
+  <string name="translation_nav_favorites">Favorites</string>
+  <string name="translation_nav_pages">Pages</string>
+  <string name="translation_nav_sidebar">Sidebar navigation</string>
+  <string name="translation_nav_filterNoMatch">No matches.</string>
+  <string name="translation_nav_filterClear">Clear filter</string>
+  <string name="translation_nav_pinPage">Pin %1$s</string>
+  <string name="translation_nav_vehicleCount">%1$d vehicles</string>
+  <string name="translation_nav_staleCount">%1$d stale rows</string>
   <string name="translation_nav_vampireDrain">Vampire Drain</string>
   <string name="translation_nav_vehicleComparison">Fleet Comparison</string>
   <string name="translation_nav_vehicleCount">%1$s vehicles</string>
