@@ -12,11 +12,13 @@ import io.teslasync.shared.core.cache.CacheStore
 import io.teslasync.shared.core.cache.Clock
 import io.teslasync.shared.core.cache.SystemClock
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
+import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
+import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
 import io.teslasync.shared.core.presentation.vehicles.VehiclesStore
 import kotlinx.coroutines.CoroutineScope
@@ -57,6 +59,7 @@ class DataContainer(
     private val vehiclesRepository = HttpVehiclesRepository(api, cacheStore, clock)
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
+    private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -68,6 +71,12 @@ class DataContainer(
 
     /** Shared Settings domain state holder (web `useSettings` port); backs the unit formatter. */
     val settingsStore = SettingsStore(settingsRepository, scope)
+
+    /**
+     * Shared unified-pin domain state holder (web `usePinned` port). Backs pin-aware ordering on every
+     * surface that floats pinned rows to the top (the layout `VehiclePicker`, dashboard widgets, …).
+     */
+    val pinnedStore = PinnedStore(pinnedRepository, scope)
 
     /** App-scoped active-vehicle selection, self-healing from the live vehicle list. */
     val selectedVehicleStore = SelectedVehicleStore()
