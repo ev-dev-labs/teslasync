@@ -384,6 +384,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.Model.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.Source.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertRulesPage\AlertRulesPage.ViewModel.cs" Link="FeatureViews\AlertRulesPage\AlertRulesPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.Model.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.Source.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AlertsListPage\AlertsListPage.ViewModel.cs" Link="FeatureViews\AlertsListPage\AlertsListPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleAccessPage\VehicleAccessPage.Model.cs" Link="FeatureViews\VehicleAccessPage\VehicleAccessPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleAccessPage\VehicleAccessPage.Source.cs" Link="FeatureViews\VehicleAccessPage\VehicleAccessPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleAccessPage\VehicleAccessPage.ViewModel.cs" Link="FeatureViews\VehicleAccessPage\VehicleAccessPage.ViewModel.cs" />

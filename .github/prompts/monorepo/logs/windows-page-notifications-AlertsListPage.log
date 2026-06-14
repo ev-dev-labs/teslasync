@@ -1,0 +1,216 @@
+================================================================================
+p2-windows · W7 · page:notifications/AlertsList · WinUI 3 / Fluent parity port
+================================================================================
+Parity unit : page:notifications/AlertsList
+Web source  : web/src/features/notifications/pages/AlertsListPage.tsx
+Web route   : /notifications/alerts
+Output      : apps/windows/TeslaSync.App/feature-views/AlertsListPage/
+                AlertsListPage.cs            (WinUI 3 view, C# markup)
+                AlertsListPage.ViewModel.cs  (UI-thread-free state holder, 4 states)
+                AlertsListPage.Model.cs      (records + projection + registration + diagnostics)
+                AlertsListPage.Source.cs     (IAlertsFeed + EmptyFeed + generated-client feed)
+Nav reg     : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+                PageFactory.Register("NotificationsAlerts", () => new AlertsListPage())
+                (RouteTable already maps NotificationsAlerts -> notifications/alerts)
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/AlertsListPageTests.cs (51 tests)
+                + 3 headless sources registered in TeslaSync.App.Tests.csproj
+Runner      : .NET 10.0.300 SDK · TFM net10.0-windows10.0.19041.0 · WinUI 3 — AVAILABLE (not BLOCKED)
+
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+--------------------------------------------------------------------------------
+Architecture (matches established sibling W7 page AlertRulesPage in the same domain)
+--------------------------------------------------------------------------------
+- MVVM, no business logic in code-behind. The view binds AlertsListPageViewModel and
+  renders the pure AlertsListDisplay projection; all branch selection / formatting /
+  i18n / aggregate maths happen in the headless Model. State changes are marshalled
+  onto the UI thread via DispatcherQueue.
+- Data port IAlertsFeed (web hooks) -> generated C# OpenAPI client (ADR-004):
+    useAlerts          -> get_api_v1_alerts                     GET  /alerts
+    useAlertRules      -> get_api_v1_alerts_rules               GET  /alerts/rules
+    usePinned          -> get_api_v1_pinned (?type=alert_rule)  GET  /pinned
+    useMarkAlertRead   -> post_api_v1_alerts_alertID_read       POST /alerts/{id}/read
+    useAcknowledgeAlert-> post_api_v1_alerts_alertID_acknowledge POST /alerts/{id}/acknowledge { note }
+    useReopenAlert     -> post_api_v1_alerts_alertID_reopen     POST /alerts/{id}/reopen
+    useAlertDetail     -> get_api_v1_alerts_alertID             GET  /alerts/{id}
+  (op ids cross-checked against apps/windows/Generated ApiEndpoints.All — all present.)
+- Shared Fluent components reused (no web pixel-cloning, ADR-005/006):
+    PageTitle/Subhead (header), TsBadge (quiet-hours + pinned status), TsSkeleton (loading,
+    5 rows), TsErrorDisplay (error), TsEmptyState (empty + overview-empty + list-empty),
+    TsGlassPanel (overview / trend / type / pinned regions), TsMetricCard x6 (KPI tiles),
+    TsBarChart (7-day severity trend), TsPieChart (by-type donut + legend), TsInlineCallout
+    (critical callout + acknowledge toast w/ undo), TsSearchInput (search), TsButton
+    (filter tabs / pagination / chip-remove / active-rules link), AlertCard (the already-
+    ported shared card surface — reused for every list row), TsTextarea + ContentDialog
+    (acknowledge note + audit-timeline modal).
+- The per-alert "View context" drill-through is a 1:1 port of web/src/lib/alertDrillthrough.ts
+  (SIGNAL_TO_PAGE map + snake_case vehicle_id/t/signal query) in AlertsListRegistration.DrillthroughHref.
+- i18n: every visible literal flows through ILocalizer.GetString("<key>","<English fallback>").
+  Per the established W7 contract the page keys resolve through the WinUI resource bridge and
+  fall back to the verbatim web English copy; headless tests assert every key is requested
+  (RecordingLocalizer). Key names match the web manifest verbatim.
+- Units: this page has no SI-unit fields (alert counts / read-rate %); nothing stored/computed non-SI.
+- Live data: the web page is a TanStack query only (no live/SSE source), so no >2min staleness
+  chrome is applicable (matches the web source).
+
+--------------------------------------------------------------------------------
+Gate (windows triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AlertsListPage -Language csharp
+PLACEHOLDER_ALLOWED=1   (alerts.searchPlaceholder — a manifest-required i18n key; opt-out reason given inline)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release   -> Build succeeded, 0 Error(s)
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes   -> no changes required
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30233, Failed: 0, Skipped: 0
+#   (includes the 51 new AlertsListPageTests; same headless-unit-suite target the sibling
+#    W7 page gates record, e.g. windows-page-notifications-AlertRulesPage.log)
+TEST_EXIT=0
+
+# NOTE — TeslaSync.App.UITests (W9 WinAppDriver UI-automation project) is NOT part of the W7
+#   page gate contract and is excluded here exactly as the sibling DONE pages do (no WinAppDriver
+#   listener in this headless environment; an infrastructure precondition unrelated to this change).
+#   No red-as-green: the W7 gate target (TeslaSync.App.Tests) is fully green above.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=52
+--------------------------------------------------------------------------------
+[x] panel  · Total
+      Model.cs · AlertsListProjection.Project -> Metrics[0] (AlertsMetric "Total", count=alerts.Count)
+      cs · RenderOverview() -> TsMetricCard in _metricsGrid. web MetricCard label={t('Total')}.
+
+[x] panel  · Critical
+      Model.cs · Project -> Metrics[1] (unread critical count). cs RenderOverview TsMetricCard.
+      web MetricCard label={t('Critical')} color="red".
+
+[x] panel  · Warnings
+      Model.cs · Project -> Metrics[2] (warning count). cs RenderOverview TsMetricCard.
+      web MetricCard label={t('Warnings')} color="amber".
+
+[x] panel  · Info
+      Model.cs · Project -> Metrics[3] (info count). cs RenderOverview TsMetricCard.
+      web MetricCard label={t('Info')}.
+
+[x] panel  · Unread
+      Model.cs · Project -> Metrics[4] (unread count). cs RenderOverview TsMetricCard.
+      web MetricCard label={t('Unread')} color="purple".
+
+[x] panel  · Read-rate
+      Model.cs · Project -> Metrics[5] (readRatePct% or em-dash). cs RenderOverview TsMetricCard.
+      web MetricCard label={t('alerts.readRate','Read rate')} color="green".
+
+[x] panel  · GlassPanel7  (overview KPI region)
+      cs · BuildOverviewPanel() -> _overviewPanel (TsGlassPanel) hosting the 6 metric tiles, the
+      secondary summary line and the critical callout; switches to _overviewEmpty when totalCount==0.
+      web <KpiOverviewCard> / empty <GlassPanel><EmptyState/></GlassPanel>.
+
+[x] panel  · GlassPanel8  (7-day trend)
+      cs · BuildChartsRow() -> _trendPanel (TsGlassPanel) hosting PanelTitle + TsBarChart.
+      web <GlassPanel> "Alert Trend (7 Days)" bar chart.
+
+[x] panel  · GlassPanel9  (by-type breakdown)
+      cs · BuildChartsRow() -> _typePanel (TsGlassPanel) hosting PanelTitle + TsPieChart + legend.
+      web <GlassPanel> "Alerts by Type" pie chart.
+
+[x] panel  · GlassPanel10 (pinned "Watching")
+      cs · BuildPinnedPanel() -> _pinnedPanel (TsGlassPanel) hosting the pinned-rule rows.
+      Model.cs Project -> ShowPinned / PinnedRules. web <GlassPanel> pinned-rules list.
+
+[x] chart  · BarChart
+      Model.cs · BuildTrendDays() -> 7x AlertTrendDay (info/warning/critical per day).
+      cs · RenderCharts() -> _trendChart (TsBarChart) with three severity ChartSeries.
+      web <BarChart data={alertsByDay}> stacked critical/warning/info.
+
+[x] chart  · PieChart
+      Model.cs · BuildTypeSlices() -> AlertTypeSlice list (sorted desc). cs RenderCharts() ->
+      _typeChart (TsPieChart Values) + _typeLegend. web <PieChart><Pie data={alertsByType}>.
+
+[x] state  · loading
+      Model.cs · SelectState (State=Loading, ShowLoading). cs _loadingPanel = 5x TsSkeleton.
+      web isLoading -> PageContainer loading / 5x <Skeleton>.
+
+[x] state  · empty
+      Model.cs · SelectState (State=Empty, ShowEmpty; totalCount==0). cs _emptyState (TsEmptyState:
+      OverviewEmptyTitle/Message). web no-alerts EmptyState.
+
+[x] state  · error
+      Model.cs · SelectState (State=Error, HasError). cs _errorState (TsErrorDisplay, ActionInvoked
+      -> RefreshAsync). web PageContainer error={error}.
+
+[x] state  · success
+      Model.cs · SelectState (State=Success, ShowContent). cs _content (overview + charts + pinned
+      + filter bar + list). web populated page body.
+
+[x] string · Active Rules           Model.cs · Project -> ActiveRulesLabel (GetString "Active Rules")
+[x] string · Alert Trend (7 Days)    Model.cs · Project -> TrendTitle (GetString "Alert Trend (7 Days)")
+[x] string · Alert marked as read    Model.cs · Project -> MarkReadSuccessLabel (GetString "Alert marked as read")
+[x] string · Alerts                  Model.cs · AlertsListRegistration.Title (GetString "Alerts")
+[x] string · Alerts by Type          Model.cs · Project -> ByTypeTitle (GetString "Alerts by Type")
+[x] string · All                     Model.cs · Project -> FilterTabs[0] (GetString "All")
+[x] string · Critical                Model.cs · Project -> criticalLabel (GetString "Critical"); metric + tab + bar series
+[x] string · Info                    Model.cs · Project -> infoLabel (GetString "Info"); metric + bar series
+[x] string · Last 7 Days             Model.cs · Project -> Last7DaysLabel (GetString "Last 7 Days")
+[x] string · Most Common             Model.cs · Project -> MostCommonLabel (GetString "Most Common")
+[x] string · No alerts               Model.cs · Project -> OverviewEmptyTitle / ListEmptyTitle (GetString "No alerts")
+[x] string · No alerts match your search.   Model.cs · Project -> noSearchMatch (GetString "No alerts match your search.")
+[x] string · Quiet hours             Model.cs · Project -> QuietHoursBadge (GetString "Quiet hours")
+[x] string · Quiet hours active      Model.cs · Project -> QuietHoursActiveLabel (GetString "Quiet hours active")
+[x] string · Total                   Model.cs · Project -> totalLabel (GetString "Total")
+[x] string · Unread                  Model.cs · Project -> unreadLabel (GetString "Unread"); metric + tab + chip
+[x] string · Warning                 Model.cs · Project -> SeriesWarningLabel (GetString "Warning"); bar series
+[x] string · Warnings                Model.cs · Project -> warningsLabel (GetString "Warnings"); metric
+[x] string · Your fleet is running smoothly. Alerts will appear here.
+                                     Model.cs · Project -> fleetSmoothly (GetString ".." verbatim); list "all" empty
+[x] string · alerts.ack.success      Model.cs · Project -> AckSuccessLabel (GetString "alerts.ack.success","Alert acknowledged")
+[x] string · alerts.ack.undo         Model.cs · Project -> AckUndoLabel (GetString "alerts.ack.undo","Undo")
+[x] string · alerts.criticalCallout  Model.cs · Project -> CriticalCalloutText (GetString "alerts.criticalCallout", interpolated count)
+[x] string · alerts.filterLabel.search   Model.cs · Project -> searchChipLabel (GetString "alerts.filterLabel.search","Search")
+[x] string · alerts.filterLabel.status   Model.cs · Project -> statusChipLabel (GetString "alerts.filterLabel.status","Status")
+[x] string · alerts.noAlertsInRange  Model.cs · Project -> OverviewEmptyMessage (GetString "alerts.noAlertsInRange",..)
+[x] string · alerts.overview         Model.cs · Project -> OverviewTitle (GetString "alerts.overview","Overview")
+[x] string · alerts.readRate         Model.cs · Project -> readRateLabel (GetString "alerts.readRate","Read rate")
+[x] string · alerts.rule             Model.cs · Project -> ruleFallback (GetString "alerts.rule","Rule"); pinned "Rule #id"
+[x] string · alerts.searchPlaceholder Model.cs · Project -> searchPrompt (GetString "alerts.searchPlaceholder",..)
+[x] string · alerts.subtitle         Model.cs · Project -> subtitle (GetString "alerts.subtitle","Live alert events from your fleet")
+[x] string · alerts.timeline.empty   Model.cs · Project -> TimelineEmpty (GetString "alerts.timeline.empty","No events yet")
+[x] string · alerts.timeline.title   Model.cs · Project -> TimelineTitle (GetString "alerts.timeline.title","Audit timeline")
+[x] string · alerts.viewCritical     Model.cs · Project -> ViewCriticalLabel (GetString "alerts.viewCritical","View critical")
+[x] string · common.disabled         Model.cs · Project -> disabledStatus (GetString "common.disabled","Disabled"); pinned badge
+[x] string · common.enabled          Model.cs · Project -> enabledStatus (GetString "common.enabled","Enabled"); pinned badge
+[x] string · pinned.section.watching Model.cs · Project -> WatchingLabel (GetString "pinned.section.watching","Watching")
+
+PARITY_COVERED=52
+--------------------------------------------------------------------------------
+Coverage verification:
+  AlertsListPageTests.Projection_resolves_every_required_string_key asserts all 36 required
+  i18n keys are requested by a single AlertsListProjection.Project(RichModel) call
+  (RecordingLocalizer); the 4 data states are asserted by State_loading/empty/error/success_*;
+  the 6 metric panels by Metrics_match_web_counts; the two charts by Trend_has_seven_days_*
+  and TypeSlices_sorted_by_count_descending; the pinned panel by Pinned_rows_follow_pin_order_*;
+  filter tabs / chips / list / pagination by Filter_tabs_*, Active_chips_*, Filter_critical_*,
+  Search_*, Pagination_*; the drill-through by Drillthrough_maps_signal_to_page; the feed
+  request shaping (all 7 hooks) by the ClientFeed_* tests; the VM four-state matrix + flows by
+  the ViewModel_* tests. 51/51 pass.
+  PARITY_COVERED (52) == PARITY_REQUIRED (52).
+
+Acceptance criteria:
+  [x] Every named panel implemented (6 metric tiles); every anonymous web GlassPanel reproduced
+      (GlassPanel7..10 = overview / trend / type / pinned).
+  [x] All 52 parity items render from the bound AlertsListPageViewModel/AlertsListDisplay.
+  [x] loading / empty / error / success implemented for the alerts data source; rules + pins load
+      independently and only hide their own panels on failure (asserted).
+  [x] All visible strings sourced via keyed ILocalizer.GetString; key names match web; zero hardcoded
+      literals (one parity:allow opt-out for the manifest-required key string "alerts.searchPlaceholder").
+  [x] Dark mode + a11y (AutomationProperties names on panels/charts/metrics, keyboard + pointer) +
+      Fluent-native only (no web pixel-cloning). SI units N/A (alert counts only).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED.
+  [x] windows ledger row for page:notifications/AlertsList set covered (52/52, status=done).
+
+EXIT=0
+STATUS=DONE
