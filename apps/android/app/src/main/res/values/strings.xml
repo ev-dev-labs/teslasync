@@ -7511,6 +7511,8 @@
   <string name="translation_widget_fleetStatsBar_onlineNow">Online Now</string>
   <string name="translation_widget_fleetStatsBar_title">Fleet Stats</string>
   <string name="translation_widget_fleetStatsBar_vehicles">Vehicles</string>
+  <string name="translation_widget_flowDiagram_aria">Energy flow diagram</string>
+  <string name="translation_widget_flowDiagram_noData">No flow data available</string>
   <string name="translation_widget_forecast_accelerated">Accelerated</string>
   <string name="translation_widget_forecast_currentHealth">Current Health</string>
   <string name="translation_widget_forecast_healthy">Healthy</string>

@@ -5655,6 +5655,10 @@
       "title": "Energy Flow",
       "noData": "No energy data available"
     },
+    "flowDiagram": {
+      "aria": "Energy flow diagram",
+      "noData": "No flow data available"
+    },
     "consuming": "Consuming",
     "regenerating": "Regenerating",
     "standby": "Standby",
