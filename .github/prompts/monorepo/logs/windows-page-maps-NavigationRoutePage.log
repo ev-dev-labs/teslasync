@@ -1,0 +1,177 @@
+P2-WINDOWS W7 — page:maps/NavigationRoute — WinUI 3 / Fluent parity port
+========================================================================
+Web source : web/src/features/maps/pages/NavigationRoutePage.tsx (route /navigation)
+Output     : apps/windows/TeslaSync.App/feature-views/NavigationRoutePage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling done pages
+              RouteEfficiencyPage / TemperatureImpactPage / LocationsPage. The generated prompt's path
+              apps/windows/TeslaSync/Features/Maps does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register(NavigationRouteRegistration.RouteName, static () => new FeatureViews.Maps.NavigationRoutePage())
+             (RouteTable already maps Page("NavigationRoute","navigation",MapsLocation,…) at
+              TeslaSync.App.Core/Navigation/RouteTable.cs:286 — no route entry added)
+Strings    : every visible literal is resolved by web key through ILocalizer.GetString(key, englishFallback) in
+             NavigationStrings.Resolve (Model.cs). apps/windows/Strings/{en,he,ar}/Resources.resw are catalog-
+             generated (header: "AUTO-GENERATED … do not edit by hand"); the nav.* keys resolve through the
+             localizer's English-fallback path, the same precedent the sibling RouteEfficiencyPage /
+             TripPlannerPage follow. None hardcoded.
+Units (SI) : speed_mph is m/s SI, miles_to_arrival is metres SI (Phase-48). Converted at the display boundary only
+             via UnitConverters.SpeedFromSi / DistanceFromSi + UnitLabels (Model.cs). No non-SI stored/computed.
+
+Data sources (web hooks ported, same names at the C# call sites):
+  useChargingTelemetryLatest  GET /charging-telemetry/latest [vehicle_id]  -> Operations.Charging.TelemetryLatest
+  useLocationSnapshotLatest   GET /location-snapshots/latest [vehicle_id]  -> Operations.Locations.SnapshotLatest
+  useLocationSnapshots        GET /location-snapshots [vehicle_id,limit]   -> Operations.Locations.SnapshotHistory (added)
+  (NavigationRouteClientFeed: latest = primary/error-propagating; history + charging = best-effort/degrade.)
+
+Files:
+  feature-views/NavigationRoutePage/NavigationRoutePage.Model.cs      (parsers + snapshot + feed iface + EmptyFeed + display records + NavigationStrings(60) + projection + registration + diagnostics)
+  feature-views/NavigationRoutePage/NavigationRoutePage.Source.cs     (generated C# client GET adapter: NavigationRouteClientFeed — 3 reads)
+  feature-views/NavigationRoutePage/NavigationRoutePage.ViewModel.cs  (INotifyPropertyChanged data holder + state matrix + units + freshness flags)
+  feature-views/NavigationRoutePage/NavigationRoutePage.cs            (WinUI 3 UserControl, Fluent + design tokens + AutomationPeer)
+  TeslaSync.App.Core/Data/Net/Operations.cs                          (+Locations.SnapshotHistory = get_api_v1_location_snapshots)
+  TeslaSync.App/Shell/ShellWindow.xaml.cs                             (PageFactory registration)
+  TeslaSync.App.Tests/FeatureViews/NavigationRoutePageTests.cs        (53 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                      (link the 3 UI-free files; the WinUI view is build-only)
+
+=== PARITY ===
+PARITY_REQUIRED=79
+# Each item: web region -> binding C# evidence (file + symbol).
+
+# -- panels (13) --
+[x] panel  GlassPanel1 Navigation-Status      -> NavigationRoutePage.cs BuildStatus(); Model NavStatusDisplay / NavigationProjection.BuildStatus
+[x] panel  GlassPanel2 Location-Status-Cards  -> NavigationRoutePage.cs BuildLocationCards()/BuildLocationCard(); Model BuildLocationCards (5x NavLocationCardDisplay)
+[x] panel  Distance                           -> NavigationRoutePage.cs BuildMetrics() Metrics[0]; Model NavMetricDisplay(s.MetricDistance)
+[x] panel  ETA                                -> NavigationRoutePage.cs BuildMetrics() Metrics[1]; Model NavMetricDisplay(s.MetricEta)
+[x] panel  Traffic-Delay                      -> NavigationRoutePage.cs BuildMetrics() Metrics[2]; Model NavMetricDisplay(s.MetricTrafficDelay)
+[x] panel  Avg-Speed                          -> NavigationRoutePage.cs BuildMetrics() Metrics[3]; Model NavMetricDisplay(s.MetricAvgSpeed)+AverageSpeed
+[x] panel  Energy-at-Arrival                  -> NavigationRoutePage.cs BuildMetrics() Metrics[4]; Model NavMetricDisplay(s.MetricEnergyAtArrival)
+[x] panel  GlassPanel8 Speed-Profile          -> NavigationRoutePage.cs BuildChart(SpeedChart,area:true); Model NavChartDisplay SpeedChart
+[x] panel  GlassPanel9 Waypoints              -> NavigationRoutePage.cs BuildWaypoints()/BuildTablePanel(); Model NavWaypointsDisplay
+[x] panel  GlassPanel10 Route-Traffic-Delay   -> NavigationRoutePage.cs BuildTraffic(); Model NavTrafficDisplay + TrafficDelayDisplay
+[x] panel  GlassPanel11 Recent-Destinations   -> NavigationRoutePage.cs BuildTableSection(RecentDestinations); Model BuildRecentDestinations
+[x] panel  GlassPanel12 Presence              -> NavigationRoutePage.cs BuildChart(PresenceChart,area:false); Model NavChartDisplay PresenceChart
+[x] panel  GlassPanel13 Location-History      -> NavigationRoutePage.cs BuildTableSection(LocationHistory); Model BuildHistory
+
+# -- charts (2) --
+[x] chart  AreaChart                          -> NavigationRoutePage.cs BuildChart(area:true)=new TsAreaChart; Model BuildSpeedChart ChartSeriesKind.Area (speed + distance-to-arrival series)
+[x] chart  LineChart                          -> NavigationRoutePage.cs BuildChart(area:false)=new TsLineChart; Model BuildPresenceChart ChartSeriesKind.Line (home/work/homelink series)
+
+# -- data states (4) — projected for every source; loading->shimmer empty->EmptyState error->QueryError success->content --
+[x] state  loading  -> NavigationDisplay.ShowLoading (NavigationProjection precedence: Loading&&!HasData); test State_loading_when_queries_in_flight
+[x] state  empty    -> NavigationDisplay.ShowEmpty   (!HasData); TsEmptyState; test State_empty_when_resolved_with_no_snapshot_or_history
+[x] state  error    -> NavigationDisplay.ShowError   (ErrorDetail!=null); TsQueryError + Retry; test State_error_when_query_failed
+[x] state  success  -> NavigationDisplay.ShowContent (HasData); test State_success_when_a_snapshot_is_present
+
+# -- strings (60) — all resolved eagerly in NavigationStrings.Resolve (Model.cs); test Projection_resolves_every_required_string_key_in_success (+ ..._even_in_the_loading_state) --
+[x] string common.noData                  -> NavigationStrings.CommonNoData
+[x] string error.loadFailed               -> NavigationStrings.ErrorLoadFailed
+[x] string nav.active                     -> NavigationStrings.Active
+[x] string nav.atHome                     -> NavigationStrings.AtHome
+[x] string nav.atWork                     -> NavigationStrings.AtWork
+[x] string nav.awayFromHome               -> NavigationStrings.AwayFromHome
+[x] string nav.chartDistanceV2            -> NavigationStrings.ChartDistanceV2
+[x] string nav.chartSpeedV2               -> NavigationStrings.ChartSpeedV2
+[x] string nav.col.destination            -> NavigationStrings.ColDestination
+[x] string nav.col.distance               -> NavigationStrings.ColDistance
+[x] string nav.col.eta                    -> NavigationStrings.ColEta
+[x] string nav.col.home                   -> NavigationStrings.ColHome
+[x] string nav.col.lat                    -> NavigationStrings.ColLat
+[x] string nav.col.lon                    -> NavigationStrings.ColLon
+[x] string nav.col.time                   -> NavigationStrings.ColTime
+[x] string nav.col.work                   -> NavigationStrings.ColWork
+[x] string nav.currentLocation            -> NavigationStrings.CurrentLocation
+[x] string nav.delay                      -> NavigationStrings.Delay
+[x] string nav.destination                -> NavigationStrings.Destination
+[x] string nav.distanceRemaining          -> NavigationStrings.DistanceRemaining
+[x] string nav.eta                        -> NavigationStrings.Eta
+[x] string nav.gpsFixQuality              -> NavigationStrings.GpsFixQuality
+[x] string nav.heading                    -> NavigationStrings.Heading
+[x] string nav.headingValue               -> NavigationStrings.HeadingValue ({{cardinal}}/{{degrees}} interpolated)
+[x] string nav.homeStatus                 -> NavigationStrings.HomeStatus
+[x] string nav.homelinkNearby             -> NavigationStrings.HomelinkNearby
+[x] string nav.inactive                   -> NavigationStrings.Inactive
+[x] string nav.legendDistanceToArrivalV2  -> NavigationStrings.LegendDistanceToArrivalV2
+[x] string nav.legendSpeedV2              -> NavigationStrings.LegendSpeedV2
+[x] string nav.locationHistory            -> NavigationStrings.LocationHistory
+[x] string nav.locationUnavailable        -> NavigationStrings.LocationUnavailable
+[x] string nav.metric.avgSpeed            -> NavigationStrings.MetricAvgSpeed
+[x] string nav.metric.distance            -> NavigationStrings.MetricDistance
+[x] string nav.metric.energyAtArrival     -> NavigationStrings.MetricEnergyAtArrival
+[x] string nav.metric.eta                 -> NavigationStrings.MetricEta
+[x] string nav.metric.trafficDelay        -> NavigationStrings.MetricTrafficDelay
+[x] string nav.minutes                    -> NavigationStrings.Minutes
+[x] string nav.noActiveNav                -> NavigationStrings.NoActiveNav
+[x] string nav.noDestinations             -> NavigationStrings.NoDestinations
+[x] string nav.noGps                      -> NavigationStrings.NoGps
+[x] string nav.noHistory                  -> NavigationStrings.NoHistory
+[x] string nav.noPresence                 -> NavigationStrings.NoPresence
+[x] string nav.noSnapshots                -> NavigationStrings.NoSnapshots
+[x] string nav.notAtWork                  -> NavigationStrings.NotAtWork
+[x] string nav.pageTitle                  -> NavigationStrings.PageTitle
+[x] string nav.presenceChart              -> NavigationStrings.PresenceChart
+[x] string nav.recentDestinations         -> NavigationStrings.RecentDestinations
+[x] string nav.refresh                    -> NavigationStrings.Refresh
+[x] string nav.routeLastUpdated           -> NavigationStrings.RouteLastUpdated
+[x] string nav.speedProfile               -> NavigationStrings.SpeedProfile
+[x] string nav.status                     -> NavigationStrings.Status
+[x] string nav.subtitle                   -> NavigationStrings.Subtitle
+[x] string nav.trafficDelay               -> NavigationStrings.TrafficDelay
+[x] string nav.unknown                    -> NavigationStrings.Unknown
+[x] string nav.waypoints                  -> NavigationStrings.Waypoints
+[x] string nav.workStatus                 -> NavigationStrings.WorkStatus
+[x] string nav.wp.distance                -> NavigationStrings.WpDistance
+[x] string nav.wp.name                    -> NavigationStrings.WpName
+[x] string nav.wp.type                    -> NavigationStrings.WpType
+[x] string navigation.noRoute             -> NavigationStrings.NavigationNoRoute
+
+# Test backing (53 headless tests, NavigationRoutePageTests.cs):
+#   60-key coverage: Projection_resolves_every_required_string_key_in_success / ..._even_in_the_loading_state /
+#     Required_string_key_set_has_exactly_sixty_unique_keys.
+#   state matrix: State_loading/empty/error/success + History_only_snapshot_still_resolves_to_success.
+#   panels: Status_active/inactive, GpsWarning_shown/hidden, LocationCards_*, Metrics_* (+imperial),
+#     Waypoints_*, RecentDestinations_deduplicates, LocationHistory_projects_one_row_per_snapshot.
+#   charts: SpeedChart_builds_two_area_series / SpeedChart_is_empty_without_history / PresenceChart_builds_three_line_series.
+#   helpers: TrafficBadgeStatus_*, HeadingToCardinal_*, NormalizeGpsState_matches_web, AverageSpeed_*.
+#   parsers: Snapshot_parses_snake_case_fields, ParseHistory/ParseLatest/ParseExpectedEnergy.
+#   feed: ClientFeed_requests_three_reads_scoped_to_the_vehicle / _propagates_a_failed_primary_read /
+#     _degrades_charging_failure_to_an_absent_percentage.
+#   view-model: ViewModel_loads_success / _surfaces_the_error_state / _reprojects_when_units_change.
+#   diagnostics + registration: Diagnostics_record_only_view_opened / Registration_exposes_route_and_operations.
+
+PARITY_COVERED=79
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Maps does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/NavigationRoutePage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s).
+#   (17 pre-existing CA warnings live in TeslaSync.App.Core files untouched by this change; the 5 new/edited
+#    files add 0 warnings.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <NavigationRoutePage Model/Source/ViewModel/view
+#   + NavigationRoutePageTests + Operations.cs + ShellWindow.xaml.cs>  -> 0 issues (LF / utf-8, no-BOM)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30199, Failed: 0, Skipped: 0
+#   (incl. 53 NavigationRoutePageTests). This is the headless gate the sibling done pages use for TEST_EXIT
+#   (see windows-page-driving-RouteEfficiencyPage.log).
+TEST_EXIT=0
+# NOTE (environment): apps/windows/TeslaSync.App.UITests is a WinAppDriver/Appium E2E suite that requires a UI-
+#   automation runner on http://127.0.0.1:4723. That daemon is ABSENT in this sandbox, so `dotnet test
+#   TeslaSync.sln` (which also enumerates UITests) throws UiAutomationUnavailableException at session setup
+#   (Fixtures/WinAppDriverSession.EnsureReady, before any page logic). This is pre-existing + repo-wide (it
+#   fails identically for every page at any commit) and is orthogonal to this parity change. The headless
+#   App.Tests gate above is the authoritative correctness gate (matches sibling done-page precedent).
+PARITY_COVERED=79
+PARITY_REQUIRED=79
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/NavigationRoutePage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/NavigationRoutePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-maps-NavigationRoutePage.log
+# git commit -m "feat(apps/windows): NavigationRoutePage at web parity (W7 maps)"
+
+EXIT=0
+STATUS=DONE

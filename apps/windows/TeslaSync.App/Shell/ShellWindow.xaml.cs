@@ -443,6 +443,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DataExport", static () => new FeatureViews.SystemOps.DataExportPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
         _viewModel.PageFactory.Register("TemperatureImpact", static () => new FeatureViews.Maps.TemperatureImpactPage());
+        // Maps / Navigation & Route page (P2/W7) — parity port of web NavigationRoutePage at route /navigation.
+        _viewModel.PageFactory.Register(
+            FeatureViews.Maps.NavigationRouteRegistration.RouteName,
+            static () => new FeatureViews.Maps.NavigationRoutePage());
         // Maps / Locations page (P2/W7) — parity port of web LocationsPage at route /locations. The empty-state
         // "View drives" call-to-action navigates to the drives list (web Link to="/drives").
         _viewModel.PageFactory.Register("Locations", () =>
