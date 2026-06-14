@@ -926,3 +926,4 @@ p2-windows/pages/analytics/LifetimeStatsPage.prompt.md
 p2-windows/pages/analytics/AnalyticsPage.prompt.md
 p2-windows/pages/analytics/FleetComparePage.prompt.md
 p2-windows/pages/analytics/MileagePage.prompt.md
+p2-windows/pages/analytics/StatisticsPage.prompt.md
