@@ -604,6 +604,10 @@ public sealed partial class ShellWindow : Window
             "PowerDashboards", static () => new FeatureViews.PowerUser.DashboardsPage());
         // Settings / Active Sessions page (P2/W7) — parity port of web ActiveSessionsPage at route /account/sessions.
         _viewModel.PageFactory.Register("ActiveSessions", static () => new FeatureViews.Settings.ActiveSessionsPage());
+        // Settings / Account / Privacy page (P2/W7) — parity port of web PrivacyPage at route /account/privacy. Hosts
+        // the native PrivacySection inside the shared PageContainer (title + subtitle + copy-link); RouteTable already
+        // maps Page("Privacy","account/privacy") and the footer "Account" shortcut targets this route.
+        _viewModel.PageFactory.Register("Privacy", static () => new FeatureViews.Settings.PrivacyPage());
         // Settings / Helix (AI) integration page (P2/W7) — parity port of web HelixPage at route /integrations/helix.
         // Thin PageContainer wrapper (title + subtitle + integrations/helix breadcrumb overrides, page-level loading
         // bound to useSettings) around the already-ported AISettings surface. RouteTable already maps
