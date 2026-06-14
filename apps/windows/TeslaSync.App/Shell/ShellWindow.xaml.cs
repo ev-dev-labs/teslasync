@@ -370,6 +370,16 @@ public sealed partial class ShellWindow : Window
             page.BackRequested += (_, _) => NavigateTo("charging");
             return page;
         });
+        // System / IncidentTimeline page (P2/W7) — parity port of web IncidentTimelinePage at route
+        // /system-status/incidents/:id. The route incident id is read from the live match and the back
+        // affordance maps to the System Status page.
+        _viewModel.PageFactory.Register("IncidentTimeline", () =>
+        {
+            var page = new FeatureViews.SystemOps.IncidentTimelinePage(
+                ParseSessionId(_viewModel.Current.Param("id")));
+            page.BackRequested += (_, _) => NavigateTo("system-status");
+            return page;
+        });
         // Charging / Charging Curve page (P2/W7) — parity port of web ChargingCurvePage at route /charging-curve.
         _viewModel.PageFactory.Register("ChargingCurve", static () => new FeatureViews.Charging.ChargingCurvePage());
         // Charging / Charging Heatmap page (P2/W7) — parity port of web ChargingHeatmapPage at route /charging-heatmap.

@@ -1,0 +1,125 @@
+=== p2-windows · W7 · page:system/IncidentTimeline (WinUI 3 / Fluent) ===
+Parity unit : page:system/IncidentTimeline   kind=page   web route=/system-status/incidents/:id
+Web source  : web/src/features/system/pages/IncidentTimelinePage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every routed feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure Microsoft.UI-free records +
+  projection + registration + diagnostics, unit-tested headlessly), <Name>.Source.cs (the generated-client data
+  adapter), <Name>.ViewModel.cs (the observable state holder) and <Name>.cs (the Fluent view). The generated
+  prompt's idealized "IncidentTimelinePage.xaml + IncidentTimelinePageViewModel.cs under TeslaSync/Features/System"
+  is mapped onto these real conventions — exactly as the W7 ChargingDetailPage / MyActivityPage precedents are.
+- Namespace: TeslaSync.App.FeatureViews.SystemOps (matching RouteGroup.SystemOps in Core/Navigation/RouteTable.cs,
+  where Hidden("IncidentTimeline","system-status/incidents/:id",RouteGroup.SystemOps,"Incident") already exists),
+  NOT a ".System" leaf (a literal "System" namespace shadows the global System namespace for sibling files —
+  the same decision the MyActivityPage W7 log records). The incident severity/status unions (IncidentSeverity /
+  IncidentStatus + wire mappings) are the incident-domain authority already declared once for the parent
+  TeslaSync.App.FeatureViews namespace in IncidentForm.Model.cs; this page consumes them (resolved from the parent
+  namespace) rather than re-declaring them — no CS0101 duplicate type.
+- Three data sources = the web page's three hooks, names kept at the C# call sites:
+    useIncident            -> GET   /status/incidents/{id}          op get_api_v1_status_incidents_id
+    useAppendIncidentUpdate-> POST  /status/incidents/{id}/updates  op post_api_v1_status_incidents_id_updates
+    usePatchIncident       -> PATCH /status/incidents/{id}          op patch_api_v1_status_incidents_id
+  IncidentTimelineClientSource binds the generated C# client (ADR-004) for the read + both writes, parses every
+  incident envelope through the tolerant IncidentDetail/IncidentUpdateItem readers (snake_case, null-tolerant),
+  and classifies any fault through the shared ApiErrorMapper rather than throwing — so a 404 becomes the
+  never-blank not-found surface and a write fault becomes a toast (web parity: the mutation resolves to a toast,
+  never an unhandled rejection). The operation ids were cross-checked against the generated endpoint table in
+  apps/windows/Generated/Api/ApiEndpoints.cs. EmptyIncidentTimelineSource is the shell default (renders the
+  not-found surface until a host wires the client source via IncidentTimelinePage.Create — the same deferred
+  wiring as the sibling detail pages). Registered in ShellWindow.xaml.cs PageFactory under "IncidentTimeline"
+  (the RouteTable nav name), reading the route :id via ParseSessionId(_viewModel.Current.Param("id")) and mapping
+  the in-body back affordance to NavigateTo("system-status").
+- The view composes the shared PageContainer chrome (title = incident.title / "Incident"; subtitle =
+  "Incident #id" / "Loading…" / "Not found"; a Back action in the actions slot; PageContainer.IsLoading drives
+  the loading spinner — web loading branch) around the four web GlassPanels, each a Fluent TsGlassPanel built
+  from W2 design tokens: GlassPanel1 (not-found / web error||!incident branch), GlassPanel2 (header: severity
+  glyph tinted by tone, status TsBadge, severity label, source, open/resolved-duration TsBadge, description,
+  affected-components line, started/resolved meta and the Resolve TsButton), GlassPanel3 (newest-first update
+  timeline — [...updates].reverse() — each a status TsBadge + absolute timestamp + optional "· author" + the
+  message on a left rail) and GlassPanel4 (append form: TsTextarea + status TsSelect + Add TsButton, hidden once
+  resolved). The resolve action is gated behind a TsConfirmDialog (web ConfirmDialog) and both writes raise an
+  InfoBar toast (web useToast). All branch selection, fmtDuration tiers, the STATUS_BADGE / SEVERITY_TONE /
+  STATUS_LABEL tables and i18n happen in the Microsoft.UI-free IncidentTimelineProjection; the view is a thin
+  renderer with coalesced UI-thread marshalling.
+- i18n (ADR-014): every visible literal flows through the ILocalizer facade via IncidentTimelineStrings keys with
+  the web literal as the English fallback (the established IncidentForm / IncidentsCard pattern — the platform
+  Strings/*.resw catalog is generator-owned by apps/shared/i18n/generators/gen-i18n.ts and is NOT hand-edited;
+  Localization.Get / PassthroughLocalizer resolve a missing key to the fallback, so the page renders correctly
+  and stays format/drift-clean). Lifecycle status + severity labels reuse the shared status.incidents.status.* /
+  status.incidents.severity.* keys (single-sourced with IncidentForm / IncidentsCard); page-specific copy is
+  keyed under status.incidentTimeline.*. A RecordingLocalizer test asserts every projected string routes through
+  a catalogued key.
+- a11y (ADR-015): the page, each panel, the toast and every interactive element carry AutomationProperties
+  names/ids; the surface adds no bespoke motion so reduced-motion is honoured by construction; light/dark + high
+  contrast come from the tokenized shared components. SI units: N/A — this surface carries no unit-bearing fields
+  (durations are wall-clock deltas formatted by the shared port). PII-safe diagnostics emit only
+  "view.opened / status.incident.update.appended / status.incident.resolved slug=IncidentTimelinePage" — never an
+  incident title, description, component or update body.
+- The AIIncidentTimelineSummarizer the web page renders between the header and the timeline is a SEPARATE
+  component parity unit (gated by withAiFeature; renders null when AI is off, which is the default surface). It is
+  out of this page unit's scope and not built here.
+
+=== PARITY ===
+PARITY_REQUIRED=6
+
+# Panels (4) — every web GlassPanel reproduced as a Fluent TsGlassPanel from W2 tokens (never blank; ADR-011)
+[x] panel  - GlassPanel1  -> IncidentTimelinePage.cs _notFoundPanel (TsGlassPanel, AutomationId "incident-timeline-not-found"); BuildBody hosts _notFoundText (web "Incident {id} not found or you don't have access.") + the Back-to-System-Status TsButton; shown in the NotFound state (web error || !incident branch). Projection: IncidentTimelineProjection.Project NotFound branch (IncidentTimelineStrings.NotFound, id embedded); test Project_not_found_branch_embeds_the_route_id
+[x] panel  - GlassPanel2  -> IncidentTimelinePage.cs _headerPanel (TsGlassPanel "incident-timeline-header") built by BuildHeaderPanel: severity FontIcon tinted via StatusResources.AccentBrushKey(display.SeverityTone), status TsBadge, severity label, source Caption, open/resolved-duration TsBadge, description Text, affects Caption, Clock meta Caption and the Resolve TsButton. Projection: Project Ready branch + RenderHeader; tests Project_ready_branch_projects_open_header_timeline_and_form / Project_resolved_incident_hides_open_badge_and_uses_success_tone
+[x] panel  - GlassPanel3  -> IncidentTimelinePage.cs _timelinePanel (TsGlassPanel "incident-timeline-updates") built by BuildTimelinePanel: Message glyph + "Timeline" PanelTitle + "{n} entries" Caption, and _timelineList rebuilt by RenderTimeline from display.Rows (BuildTimelineRow → status TsBadge + absolute timestamp + optional "· author" + message on a left rail). Projection: IncidentTimelineProjection.BuildRows reverses oldest-first to newest-first; test BuildRows_reverses_updates_newest_first_with_author_and_status
+[x] panel  - GlassPanel4  -> IncidentTimelinePage.cs _formPanel (TsGlassPanel "incident-timeline-form") built by BuildFormPanel: TsTextarea (MaxLength 4000) + status TsSelect (5 web options) + Add TsButton; RenderForm hides it once resolved (web {!isResolved && …}). Projection: IncidentTimelineProjection.BuildStatusOptions; tests BuildStatusOptions_keeps_current_then_four_targets / ViewModel_append_success_clears_form_and_applies_refreshed_incident
+
+# Data states (2 manifest-declared: loading, success) — plus the web not-found branch, each a visible region
+[x] state  - loading      -> IncidentTimelineState.Loading; IncidentTimelineProjection.Project loading branch sets Display.IsLoading=true → IncidentTimelinePage.Render sets PageContainer.IsLoading=true (web loading spinner replaces the body); IncidentTimelinePageViewModel starts Loading and LoadAsync keeps it until the first read resolves; tests Project_loading_branch_shows_spinner_subtitle / ViewModel_starts_in_the_loading_state
+[x] state  - success      -> IncidentTimelineState.Ready (web success branch); Project Ready branch emits the header/timeline/form display; IncidentTimelinePage.Render shows _successStack (GlassPanel2+3+4); IncidentTimelinePageViewModel.LoadAsync enters Ready on a loaded incident and stamps UpdatedAt; tests Project_ready_branch_projects_open_header_timeline_and_form / ViewModel_load_success_enters_ready_and_stamps_updated_at
+# (the web page additionally branches not-found — implemented as GlassPanel1 above + ViewModel_load_failure_enters_not_found; the two writes are covered by ViewModel_append_* / ViewModel_resolve_* and the contract-client ClientSource_* tests.)
+
+PARITY_COVERED=6
+# Coverage asserted headlessly by TeslaSync.App.Tests/FeatureViews/IncidentTimelinePageTests.cs (41 test cases,
+# all green): the tolerant incident/update JSON adapters (every field + missing-optional defaults + non-numeric-id
+# → null), the Append/Patch request wire shapes (message always; status omitted when null; resolved:true), the
+# projection tone tables (STATUS_BADGE / SEVERITY_TONE + glyph), the fmtDuration tiers (s/m/h/d + open-uses-now),
+# the newest-first timeline reversal with author/status, the 5 status options, the loading/not-found/ready
+# branches (open vs resolved duration badge + meta), the i18n key catalog (every projected string via a
+# RecordingLocalizer is in IncidentTimelineStrings.AllKeys; status/severity reuse the shared status.incidents.*
+# keys), the generated operation ids, the contract-client source (operation id + id path param + 404→NotFound +
+# 5xx→Server + the echoed incident parsed back), the view-model read/append/resolve flows (loading→ready,
+# →not-found, blank-message toast-without-write, append clears the form + applies the refreshed incident + success
+# toast, append/resolve failure toasts, resolve patches resolved:true) and the PII-safe diagnostics. The WinUI
+# view (IncidentTimelinePage.cs) is exercised by the Release app build.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/IncidentTimelinePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Warning(s) 0 Error(s)
+#   (TeslaSync.App WinUI app + App.Core + App.Platform + App.Tests + App.UITests all compiled; the new page's
+#    three Microsoft.UI-free sources are Compile-linked into App.Tests in path-sorted order between IncidentsCard
+#    and InfoTile per the test project's single-Compile-group invariant.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+#   (this unit's files are LF + whitespace + analyzer clean; the generator-owned Strings/*.resw catalog was left
+#    pristine — an interim `dotnet format` auto-fix that re-sorted the resw data nodes was reverted, and the
+#    --verify-no-changes pass is green with them untouched.)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30443, Failed: 0, Skipped: 0, Total: 30443
+#   (filtered FullyQualifiedName~IncidentTimelinePageTests -> Passed: 41, Failed: 0, Skipped: 0)
+TEST_EXIT=0
+PARITY_COVERED=6
+PARITY_REQUIRED=6
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/IncidentTimelinePage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/IncidentTimelinePageTests.cs \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-system-IncidentTimelinePage.log
+# git commit -m "feat(apps/windows): IncidentTimelinePage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
