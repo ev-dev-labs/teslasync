@@ -782,3 +782,4 @@ p3-android/shared-meaningful/A-0201-StickyCompactHero.prompt.md
 p3-android/shared-meaningful/A-0202-UptimeHeatmap.prompt.md
 p3-android/shared-meaningful/A-0211-DataTableColumnsMenu.prompt.md
 p3-android/shared-meaningful/A-0208-DataTable.prompt.md
+p3-android/shared-meaningful/A-0207-CopyButton.prompt.md
