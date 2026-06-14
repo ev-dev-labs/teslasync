@@ -1,0 +1,380 @@
+=== P3 Widget primitive 0001 WidgetBigNumber (Android) ===
+
+Primitive: WidgetBigNumber  (registry slug "WidgetBigNumber", id "widget-big-number")
+Tier     : Widget primitive (shared widget building block used by many widgets)
+Web spec : web/src/features/dashboard/widgets/shared/WidgetBigNumber.tsx
+ADR refs : ADR-002 (native UI), ADR-005 (design tokens), ADR-009 (diagnostics)
+
+------------------------------------------------------------------------------
+CAPABILITY (BLOCKED clause check)
+------------------------------------------------------------------------------
+Required: Jetpack Compose + Material 3 + Kotlin 2.2.x. AVAILABLE on this runner:
+  - JDK 21 (Android Studio JBR at %JAVA_HOME%), Android SDK at %ANDROID_HOME%
+    (C:\Users\AtulM\AppData\Local\Android\Sdk)
+  - Kotlin 2.4.0, AGP 8.9.2, Compose BOM 2026.04.01, Material 3 1.4.0
+    (apps/android/gradle/libs.versions.toml; the repo lock EXCEEDS the prompt's
+    2.2.x minimum — apps/versions.lock.md / apps/README.md).
+  - minSdk 26 (Android 8), targetSdk/compileSdk 36 (app/build.gradle.kts).
+Baseline `:android:assembleRelease` is GREEN (pre- and post-change). => NOT blocked.
+
+------------------------------------------------------------------------------
+PATH / MODULE RECONCILIATION (no silent drift — covenant #9)
+------------------------------------------------------------------------------
+1. Gradle module: the prompt gate says `:app:` -> the real module is `:android`.
+   Evidence: apps/android/settings.gradle.kts L33-36
+     include(":android"); project(":android").projectDir = file("app")
+     ("every P3/A* prompt gate addresses `:android:`").
+   `:app:assembleRelease` fails with "project 'app' not found"; `:android:` is the
+   real, gate-compliant task name and is used below.
+
+2. Source path: KEPT at the prompt's mandated, allowed-files location
+     apps/android/app/src/main/java/com/teslasync/widget-primitives/WidgetBigNumber/
+   (this is also the gate's check-placeholders -Path, so the scan runs over the
+   real files as written). The directory cannot back a valid Kotlin package
+   (hyphen + PascalCase leaf), so the package intentionally diverges to
+     io.teslasync.android.widgetprimitives.widgetbignumber
+   with @file:Suppress("InvalidPackageDeclaration"), exactly as the sibling
+   presentational surfaces do (com/teslasync/shared-surfaces/StaggerContainer.kt,
+   com/teslasync/shared-surfaces/AnimatedNumber/AnimatedNumber.kt) and the sibling
+   dashboard surface (com/teslasync/dashboard-widgets/RangeBarWidget/RangeBarWidget.kt).
+   This passes ktlint + detekt (LINT_EXIT=0 below, warningsAsErrors=true), so the
+   templated path is NOT rejected by the repo's quality gate for this artifact —
+   the suppress is the sanctioned mechanism and the mandated path is preserved.
+   The co-located tests use the real package path (no suppress needed):
+     src/test/java/io/teslasync/android/widgetprimitives/widgetbignumber/
+     src/androidTest/java/io/teslasync/android/widgetprimitives/widgetbignumber/
+
+3. Placeholder false positive opt-out: the shared formatter call
+   `animatable.value.toDouble()` trips the scanner's case-insensitive "TODO"
+   substring match (it contains "toDo"). It carries a `// parity:allow ... not a
+   TODO` marker (PLACEHOLDER_ALLOWED=1, not a violation), identical to the sibling
+   AnimatedNumber surface's handling of the same `.toDouble()` call.
+
+------------------------------------------------------------------------------
+FILES (the WidgetBigNumber primitive bundle + its tests)
+------------------------------------------------------------------------------
+main/.../widget-primitives/WidgetBigNumber/
+  WidgetBigNumberModel.kt   pure framework-free model (JVM-tested, no Compose):
+                            WidgetBigNumberRegistration (id/slug),
+                            WidgetBigNumberDefaults (NULL_DISPLAY "—"/DECIMALS 0/
+                            ANIMATION_MS 1000 = web AnimatedNumber 1s),
+                            WidgetBigNumberBadgeVariant + WidgetBigNumberBadge,
+                            WidgetBigNumberSpec, WidgetBigNumberContent,
+                            WidgetBigNumberModel.project (ChartFormat formatting,
+                            null/non-finite -> nullDisplay, blank-normalize,
+                            uppercase label, coherent a11y label in web DOM order),
+                            WidgetBigNumberDiagnostics (PII-safe view.opened).
+  WidgetBigNumber.kt        Compose view: centered Column + baseline Row; value
+                            glyph at displaySmall (30sp Bold = text-3xl font-bold)
+                            in caller valueColor, count-up Animatable honoring
+                            reduced motion, plus the static and the muted-null
+                            branches, tabular figures ("tnum"); optional unit /
+                            uppercase label / subtitle; Badge atom (badgeVariantMap);
+                            merged single TalkBack description + testTag; one-shot
+                            view.opened; 3 @Preview (full / empty / static).
+test/.../widgetprimitives/widgetbignumber/
+  WidgetBigNumberModelTest.kt        9 tests (projection: present/decimals/locale,
+                                     null + non-finite, custom nullDisplay,
+                                     blank-normalize, trim, a11y join, defaults).
+  WidgetBigNumberDiagnosticsTest.kt  2 tests (slug contract + PII-safe view.opened).
+androidTest/.../widgetprimitives/widgetbignumber/
+  WidgetBigNumberUiTest.kt           5 instrumented tests (present/null/badge
+                                     states + one-shot view.opened + a11y
+                                     contentDescription). Compiles clean (0 errors
+                                     attributable to this file); runs under
+                                     connectedAndroidTest — see "Note on tests".
+
+------------------------------------------------------------------------------
+PARITY EVIDENCE (web -> native, symbol)
+------------------------------------------------------------------------------
+[comp]  AnimatedNumber (@/components/data-display) -> count-up Animatable + the
+        shared ChartFormat.number formatter, rendered at displaySmall in valueColor
+        (the web styles the atom via className text-3xl font-bold {valueColor};
+        the parameterless data-display atom cannot express valueColor, so the glyph
+        is rendered directly to preserve that knob — documented in WidgetBigNumber.kt).
+[comp]  Badge (@/components/ui) -> io.teslasync.android.components.ui.Badge.
+[logic] badgeVariantMap {success,warning,error->danger,neutral}
+                                 -> WidgetBigNumberBadgeVariant.toBadgeVariant.
+[logic] value !== null ? (animated ? AnimatedNumber : tabular span) : nullDisplay
+                                 -> WidgetBigNumberValue when-branches over
+                                    WidgetBigNumberModel.project.
+[logic] fmtNumber + tabular-nums -> ChartFormat.number + fontFeatureSettings "tnum".
+[style] text-3xl font-bold        -> typography.displaySmall (30sp Bold); valueColor -> Color param.
+[style] unit text-lg secondary    -> titleMedium / onSurfaceVariant.
+[style] label text-[10px] uppercase muted -> labelSmall + uppercase(locale) + muted color.
+[style] subtitle text-xs secondary -> bodySmall / onSurfaceVariant.
+[style] null muted (text-muted)   -> onSurfaceVariant @ 0.7 alpha.
+[state] present(animated) -> count-up glyph; present(static, animated=false) -> static glyph;
+        null/non-finite -> muted nullDisplay glyph (web value===null branch);
+        unit/label/subtitle/badge each render only when present (web `x && …`).
+[a11y]  one merged contentDescription (value+unit, label, subtitle, badge) read once by
+        TalkBack; testTag root; type tokens respect font scale; reduced motion honored.
+[telem] view.opened slug=WidgetBigNumber -> WidgetBigNumberDiagnostics.recordViewOpened (P1/S11).
+[i18n]  none — the primitive is anonymous; every visible string is a caller prop, exactly
+        as the web source (which has no t() calls). No key invented (covenant: no silent drift).
+
+States rationale: this is a PURE presentational primitive (no hooks, no fetch). Its real,
+fully-reproduced states are the value branches above. The generic loading/error/stale/offline
+states do not apply (there is no async feed); the owning widget wraps this primitive in its own
+shell carrying those states (e.g. RangeBarWidget's WidgetShell). Fabricating them would model a
+dependency the web spec does not have (covenant: no scope narrowing / no skip-and-assume).
+
+Note on tests: the GATE runs :android:testReleaseUnitTest only — the pure projection (9) +
+diagnostics (2) = 11 JVM tests cover the adapter, every value state, and the PII-safe telemetry.
+The instrumented WidgetBigNumberUiTest (per-state render + a11y contentDescription) needs an
+emulator the gate does not start. It compiles clean: a full :android:compileDebugAndroidTestKotlin
+reports 59 PRE-EXISTING errors across OTHER artifacts' androidTest files (missing assertExists/
+assertDoesNotExist imports, @Composable misuse — e.g. FSMStateDiagram, NotionSidebar, TreeSelect,
+BatteryCellsWidget) and ZERO attributable to WidgetBigNumberUiTest.kt. Those files are outside this
+artifact's allowed files / out of scope (each surface has its own prompt) and the androidTest source
+set is not part of this gate, so they are left untouched (no predecessor bypass, no out-of-scope edits).
+The 3 @Preview render the full/empty/static states for visual verification.
+
+------------------------------------------------------------------------------
+GATE (android triad + placeholder scan; module path corrected :app -> :android)
+------------------------------------------------------------------------------
+### :android:assembleRelease ###
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:mergeReleaseNativeLibs NO-SOURCE
+> Task :shared:core:copyReleaseJniLibsProjectOnly UP-TO-DATE
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:mergeReleaseJniLibFolders UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :android:mergeReleaseNativeLibs UP-TO-DATE
+> Task :android:stripReleaseDebugSymbols UP-TO-DATE
+> Task :android:extractReleaseNativeSymbolTables UP-TO-DATE
+> Task :android:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :android:checkReleaseDuplicateClasses UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToDirRelease UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:prepareReleaseArtProfile UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :shared:core:mergeReleaseShaders UP-TO-DATE
+> Task :shared:core:compileReleaseShaders NO-SOURCE
+> Task :shared:core:generateReleaseAssets UP-TO-DATE
+> Task :shared:core:releaseAssetsCopyForAGP NO-SOURCE
+> Task :shared:core:mergeReleaseAssets UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:desugarReleaseFileDependencies UP-TO-DATE
+> Task :android:mergeReleaseStartupProfile UP-TO-DATE
+> Task :android:mergeExtDexRelease UP-TO-DATE
+> Task :android:mergeReleaseArtProfile UP-TO-DATE
+> Task :android:mergeReleaseShaders UP-TO-DATE
+> Task :android:compileReleaseShaders NO-SOURCE
+> Task :android:generateReleaseAssets UP-TO-DATE
+> Task :android:mergeReleaseAssets UP-TO-DATE
+> Task :android:compressReleaseAssets UP-TO-DATE
+> Task :android:extractReleaseVersionControlInfo UP-TO-DATE
+> Task :android:optimizeReleaseResources UP-TO-DATE
+> Task :android:collectReleaseDependencies UP-TO-DATE
+> Task :android:sdkReleaseDependencyData UP-TO-DATE
+> Task :android:writeReleaseAppMetadata UP-TO-DATE
+> Task :android:writeReleaseSigningConfigVersions UP-TO-DATE
+> Task :android:compileReleaseKotlin
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:dexBuilderRelease
+> Task :android:mergeReleaseGlobalSynthetics UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseJavaResource UP-TO-DATE
+> Task :android:mergeDexRelease
+> Task :android:compileReleaseArtProfile
+> Task :android:packageRelease
+> Task :android:createReleaseApkListingFileRedirect UP-TO-DATE
+> Task :android:assembleRelease
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-03/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 33s
+70 actionable tasks: 7 executed, 63 up-to-date
+BUILD_EXIT=0
+### :android:testReleaseUnitTest ###
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :shared:core:preBuild UP-TO-DATE
+> Task :shared:core:preReleaseBuild UP-TO-DATE
+> Task :shared:core:writeReleaseAarMetadata UP-TO-DATE
+> Task :shared:core:generateReleaseResValues UP-TO-DATE
+> Task :shared:core:generateReleaseResources UP-TO-DATE
+> Task :shared:core:packageReleaseResources UP-TO-DATE
+> Task :shared:core:extractDeepLinksRelease UP-TO-DATE
+> Task :shared:core:processReleaseManifest UP-TO-DATE
+> Task :shared:core:parseReleaseLocalResources UP-TO-DATE
+> Task :shared:core:generateReleaseRFile UP-TO-DATE
+> Task :shared:core:compileReleaseLibraryResources UP-TO-DATE
+> Task :android:buildKotlinToolingMetadata UP-TO-DATE
+> Task :android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :android:generateDesignTokens
+> Task :android:preBuild
+> Task :android:preReleaseBuild
+> Task :android:generateReleaseBuildConfig UP-TO-DATE
+> Task :shared:core:kmpPartiallyResolvedDependenciesChecker
+> Task :shared:core:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :shared:core:generateCommonMainTeslaSyncCacheInterface UP-TO-DATE
+> Task :android:checkReleaseAarMetadata UP-TO-DATE
+> Task :android:generateReleaseResValues UP-TO-DATE
+> Task :android:mapReleaseSourceSetPaths UP-TO-DATE
+> Task :android:generateReleaseResources UP-TO-DATE
+> Task :shared:core:compileReleaseKotlinAndroid UP-TO-DATE
+> Task :shared:core:javaPreCompileRelease UP-TO-DATE
+> Task :shared:core:compileReleaseJavaWithJavac NO-SOURCE
+> Task :shared:core:bundleLibCompileToJarRelease UP-TO-DATE
+> Task :shared:core:processReleaseJavaRes UP-TO-DATE
+> Task :android:mergeReleaseResources UP-TO-DATE
+> Task :shared:core:bundleLibRuntimeToJarRelease UP-TO-DATE
+> Task :android:packageReleaseResources UP-TO-DATE
+> Task :android:parseReleaseLocalResources UP-TO-DATE
+> Task :android:createReleaseCompatibleScreenManifests UP-TO-DATE
+> Task :android:extractDeepLinksRelease UP-TO-DATE
+> Task :android:processReleaseMainManifest UP-TO-DATE
+> Task :android:processReleaseManifest UP-TO-DATE
+> Task :android:processReleaseManifestForPackage UP-TO-DATE
+> Task :android:processReleaseResources UP-TO-DATE
+> Task :android:compileReleaseKotlin UP-TO-DATE
+> Task :android:javaPreCompileRelease UP-TO-DATE
+> Task :android:compileReleaseJavaWithJavac UP-TO-DATE
+> Task :android:preReleaseUnitTestBuild
+> Task :android:javaPreCompileReleaseUnitTest UP-TO-DATE
+> Task :android:processReleaseJavaRes UP-TO-DATE
+> Task :android:bundleReleaseClassesToRuntimeJar
+> Task :android:bundleReleaseClassesToCompileJar
+> Task :android:compileReleaseUnitTestKotlin
+> Task :android:compileReleaseUnitTestKotlin UP-TO-DATE
+> Task :android:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :android:processReleaseUnitTestJavaRes UP-TO-DATE
+> Task :android:testReleaseUnitTest
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-03/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2m 51s
+45 actionable tasks: 5 executed, 40 up-to-date
+TEST_EXIT=0
+### ktlintCheck detekt ###
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources NO-SOURCE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :android:loadKtlintReporters UP-TO-DATE
+> Task :android:runKtlintCheckOverAndroidTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintAndroidTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverAndroidTestSourceSet UP-TO-DATE
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverDebugSourceSet NO-SOURCE
+> Task :android:ktlintDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverKotlinScripts UP-TO-DATE
+> Task :android:ktlintKotlinScriptCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverReleaseSourceSet NO-SOURCE
+> Task :android:ktlintReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesDebugSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesDebugSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestFixturesSourceSet NO-SOURCE
+> Task :android:ktlintTestFixturesSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestReleaseSourceSet NO-SOURCE
+> Task :android:ktlintTestReleaseSourceSetCheck SKIPPED
+> Task :android:runKtlintCheckOverTestSourceSet UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:detekt
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintCheck
+
+[Incubating] Problems report is available at: file:///F:/github/teslasync-wt/wt-03/apps/android/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.5/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 5m 18s
+13 actionable tasks: 3 executed, 10 up-to-date
+LINT_EXIT=0
+
+--- testReleaseUnitTest results (WidgetBigNumber) ---
+io.teslasync.android.widgetprimitives.widgetbignumber.WidgetBigNumberDiagnosticsTest: tests=2 failures=0 errors=0 skipped=0
+io.teslasync.android.widgetprimitives.widgetbignumber.WidgetBigNumberModelTest: tests=9 failures=0 errors=0 skipped=0
+
+--- check-placeholders.ps1 -Path .../widget-primitives/WidgetBigNumber ---
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+EXIT=0
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
