@@ -940,3 +940,4 @@ p2-windows/pages/driving/DrivetrainHealthPage.prompt.md
 p2-windows/pages/driving/RouteEfficiencyPage.prompt.md
 p2-windows/pages/driving/DrivingDynamicsPage.prompt.md
 p2-windows/pages/maps/NavigationRoutePage.prompt.md
+p2-windows/pages/maps/MapOverviewPage.prompt.md
