@@ -6,6 +6,7 @@ import io.teslasync.android.admin.apilogs.ApiLogsPageHost
 import io.teslasync.android.admin.feedback.FeedbackQueuePageHost
 import io.teslasync.android.admin.gasprice.GasPriceAutoPollPageHost
 import io.teslasync.android.admin.ingestxray.IngestXRayPageHost
+import io.teslasync.android.admin.schemadrift.SchemaDriftPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -55,6 +56,8 @@ class TeslaSyncApplication : Application() {
         GasPriceAutoPollPageHost.register()
         // Register the native ingest-X-Ray admin screen for the /admin/ingest-xray route (P3/A7). Idempotent.
         IngestXRayPageHost.register()
+        // Register the native schema-drift admin screen for the /admin/schema-drift route (P3/A7). Idempotent.
+        SchemaDriftPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

@@ -34,5 +34,14 @@
     "requiredCount": 12,
     "promptId": "p3-android/pages/admin/IngestXRayPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-IngestXRayPage.log"
+  },
+  {
+    "unitId": "page:admin/SchemaDrift",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p3-android/pages/admin/SchemaDriftPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SchemaDriftPage.log"
   }
 ]
