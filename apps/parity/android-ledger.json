@@ -43,5 +43,14 @@
     "requiredCount": 32,
     "promptId": "p3-android/pages/admin/SchemaDriftPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SchemaDriftPage.log"
+  },
+  {
+    "unitId": "page:admin/SlowQueries",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 22,
+    "requiredCount": 22,
+    "promptId": "p3-android/pages/admin/SlowQueriesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SlowQueriesPage.log"
   }
 ]

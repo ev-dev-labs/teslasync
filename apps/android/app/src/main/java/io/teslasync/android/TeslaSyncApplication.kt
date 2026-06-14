@@ -7,6 +7,7 @@ import io.teslasync.android.admin.feedback.FeedbackQueuePageHost
 import io.teslasync.android.admin.gasprice.GasPriceAutoPollPageHost
 import io.teslasync.android.admin.ingestxray.IngestXRayPageHost
 import io.teslasync.android.admin.schemadrift.SchemaDriftPageHost
+import io.teslasync.android.admin.slowqueries.SlowQueriesPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -58,6 +59,8 @@ class TeslaSyncApplication : Application() {
         IngestXRayPageHost.register()
         // Register the native schema-drift admin screen for the /admin/schema-drift route (P3/A7). Idempotent.
         SchemaDriftPageHost.register()
+        // Register the native slow-queries admin screen for the /admin/slow-queries route (P3/A7). Idempotent.
+        SlowQueriesPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
