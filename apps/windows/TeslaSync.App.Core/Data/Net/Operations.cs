@@ -68,6 +68,7 @@ public static class Operations
     {
         public const string Fleet = "get_api_v1_analytics_fleet";
         public const string Tco = "get_api_v1_analytics_tco";
+        public const string BatteryCells = "get_api_v1_analytics_battery_cells";
         public const string BatteryDegradation = "get_api_v1_analytics_battery_degradation";
         public const string BatteryHealth = "get_api_v1_analytics_battery_health";
         public const string Regen = "get_api_v1_analytics_regen";
