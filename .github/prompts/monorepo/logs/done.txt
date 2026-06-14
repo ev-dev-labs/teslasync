@@ -808,3 +808,4 @@ p3-android/shared-meaningful/A-0228-ThemePicker.prompt.md
 p3-android/shared-meaningful/A-0229-ThemeProvider.prompt.md
 p3-android/shared-meaningful/A-0231-Tooltip.prompt.md
 p3-android/shared-meaningful/A-0232-Typography.prompt.md
+p3-android/widget-primitives/A-0002-WidgetChartSummary.prompt.md
