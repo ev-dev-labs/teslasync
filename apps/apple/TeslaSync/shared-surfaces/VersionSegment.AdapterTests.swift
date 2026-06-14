@@ -272,7 +272,10 @@ final class VersionSegmentValueTypeTests: XCTestCase {
     }
 
     func testProbeOutcomeEquality() {
-        XCTAssertEqual(VersionInfoProbeOutcome.info(VersionSegmentInfo(appVersion: "1")), .info(VersionSegmentInfo(appVersion: "1")))
+        XCTAssertEqual(
+            VersionInfoProbeOutcome.info(VersionSegmentInfo(appVersion: "1")),
+            .info(VersionSegmentInfo(appVersion: "1"))
+        )
         XCTAssertEqual(
             UpdateCheckProbeOutcome.failed(message: "x", offline: true),
             .failed(message: "x", offline: true)

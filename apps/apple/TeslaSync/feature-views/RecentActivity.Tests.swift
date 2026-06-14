@@ -100,7 +100,7 @@ import XCTest
 
 // MARK: - Adapter: activity feed projection
 
-@MainActor final class RecentActivityFeedProjectionTests: XCTestCase {
+@MainActor final class RecentActivityProjectionTests: XCTestCase {
     private let echo: (String, String) -> String = { _, fallback in fallback }
     private let now = Date(timeIntervalSince1970: 1_733_580_000)
 
