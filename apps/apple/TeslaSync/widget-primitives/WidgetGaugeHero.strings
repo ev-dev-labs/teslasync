@@ -1,0 +1,30 @@
+/*
+  WidgetGaugeHero.strings
+  TeslaSync — P4 widget primitive · 0007 · WidgetGaugeHero (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetGaugeHero.tsx` (and the `RadialGauge` it composes) renders NO copy
+  string of its own — every visible string (`gauge.label`, `gauge.unit`, each stat's `label` / `value` /
+  `unit`) is a caller-supplied, already-localized prop rendered verbatim, and there are zero `t()` calls. So
+  every entry below is a NATIVE accessibility / HIG addition (no web `t()` key exists): the value-with-unit
+  join, the ring's combined VoiceOver reading + its spoken percent value, and each supporting stat's combined
+  reading.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("WidgetGaugeHero") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Joins a formatted value with its optional unit affix — "{value} {unit}" — for a spoken reading. */
+"widgetGaugeHero.valueUnit" = "%1$@ %2$@";
+
+/* The ring's combined VoiceOver reading — "{label}, {value}{unit}". Positional so translators can reorder. */
+"widgetGaugeHero.gaugeLabel" = "%1$@, %2$@";
+
+/* The ring's spoken accessibility value — the whole-percent fill. "%%" is a literal percent sign. */
+"widgetGaugeHero.gaugeValue" = "%1$d%% of maximum";
+
+/* A supporting stat's combined VoiceOver reading — "{label}, {value}{unit}". Positional for reordering. */
+"widgetGaugeHero.statLabel" = "%1$@, %2$@";
