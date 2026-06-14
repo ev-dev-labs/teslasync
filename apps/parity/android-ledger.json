@@ -25,5 +25,14 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/admin/GasPriceAutoPollPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-GasPriceAutoPollPage.log"
+  },
+  {
+    "unitId": "page:admin/IngestXRay",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "p3-android/pages/admin/IngestXRayPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-IngestXRayPage.log"
   }
 ]

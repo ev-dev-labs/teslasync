@@ -14,6 +14,7 @@ import io.teslasync.shared.core.cache.SystemClock
 import io.teslasync.shared.core.data.repo.HttpAdminRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
+import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
 import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
@@ -22,6 +23,7 @@ import io.teslasync.shared.core.net.ApiHttpClient
 import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
+import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
 import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
 import io.teslasync.shared.core.presentation.vehicles.VehiclesStore
@@ -66,6 +68,7 @@ class DataContainer(
     private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
     private val adminRepository = HttpAdminRepository(api, cacheStore, clock)
     private val feedbackRepository = HttpFeedbackRepository(api, cacheStore, clock)
+    private val ingestXRayRepository = HttpIngestXRayRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -98,6 +101,12 @@ class DataContainer(
      * the status/forward patch the A7 FeedbackQueuePage admin surface binds to.
      */
     val feedbackStore = FeedbackStore(feedbackRepository, scope)
+
+    /**
+     * Shared Ingest X-Ray domain state holder (web `useIngestXRay` port) — the per-vehicle telemetry-ingest
+     * diagnostic feed (`/system/ingest-xray/{id}`) the A7 IngestXRayPage admin surface binds to.
+     */
+    val ingestXRayStore = IngestXRayStore(ingestXRayRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->
