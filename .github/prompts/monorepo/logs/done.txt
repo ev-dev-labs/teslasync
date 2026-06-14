@@ -863,3 +863,4 @@ p3-android/pages/admin/GasPriceAutoPollPage.prompt.md
 p3-android/pages/admin/IngestXRayPage.prompt.md
 p3-android/pages/admin/SchemaDriftPage.prompt.md
 p3-android/pages/admin/SlowQueriesPage.prompt.md
+p3-android/pages/admin/TeslaRegionPage.prompt.md
