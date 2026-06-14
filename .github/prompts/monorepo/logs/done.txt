@@ -775,3 +775,4 @@ p3-android/shared-meaningful/A-0185-MapTileLayer.prompt.md
 p3-android/shared-meaningful/A-0188-PullToRefresh.prompt.md
 p3-android/shared-meaningful/A-0193-StaggerContainer.prompt.md
 p3-android/shared-meaningful/A-0200-StickyChipBar.prompt.md
+p3-android/shared-meaningful/A-0204-Checkbox.prompt.md
