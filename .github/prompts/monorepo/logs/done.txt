@@ -944,3 +944,4 @@ p2-windows/pages/maps/MapOverviewPage.prompt.md
 p2-windows/pages/maps/GeofencesPage.prompt.md
 p2-windows/pages/notifications/AlertsListPage.prompt.md
 p2-windows/pages/power-user/SqlPlaygroundPage.prompt.md
+p2-windows/pages/notifications/AuditLogPage.prompt.md
