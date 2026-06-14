@@ -1,0 +1,226 @@
+=== P4 Shared surface 0193 StaggerContainer (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/StaggerContainer.*
+Web src  : web/src/components/motion/StaggerContainer.tsx  (+ hooks/useMotionPreference.ts)
+Host     : macOS / Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.x · swiftformat 0.61.x
+           xcodegen 2.45.x · pwsh 7.x · OpenJDK 17.0.19 (KMP) · iPhone 16 sim (iOS 26.5) booted
+Capability: NOT BLOCKED — SwiftUI present; Swift Charts / MapKit are NOT needed (the web source uses
+           neither — it is a pure motion wrapper). KMP Shared.xcframework built green via Gradle and staged
+           (ios-arm64 + ios-arm64-simulator + macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly.
+
+------------------------------------------------------------------------------
+WHAT SHIPPED  (8 StaggerContainer.* files; shared-surface bundle convention)
+------------------------------------------------------------------------------
+StaggerContainer.swift          (100) Public SwiftUI surface. @ViewBuilder content wrapper that lays children
+                                      in a VStack(alignment:spacing:) (the web motion.div block flow); binds
+                                      the live \.accessibilityReduceMotion env (P1/S8, native peer of web
+                                      useReducedMotion()); publishes the orchestration context into the env
+                                      so every descendant .staggerChild(index:) inherits the cascade (native
+                                      peer of Framer Motion variant inheritance); reveals on appear; once-only
+                                      view.opened. Prop init + model-injection seam (bindsReduceMotion: the
+                                      injected path lets a host/preview/test drive the preference, since the
+                                      system reduce-motion key is get-only / un-overridable).
+StaggerContainer.Adapter.swift  (211) Foundation-only core: StaggerContainerSurface.slug="StaggerContainer";
+                                      StaggerContainerPhase (web variants hidden/show); MotionPreference
+                                      (1:1 port of useMotionPreference — durationMs=reduce?0:defaultMs,
+                                      default 250 = the container's useMotionPreference() call with no arg);
+                                      StaggerContainerInput (stepSeconds=0.06 web staggerChildren +
+                                      childDurationMs=350 the hosted StaggerItem); StaggerContainerProjection
+                                      (staggerStepSeconds, delaySeconds(forIndex)=step*index, hosted child
+                                      hidden opacity/offset + duration, per-phase opacity/offset);
+                                      StaggerContainerProjector.resolve (step=reduce?0:0.06, child hidden=
+                                      reduce?{1,0}:{0,15}, child dur=reduce?0:350ms — web).
+StaggerContainer.Model.swift    (158) P1/S10 StaggerContainerStrings facade (native a11y additions only — the
+                                      web source is anonymous), P1/S11 StaggerContainerTelemetry seam + OSLog
+                                      default, P1/S8 @Observable StaggerContainerModel (input + bound
+                                      reduceMotion + phase -> projection; reveal/reset; view.opened once,
+                                      idempotent).
+StaggerContainer.Views.swift    (147) Token-driven (P1/S9): StaggerContainerContext + EnvironmentValues
+                                      .staggerContainerContext (the cascade-inheritance seam; .inert default
+                                      so a stray child stays visible — mirrors the existing
+                                      ChartHiddenSeriesContext env pattern); StaggerContainerMotion
+                                      .childEntrance (easeOut(duration).delay(index*0.06); nil under reduce ->
+                                      instant settle); .staggerChild(index:) modifier (phase -> opacity+offset,
+                                      animated with the per-index delay; VoiceOver-transparent);
+                                      StaggerContainerEmptyContent (the never-a-blank-box empty leaf).
+StaggerContainer.Previews.swift (87)  DEBUG previews for every REAL branch: full-motion cascade, reduced-
+                                      motion (via injected model), stray child (inert default), empty leaf.
+StaggerContainer.strings        (22)  P1/S10 catalog: staggerContainer.empty, staggerContainer.emptyMessage.
+                                      NO web t() keys exist (source anonymous) -> native a11y additions only.
+StaggerContainer.AdapterTests.swift (190) Pure-core XCTest: surface slug; the useMotionPreference 5-case port
+                                      (mirrors the web hook's vitest cases); projection (reduced/full step +
+                                      child variant, cascade delay by index, negative-index clamp, custom
+                                      step/duration, durationSeconds); per-phase opacity/offset; context.inert;
+                                      value-type equality.
+StaggerContainer.Tests.swift    (168) State-holder/view/facade XCTest: view.opened once+idempotent+stop/start;
+                                      reveal phase flip + idempotence + reset; reduceMotion/input rebind
+                                      re-derives projection; childEntrance nil-under-reduce / present otherwise;
+                                      view composition for every branch (cascade/centered/custom-timing/empty/
+                                      injected/stray child); strings facade fallbacks.
+7 .swift files = 703 LOC (surface) + 358 LOC tests; max single file 211 (SwiftLint file_length budget 400,
+--strict). No file gated all content behind a single data flag; every branch renders.
+
+------------------------------------------------------------------------------
+PARITY SCOPE  (Honesty #2 No-scope-narrowing)
+------------------------------------------------------------------------------
+The web <StaggerContainer> is a PURE presentational MOTION WRAPPER. Its inputs are `children` + one
+display-boundary hook (useMotionPreference()); it renders a motion.div whose `show` variant carries
+`transition: { staggerChildren: reduce ? 0 : 0.06 }` — the cascade that delays each child's entrance. There
+is NO fetch, NO React-Query cache, NO Promise -> therefore NO loading / error / stale / offline branch (there
+is nothing to fetch, fail, age, or disconnect from; the hosted content owns its own data states).
+Reproducing those generic states would FABRICATE behaviour the source does not have, so this surface
+reproduces only the source's REAL branches — exactly the disposition the sibling presentational primitives
+StaggerItem (0194), FadeIn (0191), RouteTransition (0192), and InlineCallout (0124) used. The REAL branches,
+all reproduced + tested:
+  • full-motion cascade : children enter hidden {opacity 0, y 15} -> shown {opacity 1, y 0} over 350 ms,
+                          each delayed index * 0.06 s (web staggerChildren).
+  • reduced-motion      : the cascade collapses to a no-op (staggerChildren=0); children render in their
+                          final state {opacity 1, y 0}, no movement; childEntrance animation nil.
+  • empty-content leaf  : the native never-a-blank-box peer of the container hosting no children.
+  • stray child (inert) : a .staggerChild(index:) outside any container resolves to the .inert context
+                          (phase already shown) and renders fully visible — the web peer of a <StaggerItem>
+                          mounted without a <StaggerContainer> parent.
+Data source  : useMotionPreference -> StaggerContainerMotionPreference.resolve (1:1 port; the live reduce
+               flag binds via \.accessibilityReduceMotion, the native peer of useReducedMotion()).
+Shared comps : none (the web source uses none).
+Charts/maps  : none (the web source uses none) -> Swift Charts / MapKit not required.
+i18n keys    : none in source (anonymous); only native a11y additions, resolved through the P1/S10 facade.
+Telemetry    : view.opened emitted once with slug "StaggerContainer" (P1/S11).
+a11y         : reduce-motion honored (the core behaviour, tested); Dynamic Type via tokens; the cascade
+               wrapper is VoiceOver-transparent (adds no traits, leaving content semantics intact); the empty
+               leaf is a single combined, labelled element. No interactive elements (vacuous for "label on
+               every interactive element").
+
+------------------------------------------------------------------------------
+GATE RESULTS  (verbatim)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+    -> ** BUILD FAILED **  IOS_EXIT=65   (build-action exit captured verbatim from the incremental build:
+       "Command SwiftCompile failed with a nonzero exit code" / ** BUILD FAILED ** / (2 failures);
+       `build test` then cancels Testing because the build failed.)
+    The failure is FOREIGN (NOT this surface): a swift-frontend IRGen crash (a compiler crash during IR
+    Generation, not a diagnostic) on the alphabetical compile batch that begins with the feature-views file:
+       4. While evaluating request IRGenRequest(IR Generation for file ".../feature-views/
+          AppearanceSettings.Controls.swift")
+       5. While emitting IR SIL function "@$sSbScA_pSgIeAghyg_SbIeAghn_TR".   (a closure reabstraction thunk)
+    The whole failed batch is foreign: AppearanceSettings.* / AppleAuthSession.swift / AreaChartWrapper.* /
+    AuditLog* — StaggerContainer occurrences in "The following build commands failed": 0.
+    The whole-module type-check (EmitSwiftModule for TeslaSync, which INCLUDES StaggerContainer) succeeded;
+    app + widget linking + preview-dylib link began before the foreign A* batch crashed. StaggerContainer
+    error count in this build: 0.
+
+    BASELINE PROOF (Honesty #1/#8) — same gate, StaggerContainer.* EXCLUDED from compilation:
+      xcodebuild ... build EXCLUDED_SOURCE_FILE_NAMES='StaggerContainer.*'  ->  ** BUILD FAILED **
+      BASELINE_IOS_EXIT=65, SAME foreign crash in feature-views/AppearanceSettings.Controls.swift, (2
+      failures). The tree is RED WITHOUT this surface -> the red is PRE-EXISTING and FOREIGN. (Same class of
+      Swift-6.3 closure-reabstraction IRGen defect the sibling StaggerItem 0194 dispositioned as foreign.)
+
+[2] xcodebuild -scheme TeslaSync-macOS build [test]
+    -> ** BUILD FAILED **  MAC_EXIT=65
+    ENVIRONMENTAL, pre-compile (NOT this surface): the macOS app/widget targets carry hardened-runtime
+    entitlements that require a development signing certificate, and the runner has none
+    (project.yml DEVELOPMENT_TEAM=""):
+      TeslaSync.xcodeproj: error: "TeslaSync-macOS" has entitlements that require signing with a
+        development certificate. Enable development signing in the Signing & Capabilities editor.
+      TeslaSync.xcodeproj: error: "TeslaSyncWidgets-macOS" has entitlements that require signing ...
+      The following build commands failed: Building project TeslaSync with scheme TeslaSync-macOS (1 failure)
+    The Shared.xcframework pre-action staged green; StaggerContainer error count: 0. (Same environmental
+    disposition StaggerItem 0194 recorded.) StaggerContainer's macOS-15 compilation is proven green
+    independently via the macOS typecheck + `swift test` below.
+
+[3] swiftlint --strict (FULL TREE, gate step)
+    -> Found 3 violations, 3 serious in 5503 files.        LINT_EXIT=2
+    All 3 are FOREIGN + pre-existing (NOT this surface, NOT in the allowed file set):
+      TeslaSync/widget-primitives/WidgetChartSummary.Tests.swift:52/53/54: identifier_name (vars a/b/c)
+    Surface-scoped swiftlint --strict on the 7 StaggerContainer.* .swift files: 0 violations (see [B]).
+
+[4] swiftformat --lint apps/apple (FULL TREE, gate step)
+    -> 1/5801 files require formatting, 2 files skipped.   FORMAT_EXIT=1
+    The 1 file is FOREIGN + pre-existing (NOT this surface):
+      TeslaSync/feature-views/RecentDrivesSection.Previews.swift:27/28: (redundantType)
+    Surface-scoped swiftformat --lint on the 7 StaggerContainer.* .swift files: 0/7 require formatting (B).
+
+[5] check-placeholders.ps1 (REAL gate tool)
+    scoped REAL scan of the 8 StaggerContainer.* files:  PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  EXIT=0
+    gate-literal -Path .../StaggerContainer (filename PREFIX => resolves to nothing => clean):  EXIT=0
+    -> no TODO/FIXME/XXX/Placeholder/Coming soon/Lorem/"not implemented"; 0 opt-outs.   PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate -> project regenerated; StaggerContainer.* globbed into the iOS app + macOS app
+    (excludes *Tests.swift) and both XCTest bundles (includes *Tests.swift).               XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION  (all GREEN — actually executed, Honesty #3)
+------------------------------------------------------------------------------
+[xcframework] apps/apple/Scripts/build-shared-xcframework.sh -> Gradle assembled the Shared XCFramework
+              (debug + release; ios-arm64 + ios-arm64-simulator + macos-arm64) and staged it.  XCFRAMEWORK_EXIT=0
+[A][typecheck-iOS]   xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6
+                     -strict-concurrency=complete -target arm64-apple-ios18.0-simulator -D DEBUG
+                     (the 5 real surface .swift files + design Tokens.swift) -> 0 errors.   IOS_TYPECHECK_EXIT=0
+[A][typecheck-macOS] xcrun --sdk macosx swiftc -typecheck -swift-version 6 -strict-concurrency=complete
+                     -target arm64-apple-macos15.0 -D DEBUG (real surface + Tokens.swift) -> 0 errors.
+                                                                                            MAC_TYPECHECK_EXIT=0
+[swift test]  The UNMODIFIED @testable XCTest files (StaggerContainer.Tests + .AdapterTests) run as a real
+              SwiftPM module named TeslaSync (the shipped surface + design tokens), macOS, Swift 6 strict
+              concurrency:  Executed 33 tests, with 0 failures (0 unexpected).               SWIFT_TEST_EXIT=0
+              Covered: useMotionPreference 5-case port; projection (full/reduced step + child variant, cascade
+              delay by index, negative-index clamp, custom step/duration); per-phase opacity+offset;
+              context.inert; value-type equality; model view.opened-once/idempotent/stop-start; reveal
+              flip+reset; reduceMotion/input rebind; childEntrance nil-under-reduce / present; view
+              composition every branch; strings fallbacks.
+[B][lint-scoped]   swiftlint lint --strict (7 StaggerContainer.* .swift) -> 0 violations, 0 serious.
+[B][format-scoped] swiftformat --lint (7 StaggerContainer.* .swift)     -> 0/7 require formatting.
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+ 1  No red-as-green ..... IOS_EXIT=65 + MAC_EXIT=65 + LINT_EXIT=2 + FORMAT_EXIT=1 shown verbatim with
+                          file:line; NEVER claimed the full-tree gate green.
+ 2  No scope narrowing .. full surface (adapter/model/views/previews/strings + 2 test files) + every REAL
+                          branch (cascade / reduced / empty leaf / stray-inert child); generic loading/error/
+                          stale/offline are documented N/A (the pure motion wrapper has none), not skipped.
+ 3  No skip-and-assume .. iOS gate, iOS baseline build, macOS gate, iOS+macOS typechecks, swift test (33),
+                          full-tree + scoped swiftlint, full-tree + scoped swiftformat, placeholder, xcodegen,
+                          Gradle xcframework — ALL actually executed; numbers pasted from real output.
+ 4  No stubs as final ... PLACEHOLDER_COUNT=0; every branch implemented + previewed + tested.
+ 5  No parity shortcuts . useMotionPreference ported 1:1 incl. its five hook test cases; the cascade step
+                          (0.06s staggerChildren), the hosted child variant {0,15}->{1,0}, and the 350ms
+                          child duration reproduced from source; the container's empty `hidden:{}` (no self
+                          transform) honored (only children move).
+ 6  No delegation ....... implemented directly.
+ 7  No predecessor bypass the iOS IRGen red + macOS signing red are dispositioned exactly as the accepted
+                          siblings StaggerItem(0194)/FadeIn(0191)/RouteTransition(0192) dispositioned the same
+                          foreign/environmental reds; the foreign swiftlint/swiftformat debt is left untouched
+                          (outside the allowed StaggerContainer.* file set).
+ 8  No commit on red .... the iOS red is FOREIGN (proven PRE-EXISTING via the StaggerContainer-excluded
+                          baseline, BASELINE_IOS_EXIT=65 on AppearanceSettings.Controls.swift) and the macOS
+                          red is ENVIRONMENTAL (no dev-signing cert); the 3 swiftlint + 1 swiftformat full-tree
+                          findings are foreign pre-existing files. This surface contributes ZERO errors and
+                          EVERY surface-attributable gate is green (typecheck iOS+macOS, swift test 33/33,
+                          scoped lint 0, scoped format 0, placeholder 0).
+ 9  No silent drift ..... the easeOut child-entrance curve (matching the app's TSFadeIn motion language; the
+                          web child `show` transition sets only duration) and the env-context cascade-
+                          inheritance design (mirroring the existing ChartHiddenSeriesContext surface) are
+                          documented above.
+10  Log ends with EXIT/STATUS.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+XCFRAMEWORK_EXIT=0
+IOS_EXIT=65          (FOREIGN pre-existing swift-frontend IRGen crash in feature-views/
+                      AppearanceSettings.Controls.swift + A* batch; surface 0 errors — proven via baseline
+                      exclusion + isolated iOS typecheck + swift test)
+BASELINE_IOS_EXIT=65 (StaggerContainer.* EXCLUDED — tree still red on the same foreign AppearanceSettings
+                      crash; proves the iOS red is pre-existing + foreign)
+MAC_EXIT=65          (ENVIRONMENTAL: no macOS development-signing certificate on runner; pre-compile;
+                      surface 0 errors — proven via macOS typecheck + swift test)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0    (33/33)
+LINT_EXIT=2          (3 FOREIGN pre-existing: WidgetChartSummary.Tests.swift a/b/c; surface scoped = 0)
+FORMAT_EXIT=1        (1 FOREIGN pre-existing: RecentDrivesSection.Previews.swift; surface scoped = 0/7)
+PLACEHOLDER_EXIT=0
+XCODEGEN_EXIT=0
+
+EXIT=0
+STATUS=DONE
