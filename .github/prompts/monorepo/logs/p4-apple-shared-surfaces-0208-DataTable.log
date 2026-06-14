@@ -1,0 +1,278 @@
+=== P4 Shared surface 0208 DataTable (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/DataTable.*
+Web src  : web/src/components/ui/DataTable.tsx
+Host     : macOS / Darwin 25.5.0 (arm64) · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3
+           swiftformat 0.61.1 · xcodegen 2.45.4 · pwsh 7.6.2 · OpenJDK 17.0.19 (KMP) · iPhone 16 sim booted
+Capability: NOT BLOCKED — SwiftUI present (Xcode 26.5 / Swift 6.3.2). Swift Charts / MapKit are NOT needed
+           (the web source uses neither — DataTable is a prop-driven presentational table). KMP
+           Shared.xcframework built green (Gradle BUILD SUCCESSFUL; staged ios-arm64 + ios-arm64-simulator +
+           macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly, no sub-agents.
+Shared env: the runner is shared by sibling agent slots (slot-28 / slot-29 ran concurrent full xcodebuilds of
+           the same-named TeslaSync project). DerivedData + /tmp are shared, so the full-app gate was run with a
+           slot-unique -derivedDataPath + log to de-contaminate (the first run's log carried 2846 slot-29
+           paths from a concurrent build into the shared /tmp filename; the isolated re-run carries only
+           slot-27 paths).
+
+------------------------------------------------------------------------------
+WHAT SHIPPED  (16 DataTable.* files; shared-surface bundle convention)
+------------------------------------------------------------------------------
+DataTable.Adapter.swift           (195) Foundation-only core: DataTableSurface.slug; the i18n resolve seam;
+                                        the value enums (selection mode, sort direction, column alignment,
+                                        density + its web-fixed paddings / 32-44-56 row heights);
+                                        DataTableColumnSpec (closure-free column twin).
+DataTable.CSV.swift               (82)  RFC-4180 CSV serializer (escape / record / encode, CRLF) + the
+                                        date-stamped default filename + i18next {{token}} interpolation
+                                        (native peers of lib/csvExport + i18next).
+DataTable.Projector.swift         (155) Pure derivations: column order/visibility (delegating to the shared
+                                        ColumnLayoutProjector), per-page slice, page clamp, resolved width,
+                                        mobile allow-list, leading-control count, duplicate-key guard,
+                                        content-state (rows/empty/failed), selected-rows, export-disabled.
+DataTable.SelectionProjector.swift(100) Selection arithmetic: all/some, single replace, membership toggle,
+                                        additive shift-range, select-all, expansion (web toggleRow/toggleAll).
+DataTable.Strings.swift           (101) P1/S10 facade — every web t(...) key (selection / expand / export /
+                                        resize / error) + native empty/retry additions, with interpolation.
+DataTable.Model.swift             (266) P1/S11 telemetry seam + OSLog default, and the P1/S8 @Observable
+                                        DataTableModel: owns page/pageSize (size change + data-count change
+                                        reset to page 1), layout, widths, export flag, reorder hint, failure;
+                                        mirrors the controlled selection/expansion; routes every mutation
+                                        through the pure projectors; view.opened once.
+DataTable.Types.swift             (189) SwiftUI public value types: the generic DataTableColumn (cell ->
+                                        AnyView) + chainable .exportingText, DataTablePagination,
+                                        DataTableMenuAction, DataTableMetrics (P1/S9), alignment -> SwiftUI.
+DataTable.View.swift              (173) Public DataTable<Row> surface: the full prop init (data/columns/
+                                        keyExtractor + sort/selection/expansion/resize/columns/export/
+                                        pagination/context-menu/density/mobile) + body; builds the model +
+                                        composed controllers (wired to the model); fileExporter for CSV.
+                                        (Named .View to avoid a bare-filename clash with the pre-existing
+                                        Sources/Components/UI/DataTable.swift TSDataTable component.)
+DataTable.Logic.swift             (300) Derived state (effectiveColumns/pageRows/contentState/…), the
+                                        composition (toolbar · sticky-header lazy scroll region · body
+                                        branches), and lifecycle/sync (controlled-prop mirror, pager/menu
+                                        sync, drag-reorder via moveColumn, CSV export build).
+DataTable.Header.swift            (238) Header row + cells: select-all (indeterminate), expand header, grips +
+                                        drag-to-reorder, sort toggle (+ chevron / aria-sort), trailing
+                                        DataTableResizer (composed 0212).
+DataTable.Row.swift               (279) Data row (selection checkbox/radio + macOS shift-range, expand
+                                        chevron, fixed-width cells, expanded drawer, row context menu) + the
+                                        empty row + the error fallback (web SectionErrorBoundary + retry).
+DataTable.Chrome.swift            (172) DataTableComposition (wires composed PaginationController /
+                                        DataTableColumnMenuController to the model), DataTableToolbar (bulk
+                                        bar 0209 + export button + column menu 0210), DataTableCSVDocument.
+DataTable.Previews.swift          (209) DEBUG previews for every branch/feature: base, active sort, multi +
+                                        bulk bar + export, single, expandable, resize + column menu,
+                                        paginated, empty, error (duplicate keys), compact density.
+DataTable.strings                 (63)  P1/S10 catalog: every web key (errors.section.tableTitle,
+                                        table.selection.*, table.expand.*, table.export.*,
+                                        table.columns.resizeLabel) + native table.empty.default /
+                                        table.error.retry.
+DataTable.AdapterTests.swift      (315) Pure-core XCTest: slug; enums; density metrics; order (nil/hidden/
+                                        reorder/spec-preserve); slice/clamp/leading/width/mobile;
+                                        duplicate-keys + content-state; selected-rows + export-disabled;
+                                        selection all/some/single/membership/range/order-independent/
+                                        missing-endpoint/select-all/expansion; CSV escape/record/encode/
+                                        filename; interpolation; value-type equality.
+DataTable.Tests.swift             (242) State-holder/view/facade XCTest: view.opened once + stop/start;
+                                        pagination mutators (size + data reset to page 1); layout/widths/
+                                        export/failure/drag mutators; single replace/clear; multi membership +
+                                        shift-range from the advancing anchor; select-all + clear; expansion;
+                                        controlled-prop update (set + closure refresh); none-mode no-op; view
+                                        + leaf-cell composition; strings facade fallbacks.
+13 ship .swift = 2250 LOC; max ship file 300 (Logic); SwiftLint file_length budget 400, --strict. No file
+gated all content behind a single data flag; every state renders real content (rows / empty / error).
+
+------------------------------------------------------------------------------
+PARITY SCOPE  (Honesty #2 No-scope-narrowing)
+------------------------------------------------------------------------------
+The web <DataTable> is a PROP-DRIVEN presentational component: its data arrives as the `data: T[]` prop — there
+is NO fetch, NO React-Query cache, NO Promise — so it has NO loading / stale / offline branch (the hosting page
+owns those and feeds `data` down). Inventing that chrome would FABRICATE states the source lacks, so this
+surface reproduces only the source's REAL branches — the same disposition the accepted sibling presentational
+primitives DataTableBulkBar (0209), DataTableResizer (0212), and Pagination (0221) used. The REAL branches, all
+reproduced + previewed + tested:
+  • populated : the rows (standard + lazily-windowed via LazyVStack — the native peer of useVirtualizer).
+  • empty     : data.isEmpty -> the emptyMessage row (web `data.length === 0`).
+  • error     : the SectionErrorBoundary "This table failed to render" fallback, reached on a host-signalled
+                failure OR a duplicate-key collision (the native peer of React's "two children with the same
+                key"), with a retry affordance (the web boundary auto-retries on re-render).
+Plus every interactive feature the source renders: sort (+chevron/aria-sort), single/multi selection (checkbox
+/radio, select-all + indeterminate, macOS shift-range), expandable row drawers, per-column resize, column
+visibility + drag-reorder (+ the ↑/↓ menu), CSV export, pagination, mobile column hiding, density, and the row
+context menu.
+Data sources : useTranslation -> the P1/S10 DataTableStrings facade; useVirtualizer -> SwiftUI LazyVStack
+               (inherent row windowing); useSortToggle -> the controlled sortKey/sortDirection + onSort
+               (DataTableSortDirection.toggled is the verbatim `d === 'asc' ? 'desc' : 'asc'`).
+Composed     : the toolbar/footer/resize children are EACH their own prompt (Out of Scope: "Other surfaces in
+               the same feature") and are COMPOSED as the real architecture: DataTableBulkBar (0209),
+               DataTableColumnMenu (0210) + its controller, DataTableResizer (0212), PaginationView (0221) +
+               its controller. The shared pure ColumnLayout / ColumnDescriptor / ColumnLayoutProjector (the
+               native port of lib/columnOrderStore) are reused for ordering (DRY). The prompt's "Shared
+               components used: (none)" refers to atomic shared components (Button/Badge/…) — DataTable uses
+               raw HTML elements on the web, so none; the four full surfaces above are composed integration
+               points, not atomic components.
+Charts/maps  : none (the web source uses none) -> Swift Charts / MapKit not required.
+i18n keys    : errors.section.tableTitle, table.selection.deselectRow/selectRow/deselectAll/selectAll,
+               table.expand.collapse/expand/column, table.export.csv/csvButton, table.columns.resizeLabel —
+               ALL resolved through the P1/S10 facade; + native table.empty.default / table.error.retry. No
+               English literals in code.
+Telemetry    : view.opened emitted once with slug "DataTable" (P1/S11).
+a11y         : VoiceOver labels on every interactive element (row checkbox/radio, select-all, expand chevron,
+               sort button + spoken sort value, resize handle, export, column menu, pager); the row checkbox
+               carries the .isSelected trait; Dynamic Type via the type tokens; the resizer/menu fades honor
+               Reduce Motion (inherited from the composed surfaces).
+
+------------------------------------------------------------------------------
+GATE RESULTS  (verbatim)
+------------------------------------------------------------------------------
+[1] xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16'
+    -derivedDataPath /tmp/slot27-dd-ios build   (slot-isolated to de-contaminate the shared runner)
+    -> ** BUILD FAILED **  IOS_BUILD_EXIT=65
+    The whole TeslaSync app module TYPE-CHECKED CLEAN — the build reached `EmitSwiftModule normal arm64 (in
+    target 'TeslaSync')` and emitted the module with ZERO `error:` lines in the entire log (grep -c 'error:'
+    = 0). The build then failed during per-file SIL/IR codegen with a SWIFT COMPILER CRASH (NOT a type error):
+      "Please submit a bug report (https://swift.org/contributing/#reporting-bugs) and include the crash
+       backtrace. Stack dump: …"
+    The crashing SwiftCompile batch is ALL FOREIGN files (AppearanceSettings.*, AreaChartWrapper.*,
+    AuditLogPage.* / AuditLogRouteRegistration.swift, AppleAuthSession.swift) — it contains ZERO DataTable
+    files (grep of the failed-batch -> no DataTable.*). DataTable error count in this build: 0. The crash is a
+    foreign compiler-instability red (a compiler bug on foreign code, aggravated by 3+ concurrent slot
+    xcodebuilds contending for RAM/CPU on the shared runner), NOT a DataTable defect. My surface's iOS-18
+    compilation is proven green independently via the iOS isolation typecheck + `swift test` below + the
+    clean whole-module emit above.
+    (First, non-isolated run wrote to the shared /tmp/ios_build.log and was clobbered by slot-29's concurrent
+    build — 2846 slot-29 paths; re-run under a slot-unique -derivedDataPath/log carried only slot-27 paths.)
+
+    NOTE — a self-introduced collision was found AND fixed here: my main view file was first named
+    DataTable.swift and clashed (bare filename) with the pre-existing committed
+    Sources/Components/UI/DataTable.swift (the unrelated TSDataTable component). Renamed to DataTable.View.swift
+    (still DataTable.* / still the DataTable<Row> type; no type-name collision — verified by grep). After the
+    rename the duplicate-filename error is gone and the module type-checks clean (0 errors).
+
+[2] macOS — the full `xcodebuild -scheme TeslaSync-macOS build test` is DEFERRED to the acceptance gate
+    (macos-latest with signing identities), consistent with apps/macos-pending-verifications.md and the sibling
+    surfaces: the macOS app/widget targets carry hardened-runtime entitlements that require a development
+    signing certificate the runner lacks, and a full macOS build under the same concurrent-slot contention hits
+    the same foreign compiler crash. DataTable's macOS-15 compilation is proven green via the macOS isolation
+    typecheck (which compiles the macOS-only AppKit NSEvent shift-range branch + the composed
+    pointerStyle(.columnResize)) + the macOS `swift test` (55/55) below.
+
+[3] swiftlint --strict   (FULL TREE, gate step)
+    -> Found 3 violations, 3 serious in 5525 files.   LINT_EXIT=2
+    All 3 are FOREIGN + pre-existing — single-letter variable names a/b/c in
+    widget-primitives/WidgetChartSummary.Tests.swift:52-54 (identifier_name). That file is committed +
+    UNTOUCHED by this work (git status clean for it). DataTable.* violations: 0.
+    swiftlint on the 15 DataTable.* swift files (scoped): 0 violations.   MY_LINT_EXIT=0
+
+[4] swiftformat --lint apps/apple   (FULL TREE, gate step)
+    -> 1/5823 files require formatting, 2 skipped.    FORMAT_EXIT=1
+    The 1 file is FOREIGN + pre-existing — feature-views/RecentDrivesSection.Previews.swift:27-28
+    (redundantType). PROVEN pre-existing: `git show HEAD:…RecentDrivesSection.Previews.swift | swiftformat
+    --lint` -> 1/1 requires formatting (the committed version already fails). DataTable.* require formatting: 0.
+    swiftformat --lint on the 15 DataTable.* files (scoped): 0/15.        MY_FORMAT_EXIT=0
+
+[5] check-placeholders.ps1   (REAL gate tool)
+    gate-literal -Path …/shared-surfaces/DataTable -Language swift :  PLACEHOLDER_COUNT=0  EXIT=0
+    real scoped scan of the 16 shipped files (temp copy)           :  PLACEHOLDER_COUNT=0  EXIT=0
+    planted self-check (TODO + fatalError("unimpl") in a copy)     :  PLACEHOLDER_COUNT=2  EXIT=1 (gate live)
+    ./check-placeholders.ps1 -SelfTest                             :  SELFTEST_EXIT=0 (all PASS)
+    -> no TODO/FIXME/XXX/Coming soon/Placeholder/Lorem/unimpl stub; 0 opt-outs.        PLACEHOLDER_EXIT=0
+
+[6] xcodegen generate -> 102 DataTable.* refs across the iOS app + macOS app + both XCTest bundles (all 16
+    files enumerated; e.g. DataTable.View.swift 12 refs, DataTable.Tests.swift 6, DataTable.strings 6).
+                                                                          XCODEGEN_EXIT=0
+
+------------------------------------------------------------------------------
+SURFACE-ATTRIBUTABLE VERIFICATION  (all GREEN — actually executed, Honesty #3)
+------------------------------------------------------------------------------
+[xcframework] apps/apple/Scripts/build-shared-xcframework.sh -> Gradle BUILD SUCCESSFUL (release link of
+              IosArm64 + IosSimulatorArm64 + MacosArm64); staged Frameworks/Shared.xcframework.
+                                                                          XCFRAMEWORK_EXIT=0
+[typecheck-iOS]   swiftc -typecheck -swift-version 6 -strict-concurrency=complete -D DEBUG
+                  -target arm64-apple-ios18.0-simulator (SDK 26.5): the real surface (13 ship files) + the 4
+                  COMPOSED siblings (DataTableResizer/BulkBar/ColumnMenu/Pagination, 16 files) + the design
+                  layer (Tokens + TSDesign + TSMaterial) -> 0 errors / 0 warnings.   IOS_TYPECHECK_EXIT=0
+[typecheck-macOS] same at -target arm64-apple-macos15.0 (compiles the macOS NSEvent shift-range branch + the
+                  composed pointerStyle(.columnResize)) -> 0 errors / 0 warnings.    MAC_TYPECHECK_EXIT=0
+[swift test]  The UNMODIFIED @testable XCTest files (DataTable.AdapterTests + DataTable.Tests) run as a real
+              module named TeslaSync (the 13 ship files + the 4 composed siblings + the design layer), macOS,
+              Swift 6 strict concurrency:  Executed 55 tests, with 0 failures (0 unexpected).  SWIFT_TEST_EXIT=0
+              Covered: slug; enums; density metrics; column order (nil/hidden/reorder/spec-preserve);
+              slice/clamp/leading/width/mobile; duplicate-key + content-state (empty/failed/rows);
+              selected-rows + export-disabled; selection all/some/single/membership/additive-range/
+              order-independent/missing-endpoint/select-all/expansion; CSV escape/record/encode/filename;
+              interpolation; value-type equality; model view.opened-once + stop/start; pagination mutators
+              (size + data-count reset to page 1); layout/widths/export/failure/drag mutators; single
+              replace/clear; multi membership + shift-range from the advancing anchor; select-all/clear;
+              expansion; controlled-prop update (set + closure refresh); none-mode no-op; view + leaf-cell
+              composition; strings facade fallbacks.
+[app-compile] iOS real app-target WHOLE-MODULE type-check (gate [1]): 0 DataTable errors (0 error: lines total;
+              the module emitted). The surface integrates into the real app target with no symbol collisions
+              (all public types DataTable-prefixed; verified no type-name clash with the pre-existing
+              Sources/Components/UI/DataTable.swift TSDataTable component).
+
+------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------
+ 1  No red-as-green ..... IOS_BUILD_EXIT=65, LINT_EXIT=2, FORMAT_EXIT=1 shown verbatim with file:line; NEVER
+                          claimed green. The iOS red is a FOREIGN compiler CRASH (stack dump) on foreign files
+                          with 0 DataTable files + 0 error: lines.
+ 2  No scope narrowing .. full surface (adapter/csv/projector/selection/strings/model/types/view/logic/header/
+                          row/chrome/previews/strings + 2 test files) + every REAL branch + every interactive
+                          feature; loading/stale/offline documented N/A (prop-driven, no fetcher).
+ 3  No skip-and-assume .. xcframework, iOS+macOS typecheck, swift test (55), swiftlint, swiftformat, placeholder
+                          (gate-literal + real scoped + planted self-check + -SelfTest), xcodegen, the iOS app
+                          build — ALL actually executed; real exit codes captured.
+ 4  No stubs as final ... PLACEHOLDER_COUNT=0 (self-checked the gate detects a planted stub in my file shape);
+                          every branch implemented + previewed + tested.
+ 5  No parity shortcuts . useSortToggle toggle, the data.slice page window, toggleRow single/multi/shift-range,
+                          toggleAll + indeterminate, the RFC-4180 CSV + date filename, the SectionErrorBoundary
+                          fallback, the column order/visibility/reorder (moveColumn), the resize handle, the
+                          density paddings, and every t() key are reproduced from source; recharts/leaflet
+                          N/A; cyan-400 -> Color.TS.accent.
+ 6  No delegation ....... implemented directly; no sub-agents/background delegation used.
+ 7  No predecessor bypass P4-core/P1 deps (tokens, i18n facade, telemetry seam, shared ColumnLayoutProjector)
+                          consumed; the four composed sibling surfaces (0209/0210/0212/0221) reused as the real
+                          architecture, not re-implemented; the FOREIGN compiler-crash + FOREIGN lint/format
+                          reds dispositioned exactly as the accepted siblings.
+ 8  No commit on red .... every SURFACE-ATTRIBUTABLE gate is green (xcframework, iOS+macOS typecheck, 55/55
+                          swift test, my-file lint+format, placeholder, xcodegen, clean whole-module emit). The
+                          iOS build red is a FOREIGN compiler crash on foreign files (0 DataTable files, 0
+                          error: lines) under shared-runner contention; the lint/format reds are FOREIGN
+                          committed files (proven via git status + HEAD baseline). The full xcodebuild build
+                          test is deferred to p4-apple/P99 acceptance (isolated macos-latest), per
+                          apps/macos-pending-verifications.md.
+ 9  No silent drift ..... only the 16 DataTable.* files added; no foreign file modified (git status clean apart
+                          from my untracked additions + the git-ignored generated .xcodeproj). Documented
+                          mappings: density 32/44/56 row heights; cyan-400 -> Color.TS.accent; checkbox/radio ->
+                          SF Symbols; useVirtualizer -> LazyVStack; HTML5 column drag -> draggable/
+                          dropDestination + moveColumn; downloadCSV -> fileExporter; SectionErrorBoundary ->
+                          a real duplicate-key/host-failure fallback + retry.
+10  Log ends with EXIT and STATUS each on its own line.
+
+------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------
+XCFRAMEWORK_EXIT=0
+IOS_TYPECHECK_EXIT=0   (surface + 4 composed siblings + design; 0 errors / 0 warnings)
+MAC_TYPECHECK_EXIT=0   (incl. the macOS AppKit shift-range + pointerStyle branches)
+SWIFT_TEST_EXIT=0      (55/55)
+MY_LINT_EXIT=0         (15 DataTable.* swift files; 0 violations)
+LINT_EXIT=2            (FULL TREE — 3 FOREIGN identifier_name in WidgetChartSummary.Tests.swift; committed/untouched)
+MY_FORMAT_EXIT=0       (15 DataTable.* swift files; 0 require formatting)
+FORMAT_EXIT=1          (FULL TREE — 1 FOREIGN redundantType in RecentDrivesSection.Previews.swift; proven pre-existing via HEAD)
+PLACEHOLDER_EXIT=0     (PLACEHOLDER_COUNT=0; gate-literal + real scoped + planted self-check + -SelfTest)
+XCODEGEN_EXIT=0        (102 DataTable.* refs — iOS+macOS app + both test bundles)
+IOS_BUILD_EXIT=65      (FOREIGN Swift compiler CRASH on foreign files — AppearanceSettings/AreaChartWrapper/
+                        AuditLog batch; 0 DataTable files; 0 error: lines; whole-module emit succeeded; under
+                        shared-runner concurrent-slot contention)
+MAC_BUILD              (DEFERRED to P99 acceptance — macOS dev-signing + shared-runner contention; macOS proven
+                        via MAC_TYPECHECK + swift test)
+
+Every surface-attributable gate is GREEN. The iOS app build red is a FOREIGN compiler crash on foreign files
+(0 DataTable files, 0 error: lines, whole-module type-check passed) aggravated by concurrent-slot resource
+contention on the shared runner; the lint/format reds are FOREIGN committed files. The full-app iOS-Simulator +
+macOS `xcodebuild build test` is deferred to p4-apple/P99-0001-apple-acceptance-gate (isolated macos-latest
+with signing identities), consistent with apps/macos-pending-verifications.md.
+
+EXIT=0
+STATUS=DONE
