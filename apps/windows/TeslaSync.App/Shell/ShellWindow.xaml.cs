@@ -533,6 +533,13 @@ public sealed partial class ShellWindow : Window
             "NotificationsWebhooks",
             static () => new FeatureViews.Notifications.WebhooksPage());
 
+        // Notifications / Audit Log page (P2/W7) — parity port of web notifications AuditLogPage at route
+        // /notifications/audit (useAuditLogs → GET /system/audit). Distinct from the admin AuditLog page; RouteTable
+        // already maps Page("NotificationsAudit","notifications/audit",RouteGroup.Notifications).
+        _viewModel.PageFactory.Register(
+            "NotificationsAudit",
+            static () => new FeatureViews.Notifications.NotificationsAuditLogPage());
+
 
         // Power User / Dashboard composer page (P2/W7) — parity port of web DashboardsPage at route
         // /power/dashboards. A purely local-state surface: it composes Grafana dashboard JSON and copies it to

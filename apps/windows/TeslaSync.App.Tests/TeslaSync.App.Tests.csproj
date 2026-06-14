@@ -855,6 +855,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.Source.cs" Link="FeatureViews\NotificationChannelsView.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationChannelsView.ViewModel.cs" Link="FeatureViews\NotificationChannelsView.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationRow\NotificationRow.Model.cs" Link="FeatureViews\NotificationRow\NotificationRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationsAuditLogPage\NotificationsAuditLogPage.Model.cs" Link="FeatureViews\NotificationsAuditLogPage\NotificationsAuditLogPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationsAuditLogPage\NotificationsAuditLogPage.Source.cs" Link="FeatureViews\NotificationsAuditLogPage\NotificationsAuditLogPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\NotificationsAuditLogPage\NotificationsAuditLogPage.ViewModel.cs" Link="FeatureViews\NotificationsAuditLogPage\NotificationsAuditLogPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Model.cs" Link="FeatureViews\NotificationSettings.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.Source.cs" Link="FeatureViews\NotificationSettings.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\NotificationSettings.ViewModel.cs" Link="FeatureViews\NotificationSettings.ViewModel.cs" />
