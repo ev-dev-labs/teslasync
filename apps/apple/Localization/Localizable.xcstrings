@@ -3906,6 +3906,28 @@
         }
       }
     },
+    "route.apiLogs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Logs"
+          }
+        }
+      }
+    },
+    "spotlight.route.apiLogs.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record of all API calls with request/response details"
+          }
+        }
+      }
+    },
     "widget.drivetrainHealth.accessibility.refresh": {
       "extractionState": "manual",
       "localizations": {
