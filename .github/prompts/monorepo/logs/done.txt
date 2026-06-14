@@ -779,3 +779,4 @@ p3-android/shared-meaningful/A-0204-Checkbox.prompt.md
 p3-android/shared-meaningful/A-0203-Accordion.prompt.md
 p3-android/shared-meaningful/A-0199-StatusHero.prompt.md
 p3-android/shared-meaningful/A-0201-StickyCompactHero.prompt.md
+p3-android/shared-meaningful/A-0202-UptimeHeatmap.prompt.md
