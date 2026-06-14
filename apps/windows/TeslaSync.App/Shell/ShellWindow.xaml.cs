@@ -180,6 +180,9 @@ public sealed partial class ShellWindow : Window
         // Telemetry / Signal Explorer page (P2/W7) — parity port of web SignalExplorerPage at route /signal-explorer.
         // RouteTable already maps Page("SignalExplorer","signal-explorer",RouteGroup.TelemetrySignals).
         _viewModel.PageFactory.Register("SignalExplorer", static () => new FeatureViews.Telemetry.SignalExplorerPage());
+        // Telemetry / Signal Gap Detector page (P2/W7) — parity port of web SignalGapDetectorPage at route /signal-gaps.
+        // RouteTable already maps Page("SignalGapDetector","signal-gaps",RouteGroup.TelemetrySignals).
+        _viewModel.PageFactory.Register("SignalGapDetector", static () => new FeatureViews.Telemetry.SignalGapDetectorPage());
 
         // Notifications / Alert rules page (P2/W7) — parity port of web AlertRulesPage at route /notifications/rules.
         // The rule-name links and the "Open Alert Studio" affordances navigate to the studio route.

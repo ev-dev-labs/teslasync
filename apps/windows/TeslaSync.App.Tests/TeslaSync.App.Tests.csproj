@@ -1030,6 +1030,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SignalExplorerPage\SignalExplorerPage.Model.cs" Link="FeatureViews\SignalExplorerPage\SignalExplorerPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalExplorerPage\SignalExplorerPage.Source.cs" Link="FeatureViews\SignalExplorerPage\SignalExplorerPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalExplorerPage\SignalExplorerPage.ViewModel.cs" Link="FeatureViews\SignalExplorerPage\SignalExplorerPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalGapDetectorPage\SignalGapDetectorPage.Model.cs" Link="FeatureViews\SignalGapDetectorPage\SignalGapDetectorPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalGapDetectorPage\SignalGapDetectorPage.Source.cs" Link="FeatureViews\SignalGapDetectorPage\SignalGapDetectorPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SignalGapDetectorPage\SignalGapDetectorPage.ViewModel.cs" Link="FeatureViews\SignalGapDetectorPage\SignalGapDetectorPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.Model.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.Source.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SignalLogViewerPage\SignalLogViewerPage.ViewModel.cs" Link="FeatureViews\SignalLogViewerPage\SignalLogViewerPage.ViewModel.cs" />
