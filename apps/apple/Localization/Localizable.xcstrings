@@ -1,6 +1,369 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "common.unit.gallon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gal"
+          }
+        }
+      }
+    },
+    "common.unit.liter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L"
+          }
+        }
+      }
+    },
+    "route.tco" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "True Cost"
+          }
+        }
+      }
+    },
+    "tco.costKm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost/km"
+          }
+        }
+      }
+    },
+    "tco.costPerKm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost per Kilometer"
+          }
+        }
+      }
+    },
+    "tco.costPerKm.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost per kilometer bar chart comparing EV electricity to gas"
+          }
+        }
+      }
+    },
+    "tco.cumulativeSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cumulative Savings Over Time"
+          }
+        }
+      }
+    },
+    "tco.cumulativeSavings.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cumulative EV-vs-gas savings area chart over time"
+          }
+        }
+      }
+    },
+    "tco.electricityVsGas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Electricity vs gasoline"
+          }
+        }
+      }
+    },
+    "tco.equivGasCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equiv. Gas Cost"
+          }
+        }
+      }
+    },
+    "tco.evCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EV Cost"
+          }
+        }
+      }
+    },
+    "tco.evElectric" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EV (Electric)"
+          }
+        }
+      }
+    },
+    "tco.fuelSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fuel Savings"
+          }
+        }
+      }
+    },
+    "tco.gasEquiv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gas Equiv."
+          }
+        }
+      }
+    },
+    "tco.iceGas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ICE (Gas)"
+          }
+        }
+      }
+    },
+    "tco.maintenanceSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maintenance Savings (Est.)"
+          }
+        }
+      }
+    },
+    "tco.monthlyEvVsGas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly EV vs Gas Cost"
+          }
+        }
+      }
+    },
+    "tco.monthlyEvVsGas.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly EV vs gas cost comparison bar chart"
+          }
+        }
+      }
+    },
+    "tco.monthlySavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly Savings"
+          }
+        }
+      }
+    },
+    "tco.noData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No data available. Start charging to see your cost analysis."
+          }
+        }
+      }
+    },
+    "tco.noMonthlyData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No monthly data available yet"
+          }
+        }
+      }
+    },
+    "tco.noOilChanges" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No oil changes, less brake wear"
+          }
+        }
+      }
+    },
+    "tco.overMonths" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Over %@ months"
+          }
+        }
+      }
+    },
+    "tco.perKmEv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "per km (EV)"
+          }
+        }
+      }
+    },
+    "tco.perKmGas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "per km (Gas)"
+          }
+        }
+      }
+    },
+    "tco.plusMaintenance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+ ~$50/mo maintenance savings"
+          }
+        }
+      }
+    },
+    "tco.savingsBreakdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Savings Breakdown"
+          }
+        }
+      }
+    },
+    "tco.sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sessions"
+          }
+        }
+      }
+    },
+    "tco.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare your EV running costs against an equivalent gas vehicle"
+          }
+        }
+      }
+    },
+    "tco.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "True Cost of Ownership"
+          }
+        }
+      }
+    },
+    "tco.totalEstSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Estimated Savings"
+          }
+        }
+      }
+    },
+    "tco.totalEvCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total EV Cost"
+          }
+        }
+      }
+    },
+    "tco.totalSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Savings"
+          }
+        }
+      }
+    },
     "API Key Created" : {
       "extractionState" : "manual",
       "localizations" : {

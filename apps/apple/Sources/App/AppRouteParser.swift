@@ -11,6 +11,8 @@ public enum AppRouteParser {
         "/charging/curves": .charging,
         "/performance": .driving,
         "/statistics": .analytics,
+        "/analytics/tco": .tco,
+        "/tco": .tco,
         "/location": .maps,
         "/alerts": .notifications,
         "/signals": .telemetry,

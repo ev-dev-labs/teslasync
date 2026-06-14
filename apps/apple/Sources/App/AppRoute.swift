@@ -26,7 +26,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
-    case fleetCompare, batteryCells
+    case fleetCompare, batteryCells, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users
@@ -79,6 +79,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: "square.grid.3x3.fill"
         case .driving: "speedometer"
         case .analytics: "chart.bar.fill"
+        case .tco: "dollarsign.circle.fill"
         case .fleetCompare: "arrow.left.arrow.right.circle.fill"
         case .maps: "mappin.and.ellipse"
         case .vehicleSystems: "gearshape.2.fill"
@@ -118,7 +119,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .vehicles, .charging, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
         case .batteryCells: .energy
-        case .analytics, .telemetry, .fleetCompare: .insights
+        case .analytics, .telemetry, .fleetCompare, .tco: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .liveSignals, .schemaDrift, .slowQueries,
