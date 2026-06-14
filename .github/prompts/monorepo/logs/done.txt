@@ -963,3 +963,4 @@ p2-windows/pages/system/DataRepairPage.prompt.md
 p2-windows/pages/vehicle-systems/GuardModePage.prompt.md
 p2-windows/pages/system/StateMachineDebuggerPage.prompt.md
 p2-windows/pages/explore/ExplorePage.prompt.md
+p2-windows/pages/system/SystemStatusPage.prompt.md
