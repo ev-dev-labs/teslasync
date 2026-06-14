@@ -12,10 +12,10 @@ import SwiftUI
 
 #if DEBUG
     private enum ChangesPanelPreviewData {
-        static func changes() -> [FeatureFlagChange] {
+        static func changes() -> [ChangesPanelFlagChange] {
             let now = Date()
             return [
-                FeatureFlagChange(
+                ChangesPanelFlagChange(
                     id: 4,
                     changedAt: now.addingTimeInterval(-45),
                     actor: "ada@fleet.io",
@@ -25,7 +25,7 @@ import SwiftUI
                     newValue: .bool(true),
                     reason: "enable beta for internal cohort"
                 ),
-                FeatureFlagChange(
+                ChangesPanelFlagChange(
                     id: 3,
                     changedAt: now.addingTimeInterval(-360),
                     actor: "grace@fleet.io",
@@ -35,7 +35,7 @@ import SwiftUI
                     newValue: .object(["percent": .number(25), "cohort": .string("internal")]),
                     reason: "bump rollout to 25%"
                 ),
-                FeatureFlagChange(
+                ChangesPanelFlagChange(
                     id: 2,
                     changedAt: now.addingTimeInterval(-5400),
                     actor: "linus@fleet.io",
@@ -45,7 +45,7 @@ import SwiftUI
                     newValue: .number(10000),
                     reason: ""
                 ),
-                FeatureFlagChange(
+                ChangesPanelFlagChange(
                     id: 1,
                     changedAt: now.addingTimeInterval(-86400),
                     actor: "",
@@ -61,7 +61,7 @@ import SwiftUI
 
     @MainActor
     private func previewModel(
-        _ state: ChangesPanelLoadState<[FeatureFlagChange]>,
+        _ state: ChangesPanelLoadState<[ChangesPanelFlagChange]>,
         scopedKey: String? = nil
     ) -> ChangesPanelModel {
         ChangesPanelModel(previewState: state, scopedKey: scopedKey)

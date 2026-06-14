@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0030 · ChangesPanel (Apple)
 //
 //  Domain value types ported from the web source's data contracts
-//  (web/src/types/admin-diagnostics.ts `FeatureFlagChange` / `FeatureFlagOperation`,
+//  (web/src/types/admin-diagnostics.ts `ChangesPanelFlagChange` / `ChangesPanelFlagOperation`,
 //  and the JSON `old_value` / `new_value` the web reads as `unknown`), plus the
 //  snake-case decode adapter the production source uses and the compact JSON cell
 //  preview (web `compact()`). Pure Foundation — no SwiftUI, no Shared xcframework —
@@ -24,13 +24,13 @@ public enum ChangesOpTone: String, Equatable, Sendable {
     case danger
 }
 
-// MARK: - FeatureFlagOperation (web `FeatureFlagOperation` union)
+// MARK: - ChangesPanelFlagOperation (web `ChangesPanelFlagOperation` union)
 
-/// One audited operation on a flag (web `FeatureFlagOperation = 'set' | 'delete'`),
+/// One audited operation on a flag (web `ChangesPanelFlagOperation = 'set' | 'delete'`),
 /// with an `unknown` fallback so an unexpected server value never crashes the
 /// table. Mirrors the operation enum in
 /// `internal/database/feature_flag_changes_repo.go`.
-public enum FeatureFlagOperation: String, Sendable, CaseIterable {
+public enum ChangesPanelFlagOperation: String, Sendable, CaseIterable {
     case set
     case delete
     case unknown
@@ -249,17 +249,17 @@ public enum ChangesValuePreview {
     }
 }
 
-// MARK: - FeatureFlagChange (web `FeatureFlagChange`)
+// MARK: - ChangesPanelFlagChange (web `ChangesPanelFlagChange`)
 
-/// One feature-flag change-audit row (web `FeatureFlagChange`). Only the fields the
+/// One feature-flag change-audit row (web `ChangesPanelFlagChange`). Only the fields the
 /// panel renders are modeled; `changedAt` is optional because a malformed timestamp
 /// must degrade to an em-dash rather than drop the row.
-public struct FeatureFlagChange: Identifiable, Equatable, Sendable {
+public struct ChangesPanelFlagChange: Identifiable, Equatable, Sendable {
     public let id: Int
     public var changedAt: Date?
     public var actor: String
     public var flagKey: String
-    public var operation: FeatureFlagOperation
+    public var operation: ChangesPanelFlagOperation
     public var oldValue: ChangeJSONValue
     public var newValue: ChangeJSONValue
     public var reason: String
@@ -269,7 +269,7 @@ public struct FeatureFlagChange: Identifiable, Equatable, Sendable {
         changedAt: Date? = nil,
         actor: String = "",
         flagKey: String = "",
-        operation: FeatureFlagOperation = .unknown,
+        operation: ChangesPanelFlagOperation = .unknown,
         oldValue: ChangeJSONValue = .undefined,
         newValue: ChangeJSONValue = .undefined,
         reason: String = ""
@@ -287,31 +287,31 @@ public struct FeatureFlagChange: Identifiable, Equatable, Sendable {
 
 // MARK: - Decode adapter (snake-case JSON → value types)
 
-public extension FeatureFlagChange {
+public extension ChangesPanelFlagChange {
     /// Decodes one `/system/flags/changes` row object (snake-case JSON). Parsed via
     /// `JSONSerialization` because `old_value` / `new_value` are arbitrary JSON the
     /// closed `ChangeJSONValue` projects from `Any?`.
-    static func decode(fromJSONString json: String) -> FeatureFlagChange? {
+    static func decode(fromJSONString json: String) -> ChangesPanelFlagChange? {
         guard let data = json.data(using: .utf8) else { return nil }
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
         return record(from: object)
     }
 
     /// Decodes the `/system/flags/changes` snake-case JSON array (`rows`).
-    static func decodeList(fromJSONString json: String) -> [FeatureFlagChange] {
+    static func decodeList(fromJSONString json: String) -> [ChangesPanelFlagChange] {
         guard let data = json.data(using: .utf8) else { return [] }
         guard let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return [] }
         return array.compactMap { record(from: $0) }
     }
 
-    private static func record(from object: [String: Any]) -> FeatureFlagChange? {
+    private static func record(from object: [String: Any]) -> ChangesPanelFlagChange? {
         guard let id = intValue(object["id"]) else { return nil }
-        return FeatureFlagChange(
+        return ChangesPanelFlagChange(
             id: id,
             changedAt: ChangesAuditTime.parse(object["changed_at"] as? String),
             actor: object["actor"] as? String ?? "",
             flagKey: object["flag_key"] as? String ?? "",
-            operation: FeatureFlagOperation(rawTag: object["operation"] as? String),
+            operation: ChangesPanelFlagOperation(rawTag: object["operation"] as? String),
             oldValue: ChangeJSONValue.from(json: object["old_value"]),
             newValue: ChangeJSONValue.from(json: object["new_value"]),
             reason: object["reason"] as? String ?? ""

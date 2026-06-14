@@ -74,8 +74,8 @@ import XCTest
 // MARK: - Adapter: key sort + toggle (parity with the web `useSortToggle`)
 
 @MainActor final class FlagsSortTests: XCTestCase {
-    private func rows(_ keys: [String]) -> [FeatureFlagEntry] {
-        keys.map { FeatureFlagEntry(key: $0, value: .null) }
+    private func rows(_ keys: [String]) -> [FlagsTableEntry] {
+        keys.map { FlagsTableEntry(key: $0, value: .null) }
     }
 
     func testSortsAscendingByKey() {
@@ -100,8 +100,8 @@ import XCTest
 
     func testSortIsStableForEqualKeys() {
         let duplicates = [
-            FeatureFlagEntry(key: "dup", value: .number(1)),
-            FeatureFlagEntry(key: "dup", value: .number(2))
+            FlagsTableEntry(key: "dup", value: .number(1)),
+            FlagsTableEntry(key: "dup", value: .number(2))
         ]
         let sorted = FlagsSort.sorted(duplicates, by: FlagsSortToggle())
         XCTAssertEqual(sorted.map(\.value), [.number(1), .number(2)])
@@ -112,8 +112,8 @@ import XCTest
 
 @MainActor final class FlagsTableModelTests: XCTestCase {
     private let sampleRows = [
-        FeatureFlagEntry(key: "beta_dashboard", value: .bool(true)),
-        FeatureFlagEntry(key: "max_export_rows", value: .number(5000))
+        FlagsTableEntry(key: "beta_dashboard", value: .bool(true)),
+        FlagsTableEntry(key: "max_export_rows", value: .number(5000))
     ]
 
     private func makeModel(
@@ -217,8 +217,8 @@ import XCTest
 
     func testSummaryCountsRows() {
         let projection = FlagsProjection(rows: [
-            FeatureFlagEntry(key: "a", value: .null),
-            FeatureFlagEntry(key: "b", value: .null)
+            FlagsTableEntry(key: "a", value: .null),
+            FlagsTableEntry(key: "b", value: .null)
         ])
         let summary = FlagsTableAccessibility.summary(for: projection)
         XCTAssertTrue(summary.contains("2"))
@@ -226,14 +226,14 @@ import XCTest
     }
 
     func testRowLabelListsKeyAndValue() {
-        let entry = FeatureFlagEntry(key: "beta_dashboard", value: .bool(true))
+        let entry = FlagsTableEntry(key: "beta_dashboard", value: .bool(true))
         let label = FlagsTableAccessibility.rowLabel(entry)
         XCTAssertTrue(label.contains("beta_dashboard"))
         XCTAssertTrue(label.contains("true"))
     }
 
     func testActionLabelsScopeToKey() {
-        let entry = FeatureFlagEntry(key: "beta_dashboard", value: .bool(true))
+        let entry = FlagsTableEntry(key: "beta_dashboard", value: .bool(true))
         XCTAssertTrue(FlagsTableAccessibility.editLabel(entry).contains("beta_dashboard"))
         XCTAssertTrue(FlagsTableAccessibility.deleteLabel(entry).contains("beta_dashboard"))
     }

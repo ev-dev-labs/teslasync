@@ -35,7 +35,7 @@ import XCTest
          "flag_key":"beta_dashboard","operation":"set","old_value":false,"new_value":true,
          "reason":"enable beta","trace_id":"abc123"}
         """#
-        let row = FeatureFlagChange.decode(fromJSONString: json)
+        let row = ChangesPanelFlagChange.decode(fromJSONString: json)
         XCTAssertEqual(row?.id, 7)
         XCTAssertEqual(row?.actor, "ada@fleet.io")
         XCTAssertEqual(row?.flagKey, "beta_dashboard")
@@ -48,7 +48,7 @@ import XCTest
 
     func testDecodeNullVersusAbsentValue() {
         let json = #"{"id":9,"changed_at":"2026-06-07T18:00:00Z","flag_key":"f","operation":"delete","old_value":null}"#
-        let row = FeatureFlagChange.decode(fromJSONString: json)
+        let row = ChangesPanelFlagChange.decode(fromJSONString: json)
         XCTAssertEqual(row?.operation, .delete)
         XCTAssertEqual(row?.oldValue, .null)
         XCTAssertEqual(row?.newValue, .undefined)
@@ -64,13 +64,13 @@ import XCTest
            "old_value":"on","new_value":null,"reason":""}
         ]
         """
-        let rows = FeatureFlagChange.decodeList(fromJSONString: json)
+        let rows = ChangesPanelFlagChange.decodeList(fromJSONString: json)
         XCTAssertEqual(rows.count, 2)
         XCTAssertEqual(rows[0].operation, .set)
         XCTAssertEqual(rows[1].operation, .unknown)
         XCTAssertNotNil(rows[1].changedAt)
-        XCTAssertEqual(FeatureFlagChange.decodeList(fromJSONString: "not json"), [])
-        XCTAssertNil(FeatureFlagChange.decode(fromJSONString: "not json"))
+        XCTAssertEqual(ChangesPanelFlagChange.decodeList(fromJSONString: "not json"), [])
+        XCTAssertNil(ChangesPanelFlagChange.decode(fromJSONString: "not json"))
     }
 
     func testTimestampParsing() {
@@ -84,16 +84,16 @@ import XCTest
     // MARK: Operation mapping (web `OP_VARIANT`)
 
     func testOperationMappingAndTone() {
-        XCTAssertEqual(FeatureFlagOperation(rawTag: "set"), .set)
-        XCTAssertEqual(FeatureFlagOperation(rawTag: "DELETE"), .delete)
-        XCTAssertEqual(FeatureFlagOperation(rawTag: "nope"), .unknown)
-        XCTAssertEqual(FeatureFlagOperation(rawTag: nil), .unknown)
+        XCTAssertEqual(ChangesPanelFlagOperation(rawTag: "set"), .set)
+        XCTAssertEqual(ChangesPanelFlagOperation(rawTag: "DELETE"), .delete)
+        XCTAssertEqual(ChangesPanelFlagOperation(rawTag: "nope"), .unknown)
+        XCTAssertEqual(ChangesPanelFlagOperation(rawTag: nil), .unknown)
 
-        XCTAssertEqual(FeatureFlagOperation.set.tone, .success)
-        XCTAssertEqual(FeatureFlagOperation.delete.tone, .danger)
-        XCTAssertEqual(FeatureFlagOperation.unknown.tone, .neutral)
-        XCTAssertEqual(FeatureFlagOperation.set.rawTag, "set")
-        XCTAssertEqual(FeatureFlagOperation.delete.rawTag, "delete")
+        XCTAssertEqual(ChangesPanelFlagOperation.set.tone, .success)
+        XCTAssertEqual(ChangesPanelFlagOperation.delete.tone, .danger)
+        XCTAssertEqual(ChangesPanelFlagOperation.unknown.tone, .neutral)
+        XCTAssertEqual(ChangesPanelFlagOperation.set.rawTag, "set")
+        XCTAssertEqual(ChangesPanelFlagOperation.delete.rawTag, "delete")
     }
 
     // MARK: Compact value preview (web `compact()`)
@@ -155,11 +155,11 @@ import XCTest
     }
 
     func testProjectionOperationLabelAndMissingTimestamp() {
-        let changes = [FeatureFlagChange(id: 5, changedAt: nil, flagKey: "k", operation: .delete)]
+        let changes = [ChangesPanelFlagChange(id: 5, changedAt: nil, flagKey: "k", operation: .delete)]
         let row = ChangesPanelProjection.make(from: changes, locale: locale, timeZone: timeZone).rows[0]
         XCTAssertEqual(row.changedAtText, "—")
         XCTAssertEqual(row.operationTone, .danger)
-        XCTAssertEqual(row.operationLabel, FeatureFlagOperation.delete.rawTag)
+        XCTAssertEqual(row.operationLabel, ChangesPanelFlagOperation.delete.rawTag)
         XCTAssertEqual(row.flagKeyText, "k")
     }
 
@@ -182,9 +182,9 @@ import XCTest
         offset: TimeInterval = 0,
         actor: String = "ada",
         flagKey: String = "flag",
-        operation: FeatureFlagOperation = .set
-    ) -> FeatureFlagChange {
-        FeatureFlagChange(
+        operation: ChangesPanelFlagOperation = .set
+    ) -> ChangesPanelFlagChange {
+        ChangesPanelFlagChange(
             id: id,
             changedAt: now.addingTimeInterval(offset),
             actor: actor,
@@ -204,18 +204,18 @@ import XCTest
     private let timeZone = TimeZone(identifier: "UTC")!
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-    private func sample() -> [FeatureFlagChange] {
-        [FeatureFlagChange(id: 1, changedAt: now, actor: "a", flagKey: "k", operation: .set)]
+    private func sample() -> [ChangesPanelFlagChange] {
+        [ChangesPanelFlagChange(id: 1, changedAt: now, actor: "a", flagKey: "k", operation: .set)]
     }
 
     private func resolve(
-        _ state: ChangesPanelLoadState<[FeatureFlagChange]>,
+        _ state: ChangesPanelLoadState<[ChangesPanelFlagChange]>,
         scopedKey: String? = nil
     ) -> ChangesPanelPresentation {
         ChangesPanelPresentation.resolve(state: state, scopedKey: scopedKey, locale: locale, timeZone: timeZone)
     }
 
-    private func expected(_ changes: [FeatureFlagChange]) -> ChangesPanelProjection {
+    private func expected(_ changes: [ChangesPanelFlagChange]) -> ChangesPanelProjection {
         ChangesPanelProjection.make(from: changes, locale: locale, timeZone: timeZone)
     }
 
@@ -300,14 +300,14 @@ import XCTest
     }
 
     func testPreviewModelExposesInjectedState() {
-        let rows = [FeatureFlagChange(id: 1, changedAt: Date(), operation: .set)]
+        let rows = [ChangesPanelFlagChange(id: 1, changedAt: Date(), operation: .set)]
         let model = ChangesPanelModel(previewState: .loaded(rows, stale: false), scopedKey: "beta")
         XCTAssertEqual(model.state, .loaded(rows, stale: false))
         XCTAssertEqual(model.scopedKey, "beta")
     }
 
     func testWebPropConvenienceInit() {
-        let rows = [FeatureFlagChange(id: 1, changedAt: Date(), operation: .set)]
+        let rows = [ChangesPanelFlagChange(id: 1, changedAt: Date(), operation: .set)]
         let model = ChangesPanelModel(rows: rows, loading: false, scopedKey: "k")
         XCTAssertEqual(model.state, .loaded(rows, stale: false))
         XCTAssertEqual(model.scopedKey, "k")
@@ -316,7 +316,7 @@ import XCTest
     }
 
     func testSourceBackedModelStartsOnceRefreshesAndPushes() {
-        let rows = [FeatureFlagChange(id: 1, changedAt: Date(), operation: .set)]
+        let rows = [ChangesPanelFlagChange(id: 1, changedAt: Date(), operation: .set)]
         let source = InMemoryChangesAuditSource(initial: .loaded(rows, stale: false))
         let model = ChangesPanelModel(source: source, scopedKey: nil)
         model.start()

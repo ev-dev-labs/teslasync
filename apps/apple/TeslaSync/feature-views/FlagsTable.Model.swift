@@ -66,13 +66,13 @@ public enum FlagsConnection: Sendable, Equatable {
 public struct FlagsTableUpdate: Sendable, Equatable {
     public var status: FlagsLoadStatus
     public var connection: FlagsConnection
-    public var flags: [FeatureFlagEntry]?
+    public var flags: [FlagsTableEntry]?
     public var updatedAt: Date?
 
     public init(
         status: FlagsLoadStatus = .loading,
         connection: FlagsConnection = .live,
-        flags: [FeatureFlagEntry]? = nil,
+        flags: [FlagsTableEntry]? = nil,
         updatedAt: Date? = nil
     ) {
         self.status = status
@@ -260,17 +260,17 @@ public enum FlagsTableAccessibility {
     }
 
     /// The per-row label (web row content: the flag key and its value preview).
-    public static func rowLabel(_ entry: FeatureFlagEntry) -> String {
+    public static func rowLabel(_ entry: FlagsTableEntry) -> String {
         FlagsTableStrings.format("admin.flags.a11y.row", "%@, value %@", entry.key, entry.valuePreview)
     }
 
     /// The Edit action label, scoped to the flag key for VoiceOver.
-    public static func editLabel(_ entry: FeatureFlagEntry) -> String {
+    public static func editLabel(_ entry: FlagsTableEntry) -> String {
         FlagsTableStrings.format("admin.flags.actions.editFlag", "Edit %@", entry.key)
     }
 
     /// The Delete action label, scoped to the flag key for VoiceOver.
-    public static func deleteLabel(_ entry: FeatureFlagEntry) -> String {
+    public static func deleteLabel(_ entry: FlagsTableEntry) -> String {
         FlagsTableStrings.format("admin.flags.actions.deleteFlag", "Delete %@", entry.key)
     }
 }

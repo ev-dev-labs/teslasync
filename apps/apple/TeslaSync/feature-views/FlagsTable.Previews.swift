@@ -19,15 +19,15 @@ import SwiftUI
 
     /// A representative registry covering every `previewValue` branch: boolean,
     /// number, string, nested object, and array values.
-    private let flagsPreviewRows: [FeatureFlagEntry] = [
-        FeatureFlagEntry(key: "beta_dashboard", value: .bool(true)),
-        FeatureFlagEntry(key: "max_export_rows", value: .number(5000)),
-        FeatureFlagEntry(key: "release_channel", value: .string("stable")),
-        FeatureFlagEntry(
+    private let flagsPreviewRows: [FlagsTableEntry] = [
+        FlagsTableEntry(key: "beta_dashboard", value: .bool(true)),
+        FlagsTableEntry(key: "max_export_rows", value: .number(5000)),
+        FlagsTableEntry(key: "release_channel", value: .string("stable")),
+        FlagsTableEntry(
             key: "rollout",
             value: .object(["percent": .number(25), "cohort": .string("internal")])
         ),
-        FeatureFlagEntry(
+        FlagsTableEntry(
             key: "enabled_regions",
             value: .array([.string("us"), .string("eu"), .string("apac")])
         )
@@ -36,7 +36,7 @@ import SwiftUI
     private func flagsPreviewUpdate(
         status: FlagsLoadStatus = .loaded,
         connection: FlagsConnection = .live,
-        rows: [FeatureFlagEntry]? = flagsPreviewRows
+        rows: [FlagsTableEntry]? = flagsPreviewRows
     ) -> FlagsTableUpdate {
         FlagsTableUpdate(status: status, connection: connection, flags: rows, updatedAt: Date())
     }

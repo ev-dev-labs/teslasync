@@ -30,8 +30,8 @@ public struct FlagsTable: View {
     public static let surfaceSlug = "FlagsTable"
 
     @State private var model: FlagsTableModel
-    private let onEdit: (FeatureFlagEntry) -> Void
-    private let onAskDelete: (FeatureFlagEntry) -> Void
+    private let onEdit: (FlagsTableEntry) -> Void
+    private let onAskDelete: (FlagsTableEntry) -> Void
 
     /// - Parameters:
     ///   - model: the bound state holder (web `rows` + `loading` arrive through it).
@@ -39,8 +39,8 @@ public struct FlagsTable: View {
     ///   - onAskDelete: web `onAskDelete(entry)` — opens the parent-owned confirm.
     public init(
         model: FlagsTableModel,
-        onEdit: @escaping (FeatureFlagEntry) -> Void = { _ in },
-        onAskDelete: @escaping (FeatureFlagEntry) -> Void = { _ in }
+        onEdit: @escaping (FlagsTableEntry) -> Void = { _ in },
+        onAskDelete: @escaping (FlagsTableEntry) -> Void = { _ in }
     ) {
         _model = State(initialValue: model)
         self.onEdit = onEdit
@@ -49,7 +49,7 @@ public struct FlagsTable: View {
 
     /// The rows in the web default order (key ascending). The shared table layers
     /// interactive re-sorting on top via the key column comparator.
-    private var sortedRows: [FeatureFlagEntry] {
+    private var sortedRows: [FlagsTableEntry] {
         FlagsSort.sorted(model.projection.rows, by: FlagsSortToggle())
     }
 
@@ -226,10 +226,10 @@ private extension FlagsTable {
     }
 }
 
-// MARK: - Columns (web `Column<FeatureFlagEntry>[]`)
+// MARK: - Columns (web `Column<FlagsTableEntry>[]`)
 
 private extension FlagsTable {
-    var columns: [TSColumn<FeatureFlagEntry>] {
+    var columns: [TSColumn<FlagsTableEntry>] {
         [keyColumn, valueColumn, actionsColumn]
     }
 
@@ -240,7 +240,7 @@ private extension FlagsTable {
         LocalizedStringKey(FlagsTableStrings.string(key, fallback))
     }
 
-    var keyColumn: TSColumn<FeatureFlagEntry> {
+    var keyColumn: TSColumn<FlagsTableEntry> {
         TSColumn(
             id: "key",
             title: columnTitle("admin.flags.cols.key", "Flag key"),
@@ -255,7 +255,7 @@ private extension FlagsTable {
         )
     }
 
-    var valueColumn: TSColumn<FeatureFlagEntry> {
+    var valueColumn: TSColumn<FlagsTableEntry> {
         TSColumn(
             id: "value",
             title: columnTitle("admin.flags.cols.value", "Value")
@@ -269,7 +269,7 @@ private extension FlagsTable {
         }
     }
 
-    var actionsColumn: TSColumn<FeatureFlagEntry> {
+    var actionsColumn: TSColumn<FlagsTableEntry> {
         TSColumn(
             id: "actions",
             title: columnTitle("admin.flags.cols.actions", "Actions")

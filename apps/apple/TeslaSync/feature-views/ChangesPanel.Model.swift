@@ -57,7 +57,7 @@ extension ChangesPanelLoadState: Equatable where Value: Equatable {}
 @MainActor
 public protocol ChangesAuditSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (ChangesPanelLoadState<[FeatureFlagChange]>) -> Void)? { get set }
+    var onUpdate: (@MainActor (ChangesPanelLoadState<[ChangesPanelFlagChange]>) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
@@ -66,14 +66,14 @@ public protocol ChangesAuditSource: AnyObject {
 /// In-memory source for previews + unit tests. Drive it with `push(_:)`.
 @MainActor
 public final class InMemoryChangesAuditSource: ChangesAuditSource {
-    public var onUpdate: (@MainActor (ChangesPanelLoadState<[FeatureFlagChange]>) -> Void)?
+    public var onUpdate: (@MainActor (ChangesPanelLoadState<[ChangesPanelFlagChange]>) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: ChangesPanelLoadState<[FeatureFlagChange]>?
+    private let initial: ChangesPanelLoadState<[ChangesPanelFlagChange]>?
 
-    public init(initial: ChangesPanelLoadState<[FeatureFlagChange]>? = nil) {
+    public init(initial: ChangesPanelLoadState<[ChangesPanelFlagChange]>? = nil) {
         self.initial = initial
     }
 
@@ -91,7 +91,7 @@ public final class InMemoryChangesAuditSource: ChangesAuditSource {
     }
 
     /// Pushes a snapshot to the bound model (test / preview affordance).
-    public func push(_ state: ChangesPanelLoadState<[FeatureFlagChange]>) {
+    public func push(_ state: ChangesPanelLoadState<[ChangesPanelFlagChange]>) {
         onUpdate?(state)
     }
 }
@@ -106,7 +106,7 @@ public final class InMemoryChangesAuditSource: ChangesAuditSource {
 @Observable
 public final class ChangesPanelModel {
     /// The current cache-then-network state for the change feed.
-    public private(set) var state: ChangesPanelLoadState<[FeatureFlagChange]> = .idle
+    public private(set) var state: ChangesPanelLoadState<[ChangesPanelFlagChange]> = .idle
 
     /// The flag key the panel is scoped to, or `nil` when global (web `scopedKey`).
     public let scopedKey: String?
@@ -122,7 +122,7 @@ public final class ChangesPanelModel {
     }
 
     /// Preview / test binding: render a fixed state without the shared core.
-    public init(previewState: ChangesPanelLoadState<[FeatureFlagChange]>, scopedKey: String? = nil) {
+    public init(previewState: ChangesPanelLoadState<[ChangesPanelFlagChange]>, scopedKey: String? = nil) {
         let inMemory = InMemoryChangesAuditSource(initial: previewState)
         source = inMemory
         self.scopedKey = scopedKey
@@ -133,7 +133,7 @@ public final class ChangesPanelModel {
     /// Web-prop binding: the source component receives `rows` + `loading`. Maps the
     /// two web props onto the cache-then-network load state so the native surface
     /// renders the identical loading / empty / content branches.
-    public convenience init(rows: [FeatureFlagChange], loading: Bool, scopedKey: String? = nil) {
+    public convenience init(rows: [ChangesPanelFlagChange], loading: Bool, scopedKey: String? = nil) {
         self.init(previewState: ChangesPanelModel.loadState(rows: rows, loading: loading), scopedKey: scopedKey)
     }
 
@@ -142,9 +142,9 @@ public final class ChangesPanelModel {
     /// otherwise empty rows become the `EmptyState` and present rows the table.
     /// `nonisolated` because it touches no actor state — callable off the main actor.
     public nonisolated static func loadState(
-        rows: [FeatureFlagChange],
+        rows: [ChangesPanelFlagChange],
         loading: Bool
-    ) -> ChangesPanelLoadState<[FeatureFlagChange]> {
+    ) -> ChangesPanelLoadState<[ChangesPanelFlagChange]> {
         if loading { return .loading(cached: rows.isEmpty ? nil : rows, stale: false) }
         return rows.isEmpty ? .empty(stale: false) : .loaded(rows, stale: false)
     }

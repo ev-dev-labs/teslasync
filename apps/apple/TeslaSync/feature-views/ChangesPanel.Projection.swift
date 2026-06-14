@@ -14,14 +14,14 @@ import Foundation
 // MARK: - Projection output value types
 
 /// One change-audit row, fully formatted + localized for the table (web
-/// `DataTable` row over `FeatureFlagChange`). Pure value type so row formatting is
+/// `DataTable` row over `ChangesPanelFlagChange`). Pure value type so row formatting is
 /// unit-tested without rendering the view.
 public struct ChangeRowItem: Identifiable, Equatable, Sendable {
     public let id: Int
     public let changedAtText: String
     public let actorText: String
     public let flagKeyText: String
-    public let operation: FeatureFlagOperation
+    public let operation: ChangesPanelFlagOperation
     public let operationLabel: String
     public let operationTone: ChangesOpTone
     public let oldValueText: String
@@ -45,7 +45,7 @@ public extension ChangesPanelProjection {
     /// order: the web passes `data={rows}` straight through, and the repo already
     /// returns newest-first (`ORDER BY changed_at DESC`).
     static func make(
-        from changes: [FeatureFlagChange],
+        from changes: [ChangesPanelFlagChange],
         locale: Locale = .current,
         timeZone: TimeZone = .current
     ) -> ChangesPanelProjection {
@@ -53,7 +53,7 @@ public extension ChangesPanelProjection {
     }
 
     private static func row(
-        from change: FeatureFlagChange,
+        from change: ChangesPanelFlagChange,
         locale: Locale,
         timeZone: TimeZone
     ) -> ChangeRowItem {
@@ -99,7 +99,7 @@ public extension ChangesPanelProjection {
 
     /// The localized operation token shown in the chip (web Badge body
     /// `{row.operation}`).
-    static func operationLabel(_ operation: FeatureFlagOperation) -> String {
+    static func operationLabel(_ operation: ChangesPanelFlagOperation) -> String {
         ChangesPanelStrings.string(operation.localizationKey, operation.rawTag)
     }
 }
@@ -131,12 +131,12 @@ public extension ChangesPanelPresentation {
     /// refresh / error; an empty resolved set becomes the web `EmptyState`
     /// (scoped/global message keyed on `scopedKey`).
     static func resolve(
-        state: ChangesPanelLoadState<[FeatureFlagChange]>,
+        state: ChangesPanelLoadState<[ChangesPanelFlagChange]>,
         scopedKey: String?,
         locale: Locale = .current,
         timeZone: TimeZone = .current
     ) -> ChangesPanelPresentation {
-        func project(_ changes: [FeatureFlagChange]) -> ChangesPanelProjection {
+        func project(_ changes: [ChangesPanelFlagChange]) -> ChangesPanelProjection {
             ChangesPanelProjection.make(from: changes, locale: locale, timeZone: timeZone)
         }
 
@@ -159,10 +159,10 @@ public extension ChangesPanelPresentation {
 
     private static func resolveFailure(
         _ error: ChangesPanelError,
-        cached: [FeatureFlagChange]?,
+        cached: [ChangesPanelFlagChange]?,
         stale: Bool,
         scopedKey _: String?,
-        project: ([FeatureFlagChange]) -> ChangesPanelProjection
+        project: ([ChangesPanelFlagChange]) -> ChangesPanelProjection
     ) -> ChangesPanelPresentation {
         if error == .offline {
             guard let cached, !cached.isEmpty else { return .offlineNoData }

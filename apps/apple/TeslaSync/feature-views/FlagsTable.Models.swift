@@ -4,7 +4,7 @@
 //
 //  Domain value types ported from the web source
 //  (features/admin/components/feature-flags/FlagsTable.tsx): the feature-flag
-//  registry row (`FeatureFlagEntry`), the heterogeneous flag value (the web
+//  registry row (`FlagsTableEntry`), the heterogeneous flag value (the web
 //  `unknown`/JSON value modeled as a closed enum), the compact JSON cell preview
 //  (web `previewValue`), and the controlled key sort (web `useSortToggle`).
 //
@@ -184,11 +184,11 @@ public enum FlagsValuePreview {
     }
 }
 
-// MARK: - Feature-flag row (web `FeatureFlagEntry`)
+// MARK: - Feature-flag row (web `FlagsTableEntry`)
 
-/// One row of the feature-flag registry (web `FeatureFlagEntry { key, value }`).
+/// One row of the feature-flag registry (web `FlagsTableEntry { key, value }`).
 /// `id` is the flag key (web `keyExtractor={(row) => row.key}`).
-public struct FeatureFlagEntry: Sendable, Equatable, Identifiable {
+public struct FlagsTableEntry: Sendable, Equatable, Identifiable {
     public var key: String
     public var value: FlagValue
 
@@ -249,13 +249,13 @@ public struct FlagsSortToggle: Sendable, Equatable {
 /// `[...rows].sort((a, b) => a.key.localeCompare(b.key) * dir)`.
 public enum FlagsSort {
     /// Locale-aware key comparison (web `a.key.localeCompare(b.key)`).
-    public static func compareKeys(_ lhs: FeatureFlagEntry, _ rhs: FeatureFlagEntry) -> ComparisonResult {
+    public static func compareKeys(_ lhs: FlagsTableEntry, _ rhs: FlagsTableEntry) -> ComparisonResult {
         lhs.key.localizedCompare(rhs.key)
     }
 
     /// Sorts `rows` by the controlled toggle. Ties (and the non-key field, which
     /// the web maps to `0`) preserve the original order for a stable result.
-    public static func sorted(_ rows: [FeatureFlagEntry], by sort: FlagsSortToggle) -> [FeatureFlagEntry] {
+    public static func sorted(_ rows: [FlagsTableEntry], by sort: FlagsSortToggle) -> [FlagsTableEntry] {
         rows.enumerated().sorted { lhs, rhs in
             let result = sort.field == .key
                 ? compareKeys(lhs.element, rhs.element)
@@ -275,9 +275,9 @@ public enum FlagsSort {
 /// resolved-empty helpers the render phase switches over.
 public struct FlagsProjection: Sendable, Equatable {
     /// Every feature-flag row, in source order (the view applies the sort toggle).
-    public var rows: [FeatureFlagEntry]
+    public var rows: [FlagsTableEntry]
 
-    public init(rows: [FeatureFlagEntry]) {
+    public init(rows: [FlagsTableEntry]) {
         self.rows = rows
     }
 
@@ -294,7 +294,7 @@ public struct FlagsProjection: Sendable, Equatable {
 /// the production source and previews/tests share one cached→projection path.
 public enum FlagsTableAdapter {
     /// Projects cached registry rows into the view-model projection.
-    public static func project(_ rows: [FeatureFlagEntry]) -> FlagsProjection {
+    public static func project(_ rows: [FlagsTableEntry]) -> FlagsProjection {
         FlagsProjection(rows: rows)
     }
 }

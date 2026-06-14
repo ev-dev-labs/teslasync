@@ -42,7 +42,7 @@ public struct ChangesPanel: View {
     /// call site matches the web `<ChangesPanel rows loading scopedKey />`.
     @MainActor
     public init(
-        rows: [FeatureFlagChange],
+        rows: [ChangesPanelFlagChange],
         loading: Bool,
         scopedKey: String? = nil,
         telemetry: (any DashboardWidgetTelemetrySink)? = nil

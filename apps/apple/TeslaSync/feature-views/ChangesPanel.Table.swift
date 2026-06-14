@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0030 · ChangesPanel (Apple)
 //
 //  The change-audit data table — the Apple-idiomatic parity of the web source's
-//  `DataTable<FeatureFlagChange>`. A real columnar grid on macOS / regular width
+//  `DataTable<ChangesPanelFlagChange>`. A real columnar grid on macOS / regular width
 //  and a card list on compact iPhone width, reproducing the seven web columns
 //  (changed_at / actor / flag_key / operation / old_value / new_value / reason),
 //  the monospaced cells (web `font-mono`), and the operation chip. The table is
