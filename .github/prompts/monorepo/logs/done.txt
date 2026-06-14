@@ -822,3 +822,4 @@ p3-android/widget-primitives/A-0006-WidgetFlowDiagram.prompt.md
 p3-android/widget-primitives/A-0009-WidgetRankedList.prompt.md
 p3-android/widget-primitives/A-0012-WidgetTipCards.prompt.md
 p3-android/widget-primitives/A-0010-WidgetStatGrid.prompt.md
+p3-android/widget-primitives/A-0011-WidgetStatusGrid.prompt.md
