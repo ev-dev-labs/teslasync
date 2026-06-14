@@ -1,0 +1,69 @@
+/*
+  VehicleSettingsTab.strings
+  TeslaSync — P4 feature view · 0308 · VehicleSettingsTab (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `VehicleSettingsTab` resolves (table "VehicleSettingsTab") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact set of keys from the web source
+  (features/vehicles/components/VehicleSettingsTab.tsx + its i18n catalog
+  web/src/i18n/en.json `vehicleSettings.*`), preserved verbatim. The second group
+  backs the native chrome (the P4 leaf freshness / loading / empty / error copy and the
+  native date control affordances), so the Swift sources hold no English literals.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"vehicleSettings.title" = "Per-vehicle settings";
+"vehicleSettings.subtitle" = "Override individual settings for this vehicle. Resets fall back to your account-wide values.";
+"vehicleSettings.loading" = "Loading vehicle settings…";
+"vehicleSettings.error" = "Could not load vehicle settings.";
+
+"vehicleSettings.source.override" = "Override";
+"vehicleSettings.source.user" = "User default";
+"vehicleSettings.source.vehicle" = "Vehicle name";
+"vehicleSettings.source.default" = "System default";
+
+"vehicleSettings.actions.save" = "Save";
+"vehicleSettings.actions.saving" = "Saving…";
+"vehicleSettings.actions.reset" = "Reset to default";
+"vehicleSettings.actions.resetting" = "Resetting…";
+"vehicleSettings.actions.cancel" = "Cancel";
+
+"vehicleSettings.keys.nickname.label" = "Nickname";
+"vehicleSettings.keys.nickname.help" = "Friendly name shown in the vehicle list and page title.";
+"vehicleSettings.keys.mute_until.label" = "Mute alerts until";
+"vehicleSettings.keys.mute_until.help" = "Suppresses alerts for this vehicle until the chosen date and time. Clear to receive alerts immediately.";
+"vehicleSettings.keys.charge_cost_tariff_id.label" = "Charge cost tariff";
+"vehicleSettings.keys.charge_cost_tariff_id.help" = "Tariff identifier used when calculating per-session charge costs for this vehicle.";
+"vehicleSettings.keys.units_distance.label" = "Distance unit";
+"vehicleSettings.keys.units_distance.help" = "Override the distance unit (mi or km) for this vehicle's panels.";
+"vehicleSettings.keys.units_temperature.label" = "Temperature unit";
+"vehicleSettings.keys.units_temperature.help" = "Override the temperature unit (°C or °F) for this vehicle's panels.";
+"vehicleSettings.keys.units_energy.label" = "Energy unit";
+"vehicleSettings.keys.units_energy.help" = "Override the energy display unit (kWh) for this vehicle's panels.";
+
+"vehicleSettings.validation.required" = "Value is required.";
+"vehicleSettings.validation.invalid" = "Value is not valid for this setting.";
+"vehicleSettings.validation.invalidDate" = "Enter a valid date and time.";
+
+"vehicleSettings.toasts.saved" = "Setting saved.";
+"vehicleSettings.toasts.reset" = "Reverted to default.";
+
+"vehicleSettings.errors.save" = "Failed to save setting.";
+"vehicleSettings.errors.reset" = "Failed to reset setting.";
+
+/* --- Native chrome: P4 leaf freshness / loading / empty / error + date control --- */
+"vehicleSettings.live" = "Live";
+"vehicleSettings.stale" = "Stale";
+"vehicleSettings.offline" = "Offline";
+"vehicleSettings.staleBanner" = "Reconnecting — settings may be stale";
+"vehicleSettings.offlineBanner" = "Offline — showing last saved settings";
+"vehicleSettings.refresh" = "Refresh";
+"vehicleSettings.empty" = "No vehicle settings are available right now.";
+"vehicleSettings.retry" = "Retry";
+"vehicleSettings.actions.clear" = "Clear";
+"vehicleSettings.actions.setDateTime" = "Set date & time";
