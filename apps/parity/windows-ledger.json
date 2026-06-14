@@ -171,6 +171,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
   },
   {
+    "unitId": "page:settings/Safety",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 8,
+    "requiredCount": 8,
+    "promptId": "p2-windows/W7/windows-page-settings-SafetyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-SafetyPage.log"
+  },
+  {
     "unitId": "page:settings/Settings",
     "platform": "windows",
     "status": "done",

@@ -1,0 +1,126 @@
+=== p2-windows · W7 · page:settings/Safety (WinUI 3 / Fluent) ===
+Parity unit : page:settings/Safety   kind=page   web route=/settings/safety
+Web source  : web/src/features/settings/pages/SafetyPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/SafetyPage/ (SafetyPage.Model.cs / .Source.cs / .ViewModel.cs / .cs)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client source), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SettingsPage / QuietHoursPage do. The generated prompt's idealized "SafetyPage.xaml + SafetyPageViewModel.cs under
+  TeslaSync/Features/Settings" is mapped onto these real conventions (namespace TeslaSync.App.FeatureViews.Settings).
+- Naming: the web page is SafetyPage at /settings/safety. RouteTable.cs already maps
+  Page("SafetySettingsPage","settings/safety",SettingsAccountIntegrations) — route NAME "SafetySettingsPage" — which
+  was the only Settings/safety route NOT yet wired to a page factory (it fell back to RoutePendingView). A DIFFERENT,
+  already-built VehicleSystems page (class FeatureViews.VehicleSystems.SafetySettingsPage, route name "SafetySettings",
+  path safety-settings, web vehicle-systems/pages/SafetySettingsPage.tsx) keeps the SafetySettingsPage class name, so
+  the new class is named SafetyPage (mirroring the web filename) to avoid the clash, and is registered under the
+  existing route name "SafetySettingsPage" (SafetyPageRegistration.RouteName) in ShellWindow.xaml.cs.
+- Scope (manifest is the source of truth): apps/parity/parity-manifest.json scopes page:settings/Safety to exactly 8
+  items — 1 panel (GlassPanel1, note "component: GlassPanel"), 1 state (success) and 6 strings. The manifest declares
+  NO API data sources ("renders from navigation params / local state"): the web page reads the seven safety values from
+  the already-resolved global useSettings() hook and renders its deterministic, AI-OFF-safe listing unconditionally —
+  it never gates a per-page loading/empty/error branch. The native port reproduces exactly that: a single success state.
+- Full-listing fidelity (ADR-002/006, no parity shortcuts): the web GlassPanel1 listing is reproduced in full — the
+  section header, ALL seven SAFETY_ROWS (quiet-hours enabled / window start / window end / alert digest mode /
+  critical-alert tab flash / unread tab badge / API kill-switch), each with its title, an Info TsBadge showing the
+  current value formatted exactly as the web renderValue (On/Off, the HH:MM window, the digest enum, Active/Suspended,
+  em-dash for blank), its plain-English description and a "Docs" link, plus the read-only change hint.
+- Navigation entry (ADR / W4 seam): route name "SafetySettingsPage" (RouteTable path settings/safety) already exists.
+  Registration (ShellWindow.xaml.cs) is a static factory new FeatureViews.Settings.SafetyPage() keyed on
+  SafetyPageRegistration.RouteName, mirroring the sibling Settings/QuietHours registrations that mount over their inert
+  default source (the host-injection precedent the W7 pages set).
+- Data binding (ADR-004): the manifest data source is useSettings (GET /settings). The view-model reads through an
+  injected ISafetySettingsSource; the default EmptySafetySettingsSource resolves the web DEFAULT_SETTINGS slice (so the
+  listing always renders the deterministic baseline), and the generated-client-backed SafetySettingsClientSource
+  (SafetyPage.Source.cs) binds the generated OpenAPI contract client operation get_api_v1_settings. No HTTP touches the
+  view; the read JSON round-trips through the tolerant SafetySettingsSnapshot.FromJson (accepts the bare object + the
+  platform {data:…} envelope and merges each web default for any absent/mistyped field).
+- Single data state (manifest: success): SafetyState has the one member the manifest declares — Success. The view-model
+  starts in Success with the web-default listing and re-projects with the install's real values once the read resolves;
+  a failed read folds back to the defaults (SafetyPageViewModel.LoadAsync catch -> SafetySettingsSnapshot.Default), so
+  the listing is never blank — the web pessimistic, defaults-merged contract.
+- Panel GlassPanel1: SafetyPage.cs#BuildListingPanel mounts one TsGlassPanel (the W3 Fluent glass/Mica card, ADR-005)
+  carrying a SectionTitle + Text header, the seven-row StackPanel (SafetyRowControls, each a Text title + Info TsBadge +
+  Caption description + HyperlinkButton docs) and a Caption change-hint; AutomationId "safety-settings-listing" mirrors
+  the web data-testid. Per-row AutomationId "safety-settings-row-{key}" mirrors the web li data-testid.
+- AI explainer (ADR-015 §I3 hidden UI): the web page can layer an opt-in <AISafetySettingExplainer> ABOVE the listing;
+  in off-mode (ai_mode='off') it is absent from the DOM entirely. The native baseline omits it (the deterministic
+  listing is the canonical surface; the AI explainer is its own opt-in unit), exactly as the off-mode static-help
+  invariant requires — and as the sibling QuietHoursPage gates its AI advisor off.
+- Live freshness / polling (ADR-013): N/A — settings is a one-shot REST read with no SSE/live signal source and no
+  refetch interval on the web page; no >2-min staleness pill applies.
+- SI units (ADR / P1-S5): N/A — this surface bears no SI quantity values; the row values are booleans, an enum string
+  and HH:MM clock times (not unit-bearing measurements), so no SI converter applies. No non-SI value is stored/computed.
+- i18n (ADR-014): all 6 page/listing keys + the 14 row keys are present verbatim (web key names) in
+  Strings/{en,ar,he}/Resources.resw as translation.* with the web English values; the surface resolves them through the
+  ILocalizer facade with the web key names + English defaults (PassthroughLocalizer in tests records every key). No
+  hardcoded visible chrome literal — the row VALUE tokens (On/Off/Active/Suspended/em-dash) reproduce the web's
+  non-i18n renderValue projection verbatim (value tokens, not chrome).
+- a11y (ADR-015): the PageContainer carries the page heading-level-1 landmark so the UserControl wrapper is
+  AccessibilityView.Raw and exposes a Group automation peer; each row value badge carries AutomationProperties.Name
+  "{title}: {value}", each docs link carries Name "{Docs}: {title}" + a ToolTip of the URL; design tokens drive
+  light/dark; the HyperlinkButton + badges are keyboard- and pointer-reachable.
+
+=== PARITY ===
+PARITY_REQUIRED=8
+
+# Panel (1) — the web inline GlassPanel reproduced as a Fluent glass/Mica Card (always visible; success state)
+[x] panel  - GlassPanel1   -> SafetyPage.cs#BuildListingPanel (_listingPanel TsGlassPanel, AutomationId
+             "safety-settings-listing"; header SectionTitle _listingTitle + Text _listingSubtitle; _rowsHost with the
+             seven SafetyRowControls; Caption _changeHint); web SafetyPage.tsx <GlassPanel data-testid=
+             "safety-settings-listing">; tests Projection_lists_all_seven_rows_in_web_order +
+             Projection_carries_the_listing_header_and_change_hint + ViewModel_starts_in_success_with_the_default_listing
+
+# Data state (1 declared: success) — a visible region, never blank
+[x] state  - success       -> SafetyState.Success (SafetyProjection.Project always returns State=Success; resolved incl.
+             the pessimistic-degraded read folding to defaults); rendered as the PageContainer content (the FadeIn
+             GlassPanel listing); tests Projection_is_always_in_the_success_state + ViewModel_stays_in_success_after_load
+             + ViewModel_falls_back_to_defaults_when_the_read_fails + ViewModel_reprojects_with_the_loaded_setting_values
+
+# Strings (6) — every visible literal resolves from Strings/*.resw via ILocalizer with the exact web key names
+[x] string - safetySettings.listing.changeHint -> SafetyProjection.Project localizer.GetString("safetySettings.listing.changeHint", "To change a value, open the main Settings page. …") -> SafetyDisplay.ChangeHint -> _changeHint
+[x] string - safetySettings.listing.docsLink   -> SafetyProjection.Project localizer.GetString("safetySettings.listing.docsLink", "Docs") -> SafetyRowDisplay.DocsLabel -> each row HyperlinkButton.Content
+[x] string - safetySettings.listing.subtitle   -> SafetyProjection.Project localizer.GetString("safetySettings.listing.subtitle", "Each row shows the current value on this install …") -> SafetyDisplay.ListingSubtitle -> _listingSubtitle
+[x] string - safetySettings.listing.title      -> SafetyProjection.Project localizer.GetString("safetySettings.listing.title", "Your safety-related settings") -> SafetyDisplay.ListingTitle -> _listingTitle
+[x] string - safetySettings.pageSubtitle       -> SafetyProjection.Project / SafetyPageRegistration.Subtitle localizer.GetString("safetySettings.pageSubtitle", "Notification quiet hours, alert digest mode, …") -> SafetyDisplay.Subtitle -> PageContainer.Subtitle
+[x] string - safetySettings.pageTitle          -> SafetyProjection.Project / SafetyPageRegistration.Title localizer.GetString("safetySettings.pageTitle", "Safety settings") -> SafetyDisplay.Title -> PageContainer.Title
+
+PARITY_COVERED=8
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/SafetyPageTests.cs, 24 tests, all passing):
+# Projection_resolves_every_required_string_key records every one of the 6 keys above through a RecordingLocalizer
+# (Projection_resolves_every_row_string_key adds the 14 row keys); Projection_is_always_in_the_success_state +
+# the ViewModel success/fallback/reproject tests assert the single success state renders from the bound SafetyDisplay
+# state holder; Projection_lists_all_seven_rows_in_web_order + Projection_formats_each_default_row_value_like_the_web_
+# renderValue + Projection_reflects_overridden_setting_values + Projection_renders_an_em_dash_for_a_blank_quiet_hours_
+# window + Projection_builds_absolute_docs_links_for_every_row pin the GlassPanel1 listing; the tolerant
+# Snapshot_parser_* trio + EmptySafetySettingsSource_yields_the_web_defaults complete the data-binding contract.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SafetyPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Settings path does not exist in-repo)
+#   + the SafetyPageTests.cs test file: both PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded. 0 Warning(s) 0 Error(s)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> exit 0 (SafetyPage Model/Source/ViewModel/view +
+#   SafetyPageTests + ShellWindow registration + Tests.csproj Compile links, all LF/utf-8; benign workspace-load warning only)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30381, Failed: 0, Skipped: 0 (incl. 24 SafetyPageTests)
+TEST_EXIT=0
+PARITY_COVERED=8
+PARITY_REQUIRED=8
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SafetyPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SafetyPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-settings-SafetyPage.log
+# git commit -m "feat(apps/windows): SafetyPage at web parity (W7 settings)"
+
+EXIT=0
+STATUS=DONE
