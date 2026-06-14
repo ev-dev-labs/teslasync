@@ -1,0 +1,70 @@
+/*
+  ReleaseNotes.strings
+  TeslaSync — P4 shared surface · 0135 · ReleaseNotes (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The first group mirrors the web `t()` keys called
+  by `components/feedback/ReleaseNotes.tsx` 1:1 — the badge labels (`changelog.badges.*`, web `BADGE_KEY`)
+  and the "What's New" body heading (`changelog.releaseNotes.heading`). The remaining groups are the native
+  a11y additions the web gets for free from semantic HTML: the VoiceOver show / hide hint, the expanded /
+  collapsed value (the spoken peer of `aria-expanded`), the per-change category labels (the web change dot
+  conveys its type by color only), and the empty-state leaves (the "never a blank box" peers).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("ReleaseNotes") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web `t()` keys (mirrored 1:1 from the source) --- */
+
+/* Badge label for the newest release (web BADGE_KEY.latest / BADGE_FALLBACK.latest). */
+"changelog.badges.latest" = "Latest";
+
+/* Badge label for a stable release (web BADGE_KEY.stable / BADGE_FALLBACK.stable). */
+"changelog.badges.stable" = "Stable";
+
+/* Badge label for a pre-release (web BADGE_KEY.beta / BADGE_FALLBACK.beta). */
+"changelog.badges.beta" = "Beta";
+
+/* The expanded body heading (web t('changelog.releaseNotes.heading', "What's New")). */
+"changelog.releaseNotes.heading" = "What's New";
+
+/* --- Native a11y additions (no web t() key; the web gets these from semantic HTML) --- */
+
+/* VoiceOver hint announced when a release is collapsed — the action a tap performs. */
+"changelog.releaseNotes.expandHint" = "Show release notes";
+
+/* VoiceOver hint announced when a release is expanded — the action a tap performs. */
+"changelog.releaseNotes.collapseHint" = "Hide release notes";
+
+/* VoiceOver value announced when a release is expanded (spoken peer of web aria-expanded=true). */
+"changelog.releaseNotes.expanded" = "Expanded";
+
+/* VoiceOver value announced when a release is collapsed (spoken peer of web aria-expanded=false). */
+"changelog.releaseNotes.collapsed" = "Collapsed";
+
+/* Spoken category label for an "added" change dot. */
+"changelog.changeType.added" = "Added";
+
+/* Spoken category label for a "changed" change dot. */
+"changelog.changeType.changed" = "Changed";
+
+/* Spoken category label for a "fixed" change dot. */
+"changelog.changeType.fixed" = "Fixed";
+
+/* Spoken category label for a "removed" change dot. */
+"changelog.changeType.removed" = "Removed";
+
+/* Spoken category label for a "deprecated" change dot. */
+"changelog.changeType.deprecated" = "Deprecated";
+
+/* Spoken category label for a "security" change dot. */
+"changelog.changeType.security" = "Security";
+
+/* Title of the empty-state leaf, shown when there are no releases to list. */
+"changelog.releaseNotes.empty" = "No release notes yet";
+
+/* Supporting line of the empty-state leaf. */
+"changelog.releaseNotes.emptyMessage" = "Release notes appear here after the first published version.";
+
+/* Title of the per-release empty body, shown when an open release lists no changes. */
+"changelog.releaseNotes.emptyChanges" = "No changes recorded";
