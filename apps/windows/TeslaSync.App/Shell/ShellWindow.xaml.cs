@@ -356,6 +356,14 @@ public sealed partial class ShellWindow : Window
         // /tire-pressure. RouteTable already maps Page("TirePressure","tire-pressure",RouteGroup.VehicleSystems).
         _viewModel.PageFactory.Register("TirePressure", static () => new FeatureViews.VehicleSystems.TirePressurePage());
 
+        // Driving / DrivesList page (P2/W7) — parity port of web DrivesListPage at route /drives
+        // (RouteTable Page("Drives","drives",RouteGroup.TripsDriving)). The default empty-source ctor renders the
+        // page-level empty state until a DI host wires the generated-client-backed DrivesListSource via
+        // DrivesListPage.Create. The DriveDetail / TripReplay back affordances below navigate here (NavigateTo("drives")).
+        _viewModel.PageFactory.Register(
+            FeatureViews.Driving.DrivesListRegistration.RouteName,
+            static () => new FeatureViews.Driving.DrivesListPage());
+
         // Driving / DriveDetail page (P2/W7) — parity port of web DriveDetailPage at route /drives/:id.
         // The route drive id is read from the live match and the back affordance maps to the drives list.
         _viewModel.PageFactory.Register("DriveDetail", () =>

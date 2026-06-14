@@ -277,5 +277,14 @@
     "requiredCount": 37,
     "promptId": "p2-windows/W7/windows-page-vehicles-VehicleListPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicles-VehicleListPage.log"
+  },
+  {
+    "unitId": "page:driving/DrivesList",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 77,
+    "requiredCount": 77,
+    "promptId": "p2-windows/W7/windows-page-driving-DrivesListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-DrivesListPage.log"
   }
 ]
