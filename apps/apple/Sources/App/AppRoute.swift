@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiPlayground, fleetTelemetryCoverage, liveSignals, schemaDrift, powerUser, system
+    case admin, apiPlayground, auditLog, fleetTelemetryCoverage, liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
     public var id: String {
@@ -43,6 +43,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: "battery-cells"
         case .powerUser: "power-user"
         case .apiPlayground: "api-playground"
+        case .auditLog: "audit-log"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
@@ -78,6 +79,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .diagnostics: "stethoscope"
         case .admin: "person.badge.key.fill"
         case .apiPlayground: "curlybraces"
+        case .auditLog: "list.bullet.rectangle.portrait"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .liveSignals: "waveform.path.ecg"
         case .schemaDrift: "tablecells.badge.ellipsis"
@@ -101,7 +103,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: .energy
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiPlayground, .fleetTelemetryCoverage, .liveSignals, .schemaDrift, .powerUser, .system: .system
+        case .admin, .apiPlayground, .auditLog, .fleetTelemetryCoverage, .liveSignals,
+             .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
     }
