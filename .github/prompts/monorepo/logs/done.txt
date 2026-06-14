@@ -955,3 +955,4 @@ p2-windows/pages/telemetry/SignalExplorerPage.prompt.md
 p2-windows/pages/telemetry/SignalDiffPage.prompt.md
 p2-windows/pages/telemetry/SignalGapDetectorPage.prompt.md
 p2-windows/pages/vehicles/VehicleListPage.prompt.md
+p2-windows/pages/watch/WatchFacePage.prompt.md
