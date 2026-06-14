@@ -588,6 +588,12 @@
     <Compile Include="..\TeslaSync.App\feature-views\TripListPage\TripListPage.Model.cs" Link="FeatureViews\TripListPage\TripListPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripListPage\TripListPage.Source.cs" Link="FeatureViews\TripListPage\TripListPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TripListPage\TripListPage.ViewModel.cs" Link="FeatureViews\TripListPage\TripListPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.Model.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.Display.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.Display.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.Search.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.Search.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.Projection.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.Source.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChargingListPage\ChargingListPage.ViewModel.cs" Link="FeatureViews\ChargingListPage\ChargingListPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TotpEnrollmentSection.Model.cs" Link="FeatureViews\TwoFactorAuthPage\TotpEnrollmentSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TotpEnrollmentSection.ViewModel.cs" Link="FeatureViews\TwoFactorAuthPage\TotpEnrollmentSection.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TwoFactorAuthPage\TwoFactorAuthPage.Model.cs" Link="FeatureViews\TwoFactorAuthPage\TwoFactorAuthPage.Model.cs" />

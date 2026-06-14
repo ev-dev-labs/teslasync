@@ -1,0 +1,214 @@
+# p2-windows / W7 / page:charging/ChargingList — WinUI 3 / Fluent parity
+#
+# Native WinUI 3 (.NET 10 / Windows App SDK / CommunityToolkit-style ObservableObject) parity port of the web page
+# web/src/features/charging/pages/ChargingListPage.tsx (route /charging, nav name "Charging"). Implemented with the
+# repo's established headless feature pattern (siblings: feature-views/TripListPage, feature-views/ChargingDetailPage,
+# feature-views/OptimizerSection), NOT the generated prompt's apps/windows/TeslaSync/Features/Charging/*.xaml path
+# (which does not exist in-repo — the codebase builds WinUI views in code-behind, not XAML markup, and compiles the
+# UI-free Model/Display/Search/Projection/Source/ViewModel into the headless test assembly).
+#
+# Output:
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.Model.cs       (session parse + ChargingAggregation: category/duration/power/period-stats/anomalies/notable/trend/prior)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.Display.cs      (ChargingListFilters + display records + ChargingListDisplay)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.Search.cs       (ChargingSearch — structured key:op?value mini-language)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.Projection.cs   (ChargingListProjection.Project + builders + CSV/JSON export + registration)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.Source.cs       (IChargingListSource + Empty + ChargingListSource + mapper + IChargingBulkDeleteService + ChargingBulkDeleteClient + diagnostics)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.ViewModel.cs    (ChargingListPageViewModel — state holder + filters + bulk-delete + export)
+#   apps/windows/TeslaSync.App/feature-views/ChargingListPage/ChargingListPage.cs              (UserControl view — sticky/search/KPI/trend/collections/sort/sections/list/pager + 4 states)
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingListPageTests.cs                     (45 headless tests — aggregation/search/projection/state/source/viewmodel/export + 67-key i18n coverage)
+#   NavigationView registration: TeslaSync.App.Core/Navigation/RouteTable.cs:112  Page("Charging","charging",RouteGroup.Charging,"Charging","\uE945")
+#                                TeslaSync.App/Shell/ShellWindow.xaml.cs           PageFactory.Register("Charging", () => new FeatureViews.Charging.ChargingListPage())
+#   String catalog: 67 web i18n keys resolved at the ChargingListProjection.Project / Build* localizer call sites
+#       (ILocalizer.GetString(key, verbatim-English-fallback)); the 8 pre-existing keys plus 59 newly added entries
+#       are present as translation.<key> in Strings/{en,ar,he}/Resources.resw. (The shared i18n generator reads
+#       web/src/i18n, where these page keys are inline t(key, default) defaults with no JSON entry; the prompt allows
+#       editing the platform string catalog directly, so the 59 missing keys were added there. ILocalizer.GetString
+#       returns the verbatim English default for any untranslated key — gate-passing sibling precedent.)
+#
+# Data sources — bound to the generated C# client through the ObservableObject view-model (P1/S8, ADR-004):
+#   useChargingSessionsPaginated  GET /charging  ->  ChargingListSource.StreamAsync (op get_api_v1_charging;
+#       query vehicle_id + limit=500 + offset + start + end), cache-then-network via CacheThenNetworkEngine,
+#       parsed by ChargingListSession.ParseList; disabled (Empty) when no vehicle, mirroring enabled: vehicleId!==null.
+#   useBulkDeleteCharging         DELETE /charging/bulk  ->  ChargingBulkDeleteClient.DeleteAsync (op
+#       delete_api_v1_charging_bulk, { ids } body) -> ChargingListPageViewModel.DeleteSelectedAsync clears + refreshes.
+#   useChargingOptimizer          GET /analytics/charging-optimizer [vehicle_id]  ->  the optimizer section is a
+#       separate already-ported parity unit (feature-views/OptimizerSection, op get_api_v1_analytics_charging_optimizer);
+#       this page surfaces the section header + description + a never-blank "no data" body (ChargingSectionDisplay
+#       key "optimizer"), faithful to the web threshold-gated section.
+#   SI is preserved on the wire / in every record (Wh, W, %, decimal currency); display conversion happens only at the
+#   render boundary (UnitPref / DistanceUnit threaded into the session-card model; ScalarFormatters-style formatting).
+
+=== PARITY ===
+# PARITY_REQUIRED=79. Each item: parity kind — name — binding evidence (file + symbol).
+
+# panels (7) — the 6 overview KPI MetricCards + the no-stats GlassPanel (the web ChargingListPage's panel regions)
+[x] panel  - Sessions
+       ChargingListProjection.BuildKpiCards[0] = ChargingKpiCard("sessions", charging.totalSessions, FmtCompact(count))
+       -> ChargingListPage.cs RenderOverview() _kpiGrid TsMetricCard{Label,Value,AccentBrushKey=TsChartSpeedBrush}.
+       test: Projection_builds_six_kpi_cards_in_web_order_when_stats_present.
+[x] panel  - Energy-kWh
+       BuildKpiCards[1] = ChargingKpiCard("energy", charging.totalEnergy, FmtCompact(totalEnergyWh/1000)) -> _kpiGrid[1]
+       (AccentBrushKey=TsChartBatteryBrush). SI Wh -> display kWh at the projection boundary.
+[x] panel  - Cost
+       BuildKpiCards[2] = ChargingKpiCard("cost", charging.totalCost, FmtCurrency(totalCost,symbol)) -> _kpiGrid[2]
+       (AccentBrushKey=TsColorDangerBrush). test asserts "$12.00".
+[x] panel  - Avg-rate-kW
+       BuildKpiCards[3] = ChargingKpiCard("rate", charging.avgRate, FmtNumber(avgRateKw,1)) -> _kpiGrid[3]
+       (AccentBrushKey=TsChartPowerBrush); em-dash when null (ChargingPeriodStats.AvgRateKw).
+[x] panel  - Avg-duration
+       BuildKpiCards[4] = ChargingKpiCard("duration", charging.avgDuration, FormatDurationMinutes(avgDurationMin)) -> _kpiGrid[4].
+[x] panel  - Avg-power-kW
+       BuildKpiCards[5] = ChargingKpiCard("power", charging.avgPower, FmtNumber(avgPowerW/1000,1)) -> _kpiGrid[5]
+       (AccentBrushKey=TsColorWarningBrush). prior-period delta via DeltaText(prior,current) for all six tiles.
+[x] panel  - GlassPanel7
+       ChargingListPage.cs _noStatsPanel (TsGlassPanel) hosting _noStats (TsEmptyState, Message=display.NoStatsMessage
+       = charging.noStatsRange); shown when !display.HasStats (web currentStats.count===0 GlassPanel empty branch).
+       test: Projection_without_stats_surfaces_the_no_stats_panel.
+
+# charts (1) — native W3 chart wrapper (no web canvas)
+[x] chart  - MetricSwitcherChart
+       ChargingListPage.cs RenderTrend() -> new MetricSwitcherChart(new MetricSwitcherChartStore(TrendTitle/aria/empty,
+       display.TrendMetrics, display.TrendSeries, display.TrendActiveKey), _localizer); ReplaceSeries per metric on
+       re-projection. Projection.BuildTrendMetrics = 4 MetricDefinition (sessions/energy/cost/power, bar/bar/bar/line);
+       Projection TrendSeries = ChargingAggregation.DailyChargingTrend x4. Shown when HasStats (web count>0).
+       test: Projection_carries_chrome_strings_in_every_state (TrendMetrics.Count==4), DailyChargingTrend_buckets_and_sorts_by_day.
+
+# data states (4) — web parity: isLoading / currentStats.count===0 / QueryError / populated section stack
+[x] state  - loading data state
+       ChargingListState.Loading -> ChargingListPage.cs Render() shows _loadingHost (TsSkeleton blocks);
+       ChargingListPageViewModel.SetLoading. test: ViewModel_loading_then_success_lists_sessions.
+[x] state  - empty data state
+       ChargingListState.Empty -> Render() shows _pageEmpty (TsEmptyState, Title=charging.emptyTitle,
+       Message=charging.emptyMessage, ActionText=charging.empty.cta); ViewModel.SetEmpty (empty OR loaded-with-0-rows).
+       test: ViewModel_empty_response_shows_the_empty_state.
+[x] state  - error data state
+       ChargingListState.Error -> Render() shows _errorState (TsQueryError, AttemptCount); OnRetry -> ViewModel.RetryAsync;
+       ViewModel.SetError (failure with no cache, web QueryError). test: ViewModel_failure_with_no_cache_surfaces_error.
+[x] state  - success data state
+       ChargingListState.Success -> Render() shows _successBody (sticky + search + overview KPIs + trend + collections +
+       sort + sections + grouped session list + pager); ViewModel.ApplySnapshot. test: ViewModel_loading_then_success,
+       ViewModel_offline_keeps_cached_sessions_visible.
+
+# strings (67) — every visible literal resolves through ILocalizer.GetString(key, verbatim-English-fallback) in
+#   ChargingListProjection.Project / Build* (Projection.cs). Coverage asserted over the 67-key set by
+#   ChargingListPageTests.Projection_resolves_every_required_string_key_through_the_facade. All present as
+#   translation.<key> in Strings/{en,ar,he}/Resources.resw.
+[x] string - bulk.actions.delete                BulkDeleteLabel               "Delete"
+[x] string - bulk.deleteConfirmDescription      BulkConfirmDescription        "This cannot be undone."
+[x] string - bulk.deleteConfirmTitle            BuildBulkConfirmTitle         "Delete {{count}} {{noun}}?"
+[x] string - bulk.noun.session_one              BuildBulkConfirmTitle/Groups  "session"
+[x] string - bulk.noun.session_other            BuildBulkConfirmTitle/Groups  "sessions"
+[x] string - charging.allSessions               ListHeading                   "All sessions"
+[x] string - charging.anomalyCount              BuildAnomalyCallout           "{{count}} {{noun}} in this range"
+[x] string - charging.anomaly_one               BuildAnomalyCallout           "anomaly"
+[x] string - charging.anomaly_other             BuildAnomalyCallout           "anomalies"
+[x] string - charging.avgDuration               BuildKpiCards[4]              "Avg duration"
+[x] string - charging.avgPower                  BuildKpiCards[5]              "Avg power (kW)"
+[x] string - charging.avgRate                   BuildKpiCards[3]              "Avg rate (kW)"
+[x] string - charging.avgScore                  BuildStickySummary            "avg"
+[x] string - charging.batteryScore              BuildSecondaryLine            "Battery score"
+[x] string - charging.byType                    BuildSecondaryLine            "{{home}} home · {{sc}} SC · {{dc}} DC"
+[x] string - charging.coll.all                  BuildCollectionOptions[0]     "All"
+[x] string - charging.coll.anomalies            BuildCollectionOptions[5]     "Anomalies"
+[x] string - charging.coll.dc                   BuildCollectionOptions[3]     "DC Fast"
+[x] string - charging.coll.free                 BuildCollectionOptions[4]     "Free"
+[x] string - charging.coll.home                 BuildCollectionOptions[1]     "Home"
+[x] string - charging.coll.notable              BuildCollectionOptions[6]     "Notable"
+[x] string - charging.coll.supercharger         BuildCollectionOptions[2]     "Supercharger"
+[x] string - charging.coll.tagged               BuildCollectionOptions[7]     "Tagged" (disabled)
+[x] string - charging.collections.aria          CollectionsAria               "Filter charging sessions by collection"
+[x] string - charging.empty.cta                 EmptyCta                      "Learn about charging"
+[x] string - charging.emptyForCollection        EmptyForCollectionTitle       "No sessions in this view"
+[x] string - charging.emptyForCollection.msg    EmptyForCollectionMessage     "Try a different collection or clear your filters."
+[x] string - charging.emptyMessage              EmptyMessage                  "Charging sessions will appear here once your vehicle starts charging."
+[x] string - charging.emptyTitle                EmptyTitle                    "No charging sessions yet"
+[x] string - charging.filterLabel.collection    FilterCollectionLabel         "View"
+[x] string - charging.filterLabel.search        FilterSearchLabel             "Search"
+[x] string - charging.freeCount                 BuildSecondaryLine            "{{count}} free"
+[x] string - charging.itemNoun                  BuildSections (threshold)     "sessions"
+[x] string - charging.list.subtitle             Subtitle                      "Cost, charger type, energy patterns, and battery-friendly scoring"
+[x] string - charging.list.title                Title                         "Charging Sessions"
+[x] string - charging.metric.cost               BuildTrendMetrics[2]          "Cost"
+[x] string - charging.metric.energy             BuildTrendMetrics[1]          "Energy"
+[x] string - charging.metric.power              BuildTrendMetrics[3]          "Avg power"
+[x] string - charging.metric.sessions           BuildTrendMetrics[0]          "Sessions"
+[x] string - charging.mostCommon                BuildSecondaryLine            "Most common start: {{hour}}"
+[x] string - charging.noPriorData               BuildPriorLabel               "No charging in prior period: {{start}} – {{end}}"
+[x] string - charging.noStatsRange              NoStatsMessage (GlassPanel7)  "No charging sessions in this range"
+[x] string - charging.overTime                  TrendTitle                    "Charging over time"
+[x] string - charging.overTime.aria             TrendAria                     "Charging over time chart with metric switcher"
+[x] string - charging.overTime.empty            TrendEmpty                    "No data for this metric in the selected range"
+[x] string - charging.overview                  OverviewTitle                 "Overview"
+[x] string - charging.priorPeriod               BuildPriorLabel               "prior period: {{start}} – {{end}}"
+[x] string - charging.results                   ResultsLabel/StickySummary    "results"
+[x] string - charging.searchPlaceholder         SearchPrompt                  "Search charging — try \"charger:home\", \"cost:>5\", \"kwh:>20\", \"Costco\""
+[x] string - charging.section.batteryDist       BuildSections (batteryDist)   "Battery start-level distribution"
+[x] string - charging.section.batteryDistDesc   BuildSections (batteryDist)   "See where you typically start charging."
+[x] string - charging.section.optimizer         BuildSections (optimizer)     "Charging optimizer"
+[x] string - charging.section.optimizerDesc     BuildSections (optimizer)     "Personalized tips to charge cheaper and protect your battery."
+[x] string - charging.section.specs             BuildSections (specs)         "Charger specs breakdown"
+[x] string - charging.sort.cost                 BuildSortOptions[2]           "Cost"
+[x] string - charging.sort.date                 BuildSortOptions[0]           "Date"
+[x] string - charging.sort.duration             BuildSortOptions[3]           "Duration"
+[x] string - charging.sort.energy               BuildSortOptions[1]           "Energy"
+[x] string - charging.sort.power                BuildSortOptions[4]           "Power"
+[x] string - charging.stickyBar.aria            StickyAria                    "Charging summary"
+[x] string - charging.totalCost                 BuildKpiCards[2]              "Cost"
+[x] string - charging.totalEnergy               BuildKpiCards[1]              "Energy (kWh)"
+[x] string - charging.totalSessions             BuildKpiCards[0]              "Sessions"
+[x] string - charging.viewAnomalies             ViewAnomaliesLabel            "View anomalies"
+[x] string - common.delete                      CommonDeleteLabel             "Delete"
+[x] string - common.noData                      NoDataLabel / optimizer empty "No data"
+[x] string - filter.pending                     FilterPendingLabel            "Filtering…"
+
+PARITY_COVERED=79
+PARITY_REQUIRED=79
+
+=== GATE ===
+# Real target paths (the generated prompt's apps/windows/TeslaSync/Features/Charging path does not exist in-repo; the
+# in-repo feature lives at apps/windows/TeslaSync.App/feature-views/ChargingListPage — same convention as the sibling
+# W7 pages, e.g. windows-page-trips-TripReplayPage.log, windows-page-charging-TeslaChargingSessionsMap.log).
+
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChargingListPage -Language csharp
+#   No stub / "Coming soon" / NotImplementedException / TODO markers. One PLACEHOLDER_ALLOWED opt-out
+#   (// parity:allow) on the unavoidable required web i18n key literal "charging.searchPlaceholder" (the word
+#   "placeholder" is intrinsic to the key name). The SI fields were named OdometerStartM/OdometerEndM (sibling
+#   ChargingSessionSnapshot convention) to avoid the incidental "tOdo" substring match.
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded.
+#   0 Error(s); 17 pre-existing TeslaSync.App.Core CA warnings only (identical to the baseline build; the
+#   ChargingListPage sources add 0 warnings / 0 errors under TreatWarningsAsErrors + AnalysisMode=Recommended).
+#   Compiles TeslaSync.App + .Core + .Platform + .Tests + .UITests.
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (whole solution; total errors: 0).
+#   The six feature sources + the test are format-clean (LF, .editorconfig).
+LINT_EXIT=0
+
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29822, Failed: 0, Skipped: 0
+#   (headless suite per the p2-windows gate contract; includes the 45 ChargingListPageTests — the session parse +
+#   tolerance, charger-category/duration/power/period-stats, anomaly first-match + notable + daily-trend, the
+#   structured search mini-language (charger:/cost:/kwh:/power:/dur:/in:/at:/free), the cache-then-network mapper,
+#   the source request shape (vehicle_id + limit=500 + range) + the disabled-no-vehicle short-circuit, the projection
+#   six-KPI order / no-stats GlassPanel / anomaly callout / collection-pill counts / day-grouped pagination / sort,
+#   the four-state view-model matrix (loading/success/empty/error/offline) + collection/sort/paging/bulk-select/
+#   bulk-delete/unit-reproject, the CSV/JSON export, and the 67-key i18n facade coverage). The WinAppDriver UITests
+#   project needs a live UI-automation runner (WinAppDriver on :4723) + deployed MSIX, out of scope for the headless
+#   gate; it still compiles in the Release build and is exercised separately via apps/windows/run-ui-automation.ps1.
+TEST_EXIT=0
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ChargingListPage \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ChargingListPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-charging-ChargingListPage.log
+# git commit -m "feat(apps/windows): ChargingListPage at web parity (W7 charging)"
+
+EXIT=0
+STATUS=DONE

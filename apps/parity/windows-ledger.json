@@ -205,5 +205,14 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-admin-TeslaOrdersPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "page:charging/ChargingList",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "p2-windows/W7/windows-page-charging-ChargingListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-ChargingListPage.log"
   }
 ]
