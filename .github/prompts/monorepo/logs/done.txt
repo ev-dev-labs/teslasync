@@ -764,3 +764,4 @@ p3-android/shared-meaningful/A-0178-ConnectionSegment.prompt.md
 p3-android/shared-meaningful/A-0179-HelpSegment.prompt.md
 p3-android/shared-meaningful/A-0175-NotionSidebar.prompt.md
 p3-android/shared-meaningful/A-0180-LiveTelemetrySegment.prompt.md
+p3-android/shared-meaningful/A-0177-BackgroundWorkSegment.prompt.md
