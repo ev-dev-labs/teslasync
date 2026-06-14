@@ -1,0 +1,59 @@
+/*
+  WidgetRankedList.strings
+  TeslaSync — P4 widget primitive · 0009 · WidgetRankedList (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web
+  `features/dashboard/widgets/shared/WidgetRankedList.tsx` renders exactly one copy string of its own — the
+  empty leaf default `emptyMessage = 'No data available'` (a default value, not a `t()` call); its row
+  `label` / `formattedValue` / `badge.text` are caller-supplied, already-localized props rendered verbatim.
+  The first entry below mirrors that single literal; the rest are native a11y / HIG / P4-leaf additions: the
+  row's combined rank/label/value reading, the badge append, the empty-leaf supporting hint, the loading
+  reading, the error tile copy, and the connectivity freshness chip (stale / offline) the web primitive does
+  not have but the native host-lifecycle leaf contract surfaces.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("WidgetRankedList") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Web copy (verbatim port of the web literal) --- */
+
+/* Empty-leaf headline — the web `emptyMessage` default `'No data available'`. */
+"widgetRankedList.empty" = "No data available";
+
+/* --- Native a11y / HIG additions (no web `t()` key exists) --- */
+
+/* Supporting line of the empty leaf, so the surface never renders a bare box. */
+"widgetRankedList.emptyHint" = "Items appear here once ranked data is available.";
+
+/* A row's combined VoiceOver reading — "Rank {rank}: {label}, {value}". Positional so translators reorder. */
+"widgetRankedList.rowLabel" = "Rank %1$d: %2$@, %3$@";
+
+/* Appends a row's badge reading to its base label — "{base}, {badge}". Positional for reordering. */
+"widgetRankedList.rowBadge" = "%1$@, %2$@";
+
+/* --- P4 leaf-contract copy (loading / error / freshness; native host-lifecycle wrapper) --- */
+
+/* VoiceOver reading for the loading skeleton. */
+"widgetRankedList.loadingA11y" = "Loading ranked items";
+
+/* Error tile headline (web `QueryError` peer). */
+"widgetRankedList.errorTitle" = "Couldn't load items";
+
+/* Error tile retry affordance. */
+"widgetRankedList.retry" = "Retry";
+
+/* Freshness chip — live label. */
+"widgetRankedList.live" = "Live";
+
+/* Freshness chip — stale label. */
+"widgetRankedList.stale" = "Stale";
+
+/* Freshness chip — offline label. */
+"widgetRankedList.offline" = "Offline";
+
+/* Freshness chip — stale spoken reading (tap to refresh). */
+"widgetRankedList.staleA11y" = "Stale — tap to refresh";
+
+/* Freshness chip — offline spoken reading (showing cached items). */
+"widgetRankedList.offlineA11y" = "Offline — showing the last known items";
