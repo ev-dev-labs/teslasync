@@ -1,0 +1,99 @@
+=== P3 Shared surface 0222 PinButton (Android) ===
+note: gradlew invoked as gradlew.bat (Windows runner).
+note: the Gradle module is :android (settings.gradle.kts maps projectDir=app); the prompt gate's :app:
+      placeholder is this repo's :android: module - the same adaptation every sibling P3/A* gate records
+      (e.g. 0207 CopyButton, 0183 VehiclePicker).
+note: surface ships as flat files under com/teslasync/shared-surfaces/PinButton/ (the prompt's allowed-files
+      PinButton.* path is a directory bundle, matching the 0207 CopyButton precedent); the mandated leaf
+      cannot form a valid Kotlin package (hyphen segment + PascalCase leaf), so the package is
+      io.teslasync.android.sharedsurfaces.pinbutton with @file:Suppress(InvalidPackageDeclaration). Tests
+      live in the matching real package path under test/ and androidTest/.
+note: capability OK - Kotlin 2.4.0 (>= the prompt's 2.2.x minimum), AGP 8.9.2, Compose BOM 2026.04.01 +
+      Material 3, JDK 21 (Android Studio jbr). NOT blocked.
+note: P1/S8 wiring - usePinned/useTogglePin map to the shared-core PinnedStore, which is ALREADY wired into
+      DataContainer.pinnedStore (registered by the 0183 VehiclePicker slice). The surface consumes it via
+      LocalDataContainer.current.pinnedStore; pinned() is the read feed, togglePin() the mutation, refreshAll()
+      the retry. No DataContainer edit was needed and no shared file was touched (git status: only the three
+      new pinbutton directories).
+note: i18n reuses existing P1/S10 catalog keys (translation_pin_{pin,pinned,unpin},
+      translation_toast_pin_{pinned,unpinned}_{success,error}, translation_mqtt_stale,
+      translation_common_{offline,retry,loading}, translation_freshness_updating) - all present in values/,
+      values-ar/ and values-he/. apps/android strings.xml is GENERATED from apps/shared/i18n; editing it would
+      drift and is out of allowed-files scope.
+note: parity adaptation (covenant #9, logged) - the web `PinOff` lucide glyph has no TeslaGlyphs entry and
+      that set is outside this surface's allowed files, so the pinned state is conveyed exactly as the native
+      atomic PinButton already does: the single TeslaGlyphs.Pin glyph tinted with the warning/amber status
+      token plus the label/tooltip/aria switch. The semantic flip (icon meaning + color + spoken name) is
+      reproduced.
+note: state matrix - the pin feed is a real cache-then-network read, but the web defaults the list to `[]`
+      and ALWAYS renders the button, so the read lifecycle is surfaced ADDITIVELY without hiding the toggle:
+      first-load busy indicator, unpinned/pinned content (an empty pin list is the unpinned content state, not
+      a blank box), disabled pending toggle, stale/offline/updating freshness chip, and a Retry affordance
+      beside the still-usable button on a hard error - the same "render every state, hide no region" contract
+      the 0183 VehiclePicker slice honours.
+note: androidTest - the :android: androidTest source set has PRE-EXISTING, unrelated compilation breakage
+      across many widget/feature/shared-surface UI tests (a Compose-test API drift: assertExists/
+      assertDoesNotExist/onAllNodes moved off top-level, plus a NoopLogger reference) that predates this slice
+      and is outside its allowed files. The P3 gate does NOT compile androidTest (assembleRelease +
+      testReleaseUnitTest + ktlintCheck + detekt only); ktlintCheck DOES lint the androidTest source set and
+      passes over PinButtonUiTest.kt. PinButtonUiTest.kt itself is written to the proven 0207 CopyButton UI
+      pattern (member-call .assertDoesNotExist(), no broken import).
+note: an initial ktlintTestSourceSetCheck run flagged 4 chain-continuation findings in the two unit-test
+      files; resolved by extracting the intermediate locals (the same `val state = model.state.value` shape
+      the 0183 VehiclePicker test uses). Re-run is green below. No red was committed.
+
+### gradlew :android:assembleRelease ###
+> Task :android:compileReleaseKotlin
+> Task :android:mergeDexRelease
+> Task :android:packageRelease
+> Task :android:assembleRelease
+BUILD SUCCESSFUL in 3m 56s
+BUILD_EXIT=0
+
+### gradlew :android:testReleaseUnitTest ###
+> Task :android:compileReleaseUnitTestKotlin
+> Task :android:testReleaseUnitTest
+BUILD SUCCESSFUL in 2m 24s
+TEST_EXIT=0
+unit-test result XML (app/build/test-results/testReleaseUnitTest), PinButton classes only:
+  io.teslasync.android.sharedsurfaces.pinbutton.PinButtonModelTest:     tests=22 failures=0 errors=0 skipped=0
+  io.teslasync.android.sharedsurfaces.pinbutton.PinButtonViewModelTest: tests=11 failures=0 errors=0 skipped=0
+
+### gradlew :android:ktlintCheck :android:detekt ###
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:runKtlintCheckOverTestSourceSet
+> Task :android:runKtlintCheckOverAndroidTestSourceSet
+> Task :android:ktlintMainSourceSetCheck
+> Task :android:ktlintTestSourceSetCheck
+> Task :android:ktlintAndroidTestSourceSetCheck
+> Task :android:ktlintCheck
+> Task :android:detekt
+BUILD SUCCESSFUL in 5m 06s
+LINT_EXIT=0
+  (ktlint over main + test + androidTest source sets; detekt warningsAsErrors=true, MaxLineLength=140.)
+
+### check-placeholders.ps1 (genuine per-file scan of shipped files) ###
+  main surface dir  apps/android/app/src/main/java/com/teslasync/shared-surfaces/PinButton
+    PinButton.kt            count=0
+    PinButtonModel.kt       count=0
+    PinButtonSource.kt      count=0
+    PinButtonViewModel.kt   count=0
+  test dir          apps/android/app/src/test/java/io/teslasync/android/sharedsurfaces/pinbutton
+    PinButtonModelTest.kt       count=0
+    PinButtonViewModelTest.kt   count=0
+  androidTest dir   apps/android/app/src/androidTest/java/io/teslasync/android/sharedsurfaces/pinbutton
+    PinButtonUiTest.kt          count=0
+PLACEHOLDER_COUNT_MINE=0
+PLACEHOLDER_EXIT=0
+
+### shipped surface (no stub / no skeleton) ###
+  PinButton.kt           460 lines  (stateful binder + stateless content + per-state branches + 7 previews)
+  PinButtonModel.kt      373 lines  (registration, sizes, i18n keys, labels, toast copy, projection, helpers, diagnostics)
+  PinButtonSource.kt      86 lines  (seam interface + PinnedStore production binding)
+  PinButtonViewModel.kt  129 lines  (BaseFeedViewModel holder: state + toggling + toggle/retry/onViewOpened)
+
+### result ###
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
