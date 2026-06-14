@@ -1,0 +1,143 @@
+=== p2-windows - W7 - page:system/Chatbot (WinUI 3 / Fluent) ===
+Parity unit : page:system/Chatbot   kind=page   web route=/chatbot
+Web source  : web/src/features/system/pages/ChatbotPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) - NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  HelpPage / QuickStatsPage / AlertRulesPage. The generated prompt's idealized
+  "TeslaSync/Features/System/ChatbotPage.xaml + ChatbotPageViewModel.cs" is mapped onto these real conventions;
+  "ObservableObject ViewModel" is satisfied by the established INotifyPropertyChanged state holder every sibling
+  page uses. The namespace is TeslaSync.App.FeatureViews.SystemOps (NOT ...System - a `.System` sub-namespace
+  shadows the global System namespace; SystemOps also aligns with RouteGroup.SystemOps, the manifest's system/
+  group, matching HelpPage).
+- Navigation entry: RouteTable.cs ALREADY maps Page("Chatbot","chatbot",RouteGroup.SystemOps,"Chatbot","\uE8BD")
+  (the web /chatbot route, shown in nav). The only shell wiring needed was the page-factory registration in
+  ShellWindow.xaml.cs: PageFactory.Register(ChatbotRegistration.RouteName, () => new ChatbotPage()). No
+  RouteTable edit was required.
+- Data binding (ADR-004): the manifest declares FIVE data sources - useChatSessions, useChatHistory,
+  useSendChatMessage, useRenameChatSession, useDeleteChatSession. They are bound through one IChatbotFeed port
+  (ChatbotPage.Source.cs): FetchSessionsAsync (GET /chatbot/sessions), FetchHistoryAsync (GET
+  /chatbot/history?session_id=), SendMessageAsync (POST /chatbot/), RenameSessionAsync (PATCH
+  /chatbot/sessions/{id}) and DeleteSessionAsync (DELETE /chatbot/sessions/{id}). The default EmptyChatbotFeed
+  resolves to the empty welcome (the shell ctor); the generated-client-backed ChatbotClientFeed binds the five
+  generated operation ids (post_api_v1_chatbot, get_api_v1_chatbot_history, get_api_v1_chatbot_sessions,
+  patch_api_v1_chatbot_sessions_id, delete_api_v1_chatbot_sessions_id) - all asserted to resolve against the
+  generated TeslaSync.Windows.Generated.Api.ApiEndpoints table by the test
+  Every_chatbot_operation_resolves_against_the_generated_table. The history GET's session_id query param appends
+  cleanly because the descriptor declares no query params (GeneratedApiClient.BuildQuery passes it through). The
+  ChatbotPageViewModel (P1/S8 seam) owns the sessions, the active conversation, the composer draft, the sidebar
+  visibility and the conversation state; the view never performs HTTP. The shared ChatMessageItem / SuggestedPrompts
+  / AIThinkingDots W3 surfaces are reused, not re-cloned.
+- Three data states (manifest: loading / empty / success) + a defensive Error branch (ADR-011): the conversation
+  panel (GlassPanel1) renders loading (a TsSkeleton bubble column while the sessions/history read is in flight),
+  empty (web messages.length === 0 -> the Helix mark + "How can Helix help you?" + "Ask about your vehicles,
+  drives, charging, and more" + the SuggestedPrompts chip strip), success (the message list, each row a shared
+  ChatMessageItem) and the honest Error surface (a TsQueryError + Retry, never a blank box). The composer and the
+  conversation panel are ALWAYS visible.
+- Panels (ADR-005): GlassPanel1 = the conversation TsGlassPanel (Mica/glass via the W1 surface tokens) hosting the
+  loading/empty/success/error body plus the composer (web ChatbotPage.tsx main `<GlassPanel className="flex
+  flex-col flex-1 ...">`); GlassPanel2 = the thinking-indicator TsGlassPanel hosting the in-button AIThinkingDots
+  ("Helix is thinking..."), shown while IsSending (web ChatbotPage.tsx `<GlassPanel className="!p-3 ...">`). No
+  hardcoded colours/typography - DisplayTokens (TsColor*/TsRadius* + the cyan accent token) drive light/dark/
+  high-contrast from W1.
+- Charts/maps: none declared (none built). Live/SSE: the five declared data sources are REST reads/writes, none
+  is a live stream, so no >2-min staleness pill is owed (ADR-013 N/A; the AI-on SSE path useAiStream is a
+  separate withAiFeature surface, not one of this page's manifest data sources).
+- i18n (ADR-014): every visible literal resolves through the ILocalizer facade with the web key names + English
+  defaults. The thirteen PARITY_REQUIRED keys (chatbot.title/subtitle/history/aria.conversation/inputLabel/
+  placeholder/actions.send/actions.stop/actions.stopHint/actions.stopStreaming/howCanIHelp/askAbout/thinking) are
+  already present verbatim in Strings/en/Resources.resw as translation.chatbot.* with the web English values (added
+  with the W3 chatbot components); no catalog edit was needed. The sidebar copy (newChat/noSessions/session.*/
+  aria.renameSession/aria.deleteSession/delete.*) is likewise routed through the localizer. The one irreducible
+  literal "chatbot.placeholder" (the web i18n key name) carries a `// parity:allow` marker in the Model + test
+  exactly as TsTextarea.cs does for the WinUI hint API - it is the web key, not a stub.
+- a11y (ADR-015): the conversation host is a Polite live region named chatbot.aria.conversation; the History
+  sidebar is a Navigation landmark; the composer, Send/Stop and every session row carry Narrator names; the Helix
+  mark / decorative icons are AccessibilityView.Raw; Enter sends / Shift+Enter inserts a newline (web keyboard
+  contract); the page exposes a Group automation peer; DisplayTokens drive light/dark + high-contrast.
+- Units: no unit-bearing fields on this surface (pure conversation text) - SI converters N/A.
+
+=== PARITY ===
+PARITY_REQUIRED=18
+
+# Panels (2) - the web GlassPanels reproduced as Fluent Mica/glass surfaces from W1 tokens
+[x] panel  - GlassPanel1 -> ChatbotPage.cs#_conversationPanel (TsGlassPanel hosting the conversation body
+             [loading skeleton / empty welcome / message list / error] + the composer); web ChatbotPage.tsx main
+             conversation <GlassPanel>; rendered by ChatbotPage.cs#BuildConversationPanel + RenderConversationState
+[x] panel  - GlassPanel2 -> ChatbotPage.cs#_thinkingPanel (TsGlassPanel hosting AIThinkingDots with the
+             chatbot.thinking label, Visibility bound to IsSending); web ChatbotPage.tsx thinking <GlassPanel>;
+             rendered by ChatbotPage.cs#BuildConversationPanel + Render (IsSending gate)
+
+# Data states (3 declared: loading / empty / success) + defensive Error - each a visible region, never blank
+[x] state  - loading -> ChatbotState.Loading (ChatbotPageViewModel default + LoadAsync SetState); rendered
+             ChatbotPage.cs#RenderConversationState (_loadingHost TsSkeleton column); test Default_state_is_loading
+[x] state  - empty   -> ChatbotState.Empty (ChatbotPageViewModel.DeriveContentState: messages.Count==0); rendered
+             _emptyHost (Helix mark + howCanIHelp + askAbout + SuggestedPrompts); test
+             Empty_feed_resolves_to_the_empty_conversation_state
+[x] state  - success -> ChatbotState.Success (messages present); rendered _messagesScroll (ChatMessageItem rows);
+             test Loaded_sessions_and_history_resolve_to_the_success_state (defensive Error branch:
+             A_failed_load_resolves_to_the_error_state + Retry_after_a_failure_recovers_to_a_content_state)
+
+# Strings (13) - every visible literal resolves from Strings/*.resw via ILocalizer with the web key names;
+#   tests Projection_resolves_every_required_string (RecordingLocalizer) + Projection_resolves_the_web_default_chrome
+[x] string - chatbot.actions.send         -> ChatbotDisplay.SendLabel (Send button) ; resw translation.chatbot.actions.send
+[x] string - chatbot.actions.stop         -> ChatbotDisplay.StopLabel (Stop button text) ; resw translation.chatbot.actions.stop
+[x] string - chatbot.actions.stopHint     -> ChatbotDisplay.StopHint (Stop button tooltip) ; resw translation.chatbot.actions.stopHint
+[x] string - chatbot.actions.stopStreaming-> ChatbotDisplay.StopStreamingLabel (Stop button Narrator name) ; resw translation.chatbot.actions.stopStreaming
+[x] string - chatbot.aria.conversation    -> ChatbotDisplay.ConversationLabel (conversation log Narrator name) ; resw translation.chatbot.aria.conversation
+[x] string - chatbot.askAbout             -> ChatbotDisplay.AskAbout (empty-welcome subtext) ; resw translation.chatbot.askAbout
+[x] string - chatbot.history              -> ChatbotDisplay.HistoryLabel (header History toggle) ; resw translation.chatbot.history
+[x] string - chatbot.howCanIHelp          -> ChatbotDisplay.HowCanIHelp (empty-welcome heading) ; resw translation.chatbot.howCanIHelp
+[x] string - chatbot.inputLabel           -> ChatbotDisplay.InputLabel (composer label / Narrator name) ; resw translation.chatbot.inputLabel
+[x] string - chatbot.placeholder          -> ChatbotDisplay.InputHint (composer hint, InputHintKey="chatbot.placeholder") ; resw translation.chatbot.placeholder
+[x] string - chatbot.subtitle             -> ChatbotDisplay.Subtitle (header subtitle) ; resw translation.chatbot.subtitle
+[x] string - chatbot.thinking             -> ChatbotDisplay.Thinking (AIThinkingDots label, GlassPanel2) ; resw translation.chatbot.thinking
+[x] string - chatbot.title                -> ChatbotDisplay.Title + DocumentTitle (header + window title) ; resw translation.chatbot.title
+
+PARITY_COVERED=18
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/ChatbotPageTests.cs, 26 tests, all passing):
+# Projection_resolves_every_required_string records the 13 keys through a RecordingLocalizer
+# (Manifest_requires_thirteen_distinct_strings pins the count at 13 distinct + equal to ChatbotRegistration.
+# RequiredStringKeys); Projection_resolves_the_web_default_chrome asserts the web English defaults for all 13;
+# the three data states are asserted by Default_state_is_loading, Empty_feed_resolves_to_the_empty_conversation_state
+# and Loaded_sessions_and_history_resolve_to_the_success_state (+ error/retry, new-session, history-toggle); the
+# five bound data sources by Sending_a_message_binds_send_then_refreshes_sessions, Renaming_binds_rename_then_
+# refreshes_sessions, Deleting_the_active_session_binds_delete_and_resets_the_conversation and the session/history
+# load tests; the session + message projections, the tolerant wire parsers (ParseList / ParseMessages /
+# ParseSendResult) and the PII-safe Diagnostics (view.opened slug=ChatbotPage) complete it. The two GlassPanels
+# are view symbols (ChatbotPage.cs#_conversationPanel / #_thinkingPanel) exercised by the app build (the WinUI
+# view is not headless-testable; its per-region content is driven by the asserted ChatbotDisplay projection).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/ChatbotPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+#   + the ChatbotPageTests.cs test file. The single allowed marker per scan is the web i18n key "chatbot.placeholder".
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s), 0 Warning(s) from the ChatbotPage / ShellWindow
+#   changes (CA1859 elevated-to-error and the DispatcherQueue ambiguity were both fixed; the 17 pre-existing CA*
+#   warnings in TeslaSync.App.Core are unaffected and do not surface in the App project build).
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <ChatbotPage dir + ShellWindow + tests>
+#   (all files LF / utf-8 no-BOM after normalization)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30407, Failed: 0, Skipped: 0
+#   (incl. 26 ChatbotPageTests + NavigationTests with the pre-existing Chatbot route)
+TEST_EXIT=0
+PARITY_COVERED=18
+PARITY_REQUIRED=18
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/ChatbotPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/ChatbotPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-ChatbotPage.log
+# git commit -m "feat(apps/windows): ChatbotPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
