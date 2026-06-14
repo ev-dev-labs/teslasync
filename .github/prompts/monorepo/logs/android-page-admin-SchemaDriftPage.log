@@ -1,0 +1,124 @@
+================================================================================
+P3-ANDROID A7 — page:admin/SchemaDrift  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/SchemaDriftPage.tsx
+promptId: p3-android/pages/admin/SchemaDriftPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : Android Studio jbr (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPage.kt          (@Composable screen: SchemaDriftPage + SchemaDriftPageContent)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPageSource.kt    (S8 data seam over OperatorConfidenceStore.schemaDrift())
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPageModel.kt     (framework-free model: isDrifted/isEmptyDrift, formatDelta/formatCount, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPageIcons.kt     (Fingerprint / AlertTriangle / CheckCircle2 glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SchemaDriftPageHost.kt      (PageHosts.register(adminSchemaDrift){ SchemaDriftRoute() })
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt        (NavHost wiring: + operatorConfidenceStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt      (NavHost wiring: + SchemaDriftPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                 (+22 page keys)
+apps/android/app/src/main/res/values-ar/strings.xml                              (+22 page keys, EN fallback per existing admin pattern)
+apps/android/app/src/main/res/values-he/strings.xml                              (+22 page keys, EN fallback per existing admin pattern)
+apps/parity/android-ledger.json                                                  (ledger row page:admin/SchemaDrift 32/32)
+.github/prompts/monorepo/logs/android-page-admin-SchemaDriftPage.log             (this log)
+
+Data   : single read — SchemaDriftPageViewModel binds shared S8 OperatorConfidenceStore.schemaDrift()
+         (web useSchemaDrift ▸ GET /admin/observability/schema-drift) via asSchemaDriftSource(); no HTTP in the view.
+         HTTP 503 SUBSYSTEM_NOT_CONFIGURED preserved through UiState.httpStatus -> subsystem-unavailable banner.
+Strings: 22 page keys added to res/values/strings.xml (+ values-ar / values-he); web key names preserved
+         (admin.schemaDrift.* -> translation_admin_schemaDrift_* ; admin.subsystem.unavailableTitle -> translation_admin_subsystem_unavailableTitle).
+Nav    : Destinations 'adminSchemaDrift' -> /admin/schema-drift pre-existing (count unchanged); host wired via
+         PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 5m 46s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 12m 4s (0 errors)
+  # first pass surfaced 1 error NonObservableLocale (SchemaDriftPage.kt Locale.getDefault() fallback in a
+  # composable); fixed by using Locale.ROOT as the fallback (the FeedbackQueuePage precedent). Re-run: 0 errors.
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 32s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=32
+--------------------------------------------------------------------------------
+# panels (6) — Material 3 GlassPanel / Card (Surface) ; bound state holder = SchemaDriftPageViewModel.state
+[COVERED] panel  GlassPanel1   -> SchemaDriftPage.kt:171 DriftSummary() -> :262 GlassPanel(PanelPadding.Md){ status badge + 3 Δ StatCards }  (web DriftSummary <GlassPanel> "Drift status")
+[COVERED] panel  GlassPanel2   -> SchemaDriftPage.kt:176 SectionErrorBoundary{ DriftDetails() } -> :352 GlassPanel(PanelPadding.Md){ Current + Expected FingerprintCard }  (web DriftDetails <GlassPanel> "Fingerprints")
+[COVERED] panel  Tables        -> SchemaDriftPage.kt:410 FingerprintStat(label=translation_admin_schemaDrift_tables, value=tableCount)  (web FingerprintStat "Tables")
+[COVERED] panel  Columns       -> SchemaDriftPage.kt:416 FingerprintStat(label=translation_admin_schemaDrift_columns, value=columnCount)  (web FingerprintStat "Columns")
+[COVERED] panel  Indexes       -> SchemaDriftPage.kt:422 FingerprintStat(label=translation_admin_schemaDrift_indexes, value=indexCount)  (web FingerprintStat "Indexes")
+[COVERED] panel  GlassPanel6   -> SchemaDriftPage.kt:182 GlassPanel(PanelPadding.Md){ SchemaDriftEmptyState() }  (web no-fingerprint <GlassPanel><EmptyState/>)
+# (+ web 503 subsystem-unavailable banner reproduced: SchemaDriftPage.kt:160 SubsystemUnavailableBanner() AlertBanner(Tone.Warning))
+
+# data states (4 required) — bound to SchemaDriftPageViewModel.state : StateFlow<UiState<SchemaDriftResponse>>
+[COVERED] state  loading       -> SchemaDriftPage.kt:164 state.isLoading -> LoadingState() Spinner ; SchemaDriftPageViewModel.asUiState -> UiState.loading()
+[COVERED] state  empty         -> SchemaDriftPage.kt:182 SchemaDriftEmptyState() ; UiPhase.Empty via SchemaDriftPageModel.isEmptyDrift (no fingerprint computed)
+[COVERED] state  error         -> SchemaDriftPage.kt:166 state.isError -> :167 ErrorState(onRetry=actions.onRetry) ; SchemaDriftPageViewModel.retry()
+[COVERED] state  success       -> SchemaDriftPage.kt:169 data!=null && !isEmptyDrift -> :171 DriftSummary + :176 DriftDetails ; UiPhase.Content
+
+# strings (22) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string admin.schemaDrift.columnDelta        -> SchemaDriftPage.kt:294 StatCard(label=translation_admin_schemaDrift_columnDelta)
+[COVERED] string admin.schemaDrift.columnSub          -> SchemaDriftPage.kt:298 StatCard(sublabel=translation_admin_schemaDrift_columnSub, %1$s/%2$s)
+[COVERED] string admin.schemaDrift.columns            -> SchemaDriftPage.kt:416 FingerprintStat(label=translation_admin_schemaDrift_columns)
+[COVERED] string admin.schemaDrift.emptyMessage       -> SchemaDriftPage.kt:252 EmptyState(message=translation_admin_schemaDrift_emptyMessage)
+[COVERED] string admin.schemaDrift.emptyTitle         -> SchemaDriftPage.kt:254 EmptyState(title=translation_admin_schemaDrift_emptyTitle)
+[COVERED] string admin.schemaDrift.fingerprintCurrent -> SchemaDriftPage.kt:363 FingerprintCard(title=translation_admin_schemaDrift_fingerprintCurrent)
+[COVERED] string admin.schemaDrift.fingerprintExpected-> SchemaDriftPage.kt:374 FingerprintCard(title=translation_admin_schemaDrift_fingerprintExpected)
+[COVERED] string admin.schemaDrift.fingerprintTitle   -> SchemaDriftPage.kt:359 PanelTitle(translation_admin_schemaDrift_fingerprintTitle)
+[COVERED] string admin.schemaDrift.generatedAt        -> SchemaDriftPage.kt:431 Caption(translation_admin_schemaDrift_generatedAt, formatTimestamp(...))
+[COVERED] string admin.schemaDrift.indexDelta         -> SchemaDriftPage.kt:307 StatCard(label=translation_admin_schemaDrift_indexDelta)
+[COVERED] string admin.schemaDrift.indexSub           -> SchemaDriftPage.kt:311 StatCard(sublabel=translation_admin_schemaDrift_indexSub, %1$s/%2$s)
+[COVERED] string admin.schemaDrift.indexes            -> SchemaDriftPage.kt:422 FingerprintStat(label=translation_admin_schemaDrift_indexes)
+[COVERED] string admin.schemaDrift.notConfigured      -> SchemaDriftPage.kt:205 AlertBanner(message=translation_admin_schemaDrift_notConfigured)
+[COVERED] string admin.schemaDrift.pageTitle          -> SchemaDriftPage.kt:193 PageTitle(translation_admin_schemaDrift_pageTitle)
+[COVERED] string admin.schemaDrift.statusClean        -> SchemaDriftPage.kt:341 Badge(text=translation_admin_schemaDrift_statusClean)
+[COVERED] string admin.schemaDrift.statusDrifted      -> SchemaDriftPage.kt:339 Badge(text=translation_admin_schemaDrift_statusDrifted)
+[COVERED] string admin.schemaDrift.statusTitle        -> SchemaDriftPage.kt:274 PanelTitle(translation_admin_schemaDrift_statusTitle)
+[COVERED] string admin.schemaDrift.subtitle           -> SchemaDriftPage.kt:195 BodyText(translation_admin_schemaDrift_subtitle)
+[COVERED] string admin.schemaDrift.tableDelta         -> SchemaDriftPage.kt:281 StatCard(label=translation_admin_schemaDrift_tableDelta)
+[COVERED] string admin.schemaDrift.tableSub           -> SchemaDriftPage.kt:285 StatCard(sublabel=translation_admin_schemaDrift_tableSub, %1$s/%2$s)
+[COVERED] string admin.schemaDrift.tables             -> SchemaDriftPage.kt:410 FingerprintStat(label=translation_admin_schemaDrift_tables)
+[COVERED] string admin.subsystem.unavailableTitle     -> SchemaDriftPage.kt:207 AlertBanner(title=translation_admin_subsystem_unavailableTitle)
+
+PARITY_COVERED=32
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : SchemaDriftPageViewModel binds shared S8 OperatorConfidenceStore.schemaDrift() (web useSchemaDrift)
+               via asSchemaDriftSource(); typed SchemaDriftResponse round-trips; no HTTP in the view. The 503
+               SUBSYSTEM_NOT_CONFIGURED branch (web error.status===503) is carried through UiState.httpStatus.
+si/units     : schema-drift payload carries no unit-bearing fields (SHA fingerprints, integer roll-ups, signed
+               deltas, an ISO stamp) — round-trips verbatim, no SI conversion; locale grouping at the model
+               boundary (formatCount/formatDelta), the ISO stamp formatted at the render boundary.
+a11y/theme   : shared components supply semantics content descriptions, >=48dp targets (Material Button),
+               dynamic-color + dark theme via MaterialTheme (A2 tokens); status colors from TeslaTokens.status;
+               Compose-native (no webview).
+nav          : Destinations 'adminSchemaDrift' -> /admin/schema-drift (pre-existing) wired to SchemaDriftRoute()
+               via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(32) == PARITY_REQUIRED(32)
+[PASS] all android triad gates green; parity 32/32; android ledger row page:admin/SchemaDrift status=done.
+EXIT=0
+STATUS=DONE

@@ -15,6 +15,7 @@ import io.teslasync.shared.core.data.repo.HttpAdminRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
 import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
+import io.teslasync.shared.core.data.repo.HttpOperatorConfidenceRepository
 import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
@@ -24,6 +25,7 @@ import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
 import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
+import io.teslasync.shared.core.presentation.operatorconfidence.OperatorConfidenceStore
 import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
 import io.teslasync.shared.core.presentation.vehicles.VehiclesStore
@@ -69,6 +71,7 @@ class DataContainer(
     private val adminRepository = HttpAdminRepository(api, cacheStore, clock)
     private val feedbackRepository = HttpFeedbackRepository(api, cacheStore, clock)
     private val ingestXRayRepository = HttpIngestXRayRepository(api, cacheStore, clock)
+    private val operatorConfidenceRepository = HttpOperatorConfidenceRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -107,6 +110,13 @@ class DataContainer(
      * diagnostic feed (`/system/ingest-xray/{id}`) the A7 IngestXRayPage admin surface binds to.
      */
     val ingestXRayStore = IngestXRayStore(ingestXRayRepository, scope)
+
+    /**
+     * Shared Operator-Confidence control-plane state holder (web `useOperatorConfidence` port) — the memoized,
+     * multi-observer admin-observability feeds (`/admin/observability/schema-drift`, …) the A7 SchemaDriftPage
+     * admin surface binds to.
+     */
+    val operatorConfidenceStore = OperatorConfidenceStore(operatorConfidenceRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->
