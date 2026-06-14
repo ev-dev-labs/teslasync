@@ -1,0 +1,21 @@
+/*
+  Typography.strings
+  TeslaSync — P4 shared surface · 0232 · Typography (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web `components/ui/Typography.tsx` is an
+  anonymous presentational primitive — its text is a caller-supplied, already-localized prop and it calls no
+  `t()` — so there are NO web keys to mirror here. The only entries below are the native a11y additions: the
+  "never a blank box" empty leaf (shown when a host passes empty text), with its title and supporting line.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("Typography") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the labels deterministic.
+*/
+
+/* --- Native a11y additions (no web `t()` key exists; the source is anonymous) --- */
+
+/* Title of the empty leaf, shown when a host passes empty text so the surface never renders a bare box. */
+"typography.empty.title" = "Nothing to display";
+
+/* Supporting line of the empty leaf. */
+"typography.empty.message" = "Text appears here when it becomes available.";
