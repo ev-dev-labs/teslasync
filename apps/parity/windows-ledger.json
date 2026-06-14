@@ -304,5 +304,14 @@
     "requiredCount": 77,
     "promptId": "p2-windows/W7/windows-page-driving-DrivesListPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-DrivesListPage.log"
+  },
+  {
+    "unitId": "page:system/SystemStatus",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 82,
+    "requiredCount": 82,
+    "promptId": "p2-windows/W7/windows-page-system-SystemStatusPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-SystemStatusPage.log"
   }
 ]
