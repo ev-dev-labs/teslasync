@@ -838,3 +838,4 @@ p3-android/dashboard-widgets/A-0115-WeatherAtCarWidget.prompt.md
 p3-android/feature-views/A-0002-BackendTool.prompt.md
 p3-android/feature-views/A-0011-Base64Tool.prompt.md
 p3-android/feature-views/A-0093-SummaryStatsGrid.prompt.md
+p3-android/feature-views/A-0005-FleetTelemetryHealth.prompt.md
