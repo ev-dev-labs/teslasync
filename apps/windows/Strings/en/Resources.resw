@@ -202,6 +202,18 @@
   <data name="translation.Daily Distance" xml:space="preserve">
     <value>Daily Distance</value>
   </data>
+  <data name="translation.Distance per Drive" xml:space="preserve">
+    <value>Distance per Drive</value>
+  </data>
+  <data name="translation.Monthly Summary" xml:space="preserve">
+    <value>Monthly Summary</value>
+  </data>
+  <data name="translation.No Entries" xml:space="preserve">
+    <value>No Entries</value>
+  </data>
+  <data name="translation.Odometer Over Time" xml:space="preserve">
+    <value>Odometer Over Time</value>
+  </data>
   <data name="translation.Daily Efficiency" xml:space="preserve">
     <value>Daily Efficiency</value>
   </data>

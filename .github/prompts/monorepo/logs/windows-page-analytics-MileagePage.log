@@ -1,0 +1,94 @@
+================================================================================
+ p2-windows · W7 · page:analytics/Mileage — WinUI 3 / Fluent parity port
+================================================================================
+Artifact     : page:analytics/Mileage
+Web source   : web/src/features/analytics/pages/MileagePage.tsx  (route /mileage)
+Output       : apps/windows/TeslaSync.App/feature-views/MileagePage/
+                 MileagePage.Model.cs      (models · projection · registration · diagnostics · feed)
+                 MileagePage.Source.cs     (generated-client feed — 3 reads)
+                 MileagePage.ViewModel.cs  (ObservableObject state holder · LoadAsync/RefreshAsync)
+                 MileagePage.cs            (WinUI 3 UserControl view — thin renderer)
+Nav register : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs
+                 PageFactory.Register("Mileage", () => new FeatureViews.Analytics.MileagePage())
+                 (RouteTable already maps "/mileage" -> "Mileage", RouteGroup.Analytics)
+Operations   : apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs -> Operations.Mileage
+                 Stats=get_api_v1_mileage_stats · Daily=get_api_v1_mileage_daily · Monthly=get_api_v1_mileage_monthly
+                 (all resolve in Generated/Api/ApiEndpoints.cs; OperationsResolveTests asserts this)
+Strings      : apps/windows/Strings/{en,ar,he}/Resources.resw
+                 added translation.{Distance per Drive, Monthly Summary, No Entries, Odometer Over Time}
+                 (the other 12 keys already present)
+Tests        : apps/windows/TeslaSync.App.Tests/FeatureViews/MileagePageTests.cs
+                 logic linked via TeslaSync.App.Tests.csproj <Compile Include> (Model/Source/ViewModel)
+
+NOTE: the real solution layout is apps/windows/TeslaSync.App/feature-views/** (C# markup,
+4-file Model/Source/ViewModel/View group), not the prompt's idealized
+apps/windows/TeslaSync/Features/Analytics/*.xaml. Implemented to match the live codebase
+convention (sibling: feature-views/RegenEfficiencyPage, feature-views/EfficiencyPage).
+
+Data sources (bound through MileagePageViewModel -> IMileageFeed -> MileageClientFeed):
+  useMileageStats   -> GET /mileage/stats  [vehicle_id]          (primary; failure => error surface)
+  useDailyMileage   -> GET /mileage/daily  [vehicle_id, days=90] (best-effort; envelope .days)
+  useMonthlyMileage -> GET /mileage/monthly[vehicle_id]          (best-effort; envelope .months)
+Wire distances are kilometres; converted to the display unit only at the render boundary via
+MileageProjection.FromKm (UnitConverters.DistanceFromSi(km*1000, units.Distance)) — SI-canonical.
+
+=== PARITY ===
+PARITY_REQUIRED=29
+
+-- panels (7) ------------------------------------------------------------------
+[COVERED] panel  Total-Distance     -> Model.cs MileageProjection.BuildMetricCards card[0] (s.TotalDistance "mileage.totalDistance"); view MileagePage.cs BuildMetricCards -> TsMetricCard (AccentBrushKey TsColorAccentBrush)
+[COVERED] panel  Total-Drives       -> Model.cs MileageProjection.BuildMetricCards card[1] (s.TotalDrives "mileage.totalDrives"); view BuildMetricCards -> TsMetricCard (TsColorSuccessBrush)
+[COVERED] panel  Daily-Avg-30d      -> Model.cs MileageProjection.BuildMetricCards card[2] (s.DailyAvg "mileage.dailyAvg", last_30d_km/30); view BuildMetricCards -> TsMetricCard (TsColorInfoBrush)
+[COVERED] panel  Annual-Projection  -> Model.cs MileageProjection.BuildMetricCards card[3] (s.AnnualProjection "mileage.annualProjection", dailyAvg*365); view BuildMetricCards -> TsMetricCard (TsColorAccentBrush)
+[COVERED] panel  GlassPanel5        -> Model.cs MileageProjection.BuildCharts OdometerChart (s.OdometerOverTime); view MileagePage.cs BuildChart(display.OdometerChart, Area) -> TsChartContainer (GlassPanel)
+[COVERED] panel  GlassPanel6        -> Model.cs MileageProjection.BuildCharts DailyChart (s.DailyDistance); view BuildChart(display.DailyChart, Bar) -> TsChartContainer (GlassPanel)
+[COVERED] panel  GlassPanel7        -> Model.cs MileageProjection.BuildTable (s.MonthlySummary); view MileagePage.cs BuildMonthlyTable -> TsGlassPanel + TsDataTable
+
+-- charts (2) ------------------------------------------------------------------
+[COVERED] chart  AreaChart          -> view MileagePage.cs BuildChart kind=ChartSeriesKind.Area -> new TsAreaChart() bound to OdometerChart.Points (odometer over time); test Odometer_chart_skips_days_with_a_null_final_odometer
+[COVERED] chart  BarChart           -> view MileagePage.cs BuildChart kind=ChartSeriesKind.Bar -> new TsBarChart() bound to DailyChart.Points (daily distance); test Daily_chart_includes_every_day_and_converts_distance
+
+-- data states (4) -------------------------------------------------------------
+[COVERED] state  loading            -> Model.cs MileageProjection.Project => MileageState.Loading; view _loadingSkeleton (TsSkeleton shimmer); test State_loading_when_stats_query_in_flight
+[COVERED] state  empty              -> Project => MileageState.Empty; view _emptyState (TsEmptyState, s.NoEntries); test State_empty_when_resolved_with_no_stats_object
+[COVERED] state  error              -> Project => MileageState.Error; view _errorState (TsQueryError + RetryLabel "common.retry"); test State_error_when_stats_query_failed
+[COVERED] state  success            -> Project => MileageState.Success; view _contentHost = BuildContent(...); test State_success_when_stats_present
+
+-- strings (16) — MileageStrings.Resolve (Model.cs) + Strings/{en,ar,he}/Resources.resw --
+[COVERED] string  Daily Distance            -> s.DailyDistance      GetString("Daily Distance")
+[COVERED] string  Distance                  -> s.Distance           GetString("Distance")
+[COVERED] string  Distance per Drive        -> s.DistancePerDrive   GetString("Distance per Drive")
+[COVERED] string  Drives                    -> s.Drives             GetString("Drives")
+[COVERED] string  Month                     -> s.Month              GetString("Month")
+[COVERED] string  Monthly Summary           -> s.MonthlySummary     GetString("Monthly Summary")
+[COVERED] string  No Entries                -> s.NoEntries          GetString("No Entries")
+[COVERED] string  Odometer                  -> s.Odometer           GetString("Odometer")
+[COVERED] string  Odometer Over Time        -> s.OdometerOverTime   GetString("Odometer Over Time")
+[COVERED] string  error.loadFailed          -> s.LoadFailed         GetString("error.loadFailed","Failed to load data")
+[COVERED] string  mileage.annualProjection  -> s.AnnualProjection   GetString("mileage.annualProjection","Annual Projection")
+[COVERED] string  mileage.dailyAvg          -> s.DailyAvg           GetString("mileage.dailyAvg","Daily Avg (30d)")
+[COVERED] string  mileage.subtitle          -> s.Subtitle           GetString("mileage.subtitle","Daily and monthly distance tracking")
+[COVERED] string  mileage.title             -> s.Title              GetString("mileage.title","Mileage")
+[COVERED] string  mileage.totalDistance     -> s.TotalDistance      GetString("mileage.totalDistance","Total Distance")
+[COVERED] string  mileage.totalDrives       -> s.TotalDrives        GetString("mileage.totalDrives","Total Drives")
+
+PARITY_COVERED=29
+PARITY_OK=true   (PARITY_COVERED == PARITY_REQUIRED == 29)
+
+=== GATE ===
+# placeholder scan (ADR-011): apps/windows/TeslaSync.App/feature-views/MileagePage
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s), 17 pre-existing Core warnings
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests (full unit suite) -> Passed: 29607, Failed: 0
+#   includes MileagePageTests (all green) + OperationsResolveTests (covers Operations.Mileage.*)
+TEST_EXIT=0
+
+ledger: apps/parity/windows-ledger.json row page:analytics/Mileage -> status=done, covered=29, required=29
+
+EXIT=0
+STATUS=DONE

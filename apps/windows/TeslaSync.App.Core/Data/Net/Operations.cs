@@ -33,6 +33,14 @@ public static class Operations
         public const string Stats = "get_api_v1_drives_stats";
     }
 
+    /// <summary>Mileage rollups (lifetime/windowed stats, per-day buckets, per-month buckets).</summary>
+    public static class Mileage
+    {
+        public const string Stats = "get_api_v1_mileage_stats";
+        public const string Daily = "get_api_v1_mileage_daily";
+        public const string Monthly = "get_api_v1_mileage_monthly";
+    }
+
     /// <summary>Trip rollups.</summary>
     public static class Trips
     {
