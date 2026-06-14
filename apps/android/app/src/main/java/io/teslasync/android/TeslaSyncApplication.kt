@@ -2,6 +2,7 @@ package io.teslasync.android
 
 import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
+import io.teslasync.android.admin.apilogs.ApiLogsPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -43,6 +44,8 @@ class TeslaSyncApplication : Application() {
         // shortcuts (P3/A8). Both are idempotent; publishing on every start keeps the shortcut set
         // fresh (e.g. after a per-app language change re-localizes the labels).
         SettingsPageHost.register()
+        // Register the native API-logs admin screen for the /api-logs route (P3/A7). Idempotent.
+        ApiLogsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

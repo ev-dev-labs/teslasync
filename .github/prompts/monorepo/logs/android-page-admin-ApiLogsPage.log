@@ -1,0 +1,91 @@
+P3-ANDROID A7 — page:admin/ApiLogs — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/ApiLogsPage.tsx  (route /api-logs)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (ApiLogsPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.adminStore (S8 AdminStore), TeslaSyncApplication -> ApiLogsPageHost.register("apiLogs")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the P1/S2 generated API client
+(io.teslasync.shared.core.api.generated.*) was ABSENT from this branch, so the
+shared :core composite-build dependency did not compile (baseline RED, unrelated
+to this page). It was materialized via its own deterministic generator
+(apps/tools/codegen/gen-clients.ts, reading api/openapi/teslasync.openapi.json) —
+the documented workflow — NOT stubbed/bypassed. Shared :core then compiled green.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps
+':android' -> app/); the prompt snippet's ':app:' is the same module. Kotlin daemon
+heap raised to 6g via -Pkotlin.daemon.jvmargs (CLI only, no file edits) to clear a
+compiler GC-overhead OOM on this large module.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 34s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 34s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 32s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=43
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (ApiLogsPage.kt screen, ApiLogsPageViewModel.kt, ApiLogsPageModel.kt)
+
+# panels (9) — Material 3 Card/Surface (GlassPanel) / StatCard
+[COVERED] panel  GlassPanel1   -> ApiLogsPage.kt:ApiLogsFiltersPanel() GlassPanel(PanelPadding.Md)
+[COVERED] panel  Total-Calls   -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard(label=translation_apiLogs_totalCalls, icon=FileText)
+[COVERED] panel  Error-Rate    -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard(label=translation_apiLogs_errorRate, trend=errorRateTrend)
+[COVERED] panel  Avg-Duration  -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard(label=translation_apiLogs_avgDuration, icon=Clock)
+[COVERED] panel  Last-24h      -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard(label=translation_apiLogs_last24h, icon=Activity)
+[COVERED] panel  GlassPanel6   -> ApiLogsPage.kt:ApiLogsTablePanel() GlassPanel(PanelPadding.None)
+[COVERED] panel  GlassPanel7   -> ApiLogsPage.kt:RequestUrlPanel() GlassPanel(PanelPadding.Sm)
+[COVERED] panel  GlassPanel8   -> ApiLogsPage.kt:RequestBodyPanel()->JsonViewerPanel() GlassPanel(PanelPadding.Sm)
+[COVERED] panel  GlassPanel9   -> ApiLogsPage.kt:ResponseBodyPanel()->JsonViewerPanel() GlassPanel(PanelPadding.Sm)
+
+# data states (4) — bound to ApiLogsPageViewModel.state: StateFlow<UiState<ApiLogsData>>
+[COVERED] state  loading       -> ApiLogsPage.kt:ApiLogsLoadingState() (state.isLoading) + StatCard(loading=true)
+[COVERED] state  empty         -> ApiLogsPage.kt:ApiLogsEmptyState() (UiPhase.Empty / filtered-empty)
+[COVERED] state  error         -> ApiLogsPage.kt:ApiLogsErrorState()+AlertBanner (state.isError/hasError); ApiLogsPageViewModel.combineResources -> Resource.Error
+[COVERED] state  success       -> ApiLogsPage.kt:ApiLogRow() content branch; ApiLogsPageViewModel.state UiState.Content
+
+# strings (30) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string apiLogs.adjustFilters    -> ApiLogsPage.kt:ApiLogsEmptyState()
+[COVERED] string apiLogs.allMethods       -> ApiLogsPage.kt:methodOptions()/ApiLogsFiltersPanel() Select
+[COVERED] string apiLogs.allServices      -> ApiLogsPage.kt:ApiLogsFiltersPanel() service Select(emptyLabel)
+[COVERED] string apiLogs.allStatus        -> ApiLogsPage.kt:statusOptions()/ApiLogsFiltersPanel() Select
+[COVERED] string apiLogs.avgDuration      -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard
+[COVERED] string apiLogs.byService        -> ApiLogsPage.kt:ApiLogsByServiceChips()
+[COVERED] string apiLogs.clear            -> ApiLogsPage.kt:ApiLogsFiltersPanel() Clear Button
+[COVERED] string apiLogs.error            -> ApiLogsPage.kt:ErrorDetailPanel()
+[COVERED] string apiLogs.errorRate        -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard
+[COVERED] string apiLogs.exportJson       -> ApiLogsPage.kt:ApiLogsTablePanel() Export Button
+[COVERED] string apiLogs.filterEndpoint   -> ApiLogsPage.kt:ApiLogsFiltersPanel() Input(hint)
+[COVERED] string apiLogs.filters          -> ApiLogsPage.kt:ApiLogsFiltersPanel() header
+[COVERED] string apiLogs.last24h          -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard
+[COVERED] string apiLogs.loading          -> ApiLogsPage.kt:ApiLogsLoadingState() Spinner(label)
+[COVERED] string apiLogs.next             -> ApiLogsPage.kt:ApiLogsPaginationFooter() Next Button
+[COVERED] string apiLogs.noData           -> ApiLogsPage.kt:JsonViewerPanel()
+[COVERED] string apiLogs.noLogs           -> ApiLogsPage.kt:ApiLogsTablePanel() header
+[COVERED] string apiLogs.noLogsFound      -> ApiLogsPage.kt:ApiLogsEmptyState()
+[COVERED] string apiLogs.pageOf           -> ApiLogsPage.kt:ApiLogsPaginationFooter()
+[COVERED] string apiLogs.previous         -> ApiLogsPage.kt:ApiLogsPaginationFooter() Previous Button
+[COVERED] string apiLogs.requestBody      -> ApiLogsPage.kt:RequestBodyPanel()
+[COVERED] string apiLogs.requestUrl       -> ApiLogsPage.kt:RequestUrlPanel()
+[COVERED] string apiLogs.responseBody     -> ApiLogsPage.kt:ResponseBodyPanel()
+[COVERED] string apiLogs.serviceCount     -> ApiLogsPage.kt:ApiLogsFiltersPanel() HelperText
+[COVERED] string apiLogs.serviceFilterAria-> ApiLogsPage.kt:ApiLogsFiltersPanel() semantics{contentDescription}
+[COVERED] string apiLogs.showing          -> ApiLogsPage.kt:ApiLogsTablePanel() header
+[COVERED] string apiLogs.subtitle         -> ApiLogsPage.kt:ApiLogsHeader()
+[COVERED] string apiLogs.title            -> ApiLogsPage.kt:ApiLogsHeader() PageTitle
+[COVERED] string apiLogs.totalCalls       -> ApiLogsPage.kt:ApiLogsStatsSection() StatCard
+[COVERED] string error.loadFailed         -> ApiLogsPage.kt:ApiLogsPageContent() AlertBanner + ApiLogsErrorState()
+
+PARITY_COVERED=43
+
+=== SUMMARY ===
+data sources : ApiLogsPageViewModel binds shared S8 AdminStore.apiLogs(page) + apiLogStats() (raw JsonElement) via asApiLogsSource(); no HTTP in the view.
+nav          : Destinations 'apiLogs' -> /api-logs (pre-existing) wired to ApiLogsRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(43) == PARITY_REQUIRED(43)
+[PASS] all android triad gates green; parity 43/43; android ledger row page:admin/ApiLogs status=done.
+EXIT=0
+STATUS=DONE
