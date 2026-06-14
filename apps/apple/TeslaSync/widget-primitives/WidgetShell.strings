@@ -1,0 +1,54 @@
+/*
+  WidgetShell.strings
+  TeslaSync — P4 widget primitive · 0013 · WidgetShell (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `WidgetShell` primitive
+  resolves (table "WidgetShell") lives here with its web `t(key, default)` English value. These entries
+  fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without editing the shared
+  catalog (parallel-unsafe across concurrent slots).
+
+  The web `WidgetShell` (features/dashboard/widgets/WidgetShell.tsx) is anonymous — it extracts no
+  i18n keys of its own. The strings below are the keys of the chrome it composes:
+    • DataFreshness (web @/components/data-display) — the freshness chip,
+    • HelpTooltip   (web @/components/ui)           — the "?" affordance,
+    • PinButton     (web @/components/ui)           — the pin toggle,
+    • QueryError    (web @/components/feedback)     — the error state.
+  i18next `{{m}}m ago` interpolation is expressed as a positional `%lld` format specifier for native
+  `String(format:)`.
+*/
+
+/* --- Data freshness chip (web `DataFreshness` / `formatRelativeTime`) --- */
+"freshness.justNow" = "just now";
+"freshness.minutes" = "%lldm ago";
+"freshness.hours" = "%lldh ago";
+"freshness.days" = "%lldd ago";
+"freshness.weeks" = "%lldw ago";
+"freshness.updating" = "updating…";
+"freshness.error" = "error";
+"freshness.refresh" = "Refresh";
+"freshness.lastUpdated" = "Last updated: %@";
+"freshness.neverUpdated" = "Never updated";
+"freshness.updatingTooltip" = "Updating…";
+
+/* Spoken status words for the `a11y.dataFreshness` label (web embeds the raw status string). */
+"freshness.status.fresh" = "fresh";
+"freshness.status.fetching" = "fetching";
+"freshness.status.stale" = "stale";
+"freshness.status.error" = "error";
+
+/* Non-interactive chip VoiceOver label (web `a11y.dataFreshness` = 'Data freshness: {{state}}'). */
+"a11y.dataFreshness" = "Data freshness: %@";
+
+/* --- Contextual help (web `HelpTooltip`) --- */
+"widget.shell.help.ariaLabel" = "More info about %@";
+"common.learnMore" = "Learn more";
+
+/* --- Pin toggle (web `PinButton`) --- */
+"pin.pin" = "Pin";
+"pin.unpin" = "Unpin";
+
+/* --- Error state (web `QueryError` network/unknown branch) --- */
+"error.queryTitle" = "Can't reach server";
+"error.queryMessage" = "We couldn't load this data. Check your connection and try again.";
+"action.retry" = "Retry";
