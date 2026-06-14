@@ -1,0 +1,167 @@
+p2-windows · W7 · page:battery/BatteryCells — native WinUI 3 / Fluent parity port
+================================================================================
+Web source : web/src/features/battery/pages/BatteryCellsPage.tsx  (route /battery-cells)
+Output     : apps/windows/TeslaSync.App/feature-views/BatteryCellsPage/
+               BatteryCellsPage.cs          (WinUI 3 UserControl view, C# markup)
+               BatteryCellsPage.Model.cs    (records + JSON readers + projection + registration + diagnostics)
+               BatteryCellsPage.Source.cs   (IBatteryCellsFeed + generated-client feed)
+               BatteryCellsPage.ViewModel.cs(ObservableObject-equivalent INotifyPropertyChanged holder)
+Nav        : Shell/ShellWindow.xaml.cs → PageFactory.Register("BatteryCells", … BatteryCellsPage())
+             route already in Core/Navigation/RouteTable.cs:270 Page("BatteryCells","battery-cells",…)
+Strings    : apps/windows/Strings/en/Resources.resw (battery.cells.* keys already present; resw NOT hand-edited)
+Data src   : GET /analytics/battery-cells?vehicle_id=  (Operations.Analytics.BatteryCells =
+             get_api_v1_analytics_battery_cells; ApiEndpoints.cs:137; via IApiClient, ADR-004)
+
+PATH RECONCILIATION (no silent drift): the generated prompt's templated output path
+apps/windows/TeslaSync/Features/Battery/BatteryCellsPage.xaml is a generator drift artifact —
+the real WinUI app is TeslaSync.App and every W7 page is a code-only UserControl quartet under
+feature-views/<Page>/ (NOT XAML). Followed the 6 completed W7 pages' structure exactly
+(BatteryDegradationPage is the closest analog). No XAML page is produced because the app uses C#
+markup; the ".xaml + ViewModel.cs" wording in the artifact header is satisfied by the
+BatteryCellsPage.cs view + BatteryCellsPage.ViewModel.cs holder.
+
+=== PARITY ===
+PARITY_REQUIRED=110
+
+-- panels (27) — every web region reproduced as a Fluent Card/Mica/MetricCard region ----------------
+[x] panel GlassPanel1          → BatteryCellsPage.cs BuildContent→BuildSummary (summary metric grid, TsFadeIn)
+[x] panel Total-Cells          → Model BuildSummaryMetrics[0] → BatteryCellsPage.cs BuildSummary TsMetricCard
+[x] panel Avg-Voltage          → Model BuildSummaryMetrics[1] → TsMetricCard
+[x] panel Min-Cell             → Model BuildSummaryMetrics[2] (Aggregate min cell) → TsMetricCard
+[x] panel Max-Cell             → Model BuildSummaryMetrics[3] (Aggregate max cell) → TsMetricCard
+[x] panel Imbalance            → Model BuildSummaryMetrics[4] (threshold accent) → TsMetricCard
+[x] panel Pack-Voltage         → Model BuildSummaryMetrics[5] → TsMetricCard
+[x] panel GlassPanel8          → BatteryCellsPage.cs BuildHeatmap (TsGlassPanel + Bar/Grid TsButton toggle + tiles + legend)
+[x] panel GlassPanel9          → BatteryCellsPage.cs ChartPanel(display.BarChart) (TsGlassPanel)
+[x] panel GlassPanel10         → BatteryCellsPage.cs ChartPanel(display.Distribution) (TsGlassPanel)
+[x] panel GlassPanel11         → BatteryCellsPage.cs ChartPanel(display.ImbalanceTrend) (TsGlassPanel)
+[x] panel GlassPanel12         → BatteryCellsPage.cs ChartPanel(display.OverTime) (TsGlassPanel)
+[x] panel GlassPanel13         → BatteryCellsPage.cs BuildTable (TsGlassPanel + TsDataTable + count TsBadge)
+[x] panel Voltage-Spread-Trend → BatteryCellsPage.cs BuildSpreadTrend (TsChartContainer, AccessibleSummary)
+[x] panel GlassPanel15         → BatteryCellsPage.cs BuildTemperature (TsGlassPanel + TitleRow)
+[x] panel Avg-Temperature      → Model BuildTemperatureMetrics[0] (UnitFormatters.FormatTemperature) → TsMetricCard
+[x] panel Min-Temperature      → Model BuildTemperatureMetrics[1] → TsMetricCard
+[x] panel Max-Temperature      → Model BuildTemperatureMetrics[2] → TsMetricCard
+[x] panel Temp-Spread          → Model BuildTemperatureMetrics[3] (TempDelta, °F scaling) → TsMetricCard
+[x] panel GlassPanel20         → BatteryCellsPage.cs BuildRecommendations (TsGlassPanel + TitleRow)
+[x] panel GlassPanel21         → BatteryCellsPage.cs BuildInsightCard (insight Card, status-tinted) Insights[*]
+[x] panel GlassPanel22         → BatteryCellsPage.cs BuildSummaryStats panel[0] StatTotalCells (TsGlassPanel)
+[x] panel GlassPanel23         → BatteryCellsPage.cs BuildSummaryStats panel[1] StatPackVoltage
+[x] panel GlassPanel24         → BatteryCellsPage.cs BuildSummaryStats panel[2] StatAvgVoltage
+[x] panel GlassPanel25         → BatteryCellsPage.cs BuildSummaryStats panel[3] StatVoltageSpread
+[x] panel GlassPanel26         → BatteryCellsPage.cs BuildSummaryStats panel[4] StatTempSpread
+[x] panel GlassPanel27         → BatteryCellsPage.cs BuildSummaryStats panel[5] StatNormalCells
+
+-- charts (6) — native W3 wrappers (TsCartesianChart family), never a web canvas ------------------
+[x] chart BarChart        → Model BuildBarChart (ChartSeriesKind.Bar + avg/min/max ChartAnnotation) → NewChart→TsBarChart
+[x] chart BarChart        → Model BuildDistribution (Histogram() 6–12 buckets, Bar) → TsBarChart
+[x] chart LineChart       → Model BuildImbalanceTrend (Line + Nominal/Warning annotations) → NewChart→TsLineChart
+[x] chart LineChart       → Model BuildOverTime (3 Line series min/avg/max) → TsLineChart
+[x] chart ChartContainer  → BatteryCellsPage.cs BuildSpreadTrend → TsChartContainer (State Ready/Empty)
+[x] chart AreaChart       → BatteryCellsPage.cs NewAreaChart (Area + thresholds) → TsAreaChart inside the container
+
+-- data states (4) — implemented for the battery-cells source -------------------------------------
+[x] state loading → BatteryCellsState.Loading; Display.ShowLoading; _loadingSkeleton (TsSkeleton shimmer)
+[x] state empty   → BatteryCellsState.Empty;   Display.ShowEmpty;   _emptyState (TsEmptyState, never blank)
+[x] state error   → BatteryCellsState.Error;   Display.ShowError;   _errorState (TsQueryError + Retry → RefreshAsync)
+[x] state success → BatteryCellsState.Success; Display.ShowContent; BuildContent(display)
+    (each section ALSO carries its own empty fallback: heatmap/table/charts/temp/recommendations)
+
+-- strings (73) — all resolved through ILocalizer with verbatim web keys ---------------------------
+    BatteryCellStrings.Resolve(localizer) resolves all 73 keys (web names verbatim) unconditionally,
+    asserted by BatteryCellsPageTests.Projection_resolves_every_required_string_key (success) and
+    Projection_resolves_all_keys_even_in_the_loading_state (loading), and the count is pinned by
+    Required_string_key_set_has_exactly_seventy_three_unique_keys.
+[x] Avg                          [x] Avg Voltage                 [x] Bar View
+[x] Battery Cells                [x] Cell                        [x] Cell #
+[x] Cell Count                   [x] Cell Details                [x] Cell Voltage Bar Chart
+[x] Cell Voltage Heatmap         [x] Cell Voltage Over Time      [x] Cells
+[x] Cells colored by deviation from average                      [x] Delta (mV)
+[x] Grid View                    [x] Imbalance                   [x] Imbalance (mV)
+[x] Imbalance Trend              [x] Individual cell voltage monitoring and analysis
+[x] Max                          [x] Max Cell                    [x] Max Voltage
+[x] Min                          [x] Min Cell                    [x] Min Voltage
+[x] No cell details available.   [x] No cell readings available. [x] Nominal
+[x] Pack Voltage                 [x] Significant Deviation       [x] Slight Deviation
+[x] Status                       [x] Total Cells                 [x] Voltage
+[x] Voltage (V)                  [x] Voltage Distribution        [x] Warning
+[x] cells
+[x] battery.cells.chart.noSpreadTrend     [x] battery.cells.chart.spreadTrend
+[x] battery.cells.chart.spreadTrend.aria  [x] battery.cells.chart.voltageSpread
+[x] battery.cells.insight.balanced        [x] battery.cells.insight.balancedDesc
+[x] battery.cells.insight.criticalCells   [x] battery.cells.insight.criticalCellsDesc ({{count}} interpolated)
+[x] battery.cells.insight.goodTemp        [x] battery.cells.insight.goodTempDesc
+[x] battery.cells.insight.healthy         [x] battery.cells.insight.healthyDesc
+[x] battery.cells.insight.highSpread      [x] battery.cells.insight.highSpreadDesc
+[x] battery.cells.insight.highTemp        [x] battery.cells.insight.highTempDesc
+[x] battery.cells.insight.watchSpread     [x] battery.cells.insight.watchSpreadDesc
+[x] battery.cells.insight.watchTemp       [x] battery.cells.insight.watchTempDesc
+[x] battery.cells.noInsights              [x] battery.cells.recommendations
+[x] battery.cells.stat.avgVoltage         [x] battery.cells.stat.normalCells
+[x] battery.cells.stat.packVoltage        [x] battery.cells.stat.tempSpread
+[x] battery.cells.stat.totalCells         [x] battery.cells.stat.voltageSpread
+[x] battery.cells.temp.avg                [x] battery.cells.temp.empty
+[x] battery.cells.temp.max                [x] battery.cells.temp.min
+[x] battery.cells.temp.spread             [x] battery.cells.temp.title
+[x] battery.cells.title
+
+PARITY_COVERED=110
+
+units (P1/S5): SI on the wire; the display boundary converts only at render — UnitFormatters.FormatTemperature
++ UnitConverters/UnitLabels for absolute temps, and a °F-aware delta (×1.8) for the temperature spread.
+Voltages stay SI volts; imbalance/spread are millivolts as the web emits them. No non-SI is stored/computed.
+
+a11y (ADR-015): AutomationProperties.SetName on the page, every TsMetricCard, every heatmap tile (with
+ToolTip), the count badge, the data table, each chart, each insight card and each summary-stat panel;
+a custom Group AutomationPeer; Fluent components carry built-in keyboard/pointer + light/dark via the
+design tokens (Tokens.xaml). No hardcoded colors/typography — DisplayTokens / typography components only;
+dynamic deviation colors route through StatusResources token brushes.
+
+i18n (ADR-014): every visible literal resolves through ILocalizer (ShellLocalizer→Localization.Get in the
+app; PassthroughLocalizer in tests). The battery.cells.* keys already exist in Strings/en/Resources.resw;
+the plain-English keys fall back to their verbatim en-US default exactly as the web t(key, default) does.
+The auto-generated resw was NOT hand-edited (no silent drift).
+
+=== GATE ===
+# placeholder scan (ADR-011) — templated path is the generator's nonexistent drift path (clean); actual code scanned
+PLACEHOLDER_EXIT=0       (apps/windows/TeslaSync/Features/Battery — nonexistent templated path → clean)
+PLACEHOLDER_COUNT=0      (apps/windows/TeslaSync.App/feature-views/BatteryCellsPage — actual code, csharp)
+
+# build — dotnet build apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0             (Build succeeded. 0 Error(s); TeslaSync.App compiles with TreatWarningsAsErrors=true,
+                          AnalysisLevel=latest — 0 warnings in TeslaSync.App)
+
+# lint — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0             (no formatting changes required; new files normalized to LF and pass dotnet format)
+
+# test — dotnet test apps/windows/TeslaSync.sln -c Release (headless unit project TeslaSync.App.Tests)
+TEST_EXIT=0             (Passed! - Failed: 0, Passed: 29637, Skipped: 0, Total: 29637 —
+                          incl. 41 BatteryCellsPageTests: 73-string coverage, 4-state matrix, summary metrics,
+                          heatmap deviation, bar/histogram/imbalance/over-time/spread charts, table rows,
+                          temperature °C/°F, health-insight tiers, summary stats, tolerant JSON parsing,
+                          view-model load/empty/error/refresh, client-feed request shaping, diagnostics, registration)
+
+# (UITests project TeslaSync.App.UITests is WinAppDriver/packaged-app gated — it requires a WinAppDriver/Appium
+#  runner on 127.0.0.1:4723 (UiAutomationUnavailableException when absent) and is NOT part of the headless unit
+#  gate; the 6 completed W7 predecessors verify the same way. The headless unit gate above is the W7 contract.)
+
+=== Honesty Covenant ===
+1 no red-as-green   : all four headless gate steps run; raw counts/exit codes pasted above; UITest harness
+                      gap (WinAppDriver absent) disclosed verbatim rather than reported green.
+2 no scope narrow   : all 27 panels + 6 charts + 4 states + 73 strings implemented (PARITY_COVERED==PARITY_REQUIRED==110).
+3 no skip-and-assume: every data state implemented for the battery-cells source; every per-section empty fallback present.
+4 no stubs as final : full implementations; placeholder scan clean (0). Heatmap Bar/Grid toggle is live interactive state.
+5 no parity shortcut: Fluent-native (TsGlassPanel/TsMetricCard/TsDataTable/TsCartesianChart family/TsChartContainer/
+                      TsEmptyState/TsQueryError/TsBadge/TsSkeleton/TsFadeIn) — no web pixel-cloning, no raw recharts/leaflet.
+6 no delegation     : implemented directly; no sub-agents used for the parity work.
+7 no predecessor bypass: followed the feature-views/<Page> code-only-UserControl quartet of the completed W7 pages;
+                      reused the shared C# core port (UnitFormatters/ScalarFormatters/DateTimeFormatting, ILocalizer,
+                      IApiClient/ApiRequest, ChartSeries/ChartAnnotation, StatusResources).
+8 no commit on red  : the headless gate is green (EXIT=0) before the terminal lines below.
+9 no silent drift   : templated-path → real-path reconciliation documented; Operations.Analytics.BatteryCells added
+                      against the existing generated endpoint (OperationsResolveTests covers it); resw untouched;
+                      ledger row appended (apps/parity/windows-ledger.json page:battery/BatteryCells 110/110).
+10 EXIT/STATUS terminal lines present below.
+
+EXIT=0
+STATUS=DONE
