@@ -16,5 +16,14 @@
     "requiredCount": 43,
     "promptId": "p3-android/pages/admin/FeedbackQueuePage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FeedbackQueuePage.log"
+  },
+  {
+    "unitId": "page:admin/GasPriceAutoPoll",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/GasPriceAutoPollPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-GasPriceAutoPollPage.log"
   }
 ]
