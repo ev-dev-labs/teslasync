@@ -1,0 +1,52 @@
+/*
+  BatteryRangeCharts.strings
+  TeslaSync — P4 feature view · 0288 · BatteryRangeCharts (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `BatteryRangeCharts` resolves (table "BatteryRangeCharts") lives here with its web
+  `t(key, default)` English value. These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a
+  per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  The first group is the exact keys extracted from the web source
+  (features/vehicles/components/vehicle-detail/BatteryRangeCharts.tsx). The remainder
+  back the native state envelope (freshness chip, connectivity banner, loading /
+  empty / error chrome) and the chart axes / accessibility summaries.
+*/
+
+/* --- Keys from the web source (parity) --- */
+"common.current" = "Current";
+"common.remaining" = "Remaining";
+"common.battery" = "Battery";
+"common.range" = "Range";
+"common.distance" = "Distance";
+"common.duration" = "Duration";
+"vehicles.detail.batteryOverview" = "Battery Overview";
+"vehicles.detail.driveTrend" = "Drive Distance Trend";
+"vehicles.detail.noDriveData" = "No drive data for chart";
+
+/* --- Freshness chip (Live / Stale / Offline) --- */
+"vehicles.detail.live" = "Live";
+"vehicles.detail.stale" = "Stale";
+"vehicles.detail.offline" = "Offline";
+
+/* --- Connectivity banner (stale / offline) --- */
+"vehicles.detail.staleBanner" = "Reconnecting — battery and drive data may be stale";
+"vehicles.detail.offlineBanner" = "Offline — showing the last loaded battery and drive data";
+"vehicles.detail.refresh" = "Refresh";
+
+/* --- Empty / error chrome --- */
+"vehicles.detail.noBatteryData" = "No battery data available";
+"vehicles.detail.noBatteryDataHint" = "Battery and range charts will appear here once vehicle data is available.";
+"vehicles.detail.errorTitle" = "Couldn't load battery and range";
+"vehicles.detail.retry" = "Retry";
+
+/* --- Loading accessibility --- */
+"vehicles.detail.loadingA11y" = "Loading battery and range";
+"vehicles.detail.driveLoadingA11y" = "Loading drive trend";
+
+/* --- Drive trend chart scaffolding + accessibility nouns --- */
+"vehicles.detail.driveTrend.series" = "Series";
+"vehicles.detail.driveTrend.drivesNoun" = "drives";
+"vehicles.detail.driveTrend.minutesNoun" = "min";
