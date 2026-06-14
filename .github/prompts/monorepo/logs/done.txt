@@ -833,3 +833,4 @@ p3-android/dashboard-widgets/A-0036-DigitalTwinWidget.prompt.md
 p3-android/dashboard-widgets/A-0037-DoorWindowStatusWidget.prompt.md
 p3-android/dashboard-widgets/A-0108-VehicleHeroWidget.prompt.md
 p3-android/dashboard-widgets/A-0112-WallConnectorWidget.prompt.md
+p3-android/dashboard-widgets/A-0117-WeeklySummaryCardWidget.prompt.md
