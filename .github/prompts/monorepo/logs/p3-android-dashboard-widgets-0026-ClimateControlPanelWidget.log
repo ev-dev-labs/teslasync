@@ -1,0 +1,110 @@
+=== P3 Dashboard widget 0026 ClimateControlPanelWidget (Android) ===
+run: 2026-06-14T02:10:00-07:00
+
+CAPABILITY (prompt clause: "requires Jetpack Compose + Material 3, Kotlin 2.2.x; if unavailable -> BLOCKED"):
+  Java 21 (Android Studio JBR, C:\Program Files\Android\Android Studio\jbr; OpenJDK 21.0.9)
+  Android SDK present (C:\Users\AtulM\AppData\Local\Android\Sdk; ANDROID_HOME/ANDROID_SDK_ROOT set)
+  Gradle 8.14.5 (wrapper); Kotlin + Jetpack Compose + Material 3 resolve and compile (proven below).
+  => Platform capability IS SATISFIED. This is NOT a capability BLOCK.
+
+MODULE PATH NOTE:
+  apps/android/settings.gradle.kts -> rootProject 'teslasync-android'; include(":android"); projectDir = "app".
+  The repo Gradle path is ':android:' for every P3/A* gate (settings.gradle.kts comment). The prompt's
+  ':app:' is a template alias; the real, runnable tasks are ':android:assembleRelease' /
+  ':android:testReleaseUnitTest' / ':android:ktlintCheck' + ':android:detekt'. Exit codes below are from
+  the real ':android:' tasks.
+
+PRE-BUILD CODEGEN (environment baseline, NOT a repo edit by this artifact):
+  The shared KMP DTOs io.teslasync.shared.core.api.generated.* are deterministic OpenAPI codegen output
+  (apps/tools/codegen, P1/S2/0001) written to
+  apps/shared/core/src/commonMain/kotlin/io/teslasync/shared/core/api/generated/ and are .gitignored
+  (untracked build artifacts; git status shows only this surface's 3 dirs). A fresh worktree has none, so
+  the shared core cannot compile until they are generated. Ran the committed generator from the committed
+  spec (api/openapi/teslasync.openapi.json):
+    npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts  ->  "[GEN] wrote 10 Kotlin + 10 C# files"  GEN_EXIT=0
+  This is a build prerequisite (akin to `npm install`), touches no hand-written source, and is not part of
+  this artifact's committed files.
+
+ARTIFACT (allowed files only):
+  apps/android/app/src/main/java/com/teslasync/dashboard-widgets/ClimateControlPanelWidget/
+    ClimateControlPanelModel.kt              (pure model + projection; no Compose/Android/HTTP)
+    ClimateControlPanelSource.kt             (S7 VehiclesRepository / S8 VehiclesStore port + adapters)
+    ClimateControlPanelWidgetViewModel.kt    (BaseFeedViewModel; UiState<JsonElement>; view.opened/refresh/retry)
+    ClimateControlPanelWidget.kt             (Compose M3 surface: compact hero + full panel; 6 @Preview states)
+  Tests (sibling-precedent locations, committed with the surface):
+    app/src/test/.../climatecontrolpanel/ClimateControlPanelProjectionTest.kt       (adapter/projection, off-device)
+    app/src/test/.../climatecontrolpanel/ClimateControlPanelWidgetViewModelTest.kt  (state machine + adapter + telemetry)
+    app/src/androidTest/.../climatecontrolpanel/ClimateControlPanelWidgetUiTest.kt  (per-state UI + a11y)
+
+================================================================================
+GATE (real ':android:' tasks; ANDROID_HOME set; --console=plain)
+================================================================================
+BUILD  ./gradlew :android:assembleRelease ........................................ BUILD_EXIT=0
+       "BUILD SUCCESSFUL in 7m 18s"  (this surface's compileReleaseKotlin clean; only pre-existing
+       deprecation warnings in unrelated CopyButton/HelpIcon/Tooltip — non-fatal, present before this change)
+
+TEST   ./gradlew :android:testReleaseUnitTest ..................................... TEST_EXIT=0
+       Surface-scoped (--tests "io.teslasync.android.dashboard.widgets.climatecontrolpanel.*"):
+         ClimateControlPanelProjectionTest      23 passed / 0 failed
+         ClimateControlPanelWidgetViewModelTest 15 passed / 0 failed
+         => 38 passed / 0 failed
+       Full module (unscoped, --continue): 1243 suites / 15908 tests / 0 failures / 0 errors.
+       The whole :android unit-test suite is GREEN (no pre-existing unit-test reds remain).
+
+LINT   ./gradlew :android:ktlintCheck :android:detekt (config warningsAsErrors=true) .. LINT_EXIT=0
+       "BUILD SUCCESSFUL"; ktlintMainSourceSetCheck + ktlintTestSourceSetCheck + detekt all pass for this
+       surface. (Initial run flagged this surface's multi-arg remember(...) and two >140-char test lines;
+       both fixed in-file, re-run clean.)
+
+PLACE  ./apps/tools/check-placeholders.ps1 -Path .../ClimateControlPanelWidget .... PLACEHOLDER_EXIT=0
+       PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (no TODO/stub/mock/placeholder/Lorem in shipped code)
+
+UI-TEST COMPILE (informational; NOT a gate step — the gate runs testReleaseUnitTest, not androidTest):
+  ClimateControlPanelWidgetUiTest.kt is error-free: in the full androidTest compile pass it produced ZERO
+  's (Kotlin reports every file's errors in one pass; this file is absent from all of them). The
+  ':android:compileDebugAndroidTestKotlin' task itself is RED due to ~34 PRE-EXISTING broken sibling
+  androidTest files (e.g. FSMStateDiagramUiTest, KioskSettingsModalUiTest, NotionSidebarUiTest,
+  TreeSelectUiTest, BatteryCellsWidgetUiTest, RouteDisplayUiTest, ...) that import the non-existent
+  top-level androidx.compose.ui.test.assert{Exists,DoesNotExist} or invoke @Composable from non-@Composable
+  fns. None are this surface; all are outside this artifact's allowed files; the gate does not compile or
+  run androidTest. This surface uses assertDoesNotExist()/assertExists() as SemanticsNodeInteraction
+  members (no import), so it is clean.
+
+PARITY NOTES (web source = web/src/features/dashboard/widgets/ClimateControlPanelWidget.tsx):
+  Data (useVehicles + useClimateLatest, snake_case /climate/latest JsonObject): inside_temp, outside_temp
+  (SI degC -> useUnits()/UnitFormatter.temperature, whole degrees), hvac_power (kW, " kW", shown only > 0),
+  hvac_ac_enabled, hvac_fan_speed, hvac_steering_wheel_heat_level ("{level}/3" or "Off"),
+  seat_heater_{left,right,rear_left,rear_center,rear_right} (active when > 0 -> "FL 3/3" ...), defrost_mode
+  (chip when != "Off"), battery_heater_on (chip). hvacOn = (hvac_power > 0) || hvac_ac_enabled.
+  Size branches reproduced: isCompact (cols<=1 && rows<=1) -> single inside-temp hero; else full panel.
+  States: loading skeleton / content (compact|full) / empty ("No climate data") / hard error -> empty body
+  + freshness-flagged header + refresh retry (web passes WidgetShell isError, never the `error` string) /
+  stale+offline cached rows kept visible. All six rendered as @Preview.
+  i18n (P1/S10; every key already in app/src/main/res/values*/strings.xml):
+    translation_widget_climatePanel_{title,noData,hvacOn,hvacOff,cabin,outside,fanSpeed,steeringHeat,off,
+      seatFL,seatFR,seatRL,seatRC,seatRR,noSeatHeat,defrost,batHeater},
+    translation_common_{refresh,loading,offline}, translation_a11y_loading, translation_freshness_*.
+    No English literals in native code.
+  Registry (web registry/climate.ts): id "climate-control-panel", category "climate", default 2x4, min 1x2,
+    max 4x40 (ClimateControlPanelRegistration; unit-tested ID/SLUG/DEFAULT/MIN/MAX/isWithinBounds/clamp).
+  a11y: title carries heading(); each metric cell, seat/status chip, the compact hero, the loading skeleton
+    and the refresh control carry TalkBack content descriptions; font scale + theme via Material 3 tokens
+    (P1/S9); colors via TeslaTokens status palette (light/dark/high-contrast safe).
+  Telemetry: one-shot view.opened with slug "ClimateControlPanelWidget" (P1/S11), PII-safe (no cabin
+    payload in the diagnostic).
+
+================================================================================
+CONCLUSION
+================================================================================
+The ClimateControlPanelWidget surface is COMPLETE and every gate step is GREEN on the real ':android:'
+tasks: BUILD_EXIT=0 (assembleRelease), TEST_EXIT=0 (surface 38/38 and the full module 15908/15908),
+LINT_EXIT=0 (ktlint + detekt, warnings-as-errors), PLACEHOLDER_EXIT=0. The surface's Compose UI/a11y test
+compiles clean; the only repo red is the PRE-EXISTING, module-wide androidTest source-set breakage in ~34
+unrelated sibling files (outside this artifact's allowed files and not exercised by the gate). Platform
+capability is present, so this is NOT a capability BLOCK. Only this surface's files (+ its tests + this log)
+are added; the .gitignored generated DTOs are an environment build prerequisite, not committed.
+
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
