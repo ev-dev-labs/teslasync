@@ -824,3 +824,4 @@ p3-android/widget-primitives/A-0012-WidgetTipCards.prompt.md
 p3-android/widget-primitives/A-0010-WidgetStatGrid.prompt.md
 p3-android/widget-primitives/A-0011-WidgetStatusGrid.prompt.md
 p3-android/widget-primitives/A-0013-WidgetShell.prompt.md
+p3-android/dashboard-widgets/A-0032-CostForecastWidget.prompt.md
