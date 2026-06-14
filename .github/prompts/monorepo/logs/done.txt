@@ -861,3 +861,4 @@ p3-android/pages/admin/FeatureFlagsPage.prompt.md
 p3-android/pages/admin/DiskForecastPage.prompt.md
 p3-android/pages/admin/GasPriceAutoPollPage.prompt.md
 p3-android/pages/admin/IngestXRayPage.prompt.md
+p3-android/pages/admin/SchemaDriftPage.prompt.md
