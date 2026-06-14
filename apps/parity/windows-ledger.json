@@ -259,5 +259,14 @@
     "requiredCount": 14,
     "promptId": "p2-windows/W7/windows-page-power-user-SqlPlaygroundPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-power-user-SqlPlaygroundPage.log"
+  },
+  {
+    "unitId": "page:telemetry/LiveSignalMonitor",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p2-windows/W7/windows-page-telemetry-LiveSignalMonitorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-LiveSignalMonitorPage.log"
   }
 ]

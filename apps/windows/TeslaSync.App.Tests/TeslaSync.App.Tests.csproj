@@ -828,6 +828,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalInspectorPage\LiveSignalInspectorPage.Model.cs" Link="FeatureViews\LiveSignalInspectorPage\LiveSignalInspectorPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalInspectorPage\LiveSignalInspectorPage.Source.cs" Link="FeatureViews\LiveSignalInspectorPage\LiveSignalInspectorPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalInspectorPage\LiveSignalInspectorPage.ViewModel.cs" Link="FeatureViews\LiveSignalInspectorPage\LiveSignalInspectorPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveSignalMonitorPage\LiveSignalMonitorPage.Model.cs" Link="FeatureViews\LiveSignalMonitorPage\LiveSignalMonitorPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveSignalMonitorPage\LiveSignalMonitorPage.Source.cs" Link="FeatureViews\LiveSignalMonitorPage\LiveSignalMonitorPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LiveSignalMonitorPage\LiveSignalMonitorPage.ViewModel.cs" Link="FeatureViews\LiveSignalMonitorPage\LiveSignalMonitorPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Model.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.Source.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" Link="FeatureViews\LiveSignalsTable\LiveSignalsTable.ViewModel.cs" />
