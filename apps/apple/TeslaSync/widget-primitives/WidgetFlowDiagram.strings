@@ -1,0 +1,24 @@
+/*
+  WidgetFlowDiagram.strings
+  TeslaSync — P4 widget primitive · 0006 · WidgetFlowDiagram (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `WidgetFlowDiagram`
+  primitive resolves (table "WidgetFlowDiagram") lives here with its English value. These entries fold into
+  the app `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  so each parallel surface prompt owns its own strings without editing the shared catalog (parallel-unsafe
+  across concurrent slots).
+
+  The web source (features/dashboard/widgets/shared/WidgetFlowDiagram.tsx) is anonymous — it extracts no
+  t() keys. Its own string literals are the empty-state default (`emptyMessage = 'No flow data available'`)
+  and the SVG `aria-label="Energy flow diagram"`, both captured here so the view holds no hardcoded
+  literal. The emptyHint is a native a11y / HIG addition (so the empty leaf is never a bare box).
+*/
+
+/* --- Empty leaf (web `EmptyState message={emptyMessage ?? 'No flow data available'}`) --- */
+"widgetFlowDiagram.empty" = "No flow data available";
+
+/* --- Empty leaf supporting line (native HIG — never a bare box) --- */
+"widgetFlowDiagram.emptyHint" = "Flow appears here once data is available.";
+
+/* --- Diagram graphic VoiceOver label (web `<svg aria-label="Energy flow diagram">`) --- */
+"widgetFlowDiagram.accessibilityLabel" = "Energy flow diagram";
