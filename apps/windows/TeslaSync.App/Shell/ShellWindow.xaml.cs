@@ -169,6 +169,16 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Notifications / Alerts list page (P2/W7) — parity port of web AlertsListPage at route /notifications/alerts.
+        // The per-alert "View context" drill-through, the critical callout and the Active-Rules summary navigate
+        // through the shell router.
+        _viewModel.PageFactory.Register("NotificationsAlerts", () =>
+        {
+            var page = new FeatureViews.Notifications.AlertsListPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Vehicles / Vehicle Access page (P2/W7) — parity port of web VehicleAccessPage at route
         // /vehicles/:id/access. The route id is read from the live match and feeds the drivers + invitations
         // queries (web enabled: !!vehicleId).
