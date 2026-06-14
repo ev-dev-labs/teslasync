@@ -961,3 +961,4 @@ p2-windows/pages/settings/PrivacyPage.prompt.md
 p2-windows/pages/power-user/GrafanaPanelPage.prompt.md
 p2-windows/pages/system/DataRepairPage.prompt.md
 p2-windows/pages/vehicle-systems/GuardModePage.prompt.md
+p2-windows/pages/system/StateMachineDebuggerPage.prompt.md
