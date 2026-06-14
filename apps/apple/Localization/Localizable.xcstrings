@@ -1,6 +1,787 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "1 day" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 day"
+          }
+        }
+      }
+    },
+    "14 days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "14 days"
+          }
+        }
+      }
+    },
+    "3 days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "3 days"
+          }
+        }
+      }
+    },
+    "30 days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 days"
+          }
+        }
+      }
+    },
+    "7 days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7 days"
+          }
+        }
+      }
+    },
+    "API (Internal)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API (Internal)"
+          }
+        }
+      }
+    },
+    "API Endpoint Controls" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API Endpoint Controls"
+          }
+        }
+      }
+    },
+    "API Endpoints" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API Endpoints"
+          }
+        }
+      }
+    },
+    "API resumed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API resumed"
+          }
+        }
+      }
+    },
+    "API suspended" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API suspended"
+          }
+        }
+      }
+    },
+    "All Tesla API calls have been paused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Tesla API calls have been paused"
+          }
+        }
+      }
+    },
+    "All Tesla Fleet API calls are suspended" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Tesla Fleet API calls are suspended"
+          }
+        }
+      }
+    },
+    "Auto-delete captured signals after this many days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-delete captured signals after this many days"
+          }
+        }
+      }
+    },
+    "Battery & charging data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery & charging data"
+          }
+        }
+      }
+    },
+    "Capture every fleet telemetry signal to MongoDB for debugging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture every fleet telemetry signal to MongoDB for debugging"
+          }
+        }
+      }
+    },
+    "Charge State" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge State"
+          }
+        }
+      }
+    },
+    "Climate & temperature data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Climate & temperature data"
+          }
+        }
+      }
+    },
+    "Climate State" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Climate State"
+          }
+        }
+      }
+    },
+    "Commands" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commands"
+          }
+        }
+      }
+    },
+    "Configured Endpoints" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configured Endpoints"
+          }
+        }
+      }
+    },
+    "Control Tesla Fleet API polling, endpoint toggles, and telemetry capture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control Tesla Fleet API polling, endpoint toggles, and telemetry capture"
+          }
+        }
+      }
+    },
+    "Could not toggle API suspension" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not toggle API suspension"
+          }
+        }
+      }
+    },
+    "Drive State" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drive State"
+          }
+        }
+      }
+    },
+    "Failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed"
+          }
+        }
+      }
+    },
+    "Failed to update polling config" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to update polling config"
+          }
+        }
+      }
+    },
+    "Firmware release notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Firmware release notes"
+          }
+        }
+      }
+    },
+    "Fleet API" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleet API"
+          }
+        }
+      }
+    },
+    "Fleet API Settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleet API Settings"
+          }
+        }
+      }
+    },
+    "GPS coordinates" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GPS coordinates"
+          }
+        }
+      }
+    },
+    "List vehicles from Tesla" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "List vehicles from Tesla"
+          }
+        }
+      }
+    },
+    "Location & speed data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location & speed data"
+          }
+        }
+      }
+    },
+    "Location Data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Location Data"
+          }
+        }
+      }
+    },
+    "Lock, unlock, climate, etc." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lock, unlock, climate, etc."
+          }
+        }
+      }
+    },
+    "Locks, doors, odometer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Locks, doors, odometer"
+          }
+        }
+      }
+    },
+    "Model, trim, options" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model, trim, options"
+          }
+        }
+      }
+    },
+    "MongoDB Connected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MongoDB Connected"
+          }
+        }
+      }
+    },
+    "MongoDB Not Configured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MongoDB Not Configured"
+          }
+        }
+      }
+    },
+    "Nearby Charging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nearby Charging"
+          }
+        }
+      }
+    },
+    "OAuth Callback" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OAuth Callback"
+          }
+        }
+      }
+    },
+    "On-Demand Endpoints" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-Demand Endpoints"
+          }
+        }
+      }
+    },
+    "Polling Endpoints" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Polling Endpoints"
+          }
+        }
+      }
+    },
+    "Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. Useful when your vehicle is in service."
+          }
+        }
+      }
+    },
+    "Polling config updated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Polling config updated"
+          }
+        }
+      }
+    },
+    "Raw Signal Recording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raw Signal Recording"
+          }
+        }
+      }
+    },
+    "Recent Alerts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent Alerts"
+          }
+        }
+      }
+    },
+    "Release Notes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Release Notes"
+          }
+        }
+      }
+    },
+    "Retention Period" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retention Period"
+          }
+        }
+      }
+    },
+    "Service Data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Service Data"
+          }
+        }
+      }
+    },
+    "Service history & status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Service history & status"
+          }
+        }
+      }
+    },
+    "Set MONGODB_ENABLED=true and configure MONGODB_URI to enable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set MONGODB_ENABLED=true and configure MONGODB_URI to enable"
+          }
+        }
+      }
+    },
+    "Supercharger locations" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supercharger locations"
+          }
+        }
+      }
+    },
+    "Sync vehicles from Tesla" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sync vehicles from Tesla"
+          }
+        }
+      }
+    },
+    "Telemetry Capture" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telemetry Capture"
+          }
+        }
+      }
+    },
+    "Tesla API Polling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla API Polling"
+          }
+        }
+      }
+    },
+    "Tesla API polling has been re-enabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla API polling has been re-enabled"
+          }
+        }
+      }
+    },
+    "Tesla Fleet API" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla Fleet API"
+          }
+        }
+      }
+    },
+    "Toggle individual Tesla Fleet API endpoints on or off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toggle individual Tesla Fleet API endpoints on or off"
+          }
+        }
+      }
+    },
+    "Vehicle Commands" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Commands"
+          }
+        }
+      }
+    },
+    "Vehicle Config" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Config"
+          }
+        }
+      }
+    },
+    "Vehicle Discovery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Discovery"
+          }
+        }
+      }
+    },
+    "Vehicle State" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle State"
+          }
+        }
+      }
+    },
+    "Vehicle alert history" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle alert history"
+          }
+        }
+      }
+    },
+    "Vehicle data is being polled from Tesla" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle data is being polled from Tesla"
+          }
+        }
+      }
+    },
+    "Wake Up" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wake Up"
+          }
+        }
+      }
+    },
+    "Wake vehicle from sleep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wake vehicle from sleep"
+          }
+        }
+      }
+    },
+    "Web Frontend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Web Frontend"
+          }
+        }
+      }
+    },
+    "common.noData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No data available"
+          }
+        }
+      }
+    },
+    "enabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "enabled"
+          }
+        }
+      }
+    },
+    "signals captured from" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "signals captured from"
+          }
+        }
+      }
+    },
+    "vehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vehicle"
+          }
+        }
+      }
+    },
+    "route.fleetAPI" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fleet API"
+          }
+        }
+      }
+    },
     "admin.flags.pageTitle" : {
       "extractionState" : "manual",
       "localizations" : {
