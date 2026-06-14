@@ -1,0 +1,71 @@
+=== P3 Shared surface 0233 VehicleHeroCard (Android) ===
+# Runner: Windows; openjdk version "21.0.9" 2025-10-21; Gradle 8.14.5 wrapper.
+# Module path note: settings.gradle.kts maps the app module to Gradle path ':android' (projectDir=app);
+# the prompt template's ':app:' path does not resolve (verified: "project 'app' not found"), so the gate
+# runs against ':android:' — the documented convention every P3/A* gate uses (Honesty Covenant #9).
+
+# Source: web/src/components/vehicles/VehicleHeroCard.tsx (presentational; props vehicle/vehicleState/photoUrl;
+# hooks useTranslation + useUnits; no data fetch). Native parity port at the shared-surface tier.
+# Files:
+#   app/src/main/java/com/teslasync/shared-surfaces/VehicleHeroCard/VehicleHeroCardModel.kt   (pure projection + diagnostics + registration)
+#   app/src/main/java/com/teslasync/shared-surfaces/VehicleHeroCard/VehicleHeroCard.kt        (Compose M3 stateful + stateless renderer + previews)
+#   app/src/test/java/com/teslasync/shared-surfaces/VehicleHeroCard/VehicleHeroCardModelTest.kt    (JVM adapter/projection + diagnostics; 12 tests)
+#   app/src/androidTest/java/com/teslasync/shared-surfaces/VehicleHeroCard/VehicleHeroCardUiTest.kt (per-state UI + a11y; connectedAndroidTest)
+
+$ ./gradlew :android:assembleRelease
+> Task :android:generateDesignTokens
+> Task :android:compileReleaseKotlin
+> Task :android:dexBuilderRelease
+> Task :android:packageRelease
+> Task :android:assembleRelease
+BUILD SUCCESSFUL in 3m 32s
+70 actionable tasks: 9 executed, 61 up-to-date
+BUILD_EXIT=0
+
+$ ./gradlew :android:testReleaseUnitTest
+> Task :android:compileReleaseUnitTestKotlin
+> Task :android:testReleaseUnitTest
+BUILD SUCCESSFUL in 1m 38s
+45 actionable tasks: 3 executed, 42 up-to-date
+# Surface unit report: TEST-io.teslasync.android.sharedsurfaces.vehicleherocard.VehicleHeroCardModelTest.xml
+#   tests=12 failures=0 errors=0 skipped=0
+#   (registration slug, identity passthrough, name->VIN fallback, model trim/blank, metric gauges+stats,
+#    imperial mi/degF conversion, battery 20%% color threshold, lock/sentry/firmware, fmtNumber power
+#    incl. grouping + negative regen, FSM status normalization, null-state offline card, PII-safe view.opened)
+TEST_EXIT=0
+
+$ ./gradlew ktlintCheck detekt
+> Task :android:runKtlintCheckOverMainSourceSet
+> Task :android:runKtlintCheckOverTestSourceSet
+> Task :android:runKtlintCheckOverAndroidTestSourceSet
+> Task :android:detekt
+BUILD SUCCESSFUL in 4m 37s
+LINT_EXIT=0
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/java/com/teslasync/shared-surfaces/VehicleHeroCard
+PLACEHOLDER_ALLOWED=1   # one inline // parity:allow on a Long->Double conversion (scanner substring-matches "toDo" in toDouble)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+=== Acceptance summary ===
+[x] Surface renders every web-source state: photo present/absent; live-state hero (4 RadialGauges + 8-cell StatCard grid);
+    and the no-live-state OFFLINE card (identity + StatusBadge(offline) + a friendly EmptyState in the metrics region +
+    actions) — never a blank box. Fetch-driven loading/error/stale/offline are N/A for a pure presentational surface
+    (web VehicleHeroCard has no data feed); modelling them would fabricate behaviour (Honesty Covenant #2/#9), matching
+    the accepted sibling MetricCard/StickyChipBar precedent. Documented in the model + view headers.
+[x] Hooks bind via shared P1/S8 state holders: useUnits -> LocalDataContainer.unitFormatter (StateFlow<UnitFormatter>);
+    useTranslation -> P1/S10 catalog (stringResource). vehicle/vehicleState/photoUrl are caller props (web parity). No HTTP in the view.
+[x] i18n: all 19 source keys already exist in strings.xml (translation_vehicleHero_*, translation_common_on/off/offline);
+    no English literals in native code; no catalog change needed.
+[x] Accessibility: each RadialGauge exposes a "label: value" content description; StatCards expose label+value; the three
+    action Buttons carry their localized labels as accessible names; the photo frame carries the localized alt ("<name> photo").
+[x] SI->display at the render boundary only (convertDistanceFromSI/convertTempFromSI); power rendered via fmtNumber parity
+    (Tesla drive_state.power is kW on the wire, not divided from watts) — Phase-48 SI-canonical respected.
+[x] Tests: ModelTest (projection adapter + conversions + thresholds + status + diagnostics, 12 cases, all green) +
+    UiTest (per-state render + a11y labels, mirrors the accepted MetricCardUiTest harness).
+[x] No TODO/stub/mock/placeholder/Lorem in shipped code (check-placeholders PLACEHOLDER_COUNT=0).
+[x] Telemetry: one-shot view.opened with slug "VehicleHeroCard" (PII-safe; no name/VIN/battery/range), P1/S11.
+
+BUILD_EXIT=0 TEST_EXIT=0 LINT_EXIT=0 PLACEHOLDER_EXIT=0
+EXIT=0
+STATUS=DONE
