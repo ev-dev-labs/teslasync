@@ -936,3 +936,4 @@ p2-windows/pages/charging/ChargingHeatmapPage.prompt.md
 p2-windows/pages/charging/TeslaChargingHistoryPage.prompt.md
 p2-windows/pages/dashboard/GlancePage.prompt.md
 p2-windows/pages/charging/ChargingListPage.prompt.md
+p2-windows/pages/driving/DrivetrainHealthPage.prompt.md
