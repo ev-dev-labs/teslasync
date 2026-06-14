@@ -777,3 +777,4 @@ p3-android/shared-meaningful/A-0193-StaggerContainer.prompt.md
 p3-android/shared-meaningful/A-0200-StickyChipBar.prompt.md
 p3-android/shared-meaningful/A-0204-Checkbox.prompt.md
 p3-android/shared-meaningful/A-0203-Accordion.prompt.md
+p3-android/shared-meaningful/A-0199-StatusHero.prompt.md
