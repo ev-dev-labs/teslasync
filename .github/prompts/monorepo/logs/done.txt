@@ -787,3 +787,4 @@ p3-android/shared-meaningful/A-0205-CommandPalette.prompt.md
 p3-android/shared-meaningful/A-0206-ContextMenu.prompt.md
 p3-android/shared-meaningful/A-0210-DataTableColumnMenu.prompt.md
 p3-android/shared-meaningful/A-0209-DataTableBulkBar.prompt.md
+p3-android/shared-meaningful/A-0212-DataTableResizer.prompt.md
