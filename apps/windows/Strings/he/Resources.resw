@@ -25015,4 +25015,181 @@
   <data name="translation.admin.gdprExport.subtitle" xml:space="preserve">
     <value>Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.</value>
   </data>
+  <data name="translation.bulk.noun.session_one" xml:space="preserve">
+    <value>session</value>
+  </data>
+  <data name="translation.bulk.noun.session_other" xml:space="preserve">
+    <value>sessions</value>
+  </data>
+  <data name="translation.charging.allSessions" xml:space="preserve">
+    <value>All sessions</value>
+  </data>
+  <data name="translation.charging.anomalyCount" xml:space="preserve">
+    <value>{{count}} {{noun}} in this range</value>
+  </data>
+  <data name="translation.charging.anomaly_one" xml:space="preserve">
+    <value>anomaly</value>
+  </data>
+  <data name="translation.charging.anomaly_other" xml:space="preserve">
+    <value>anomalies</value>
+  </data>
+  <data name="translation.charging.avgDuration" xml:space="preserve">
+    <value>Avg duration</value>
+  </data>
+  <data name="translation.charging.avgPower" xml:space="preserve">
+    <value>Avg power (kW)</value>
+  </data>
+  <data name="translation.charging.avgRate" xml:space="preserve">
+    <value>Avg rate (kW)</value>
+  </data>
+  <data name="translation.charging.avgScore" xml:space="preserve">
+    <value>avg</value>
+  </data>
+  <data name="translation.charging.batteryScore" xml:space="preserve">
+    <value>Battery score</value>
+  </data>
+  <data name="translation.charging.byType" xml:space="preserve">
+    <value>{{home}} home · {{sc}} SC · {{dc}} DC</value>
+  </data>
+  <data name="translation.charging.coll.all" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="translation.charging.coll.anomalies" xml:space="preserve">
+    <value>Anomalies</value>
+  </data>
+  <data name="translation.charging.coll.dc" xml:space="preserve">
+    <value>DC Fast</value>
+  </data>
+  <data name="translation.charging.coll.free" xml:space="preserve">
+    <value>Free</value>
+  </data>
+  <data name="translation.charging.coll.home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="translation.charging.coll.notable" xml:space="preserve">
+    <value>Notable</value>
+  </data>
+  <data name="translation.charging.coll.supercharger" xml:space="preserve">
+    <value>Supercharger</value>
+  </data>
+  <data name="translation.charging.coll.tagged" xml:space="preserve">
+    <value>Tagged</value>
+  </data>
+  <data name="translation.charging.collections.aria" xml:space="preserve">
+    <value>Filter charging sessions by collection</value>
+  </data>
+  <data name="translation.charging.empty.cta" xml:space="preserve">
+    <value>Learn about charging</value>
+  </data>
+  <data name="translation.charging.emptyForCollection" xml:space="preserve">
+    <value>No sessions in this view</value>
+  </data>
+  <data name="translation.charging.emptyForCollection.msg" xml:space="preserve">
+    <value>Try a different collection or clear your filters.</value>
+  </data>
+  <data name="translation.charging.emptyMessage" xml:space="preserve">
+    <value>Charging sessions will appear here once your vehicle starts charging.</value>
+  </data>
+  <data name="translation.charging.emptyTitle" xml:space="preserve">
+    <value>No charging sessions yet</value>
+  </data>
+  <data name="translation.charging.filterLabel.collection" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="translation.charging.filterLabel.search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="translation.charging.freeCount" xml:space="preserve">
+    <value>{{count}} free</value>
+  </data>
+  <data name="translation.charging.itemNoun" xml:space="preserve">
+    <value>sessions</value>
+  </data>
+  <data name="translation.charging.metric.cost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="translation.charging.metric.energy" xml:space="preserve">
+    <value>Energy</value>
+  </data>
+  <data name="translation.charging.metric.power" xml:space="preserve">
+    <value>Avg power</value>
+  </data>
+  <data name="translation.charging.metric.sessions" xml:space="preserve">
+    <value>Sessions</value>
+  </data>
+  <data name="translation.charging.mostCommon" xml:space="preserve">
+    <value>Most common start: {{hour}}</value>
+  </data>
+  <data name="translation.charging.noPriorData" xml:space="preserve">
+    <value>No charging in prior period: {{start}} – {{end}}</value>
+  </data>
+  <data name="translation.charging.noStatsRange" xml:space="preserve">
+    <value>No charging sessions in this range</value>
+  </data>
+  <data name="translation.charging.overTime" xml:space="preserve">
+    <value>Charging over time</value>
+  </data>
+  <data name="translation.charging.overTime.aria" xml:space="preserve">
+    <value>Charging over time chart with metric switcher</value>
+  </data>
+  <data name="translation.charging.overTime.empty" xml:space="preserve">
+    <value>No data for this metric in the selected range</value>
+  </data>
+  <data name="translation.charging.overview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="translation.charging.priorPeriod" xml:space="preserve">
+    <value>prior period: {{start}} – {{end}}</value>
+  </data>
+  <data name="translation.charging.results" xml:space="preserve">
+    <value>results</value>
+  </data>
+  <data name="translation.charging.searchPlaceholder" xml:space="preserve">
+    <value>Search charging — try "charger:home", "cost:&gt;5", "kwh:&gt;20", "Costco"</value>
+  </data>
+  <data name="translation.charging.section.batteryDist" xml:space="preserve">
+    <value>Battery start-level distribution</value>
+  </data>
+  <data name="translation.charging.section.batteryDistDesc" xml:space="preserve">
+    <value>See where you typically start charging.</value>
+  </data>
+  <data name="translation.charging.section.optimizer" xml:space="preserve">
+    <value>Charging optimizer</value>
+  </data>
+  <data name="translation.charging.section.optimizerDesc" xml:space="preserve">
+    <value>Personalized tips to charge cheaper and protect your battery.</value>
+  </data>
+  <data name="translation.charging.section.specs" xml:space="preserve">
+    <value>Charger specs breakdown</value>
+  </data>
+  <data name="translation.charging.sort.cost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="translation.charging.sort.date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="translation.charging.sort.duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="translation.charging.sort.energy" xml:space="preserve">
+    <value>Energy</value>
+  </data>
+  <data name="translation.charging.sort.power" xml:space="preserve">
+    <value>Power</value>
+  </data>
+  <data name="translation.charging.stickyBar.aria" xml:space="preserve">
+    <value>Charging summary</value>
+  </data>
+  <data name="translation.charging.totalCost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="translation.charging.totalEnergy" xml:space="preserve">
+    <value>Energy (kWh)</value>
+  </data>
+  <data name="translation.charging.totalSessions" xml:space="preserve">
+    <value>Sessions</value>
+  </data>
+  <data name="translation.charging.viewAnomalies" xml:space="preserve">
+    <value>View anomalies</value>
+  </data>
 </root>

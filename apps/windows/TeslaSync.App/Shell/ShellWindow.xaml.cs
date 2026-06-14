@@ -335,6 +335,12 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TripDetail", () =>
             new FeatureViews.Trips.TripDetailPage(ParseSessionId(_viewModel.Current.Param("id"))));
 
+        // Charging / ChargingList page (P2/W7) — parity port of web ChargingListPage at route /charging
+        // (RouteTable Page("Charging","charging",RouteGroup.Charging)). The default empty-source ctor renders the
+        // page-level empty state until a DI host wires the generated-client-backed ChargingListSource via
+        // ChargingListPage.Create. The ChargeDetail back affordance below navigates here (NavigateTo("charging")).
+        _viewModel.PageFactory.Register("Charging", static () => new FeatureViews.Charging.ChargingListPage());
+
         // Charging / ChargingDetail page (P2/W7) — parity port of web ChargingDetailPage at route /charging/:id.
         // The route session id is read from the live match and the back affordance maps to the charging list.
         _viewModel.PageFactory.Register("ChargeDetail", () =>
