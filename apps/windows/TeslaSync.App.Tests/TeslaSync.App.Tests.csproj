@@ -1049,6 +1049,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiUsageCard\TeslaApiUsageCard.Model.cs" Link="FeatureViews\TeslaApiUsageCard\TeslaApiUsageCard.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiUsageCard\TeslaApiUsageCard.Source.cs" Link="FeatureViews\TeslaApiUsageCard\TeslaApiUsageCard.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaApiUsageCard\TeslaApiUsageCard.ViewModel.cs" Link="FeatureViews\TeslaApiUsageCard\TeslaApiUsageCard.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingHistoryPage\TeslaChargingHistoryPage.Model.cs" Link="FeatureViews\TeslaChargingHistoryPage\TeslaChargingHistoryPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingHistoryPage\TeslaChargingHistoryPage.Source.cs" Link="FeatureViews\TeslaChargingHistoryPage\TeslaChargingHistoryPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingHistoryPage\TeslaChargingHistoryPage.ViewModel.cs" Link="FeatureViews\TeslaChargingHistoryPage\TeslaChargingHistoryPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" Link="FeatureViews\TeslaChargingSessionsMap\TeslaChargingSessionsMap.ViewModel.cs" />
