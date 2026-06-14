@@ -842,3 +842,4 @@ p3-android/feature-views/A-0005-FleetTelemetryHealth.prompt.md
 p3-android/feature-views/A-0305-VehicleHeader.prompt.md
 p3-android/shared-meaningful/A-0153-DensityToggle.prompt.md
 p3-android/shared-meaningful/A-0189-SwipeRow.prompt.md
+p3-android/shared-meaningful/A-0190-CarAnimation.prompt.md
