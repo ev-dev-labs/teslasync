@@ -260,6 +260,14 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("AutomationBuilder", static () => new FeatureViews.Automations.AutomationBuilderPage());
         // Battery / Degradation page (P2/W7) — parity port of web BatteryDegradationPage at route /battery-degradation.
         _viewModel.PageFactory.Register("BatteryDegradation", static () => new FeatureViews.Battery.BatteryDegradationPage());
+        // Battery / Health page (P2/W7) — parity port of web BatteryHealthPage at route /battery (hidden alias
+        // battery/health). The quick-link tiles raise NavigationRequested with a route the shell resolves.
+        _viewModel.PageFactory.Register("BatteryHealth", () =>
+        {
+            var page = new FeatureViews.Battery.BatteryHealthPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
         // Vehicle Systems / Safety Settings page (P2/W7) — parity port of web SafetySettingsPage at route /safety-settings.
         _viewModel.PageFactory.Register("SafetySettings", static () => new FeatureViews.VehicleSystems.SafetySettingsPage());
         // Battery / Projected Range page (P2/W7) — parity port of web ProjectedRangePage at route /analytics/range
