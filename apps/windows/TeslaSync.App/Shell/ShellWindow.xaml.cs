@@ -217,6 +217,8 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Analytics / Period comparison page (P2/W7) — parity port of web PeriodComparePage at route /period-compare.
+        _viewModel.PageFactory.Register("PeriodCompare", static () => new FeatureViews.Analytics.PeriodComparePage());
         // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
         _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 

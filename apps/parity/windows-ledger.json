@@ -196,5 +196,14 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-admin-TeslaOrdersPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "page:analytics/PeriodCompare",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 44,
+    "requiredCount": 44,
+    "promptId": "p2-windows/W7/windows-page-analytics-PeriodComparePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-PeriodComparePage.log"
   }
 ]
