@@ -1,0 +1,60 @@
+/*
+  AINLGrafanaPanel.strings
+  TeslaSync — P4 shared surface · 0033 · AINLGrafanaPanel (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native surface resolves
+  (table "AINLGrafanaPanel") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table so each parallel surface prompt owns its own strings without
+  editing the shared catalog.
+
+  Group 1 is the exact set of keys from the web source
+  (components/ai/AINLGrafanaPanel.tsx). Group 2 is the shared Helix scaffold keys the web
+  `AIFeatureCard` / `AiOutputPanel` / `AIBadge` resolve (the universal "Ask Helix" CTA, the
+  thinking label, the badge tooltip, the error label). Group 3 backs the native chrome — the
+  captured-draft preview (the proposed-panel heading + type/datasource/grid meta + query targets
+  + referenced-table chips), the P4 leaf freshness / loading / empty / error copy + the a11y
+  rationale-ready / draft-ready phrases — so the Swift sources hold no English literals.
+*/
+
+/* --- Group 1: keys from the web source (parity) --- */
+"powerGrafana.aiDrafter.title" = "Helix natural-language Grafana panel drafter";
+"powerGrafana.aiDrafter.description" = "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.";
+"powerGrafana.aiDrafter.button" = "Draft panel";
+"powerGrafana.aiDrafter.badge" = "Helix";
+"powerGrafana.aiDrafter.promptPlaceholder" = "e.g. show me a daily time series of how far I drove this month";
+"powerGrafana.aiDrafter.promptLabel" = "Grafana panel request";
+"powerGrafana.aiDrafter.applyButton" = "Apply to editor";
+"powerGrafana.aiDrafter.applyTooltip" = "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.";
+
+/* --- Group 2: shared Helix scaffold (web AIFeatureCard / AiOutputPanel / AIBadge) --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.tooltip" = "Helix is your AI assistant. It generates responses using your redacted fleet context.";
+"helix.ariaLabel" = "Helix";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Group 3: native chrome — draft preview + P4 leaf freshness / loading / empty / error + a11y --- */
+"powerGrafana.aiDrafter.draftHeading" = "Proposed panel";
+"powerGrafana.aiDrafter.typeA11y" = "Panel type %@";
+"powerGrafana.aiDrafter.datasourceA11y" = "Datasource %1$@, uid %2$@";
+"powerGrafana.aiDrafter.gridA11y" = "%1$d wide, %2$d tall, at column %3$d, row %4$d";
+"powerGrafana.aiDrafter.targetsLabel" = "Queries (%d)";
+"powerGrafana.aiDrafter.targetsEmpty" = "No queries proposed.";
+"powerGrafana.aiDrafter.targetNoQuery" = "(no query)";
+"powerGrafana.aiDrafter.targetFormat" = "format: %@";
+"powerGrafana.aiDrafter.targetA11y" = "Query %1$@: %2$@";
+"powerGrafana.aiDrafter.tablesLabel" = "Referenced tables";
+"powerGrafana.aiDrafter.emptyHintPrompt" = "Describe the panel you want Helix to draft.";
+"powerGrafana.aiDrafter.resultsReady" = "Rationale ready";
+"powerGrafana.aiDrafter.draftReadyA11y" = "Panel draft ready to apply";
+"powerGrafana.aiDrafter.loadingA11y" = "Loading Helix Grafana panel drafter";
+"powerGrafana.aiDrafter.errorTitle" = "Couldn't load Helix Grafana panel drafter";
+"powerGrafana.aiDrafter.retry" = "Retry";
+"powerGrafana.aiDrafter.live" = "Live";
+"powerGrafana.aiDrafter.stale" = "Stale";
+"powerGrafana.aiDrafter.offline" = "Offline";
+"powerGrafana.aiDrafter.staleBanner" = "Reconnecting — data may be stale";
+"powerGrafana.aiDrafter.offlineBanner" = "Offline — showing last known data";
+"powerGrafana.aiDrafter.refresh" = "Refresh";
