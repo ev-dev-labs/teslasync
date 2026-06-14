@@ -69,44 +69,7 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, GDPRExportRouteRegistration.registry(
-                    base: APIKeysRouteRegistration.registry(
-                    base: FleetAPIRouteRegistration.registry(
-                        base: ApiLogsRouteRegistration.registry(
-                            base: FeatureFlagsRouteRegistration.registry(
-                                base: AuditLogRouteRegistration.registry(
-                                    base: AutomationsListRouteRegistration.registry(
-                                        base: BatteryCellsRouteRegistration.registry(
-                                            base: StatisticsRouteRegistration.registry(
-                                                base: FleetCompareRouteRegistration.registry(
-                                                    base: TeslaOrdersRouteRegistration.registry(
-                                                        base: LiveSignalInspectorRouteRegistration.registry(
-                                                            base: SchemaDriftRouteRegistration.registry(
-                                                                base: FleetTelemetryCoverageRouteRegistration.registry(
-                                                                    base: DiskForecastRouteRegistration.registry(
-                                                                        base: ApiPlaygroundRouteRegistration.registry(
-                                                                            base: SettingsRouteRegistration.registry(
-                                                                                model: settingsModel,
-                                                                                onOpenNotifications: {
-                                                                                    selection = .notifications
-                                                                                }
-                                                                            )
-                                                                        )
-                                                                    )
-                                                                )
-                                                            )
-                                                        )
-                                                    ),
-                                                    onNavigate: { selection = $0 }
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )))
+                .environment(\.routeHosts, routeHostRegistry)
                 .platformIntegration(selection: $selection, settingsModel: settingsModel, onCommand: runCommand)
                 .commandActionsPresentation(commandActions)
                 .task {
@@ -127,6 +90,35 @@ struct TeslaSyncApp: App {
                     }
                 }
         }
+    }
+
+    /// Builds the route → page-view registry the shell renders from, threading one shared
+    /// base through every P7 page registration (each registers its own route, so order is
+    /// irrelevant). Flattened from a deeply-nested call chain so adding a registration never
+    /// breaches the line-length budget.
+    @MainActor private var routeHostRegistry: AppRouteHostRegistry {
+        var registry = SettingsRouteRegistration.registry(
+            model: settingsModel,
+            onOpenNotifications: { selection = .notifications }
+        )
+        registry = ApiPlaygroundRouteRegistration.registry(base: registry)
+        registry = DiskForecastRouteRegistration.registry(base: registry)
+        registry = FleetTelemetryCoverageRouteRegistration.registry(base: registry)
+        registry = SchemaDriftRouteRegistration.registry(base: registry)
+        registry = LiveSignalInspectorRouteRegistration.registry(base: registry)
+        registry = TeslaOrdersRouteRegistration.registry(base: registry)
+        registry = FleetCompareRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
+        registry = StatisticsRouteRegistration.registry(base: registry)
+        registry = BatteryCellsRouteRegistration.registry(base: registry)
+        registry = AutomationsListRouteRegistration.registry(base: registry)
+        registry = AuditLogRouteRegistration.registry(base: registry)
+        registry = FeatureFlagsRouteRegistration.registry(base: registry)
+        registry = ApiLogsRouteRegistration.registry(base: registry)
+        registry = FleetAPIRouteRegistration.registry(base: registry)
+        registry = APIKeysRouteRegistration.registry(base: registry)
+        registry = GDPRExportRouteRegistration.registry(base: registry)
+        registry = RbacMatrixRouteRegistration.registry(base: registry)
+        return registry
     }
 
     /// Wires the menu/command hub to the app's command executor + refresh signals.
