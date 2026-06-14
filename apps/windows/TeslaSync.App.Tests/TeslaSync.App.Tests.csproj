@@ -638,6 +638,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\DashboardPage\DashboardPage.Model.cs" Link="FeatureViews\DashboardPage\DashboardPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DashboardPage\DashboardPage.Source.cs" Link="FeatureViews\DashboardPage\DashboardPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DashboardPage\DashboardPage.ViewModel.cs" Link="FeatureViews\DashboardPage\DashboardPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GlancePage\GlancePage.Model.cs" Link="FeatureViews\GlancePage\GlancePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GlancePage\GlancePage.Source.cs" Link="FeatureViews\GlancePage\GlancePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\GlancePage\GlancePage.ViewModel.cs" Link="FeatureViews\GlancePage\GlancePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DashboardsPage\DashboardsPage.Model.cs" Link="FeatureViews\DashboardsPage\DashboardsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DashboardsPage\DashboardsPage.Source.cs" Link="FeatureViews\DashboardsPage\DashboardsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DashboardsPage\DashboardsPage.ViewModel.cs" Link="FeatureViews\DashboardsPage\DashboardsPage.ViewModel.cs" />

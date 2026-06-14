@@ -85,6 +85,16 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Dashboard / Glance page (P2/W7) — parity port of web GlancePage at route /glance (group Dashboard/Explore).
+        // RouteTable already maps Standalone("Glance","glance",RouteGroup.DashboardExplore). The "Open full app" link
+        // navigates home (the Dashboard index route).
+        _viewModel.PageFactory.Register("Glance", () =>
+        {
+            var page = new FeatureViews.Dashboard.GlancePage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Battery / Energy page (P2/W7) — parity port of web EnergyPage at route /energy.
         _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
 
