@@ -393,6 +393,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Efficiency", static () => new FeatureViews.Driving.EfficiencyPage());
         // Driving / DriveScore page (P2/W7) — parity port of web DriveScorePage at route /drive-score.
         _viewModel.PageFactory.Register("DriveScore", static () => new FeatureViews.Driving.DriveScorePage());
+        // Driving / Drivetrain Health page (P2/W7) — parity port of web DrivetrainHealthPage at route /drivetrain-health.
+        _viewModel.PageFactory.Register(
+            FeatureViews.Driving.DrivetrainHealthRegistration.RouteName,
+            static () => new FeatureViews.Driving.DrivetrainHealthPage());
         // Driving / Regen Efficiency page (P2/W7) — parity port of web RegenEfficiencyPage at route /regen-efficiency.
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
         // Analytics / Mileage page (P2/W7) — parity port of web MileagePage at route /mileage.
