@@ -1,0 +1,69 @@
+/*
+  RecentActivityFeed.strings
+  TeslaSync — P4 shared surface · 0100 · RecentActivityFeed (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The action labels + the empty-state copy
+  mirror the web source (components/data-display/RecentActivityFeed.tsx + lib/activityIcons.ts)
+  one-for-one — every `t(key, fallback)` the web feed resolves — plus the native P4 leaf chrome
+  (relative time / loading / error / freshness) so the Swift sources hold no English literals. The
+  relative-time entries lift the web `formatRelative` hardcoded phrases into the catalog, preserving the
+  copy verbatim (the `{{count}}` token is interpolated by the surface). These entries fold into the app
+  `Localizable.xcstrings` master catalog at integration time; they are kept in a per-surface table
+  ("RecentActivityFeed") so each parallel surface prompt owns its own strings without editing the shared
+  catalog.
+*/
+
+/* --- Empty state (web `RecentActivityFeed.tsx` `t(...)` key) --- */
+"activity.myActivity.empty" = "No recent activity in this window.";
+
+/* --- Action labels (web `lib/activityIcons.ts` registry) --- */
+"activity.action.vehicleCommand" = "Vehicle command";
+"activity.action.vehicleCommandWake" = "Wake vehicle";
+"activity.action.vehicleCommandHonk" = "Honk horn";
+"activity.action.vehicleCommandFlash" = "Flash lights";
+"activity.action.vehicleCommandLock" = "Lock vehicle";
+"activity.action.vehicleCommandUnlock" = "Unlock vehicle";
+"activity.action.vehicleCommandClimate" = "Climate command";
+"activity.action.vehicleCommandCharge" = "Charging command";
+"activity.action.settingsUpdate" = "Settings updated";
+"activity.action.settings" = "Settings change";
+"activity.action.alertRuleCreate" = "Alert rule created";
+"activity.action.alertRuleUpdate" = "Alert rule updated";
+"activity.action.alertRuleDelete" = "Alert rule deleted";
+"activity.action.alert" = "Alert change";
+"activity.action.automationCreate" = "Automation created";
+"activity.action.automationUpdate" = "Automation updated";
+"activity.action.automationDelete" = "Automation deleted";
+"activity.action.automation" = "Automation change";
+"activity.action.dashboardLayoutSave" = "Dashboard layout saved";
+"activity.action.dashboard" = "Dashboard change";
+"activity.action.dataExportCreate" = "Data export requested";
+"activity.action.dataExport" = "Data export";
+"activity.action.apiKeyCreate" = "API key created";
+"activity.action.apiKeyUpdate" = "API key updated";
+"activity.action.apiKeyDelete" = "API key revoked";
+"activity.action.apiKey" = "API key change";
+"activity.action.authLogin" = "Signed in";
+"activity.action.authLogout" = "Signed out";
+"activity.action.auth" = "Authentication";
+"activity.action.unknown" = "Activity";
+
+/* --- Relative time (web `formatRelative` phrases; {{count}} interpolated) --- */
+"activity.feed.justNow" = "just now";
+"activity.feed.minutesAgo" = "{{count}}m ago";
+"activity.feed.hoursAgo" = "{{count}}h ago";
+"activity.feed.daysAgo" = "{{count}}d ago";
+
+/* --- Surface chrome (P4 leaf contract) --- */
+"recentActivityFeed.a11yContainer" = "Recent activity";
+"recentActivityFeed.openHint" = "Opens the linked item";
+"recentActivityFeed.loadingA11y" = "Loading recent activity";
+"recentActivityFeed.errorTitle" = "Couldn't load recent activity";
+"recentActivityFeed.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"recentActivityFeed.live" = "Live";
+"recentActivityFeed.stale" = "Stale";
+"recentActivityFeed.offline" = "Offline";
+"recentActivityFeed.staleA11y" = "Stale — tap to refresh";
+"recentActivityFeed.offlineA11y" = "Offline — showing the last known activity";
