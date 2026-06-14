@@ -1,0 +1,175 @@
+=== p2-windows · W7 · page:telemetry/SignalGapDetector (WinUI 3 / Fluent) ===
+Parity unit : page:telemetry/SignalGapDetector   kind=page   web route=/signal-gaps
+Web source  : web/src/features/telemetry/pages/SignalGapDetectorPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/SignalGapDetectorPage/ (+ NavigationView registration, test, resw, ledger)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300), maui-windows workload installed — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SignalLogViewerPage / SignalsWorkspacePage do. The generated prompt's idealized
+  "TeslaSync/Features/Telemetry/SignalGapDetectorPage.xaml + SignalGapDetectorPageViewModel.cs" is mapped onto
+  these real conventions (namespace TeslaSync.App.FeatureViews.Telemetry, aligning with RouteGroup.TelemetrySignals).
+- Faithful scope (no scope narrowing, no stubs — ADR-011): the web SignalGapDetectorPage is a thin wrapper that
+  renders a header (title/subtitle + VehicleSelect), the no-vehicle EmptyState (web `!vehicleId || vehicleId<=0`),
+  and otherwise the shared <SignalCatalogPanel vehicleId=…>. The native port reproduces ALL of these regions: the
+  header, the parity-tracked no-vehicle empty state, AND a complete native catalog (the SignalCatalogPanel port:
+  the four summary StatCards, the search box, the tri-state filter (All/Stale Only/Active Only) and tri-state sort
+  (Most Stale/A-Z/Category) toggles, and the staleness table — status band, signal, last value, last updated, time
+  since) with its own loading / empty / error states. The manifest scopes this unit's PARITY_REQUIRED to the empty
+  state + four chrome strings (it has no API data sources of its own — the catalog data source belongs to the shared
+  SignalCatalogPanel), but the catalog region is still rendered in full so the vehicle-selected branch is never a
+  stub.
+- Data binding (ADR-004): SignalGapDetectorClientFeed binds the page's two web data sources to the generated
+  OpenAPI contract client — GET /vehicles (web useSelectedVehicle, op get_api_v1_vehicles) and
+  GET /signals/{vehicleID}/live (web useSignalGaps, op get_api_v1_signals_vehicleID_live, verified present in
+  Generated/Api/ApiEndpoints.cs). The default EmptySignalGapDetectorFeed keeps the shell-registered page mountable
+  without a backend (resolves the no-vehicle empty state, no HTTP). No HTTP touches the view; every payload
+  round-trips through the tolerant SignalGapDetectorVehicle.ParseList / SignalGapLiveEntry.ParseLive parsers.
+- Data states (manifest declares state=empty; the catalog source adds loading/empty/error/success): the page union
+  is SignalGapDetectorState {Loading (initial fleet fetch), Empty (no vehicle — the parity empty state), Error
+  (fleet fetch failed → failure banner), Catalog (vehicle selected)}; the catalog union is SignalGapCatalogState
+  {Loading (TsTableSkeleton), Error (inline danger banner), Empty (web "No signal data available"), Success}. No
+  region is ever hidden behind a null (ADR-011): a vehicle with zero signals shows the friendly empty state, a
+  search/filter with no matches keeps the table with the web "No signals match current filters" message.
+- Staleness is recomputed at the display boundary against `now` (web recomputes on every refresh): StalenessSeconds
+  / CategoryOf (never / stale>300s / active) / BandOf (never / active<30s / aging<300s / stale) port
+  getCatalogStalenessStyle + the web SignalRow.category exactly; FormatStaleness ports formatStaleness
+  (Ns ago / Nm ago / Nh Nm ago); the summary counts (total / active / stale / never) port the web reducers.
+- Panels (ADR-005), in web source order: the summary StatCard grid (TsStatCard ×4), the controls panel
+  (TsGlassPanel: TsInput search + filter TsButtons + sort TsButtons + the "Refreshes every 5s" caption), and the
+  catalog body (TsTableSkeleton / TsAlertBanner / TsDataTable Selectable=false / TsEmptyState / last-refreshed
+  caption). No hardcoded colours/typography — PageTitle/Subhead/Caption + TsStatCard/TsBadge/TsButton + the W1
+  design tokens drive light/dark/high-contrast.
+- Navigation entry: RouteTable.cs ALREADY maps Page("SignalGapDetector","signal-gaps",RouteGroup.TelemetrySignals,
+  "Signal Gaps") — unchanged. ShellWindow.xaml.cs registers the page factory
+  (_viewModel.PageFactory.Register("SignalGapDetector", () => new FeatureViews.Telemetry.SignalGapDetectorPage())).
+  This page introduces NO new route surface.
+- i18n (ADR-014): every visible literal resolves through ILocalizer.GetString(key, englishFallback) using the exact
+  web key names (signalGap.title/subtitle/noVehicle/noVehicleDesc + the shared catalog keys
+  filterPlaceholder/filterLabel/status/category/refreshInterval/noData/noMatch/totalSignals/active/stale/
+  neverReceived/all/staleOnly/activeOnly/mostStale/az/signal/lastValue/lastUpdated/timeSince/lastRefreshed). The
+  Windows catalog Strings/{en,ar,he}/Resources.resw is AUTO-GENERATED by apps/shared/i18n/generators/gen-i18n.ts
+  from apps/shared/i18n/catalog/*.json and is checksum/drift-gated (".gitattributes" pins it eol=lf for the
+  gen-i18n -Check gate). The canonical catalog already carries translation.signalGap.title /
+  translation.signalGap.subtitle (and the whole shared catalog-key set the catalog page reuses) but NOT
+  signalGap.noVehicle / signalGap.noVehicleDesc — the web page itself supplies these via t(key, fallback) because
+  the web i18n catalog has no entry for them either. Per the established sibling precedent (W7 StatusApiDocsPage /
+  HelpPage), the generated resw is therefore NOT hand-edited (that would fail the gen-i18n drift gate); instead
+  signalGap.noVehicle / signalGap.noVehicleDesc and the native-only status-band labels (web's hardcoded
+  'Never received'/'Active'/'Aging'/'Stale', externalised under signalGap.band*) resolve through the verbatim
+  English fallback on the ShellLocalizer → ResourceLoader bridge — exactly how the web renders them. Zero hardcoded
+  UI text (every literal flows through one keyed GetString call site); the key names match web; the auto-generated
+  catalog is left byte-for-byte untouched.
+- a11y (ADR-015): AutomationProperties names on the page (title), the vehicle picker, the controls panel, each
+  filter/sort toggle (its label) and each catalog row (signal + status + value + time-since); decorative glyphs set
+  AccessibilityView=Raw; the failure banners are live regions; light/dark + high-contrast honoured through the W1
+  tokens; ≥ minimum target sizes via the shared TsButton/TsSelect controls.
+- Units (ADR-005 / P1-S5): the catalog renders telemetry signal values verbatim (the value column is the raw last
+  value, not a measured quantity needing conversion) and freshness ages formatted at the display boundary; no
+  non-SI value is stored or computed.
+
+=== PARITY ===
+PARITY_REQUIRED=5
+- [x] state — empty data state (web `!vehicleId || vehicleId <= 0` → <EmptyState>)
+      evidence: SignalGapDetectorProjection.Project (SignalGapDetectorPage.Model.cs) derives
+      SignalGapDetectorState.Empty + ShowNoVehicle=true when no vehicle is selected; rendered by
+      SignalGapDetectorPage.cs (_noVehicleEmpty TsEmptyState) and surfaced by SignalGapDetectorPageViewModel.State.
+      headless asserts: Projection_loading_is_the_loading_state, Projection_no_vehicle_is_the_empty_state,
+      ViewModel_empty_feed_is_the_no_vehicle_empty_state.
+- [x] string — signalGap.noVehicle
+      evidence: SignalGapDetectorProjection.Project → NoVehicleTitle =
+      localizer.GetString("signalGap.noVehicle", "Select a vehicle to begin"); not in the canonical i18n catalog
+      (nor the web's), so it resolves through the verbatim English fallback exactly as the web t(key, fallback)
+      does — the auto-generated resw is not hand-edited (drift-safe, per the StatusApiDocs/HelpPage precedent).
+      headless asserts: Projection_no_vehicle_is_the_empty_state (asserts "Select a vehicle to begin"),
+      Projection_resolves_every_required_string_key.
+- [x] string — signalGap.noVehicleDesc
+      evidence: SignalGapDetectorProjection.Project → NoVehicleMessage =
+      localizer.GetString("signalGap.noVehicleDesc", "Pick a vehicle from the picker above to inspect its signal
+      freshness."); resolves through the verbatim English fallback (not in the catalog / web i18n), drift-safe.
+      headless asserts: Projection_no_vehicle_is_the_empty_state (asserts the message),
+      Projection_resolves_every_required_string_key.
+- [x] string — signalGap.subtitle
+      evidence: SignalGapDetectorRegistration.Subtitle → localizer.GetString("signalGap.subtitle", "Identify
+      signals that have stopped arriving or have gaps"); catalog key translation.signalGap.subtitle (pre-existing,
+      generated into the resw).
+      headless asserts: Projection_with_vehicle_shows_the_catalog_and_header_copy, Registration_exposes_route_and_operations,
+      Projection_resolves_every_required_string_key.
+- [x] string — signalGap.title
+      evidence: SignalGapDetectorRegistration.Title → localizer.GetString("signalGap.title", "Signal Gap
+      Detector"); also PageTitle (web usePageTitle fallback "Signal Gaps"); catalog key translation.signalGap.title
+      (pre-existing, generated into the resw).
+      headless asserts: Projection_with_vehicle_shows_the_catalog_and_header_copy, Registration_exposes_route_and_operations,
+      Projection_resolves_every_required_string_key.
+PARITY_COVERED=5
+
+# Beyond the manifest's required-5, the full vehicle-selected catalog region (web <SignalCatalogPanel>) is also
+# reproduced and asserted headlessly so the page is not a stub: staleness categorisation
+# (CategoryOf_and_BandOf_follow_the_web_thresholds), freshness formatting (FormatStaleness_matches_the_web_tiers,
+# FormatStaleness_never_received_is_the_em_dash), the summary counts (Projection_summary_counts_match_the_categories),
+# the row projection (Projection_rows_carry_the_band_label_value_and_time_since), the filter/sort/search pipeline
+# (Projection_filter_stale_keeps_only_stale_and_never, Projection_filter_active_keeps_only_active,
+# Projection_sort_alpha_orders_by_name, Projection_sort_staleness_puts_never_received_first,
+# Projection_search_filters_by_name_case_insensitively), the catalog inner states
+# (Projection_catalog_loading_shows_the_skeleton, Projection_catalog_empty_shows_the_no_data_state,
+# Projection_catalog_error_shows_the_error_state, Projection_search_with_no_match_keeps_the_table_with_an_empty_message),
+# the parsers (ParseList_reads_id_and_display_name, ParseLive_reads_value_and_timestamp_pairs,
+# ParseLive_tolerates_a_bare_value_and_a_missing_signals_envelope), the view-model state machine
+# (ViewModel_initial_state_is_loading, ViewModel_loads_into_catalog_and_selects_the_first_vehicle,
+# ViewModel_live_failure_is_the_catalog_error_state, ViewModel_fleet_failure_is_the_error_state,
+# ViewModel_empty_live_snapshot_is_the_catalog_empty_state, ViewModel_select_vehicle_reloads_the_live_signals,
+# ViewModel_refresh_refetches_the_selected_vehicle, ViewModel_search_filter_sort_are_client_side_and_do_not_refetch),
+# the generated-client feed request shaping (ClientFeed_vehicles_sends_the_list_operation,
+# ClientFeed_live_sends_the_vehicle_path, ClientFeed_propagates_api_exception), the PII-safe diagnostics
+# (Diagnostics_record_only_view_opened → view.opened slug=SignalGapDetectorPage) and the registration
+# (Registration_exposes_route_and_operations). 38 tests in
+# TeslaSync.App.Tests/FeatureViews/SignalGapDetectorPageTests.cs, all passing. The WinUI view itself is exercised
+# by the app build.
+
+=== GATE ===
+# 1) Placeholder / stub scan (ADR-011) — scoped to the new feature subtree, exactly as the prompt's gate scopes
+#    -Path to the page directory:
+#    & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SignalGapDetectorPage -Language csharp
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+#    (the one ALLOWED is the justified `// parity:allow web i18n key name signalGap.filterPlaceholder` on the
+#    search-hint key, whose web key name literally contains "Placeholder".)
+
+# 2) Build (solution) — dotnet build apps/windows/TeslaSync.sln -c Release
+#    Result: Build succeeded. 0 Warning(s). 0 Error(s). The new files compile clean under TeslaSync.App's
+#    TreatWarningsAsErrors=true / AnalysisMode=Recommended (the only pre-execution analyzer hit, CA1859 on the
+#    private FilterAndSort, was fixed by returning the concrete List<ComputedRow>).
+BUILD_EXIT=0
+
+# 3) Lint / format — dotnet format apps/windows/TeslaSync.sln --verify-no-changes --no-restore
+#    Result: exit 0 (no changes) across the WHOLE solution after normalising the new files to LF/utf-8 via a scoped
+#    `dotnet format --include apps/windows/TeslaSync.App/feature-views/SignalGapDetectorPage/
+#    apps/windows/TeslaSync.App.Tests/FeatureViews/SignalGapDetectorPageTests.cs`.
+LINT_EXIT=0
+
+# 4) Test — dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+#    Result: Passed: 30585, Failed: 0, Skipped: 0 (incl. the 38 new SignalGapDetectorPageTests; no regressions —
+#    the SignalGapDetectorPage view + the ShellWindow registration are WinUI view files not linked into the test
+#    project, validated by the build).
+TEST_EXIT=0
+
+PARITY_COVERED=5
+PARITY_REQUIRED=5
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SignalGapDetectorPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SignalGapDetectorPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-telemetry-SignalGapDetectorPage.log
+# (the auto-generated Strings/*.resw catalog is intentionally NOT edited — drift-safe; strings resolve via fallback)
+# git commit -m "feat(apps/windows): SignalGapDetectorPage at web parity (W7 telemetry)"
+
+EXIT=0
+STATUS=DONE

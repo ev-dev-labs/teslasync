@@ -259,5 +259,14 @@
     "requiredCount": 14,
     "promptId": "p2-windows/W7/windows-page-power-user-SqlPlaygroundPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-power-user-SqlPlaygroundPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalGapDetector",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p2-windows/W7/windows-page-telemetry-SignalGapDetectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-telemetry-SignalGapDetectorPage.log"
   }
 ]
