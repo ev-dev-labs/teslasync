@@ -52,5 +52,14 @@
     "requiredCount": 22,
     "promptId": "p3-android/pages/admin/SlowQueriesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SlowQueriesPage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaRegion",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/TeslaRegionPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaRegionPage.log"
   }
 ]
