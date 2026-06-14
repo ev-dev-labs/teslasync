@@ -948,3 +948,4 @@ p2-windows/pages/notifications/AuditLogPage.prompt.md
 p2-windows/pages/notifications/AlertStudioPage.prompt.md
 p2-windows/pages/settings/SafetyPage.prompt.md
 p2-windows/pages/system/IncidentTimelinePage.prompt.md
+p2-windows/pages/system/ChatbotPage.prompt.md
