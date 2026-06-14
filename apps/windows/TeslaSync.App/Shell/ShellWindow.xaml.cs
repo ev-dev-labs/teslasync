@@ -183,6 +183,12 @@ public sealed partial class ShellWindow : Window
         // here as a deep link. RouteTable maps Hidden("RbacMatrix","admin/rbac",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("RbacMatrix", static () => new FeatureViews.Admin.RbacMatrixPage());
 
+        // Admin / Users (Subjects) page (P2/W7) — parity port of web UsersPage (the impersonation target picker).
+        // The web page ships unrouted (no routeRegistry entry — an importable-but-unrouted symbol); there is likewise
+        // no RouteTable entry, so this registration is a latent page-factory seam mirroring the web's wired-but-unrouted
+        // state (the same approach as the Diagnostic registration below).
+        _viewModel.PageFactory.Register("Users", static () => new FeatureViews.Admin.UsersPage());
+
         // System / DB Health page (P2/W7) — parity port of web DBHealthPage at route /db-health (group Diagnostics).
         _viewModel.PageFactory.Register("DBHealthDashboard", static () => new FeatureViews.Diagnostics.DBHealthPage());
         // System / Diagnostic page (P2/W7) — parity port of web DiagnosticPage (the operator self-test wizard). The web
