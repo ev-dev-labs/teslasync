@@ -356,6 +356,11 @@ public sealed partial class ShellWindow : Window
         // /tire-pressure. RouteTable already maps Page("TirePressure","tire-pressure",RouteGroup.VehicleSystems).
         _viewModel.PageFactory.Register("TirePressure", static () => new FeatureViews.VehicleSystems.TirePressurePage());
 
+        // Vehicle Systems / Guard Mode page (P2/W7) — parity port of web GuardModePage at route /guard-mode.
+        // RouteTable already maps Page("GuardMode","guard-mode",RouteGroup.VehicleSystems). The default
+        // empty-source ctor wires the shell resource localizer; the real guard feed binds in DI hosting.
+        _viewModel.PageFactory.Register("GuardMode", static () => new FeatureViews.VehicleSystems.GuardModePage());
+
         // Driving / DrivesList page (P2/W7) — parity port of web DrivesListPage at route /drives
         // (RouteTable Page("Drives","drives",RouteGroup.TripsDriving)). The default empty-source ctor renders the
         // page-level empty state until a DI host wires the generated-client-backed DrivesListSource via

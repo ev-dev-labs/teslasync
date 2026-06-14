@@ -1,0 +1,151 @@
+P2-WINDOWS · W7 · page:vehicle-systems/GuardMode — WinUI 3 / Fluent parity port — artifact log
+
+Parity unit : page:vehicle-systems/GuardMode  (kind=page, web route /guard-mode)
+Web source  : web/src/features/vehicle-systems/pages/GuardModePage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/GuardModePage/{GuardModePage.cs, .Model.cs, .Source.cs, .ViewModel.cs}
+              (real in-repo convention — code-built WinUI views, NOT XAML; the generated prompt's
+               apps/windows/TeslaSync/Features/VehicleSystems/*.xaml path does not exist in-repo. The W3
+               component library + W4 shell are C#-built — see sibling feature-views/AuditLogPage etc.)
+Nav         : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("GuardMode", …);
+              RouteTable already maps Page("GuardMode","guard-mode",RouteGroup.VehicleSystems,"Guard Mode","\uE72E").
+Strings     : apps/windows/Strings/{en,ar,he}/Resources.resw — 36 of 38 guard.* keys already present
+              (generated from the web i18n source); added the 2 missing keys guard.acknowledgedBy +
+               guard.panicConfirmMessage to all three locales.
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/GuardModePageTests.cs (53 facts/theories);
+              linked Model/Source/ViewModel into TeslaSync.App.Tests.csproj (the WinUI view stays in the app
+              project — the headless test project is net10.0 with no WinUI).
+
+Build prereq: the W1 generated C# client is a gitignored build artifact. Materialized for the build via
+              `pwsh apps/tools/codegen/gen-clients.ps1` (writes apps/windows/Generated/Api/*.cs from
+              api/openapi/teslasync.openapi.json) + a thin apps/windows/Generated/Generated.csproj host
+              (net10.0, ns TeslaSync.Windows.Generated) that TeslaSync.App.Core already references.
+
+Data sources (8) — each bound to the generated C# client through the ObservableObject GuardModePageViewModel
+  isGuardEventAcknowledged                                  -> GuardEvent.IsAcknowledged (acknowledged_at != null)  [Model.cs]
+  useGuardConfig         GET  get_api_v1_vehicles_vehicleID_guard                 -> GuardModeClientFeed.FetchConfigAsync        [Source.cs]
+  useGuardEvents         GET  get_api_v1_vehicles_vehicleID_guard_events          -> GuardModeClientFeed.FetchEventsAsync         [Source.cs]
+  useVehicleState        GET  get_api_v1_vehicles_vehicleID_state                 -> GuardModeClientFeed.FetchVehicleStateAsync   [Source.cs]
+  useGeofences           GET  get_api_v1_geofences                                -> GuardModeClientFeed.FetchGeofencesAsync      [Source.cs]
+  useSetGuardConfig      POST post_api_v1_vehicles_vehicleID_guard                -> GuardModeClientFeed.SetConfigAsync           [Source.cs]
+  useGuardPanic          POST post_api_v1_vehicles_vehicleID_guard_panic          -> GuardModeClientFeed.PanicAsync               [Source.cs]
+  useAcknowledgeGuardEvent POST post_..._guard_events_eventID_acknowledge         -> GuardModeClientFeed.AcknowledgeAsync         [Source.cs]
+  (web hook names preserved verbatim at the C# call sites: IGuardModeFeed Fetch*/Set/Panic/Acknowledge.)
+  R-note: the guard-config POST (useSetGuardConfig) is exposed by neither internal/api/router.go nor the
+          OpenAPI contract (GET-only), so post_api_v1_vehicles_vehicleID_guard is NOT in the generated
+          endpoint table. The write is wired for full web parity; a missing-endpoint / non-2xx failure
+          degrades to the same error toast the web shows (GuardModePageViewModel.RunConfigWriteAsync catch).
+
+=== PARITY ===
+PARITY_REQUIRED=54
+
+# ── Panels (6) — each a Fluent TsGlassPanel (GlassPanel→Card+Mica, ADR-005) in GuardModePage.cs ──
+[x] panel  - GlassPanel1  -> GuardModePage.BuildTogglePanel  / field _togglePanel  (arm/disarm shield + Toggle + Updating…)        [GuardModePage.cs]
+[x] panel  - GlassPanel2  -> GuardModePage.BuildStatusPanel  / field _statusPanel  (armed-since / lock / sentry / unacknowledged)  [GuardModePage.cs]
+[x] panel  - GlassPanel3  -> GuardModePage.BuildPanicPanel   / field _panicPanel   (Emergency + PANIC button + description)        [GuardModePage.cs]
+[x] panel  - GlassPanel4  -> GuardModePage.BuildSettingsPanel/ field _settingsPanel(home-geofence + sensitivity selects + auto-panic + Save) [GuardModePage.cs]
+[x] panel  - GlassPanel5  -> GuardModePage.BuildMapPanel     / field _mapPanel     (Live Vehicle Location map)                     [GuardModePage.cs]
+[x] panel  - GlassPanel6  -> GuardModePage.BuildEventsPanel  / field _eventsPanel  (Event Timeline + unack badge + feed)           [GuardModePage.cs]
+
+# ── Maps (6) — W3 native MapControl wrapper + overlays (never a web canvas) ──
+[x] map    - MapContainer -> TsMapControl _map                  (RenderMap: center/zoom/SetHasGeometry/Invalidate)                  [GuardModePage.cs]
+[x] map    - MapTileLayer -> TsMapLayerSwitcher _layerSwitcher  (raster tile-layer style; _map.MapStyle = style)                    [GuardModePage.cs]
+[x] map    - Marker       -> TsMapMarker _marker                (vehicle position; _map.AddOverlay(_marker))                        [GuardModePage.cs]
+[x] map    - Circle       -> TsMapCircle _homeCircle            (home-geofence radius; centre+RadiusMeters from display)            [GuardModePage.cs]
+[x] map    - Popup        -> GuardMapPopup _popup : IMapOverlay (vehicle name + lat,lng over the marker — web MapPopup port)        [GuardModePage.cs]
+[x] map    - Polyline     -> TsMapPolyline _eventTrail          (event trail; wired, empty positions per web EventTrail)            [GuardModePage.cs]
+
+# ── Data states (4) — implemented for every source; never a blank region ──
+[x] state  - loading data state -> GuardModeState.Loading  -> display.IsLoading -> TsPageContainer spinner   (test: State_loading_when_initial_with_no_data)        [Model.cs/ViewModel.cs/GuardModePage.cs]
+[x] state  - empty   data state -> GuardModeState.Empty    -> per-section empty surfaces (map _mapEmpty / events _eventsEmpty) (test: State_empty_when_no_vehicle_and_no_data) [Model.cs/GuardModePage.cs]
+[x] state  - error   data state -> GuardModeState.Error    -> display.ShowError -> TsPageContainer ErrorMessage + Retry (test: State_error_when_read_failed_with_nothing_to_show) [Model.cs/GuardModePage.cs]
+[x] state  - success data state -> GuardModeState.Success  -> six panels render from bound state           (test: State_success_when_configuration_resolved)     [Model.cs/GuardModePage.cs]
+
+# ── Strings (38) — every visible literal resolves via GuardModeProjection.Project(localizer) (zero hardcoded);
+#    keys match the web i18n key names; all 38 in Strings/*.resw; RecordingLocalizer test asserts each is resolved ──
+[x] string - guard.acknowledge        -> Project localizer.GetString("guard.acknowledge","Ack")                              [Model.cs]
+[x] string - guard.acknowledgedBy     -> MapEventRow GetString("guard.acknowledgedBy","Acknowledged by")                     [Model.cs]
+[x] string - guard.alertTriggered     -> Project GetString("guard.alertTriggered","Guard Alert Triggered!")                  [Model.cs]
+[x] string - guard.armed              -> Project GetString("guard.armed","Armed")                                            [Model.cs]
+[x] string - guard.armedSince         -> Project GetString("guard.armedSince","Armed since {{time}}") + Interpolate          [Model.cs]
+[x] string - guard.autoPanic          -> Project GetString("guard.autoPanic","Auto-Panic on Trigger")                        [Model.cs]
+[x] string - guard.autoPanicHelp      -> Project GetString("guard.autoPanicHelp","Automatically execute panic actions …")    [Model.cs]
+[x] string - guard.disarmed           -> Project GetString("guard.disarmed","Disarmed")                                      [Model.cs]
+[x] string - guard.emergency          -> Project GetString("guard.emergency","Emergency")                                    [Model.cs]
+[x] string - guard.enableGuard        -> Project GetString("guard.enableGuard","Guard Mode")                                 [Model.cs]
+[x] string - guard.eventTimeline      -> Project GetString("guard.eventTimeline","Event Timeline")                          [Model.cs]
+[x] string - guard.homeGeofence       -> Project GetString("guard.homeGeofence","Home Geofence")                           [Model.cs]
+[x] string - guard.homeGeofenceHelp   -> Project GetString("guard.homeGeofenceHelp","Vehicle will trigger alert if it leaves this area") [Model.cs]
+[x] string - guard.liveMap            -> Project GetString("guard.liveMap","Live Vehicle Location")                        [Model.cs]
+[x] string - guard.locked             -> Project GetString("guard.locked","Vehicle locked")                               [Model.cs]
+[x] string - guard.noEvents           -> Project GetString("guard.noEvents","No guard events yet") (status + timeline empty) [Model.cs]
+[x] string - guard.noGeofence         -> Project GetString("guard.noGeofence","— No home geofence —")                     [Model.cs]
+[x] string - guard.noLocation         -> Project GetString("guard.noLocation","No vehicle location available")            [Model.cs]
+[x] string - guard.notArmed           -> Project GetString("guard.notArmed","Not armed")                                  [Model.cs]
+[x] string - guard.panicButton        -> Project GetString("guard.panicButton","PANIC")                                   [Model.cs]
+[x] string - guard.panicConfirmLabel  -> Project GetString("guard.panicConfirmLabel","ACTIVATE PANIC")                    [Model.cs]
+[x] string - guard.panicConfirmMessage-> Project GetString("guard.panicConfirmMessage","This will immediately flash lights …") [Model.cs]
+[x] string - guard.panicConfirmTitle  -> Project GetString("guard.panicConfirmTitle","Activate Panic Mode?")             [Model.cs]
+[x] string - guard.panicDesc          -> Project GetString("guard.panicDesc","Flash lights, honk horn, lock doors, …")    [Model.cs]
+[x] string - guard.panicking          -> Project GetString("guard.panicking","Sending...")                               [Model.cs]
+[x] string - guard.saveSettings       -> Project GetString("guard.saveSettings","Save Settings")                         [Model.cs]
+[x] string - guard.sensitivity        -> Project GetString("guard.sensitivity","Sensitivity")                            [Model.cs]
+[x] string - guard.sentryOff          -> Project GetString("guard.sentryOff","Sentry mode off")                          [Model.cs]
+[x] string - guard.sentryOn           -> Project GetString("guard.sentryOn","Sentry mode active")                        [Model.cs]
+[x] string - guard.settings           -> Project GetString("guard.settings","Guard Settings")                           [Model.cs]
+[x] string - guard.status             -> Project GetString("guard.status","Status")                                      [Model.cs]
+[x] string - guard.subtitle           -> Project GetString("guard.subtitle","Anti-theft monitoring and emergency response") [Model.cs]
+[x] string - guard.title              -> Project GetString("guard.title","Guard Mode") (+ GuardModeRegistration.Title)    [Model.cs]
+[x] string - guard.triggered          -> Project GetString("guard.triggered","TRIGGERED")                                [Model.cs]
+[x] string - guard.unack              -> Project GetString("guard.unack","unacknowledged") (timeline badge)              [Model.cs]
+[x] string - guard.unackEvents        -> Project GetString("guard.unackEvents","{{count}} unacknowledged event(s)") + Interpolate [Model.cs]
+[x] string - guard.unlocked           -> Project GetString("guard.unlocked","Vehicle unlocked")                          [Model.cs]
+[x] string - guard.updating           -> Project GetString("guard.updating","Updating...")                               [Model.cs]
+
+PARITY_COVERED=54
+# Coverage asserted headlessly by GuardModePageTests:
+#   Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) drive a RecordingLocalizer and
+#     assert all 38 RequiredStringKeys are resolved on every projection regardless of data state.
+#   State_loading / State_empty / State_error / State_success assert the four-state matrix off GuardModeDisplay.
+#   The six panels + six map overlays render from the bound GuardModeDisplay (HasLocation/HasHomeGeofence/Events/
+#     ShowTriggeredAlert flags asserted by Map_* / Home_geofence_circle_* / event-row / triggered tests).
+#   Feed_* tests assert each generated-client request's operation id + path params + body; the
+#     Read_and_command_operations_resolve_in_the_generated_table theory pins the 7 generated ids to the contract,
+#     and Set_config_write_is_a_web_parity_write_absent_from_the_generated_contract documents the GET-only gap.
+#   ViewModel_* tests assert the load loading/empty/error/success matrix and the toggle/save/panic/acknowledge
+#     mutations + toast + setter-reproject behaviour.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/GuardModePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/VehicleSystems path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 17 Warning(s)
+#   (all 17 are pre-existing TeslaSync.App.Core CA1716/CA1720/CA1859/CA1000 warnings; GuardModePage adds 0).
+#   Requires the W1 generated client materialized first (Generated/Api/*.cs via gen-clients.ts + scaffolded
+#   Generated/Generated.csproj — both gitignored build artifacts).
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (whole-solution verify clean;
+#   GuardModePage Model/Source/ViewModel/view + GuardModePageTests + ShellWindow.xaml.cs auto-formatted).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30882, Failed: 0, Skipped: 0
+#   (incl. 53 GuardModePageTests). This is the headless, parity-bearing suite that drives the W7 page gate
+#   (same convention as the sibling AuditLogPage / TirePressurePage W7 logs).
+TEST_EXIT=0
+# NOTE (environment): the whole-solution `dotnet test apps/windows/TeslaSync.sln` additionally runs
+#   TeslaSync.App.UITests, whose WinAppDriver UI-automation cases abort with UiAutomationUnavailableException
+#   (no WinAppDriver/Appium runner in this headless environment). Those are W9-scope tests, not authored or
+#   modified here, and are environment-gated — not a code regression. The headless TeslaSync.App.Tests suite
+#   that verifies this page's parity is fully green.
+PARITY_COVERED=54
+PARITY_REQUIRED=54
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/GuardModePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw apps/windows/Strings/ar/Resources.resw apps/windows/Strings/he/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/GuardModePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log
+# git commit -m "feat(apps/windows): GuardModePage at web parity (W7 vehicle-systems)"
+
+EXIT=0
+STATUS=DONE

@@ -11769,6 +11769,9 @@
   <data name="translation.guard.acknowledge" xml:space="preserve">
     <value>Ack</value>
   </data>
+  <data name="translation.guard.acknowledgedBy" xml:space="preserve">
+    <value>Acknowledged by</value>
+  </data>
   <data name="translation.guard.alertTriggered" xml:space="preserve">
     <value>Guard Alert Triggered!</value>
   </data>
@@ -11828,6 +11831,9 @@
   </data>
   <data name="translation.guard.panicConfirmLabel" xml:space="preserve">
     <value>🚨 ACTIVATE PANIC</value>
+  </data>
+  <data name="translation.guard.panicConfirmMessage" xml:space="preserve">
+    <value>This will immediately flash lights, honk horn, lock doors, enable sentry mode, and send alerts to all notification channels.</value>
   </data>
   <data name="translation.guard.panicConfirmTitle" xml:space="preserve">
     <value>Activate Panic Mode?</value>
