@@ -830,6 +830,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" Link="FeatureViews\OverviewVehicleComparison\OverviewVehicleComparison.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetComparePage\FleetComparePage.Model.cs" Link="FeatureViews\FleetComparePage\FleetComparePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetComparePage\FleetComparePage.Source.cs" Link="FeatureViews\FleetComparePage\FleetComparePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetComparePage\FleetComparePage.ViewModel.cs" Link="FeatureViews\FleetComparePage\FleetComparePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Model.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.Source.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PatternsSlide\PatternsSlide.ViewModel.cs" Link="FeatureViews\PatternsSlide\PatternsSlide.ViewModel.cs" />

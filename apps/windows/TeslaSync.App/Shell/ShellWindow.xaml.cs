@@ -217,6 +217,15 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TrueCostOwnership", static () => new FeatureViews.Analytics.TrueCostPage());
         // Analytics / Weekly digest page (P2/W7) — parity port of web WeeklyDigestPage at route /weekly-digest.
         _viewModel.PageFactory.Register("WeeklyDigest", static () => new FeatureViews.Analytics.WeeklyDigestPage());
+        // Analytics / Fleet Comparison page (P2/W7) — parity port of web FleetComparePage at route
+        // /vehicle-comparison (RouteTable Page("FleetCompare","vehicle-comparison",Analytics)). The
+        // single-vehicle empty-state CTA navigates to /vehicles; the disambiguation banner opens /period-compare.
+        _viewModel.PageFactory.Register("FleetCompare", () =>
+        {
+            var page = new FeatureViews.Analytics.FleetComparePage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
         // Charging / Cost analysis page (P2/W7) — parity port of web CostAnalysisPage at route /charging/costs.
         _viewModel.PageFactory.Register("CostAnalysis", static () => new FeatureViews.Charging.CostAnalysisPage());
 
