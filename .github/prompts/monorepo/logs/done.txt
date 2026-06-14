@@ -762,3 +762,4 @@ p3-android/shared-meaningful/A-0174-LinearSidebar.prompt.md
 p3-android/shared-meaningful/A-0176-ActiveVehicleSegment.prompt.md
 p3-android/shared-meaningful/A-0178-ConnectionSegment.prompt.md
 p3-android/shared-meaningful/A-0179-HelpSegment.prompt.md
+p3-android/shared-meaningful/A-0175-NotionSidebar.prompt.md
