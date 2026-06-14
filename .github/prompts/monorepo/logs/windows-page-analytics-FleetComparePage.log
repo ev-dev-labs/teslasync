@@ -1,0 +1,164 @@
+=== p2-windows · W7 · page:analytics/FleetCompare (WinUI 3 / Fluent) ===
+Parity unit : page:analytics/FleetCompare   kind=page   web route=/vehicle-comparison
+Web source  : web/src/features/analytics/pages/FleetComparePage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/FleetComparePage/{FleetComparePage.Model.cs,
+              FleetComparePage.Source.cs, FleetComparePage.ViewModel.cs, FleetComparePage.cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  CostAnalysisPage / OverviewVehicleComparison / BatteryComparison surfaces do. The generated prompt's idealized
+  "FleetComparePage.xaml + FleetComparePageViewModel.cs under TeslaSync/Features/Analytics" is mapped onto these real
+  conventions; the surface registers itself with the W4 ShellPageFactory by route name ("FleetCompare", already in
+  RouteTable.cs L295 → /vehicle-comparison) via ShellWindow.xaml.cs, wiring NavigationRequested → NavigateTo.
+- Data binding (ADR-004): the five manifest data sources (useVehicles GET /vehicles; useVehicleState
+  GET /vehicles/{id}/state; useDrivingStats GET /drives/stats; useCostBreakdown GET /analytics/tco;
+  useMonthlyMileage GET /mileage/monthly) are bound through one IFleetCompareSource. FleetCompareSource reads the
+  roster (Operations.Vehicles.List) then fans out — concurrently per vehicle, exactly like BatteryComparison's
+  Promise.all — the four per-vehicle reads (Operations.Vehicles.State path-scoped; Operations.Drives.Stats,
+  Operations.Analytics.Tco, and the generated get_api_v1_mileage_monthly, each vehicle_id query-scoped). A failed
+  per-vehicle slice is left null (web parity: the disabled/errored query → undefined). The assembled
+  FleetCompareData is cached as JSON by the shared CacheThenNetworkEngine so it round-trips losslessly; the routes
+  are confirmed in internal/api/router.go + the generated ApiEndpoints table. No HTTP touches the view. The
+  parameterless page ctor uses EmptyFleetCompareSource (the established W7 default-feed pattern).
+- Selection is a pure reprojection (web parity): the web roster + per-vehicle queries are already resolved and the
+  two Selects just pick ids, so FleetComparePageViewModel auto-selects the first two vehicles (web useEffect),
+  and SelectA/SelectB re-run FleetCompareProjection.Project over the already-loaded snapshot with NO refetch
+  (asserted: ViewModel_select_reprojects_without_refetch keeps Attempts==1). Cross-disable (A≠B) is enforced both
+  in the option lists (FleetCompareOption.Disabled) and the SelectA/SelectB guards.
+- The web page renders states inside PageContainer per ADR-006, reproduced as visible Fluent regions: loading ->
+  full-page skeleton (BuildLoadingSkeleton, TsGlassPanel/TsSkeleton shimmer); fewer-than-two vehicles -> the focused
+  single-vehicle TsEmptyState with the Manage-vehicles CTA (web fleetCompare.singleVehicle.*); hard error -> the
+  TsAlertBanner(Danger); success/stale/offline -> the content stack (selectors, side-by-side status cards, the two
+  charts, the lifetime table, the highlights) with a TsDataFreshness chip. Each chart and each status card carries
+  its OWN empty state (TsChartContainer ChartState.Empty for the no-data months; the select-vehicle status card) so
+  no region is ever blank.
+- SI at the display boundary (ADR-004/frontend-si-cutover): the source reads SI off the wire; FleetCompareProjection
+  converts ONLY at projection time via the shared Core.Units converters/formatters (UnitConverters.DistanceFromSi /
+  SpeedFromSi, UnitFormatters.FormatDistance / FormatTemperature / FormatEnergy, ScalarFormatters). The lifetime
+  table reproduces the web fromKm / fromKmh / whPerKmToDisplay conversions and the getWinner semantics; the monthly
+  distance chart restates the wire total_km to SI metres then converts to the user distance unit (the native
+  MonthlyMileageWidget precedent, stricter than the web which left it km). rated_range is SI metres, inside/outside
+  temp SI Celsius. Energy formats as kWh (web DEFAULT_ENERGY_PREF) via `units with { Energy = Kwh }`.
+- i18n (ADR-014): every visible literal resolves through ILocalizer.GetString(key, web-default), web key names kept
+  verbatim. All 43 declared comparison.* / fleetCompare.singleVehicle.* keys already exist in the auto-generated
+  Strings/{en,he,ar}/Resources.resw (gen-i18n.ts output, do-not-hand-edit) — verified present (e.g. en L7083-L7200,
+  L11262-L11270) — so no resw hand-edit was needed; the in-code English defaults match the web t() fallbacks.
+- a11y (ADR-015): AutomationProperties names on the page, selectors, status cards and highlight cards; the charts
+  publish AccessibleSummary (web ariaLabel) and expose the TsChartContainer data-table toggle; theme/light-dark flows
+  from design tokens (DisplayTokens / StatusResources brushes) — no hardcoded hex. Colored/weighted text uses raw
+  TextBlock (the typography controls render to an internal TextBlock and ignore Control.Foreground), matching the
+  OverviewVehicleComparison precedent.
+
+=== PARITY ===
+PARITY_REQUIRED=63
+
+# panels (12) — every named GlassPanel + the two chart regions + the four highlight StatCards
+[x] panel  GlassPanel1        FleetComparePage.cs BuildStatusCard()->TsGlassPanel ; hosted in _statusHostA (status card, vehicle A)
+[x] panel  GlassPanel2        FleetComparePage.cs BuildStatusCard()->TsGlassPanel ; hosted in _statusHostB (status card, vehicle B)
+[x] panel  GlassPanel3        FleetComparePage.cs BuildSelectorsPanel()->TsGlassPanel (the two vehicle Selects + swap)
+[x] panel  GlassPanel4        FleetComparePage.cs BuildTablePanel()->TsGlassPanel (lifetime comparison table + note)
+[x] panel  GlassPanel5        FleetComparePage.cs BuildStatusCard() !HasVehicle branch -> TsGlassPanel (select-a-vehicle empty card)
+[x] panel  Monthly-Distance   FleetComparePage.cs _monthlyContainer (TsChartContainer, BuildChart) title=comparison.monthlyDistance
+[x] panel  Drives-per-Month   FleetComparePage.cs _drivesContainer (TsChartContainer, BuildChart) title=comparison.drivesPerMonth
+[x] panel  GlassPanel8        FleetComparePage.cs BuildSingleVehiclePanel() single-vehicle empty region + BuildLoadingSkeleton SkeletonPanel()->TsGlassPanel
+[x] panel  Battery-Level      FleetComparePage.cs BuildHighlights() TsStatCard[0] <- Model BuildHighlights comparison.batteryDiff
+[x] panel  Avg-Efficiency     FleetComparePage.cs BuildHighlights() TsStatCard[1] <- Model BuildHighlights comparison.efficiencyDiff
+[x] panel  Charging-Cost      FleetComparePage.cs BuildHighlights() TsStatCard[2] <- Model BuildHighlights comparison.costDiff
+[x] panel  CO-Saved           FleetComparePage.cs BuildHighlights() TsStatCard[3] <- Model BuildHighlights comparison.co2Diff
+
+# charts (4) — W3 native chart wrappers (TsChartContainer + TsLineChart/TsBarChart), never a web canvas
+[x] chart  ChartContainer     FleetComparePage.cs _monthlyContainer : TsChartContainer (monthly distance frame, AccessibleSummary=monthlyDistance.aria)
+[x] chart  LineChart          FleetComparePage.cs _monthlyChart : TsLineChart ; Series<-Model BuildMonthly() (2 series A/B, ChartSeriesKind.Line)
+[x] chart  ChartContainer     FleetComparePage.cs _drivesContainer : TsChartContainer (drives/month frame, AccessibleSummary=drivesPerMonth.aria)
+[x] chart  BarChart           FleetComparePage.cs _drivesChart : TsBarChart ; Series<-Model BuildDrives() (2 series A/B, ChartSeriesKind.Bar)
+
+# data states (4) — loading -> empty -> error -> success, each a visible region
+[x] state  loading            ViewModel SetLoading()->FleetCompareState.Loading ; view _loadingPanel/BuildLoadingSkeleton ; test ViewModel_loaded_* path
+[x] state  empty              FleetCompareState.SingleVehicle (BuildSingleVehiclePanel) + per-panel empties (UpdateChart ChartState.Empty ; select-vehicle card) ; tests ViewModel_single_vehicle_*, ViewModel_empty_response_*, Projection_charts_empty_without_monthly_data
+[x] state  error              ViewModel SetError()->FleetCompareState.Error ; view _errorBanner (TsAlertBanner) ; test ViewModel_failure_shows_error
+[x] state  success            FleetCompareState.Content (+Stale/Offline) ; view _contentPanel ; tests ViewModel_loaded_auto_selects_first_two_vehicles, ViewModel_offline_keeps_content_with_chip
+
+# strings (43) — every visible literal via ILocalizer.GetString(key, web-default); web key names kept verbatim
+[x] string comparison.avgEfficiency             FleetComparePage.Model.cs:801
+[x] string comparison.avgSpeed                  FleetComparePage.Model.cs:806
+[x] string comparison.banner.toPeriodCta        FleetComparePage.cs:334
+[x] string comparison.banner.toPeriodPrefix     FleetComparePage.cs:333
+[x] string comparison.battery                   FleetComparePage.cs:635
+[x] string comparison.batteryDiff               FleetComparePage.Model.cs:878
+[x] string comparison.chargeSessions            FleetComparePage.Model.cs:836
+[x] string comparison.chargingCost              FleetComparePage.Model.cs:826
+[x] string comparison.co2Diff                   FleetComparePage.Model.cs:897
+[x] string comparison.co2Saved                  FleetComparePage.Model.cs:821
+[x] string comparison.costDiff                  FleetComparePage.Model.cs:890
+[x] string comparison.currentStatus             FleetComparePage.cs:221
+[x] string comparison.drivesPerMonth            FleetComparePage.cs:450
+[x] string comparison.drivesPerMonth.aria       FleetComparePage.cs:451
+[x] string comparison.efficiencyDiff            FleetComparePage.Model.cs:883
+[x] string comparison.highlights                FleetComparePage.cs:257
+[x] string comparison.lifetimeNote              FleetComparePage.cs:247
+[x] string comparison.locked                    FleetComparePage.Model.cs:610
+[x] string comparison.metric                    FleetComparePage.cs:759
+[x] string comparison.monthlyDistance           FleetComparePage.cs:446
+[x] string comparison.monthlyDistance.aria      FleetComparePage.cs:447
+[x] string comparison.noDrivesData              FleetComparePage.cs:339
+[x] string comparison.noMonthlyData             FleetComparePage.cs:338
+[x] string comparison.range                     FleetComparePage.cs:581
+[x] string comparison.regenRatio                FleetComparePage.Model.cs:816
+[x] string comparison.security                  FleetComparePage.cs:673
+[x] string comparison.selectVehicle             FleetComparePage.Model.cs:585
+[x] string comparison.sentry                    FleetComparePage.cs:685
+[x] string comparison.status                    FleetComparePage.cs:695
+[x] string comparison.subtitle                  FleetComparePage.Model.cs:936
+[x] string comparison.temp                      FleetComparePage.cs:582
+[x] string comparison.title                     FleetComparePage.Model.cs:932 (+ view:286)
+[x] string comparison.topSpeed                  FleetComparePage.Model.cs:811
+[x] string comparison.totalDistance             FleetComparePage.Model.cs:796
+[x] string comparison.totalDrives               FleetComparePage.Model.cs:791
+[x] string comparison.totalEnergy               FleetComparePage.Model.cs:831
+[x] string comparison.unknown                   FleetComparePage.Model.cs:616
+[x] string comparison.unlocked                  FleetComparePage.Model.cs:611
+[x] string comparison.vehicleA                  FleetComparePage.Model.cs:478 (+ view:193/196)
+[x] string comparison.vehicleB                  FleetComparePage.Model.cs:479 (+ view:194/205)
+[x] string fleetCompare.singleVehicle.body      FleetComparePage.Model.cs:945
+[x] string fleetCompare.singleVehicle.cta       FleetComparePage.Model.cs:950
+[x] string fleetCompare.singleVehicle.title     FleetComparePage.Model.cs:940
+
+PARITY_COVERED=63
+
+=== GATE ===
+# ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FleetComparePage -Language csharp
+#   (real feature dir; the prompt's idealized TeslaSync/Features/Analytics maps to TeslaSync.App/feature-views/FleetComparePage)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release -> Build succeeded, 0 Error(s)
+#   (17 pre-existing TeslaSync.App.Core CA warnings only; TeslaSync.App also built standalone clean)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes -> 0 issues (all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 29602, Failed: 0, Skipped: 0
+#   (incl. 36 FleetComparePageTests: parse adapters, status/table/chart/highlight projection, winner semantics,
+#    metric+imperial conversion, view-model state matrix + auto-select + reproject-on-select, registration,
+#    diagnostics, data-layer string-key coverage). This is the canonical per-page TEST gate used by every sibling
+#    W7 page (see windows-page-admin-VehicleCostPage.log TEST_EXIT line).
+TEST_EXIT=0
+# NOTE: the solution-level `dotnet test apps/windows/TeslaSync.sln` additionally enumerates
+#   TeslaSync.App.UITests; all 147 fail identically at fixture setup with
+#   UiAutomationUnavailableException ("WinAppDriver/Appium runner is absent; nothing listening on
+#   http://127.0.0.1:4723"). That is an environment limitation of the WinAppDriver UI-automation harness
+#   (absent on this host) that gates every windows page equally and is unrelated to this change — not a code
+#   defect. The substantive code-level gates (build + lint + placeholder + the TeslaSync.App.Tests unit suite)
+#   are all green, consistent with the established sibling-page completion bar.
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/FleetComparePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/FleetComparePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-analytics-FleetComparePage.log
+# git commit -m "feat(apps/windows): FleetComparePage at web parity (W7 analytics)"
+
+EXIT=0
+STATUS=DONE
