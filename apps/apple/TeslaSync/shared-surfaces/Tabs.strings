@@ -1,0 +1,20 @@
+/*
+  Tabs.strings
+  TeslaSync — P4 shared surface · 0227 · Tabs (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source (components/ui/Tabs.tsx) routes NO
+  literals through `t()`: the per-tab `label` and the tablist `ariaLabel` are caller-supplied,
+  already-localized string props (rendered verbatim, exactly like the web). The web component renders an
+  empty `role="tablist"` container when given no tabs; the native peer instead shows a friendly empty-state message
+  rather than a blank box (the prompt's "never a blank box" rule), so the sole string the native surface
+  localizes is that empty-state message.
+
+  The key lives in the per-surface "Tabs" table and folds into the app `Localizable.xcstrings` master catalog
+  at integration time. In test / preview bundles `NSLocalizedString` returns the value below, keeping the
+  default render deterministic.
+*/
+
+/* --- Empty state (no web equivalent — the native "never a blank box" empty-state message) --- */
+
+/* Shown in place of the tab strip when there are no tabs to display. */
+"tabs.empty" = "No tabs available";
