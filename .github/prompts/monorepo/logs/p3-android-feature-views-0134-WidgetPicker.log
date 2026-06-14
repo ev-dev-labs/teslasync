@@ -1,4 +1,4 @@
-﻿=== P3 Feature view 0134 WidgetPicker (Android) ===
+=== P3 Feature view 0134 WidgetPicker (Android) ===
 DATE: 2026-06-12T01:06:15.4315208-07:00
 NOTE: The prompt gate addresses ':app:'. This repo's single app module's Gradle path is ':android'
       (apps/android/settings.gradle.kts: include(\

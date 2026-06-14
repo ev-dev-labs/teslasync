@@ -1,4 +1,4 @@
-﻿=== P3 Shared surface 0210 DataTableColumnMenu (Android) ===
+=== P3 Shared surface 0210 DataTableColumnMenu (Android) ===
 date=2026-06-13T20:27:43.3761609-07:00
 NOTE: prompt gate addresses ':app:'; the single app module's Gradle path is ':android' (settings.gradle.kts maps :android -> app/). Gate run against ':android:' per that mapping.
 NOTE: runner is Windows PowerShell; the wrapper is invoked as '.\gradlew.bat' (the extensionless 'gradlew' is the POSIX script).

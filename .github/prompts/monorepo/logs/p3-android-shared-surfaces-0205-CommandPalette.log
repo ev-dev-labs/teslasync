@@ -1,4 +1,4 @@
-﻿=== P3 Shared surface 0205 CommandPalette (Android) ===
+=== P3 Shared surface 0205 CommandPalette (Android) ===
 # Module path: settings.gradle.kts maps the app module to Gradle path :android (its own comment states every
 #   P3/A* prompt gate addresses ':android:'). The prompt gate text says ':app:', which does not exist in this
 #   build (verified: "project 'app' not found in root project 'teslasync-android'"). Using :android: below.

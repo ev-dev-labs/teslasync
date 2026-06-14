@@ -1,4 +1,4 @@
-﻿=== P3 Feature view 0280 InfoTile (Android) ===
+=== P3 Feature view 0280 InfoTile (Android) ===
 --- NOTES (honesty covenant) ---
 Capability: Kotlin 2.4.0 / AGP 8.9.2 / Compose BOM + Material 3 (apps/android/gradle/libs.versions.toml),
   JDK 21 (Android Studio JBR), Gradle 8.14.5, Android SDK present. Satisfies the prompt's
