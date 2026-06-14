@@ -942,3 +942,4 @@ p2-windows/pages/driving/DrivingDynamicsPage.prompt.md
 p2-windows/pages/maps/NavigationRoutePage.prompt.md
 p2-windows/pages/maps/MapOverviewPage.prompt.md
 p2-windows/pages/maps/GeofencesPage.prompt.md
+p2-windows/pages/notifications/AlertsListPage.prompt.md
