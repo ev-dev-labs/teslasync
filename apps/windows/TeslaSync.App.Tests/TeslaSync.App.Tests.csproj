@@ -1046,6 +1046,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.Model.cs" Link="FeatureViews\TimelinePage\TimelinePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.Source.cs" Link="FeatureViews\TimelinePage\TimelinePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TimelinePage\TimelinePage.ViewModel.cs" Link="FeatureViews\TimelinePage\TimelinePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatisticsPage\StatisticsPage.Model.cs" Link="FeatureViews\StatisticsPage\StatisticsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatisticsPage\StatisticsPage.Source.cs" Link="FeatureViews\StatisticsPage\StatisticsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\StatisticsPage\StatisticsPage.ViewModel.cs" Link="FeatureViews\StatisticsPage\StatisticsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressurePage\TirePressurePage.Model.cs" Link="FeatureViews\TirePressurePage\TirePressurePage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressurePage\TirePressurePage.Source.cs" Link="FeatureViews\TirePressurePage\TirePressurePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\TirePressurePage\TirePressurePage.ViewModel.cs" Link="FeatureViews\TirePressurePage\TirePressurePage.ViewModel.cs" />
