@@ -807,3 +807,4 @@ p3-android/shared-meaningful/A-0230-Toggle.prompt.md
 p3-android/shared-meaningful/A-0228-ThemePicker.prompt.md
 p3-android/shared-meaningful/A-0229-ThemeProvider.prompt.md
 p3-android/shared-meaningful/A-0231-Tooltip.prompt.md
+p3-android/shared-meaningful/A-0232-Typography.prompt.md
