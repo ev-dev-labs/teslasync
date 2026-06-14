@@ -1,0 +1,61 @@
+=== P3 Shared surface 0183 VehiclePicker (Android) ===
+note: gradlew invoked as gradlew.bat (Windows runner).
+note: the Gradle module is :android (settings.gradle.kts maps projectDir=app); the prompt gate's :app:
+      placeholder is this repo's :android: module - same adaptation the sibling 0164 VehicleSelect / 0157
+      RangePicker gates record.
+note: surface ships as flat files under com/teslasync/shared-surfaces/ (the prompt's allowed-files VehiclePicker.*
+      path); the mandated directory cannot form a valid Kotlin package (hyphen + PascalCase leaf), so the
+      package is io.teslasync.android.sharedsurfaces.vehiclepicker with @file:Suppress(InvalidPackageDeclaration)
+      - identical to the VehicleSelect / RangePicker precedent. Tests live in the matching real package path
+      under test/ and androidTest/.
+note: the gate's extensionless -Path .../shared-surfaces/VehiclePicker matches no file, so the placeholder
+      scan below targets the real .kt files for genuine coverage (VehicleSelect precedent).
+note: P1/S8 wiring - usePinned had no Android binding; the shared-core PinnedStore (P1/S8) existed but was
+      unwired and api/cache are not reachable from composition, so DataContainer (the doc-stated 'single seam
+      prompts widen - register their store') exposes a new pinnedStore = PinnedStore(HttpPinnedRepository(...))
+      mirroring vehiclesStore. VehiclePicker binds selection+fleet+pins; no HTTP in the view.
+note: i18n reuses existing P1/S10 catalog keys (vehiclePicker.aria/statusBar.vehicle.fallback/common.*/
+      mqtt.stale/freshness.updating); apps/android strings.xml is GENERATED from apps/shared/i18n - editing it
+      would drift + is out of allowed-files scope.
+
+### gradlew :android:assembleRelease ###
+> Task :android:compileReleaseKotlin
+> Task :android:assembleRelease
+BUILD SUCCESSFUL in 2m 16s
+BUILD_EXIT=0
+
+### gradlew :android:testReleaseUnitTest ###
+> Task :android:compileReleaseUnitTestKotlin
+> Task :android:testReleaseUnitTest
+BUILD SUCCESSFUL in 1m 56s
+TEST_EXIT=0
+unit-test result XML (app/build/test-results/testReleaseUnitTest), VehiclePicker classes only:
+  io.teslasync.android.sharedsurfaces.vehiclepicker.VehiclePickerModelTest: tests=28 failures=0 errors=0 skipped=0
+  io.teslasync.android.sharedsurfaces.vehiclepicker.VehiclePickerViewModelTest: tests=12 failures=0 errors=0 skipped=0
+
+### gradlew :android:ktlintCheck :android:detekt ###
+> Task :android:ktlintAndroidTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintMainSourceSetCheck UP-TO-DATE
+> Task :android:ktlintTestSourceSetCheck UP-TO-DATE
+> Task :android:ktlintCheck UP-TO-DATE
+> Task :android:detekt UP-TO-DATE
+BUILD SUCCESSFUL in 24s
+LINT_EXIT=0
+  (ktlint over main + test + androidTest source sets; detekt warningsAsErrors=true, MaxLineLength=140.)
+
+### check-placeholders.ps1 (genuine per-file scan of shipped files) ###
+  VehiclePicker.kt                 count=0
+  VehiclePickerModel.kt            count=0
+  VehiclePickerSource.kt           count=0
+  VehiclePickerViewModel.kt        count=0
+  VehiclePickerModelTest.kt        count=0
+  VehiclePickerViewModelTest.kt    count=0
+  VehiclePickerUiTest.kt           count=0
+PLACEHOLDER_COUNT_MINE=0
+PLACEHOLDER_EXIT=0
+
+### result ###
+BUILD_EXIT=0  TEST_EXIT=0  LINT_EXIT=0  PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE
