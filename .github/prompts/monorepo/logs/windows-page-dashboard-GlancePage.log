@@ -1,0 +1,142 @@
+P2-WINDOWS W7 — page:dashboard/Glance — WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/dashboard/pages/GlancePage.tsx (route /glance)
+Output     : apps/windows/TeslaSync.App/feature-views/GlancePage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done pages DashboardPage/QuickStatsPage/EnergyProductsPage)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Glance", …)
+             (RouteTable already maps Standalone("Glance","glance",DashboardExplore,"Glance"))
+Strings    : apps/windows/Strings/{en,he,ar}/Resources.resw already carry all twenty
+             translation.glance.* keys (catalog-generated) — resolved by key, none added.
+
+Files:
+  feature-views/GlancePage/GlancePage.Model.cs      (parsers + projection + registration + diagnostics)
+  feature-views/GlancePage/GlancePage.Source.cs     (generated C# client cache-then-network: vehicles+state+location+command)
+  feature-views/GlancePage/GlancePage.ViewModel.cs  (INotifyPropertyChanged 4-state holder + ports + empty/default sources)
+  feature-views/GlancePage/GlancePage.cs            (WinUI 3 UserControl, Fluent + design tokens — build-only, not headless-linked)
+  TeslaSync.App.Tests/FeatureViews/GlancePageTests.cs  (35 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj       (links the 3 UI-free files; the WinUI view is build-only)
+  apps/parity/windows-ledger.json                      (page:dashboard/Glance -> done, 30/30)
+
+Data sources (P1/S8 state-holder VM → generated C# client, ADR-004; web hook names kept at the C# call sites):
+  useVehicles               -> GlanceVehiclesSource.StreamAsync, ApiRequest(Operations.Vehicles.List = get_api_v1_vehicles)
+                               resolves vehicleId ?? vehicles[0] via GlanceVehicle.Resolve
+  useVehicleState           -> GlanceVehicleStateSource.StreamAsync(vehicleId),
+                               ApiRequest(Operations.Vehicles.State = get_api_v1_vehicles_vehicleID_state)
+  useLocationSnapshotLatest -> GlanceLocationSource.StreamAsync(vehicleId),
+                               ApiRequest(Operations.Locations.SnapshotLatest = get_api_v1_location_snapshots_latest, vehicle_id=)
+  useVehicleCommand         -> GlanceVehicleCommandSender.SendAsync(vehicleId, command),
+                               ApiRequest(post_api_v1_vehicles_vehicleID_command, Body { command })
+Units (P1/S5): SI read from the API (rated_range metres, inside_temp °C); converted only at the display boundary in
+  GlanceProjection via UnitFormatters.FormatDistance/FormatTemperature (no non-SI stored/computed). UnitPref defaults to metric.
+Live data: web page polls via TanStack-Query refetchInterval (no useLiveX/SSE); the native VM exposes LoadAsync/RefreshAsync
+  and a TsDataFreshness chip (UpdatedAt/IsFetching/IsError) — staleness surfaced through the freshness logic (ADR-013).
+
+=== PARITY ===
+PARITY_REQUIRED=30
+
+[1/30]  panel  GlassPanel1
+        GlancePage.cs::BuildShell (TsGlassPanel, Padding 32, Mica/glass) wraps both the success card and the empty
+        surface; rendered for GlanceState.Empty and GlanceState.Success.
+        evidence-test: No_vehicle_projects_empty_state, Resolved_vehicle_projects_success_state
+[2/30]  panel  Range
+        GlanceProjection.Project -> range (GlanceMetric, "glance.range", SuccessKey, value = FormatDistance(rated_range)) ;
+        GlancePage.cs::BuildMetrics/AddMetric (TsMetricCard).
+        evidence-test: Range_and_interior_convert_at_display_boundary, Missing_range_and_temp_show_em_dash
+[3/30]  panel  Interior
+        GlanceProjection.Project -> interior (GlanceMetric, "glance.temp", WarningKey, value = FormatTemperature(inside_temp)) ;
+        GlancePage.cs::BuildMetrics.
+        evidence-test: Range_and_interior_convert_at_display_boundary, Missing_range_and_temp_show_em_dash
+[4/30]  panel  Security
+        GlanceProjection.Project -> security (GlanceMetric, "glance.security", locked?SuccessKey:DangerKey,
+        value = glance.locked|glance.unlocked) ; GlancePage.cs::BuildMetrics.
+        evidence-test: Security_card_reflects_lock_state
+[5/30]  panel  Location
+        GlanceProjection.Project -> location (GlanceMetric, "glance.locationLabel", InfoKey, value = LocationLabel(...)) ;
+        GlancePage.cs::BuildMetrics.
+        evidence-test: Location_label_prefers_home_then_work_then_favorite_then_destination
+[6/30]  chart  RadialGauge
+        GlancePage.cs::BuildGauge — native WinUI ring built from the same W3 chart primitives the TsRadialGauge wrapper
+        uses (ChartShapes.ArcPath + ChartGeometry.RingArc/GaugeFraction), value arc tinted by the web batteryColor
+        threshold via ChartBrushes.ForStatus(display.BatteryStatus); GlanceProjection BatteryValue/BatteryMax/
+        BatteryValueText/BatteryStatus/HasBatteryReading (max=100, "%", "glance.battery" caption).
+        evidence-test: Battery_threshold_maps_to_status, Missing_battery_reading_is_neutral
+[7/30]  state  loading
+        GlanceState.Loading ; GlancePageViewModel.BuildModel(loading) ; GlancePage.cs::BuildLoading (TsSkeleton ring + bars).
+        evidence-test: Loading_model_projects_loading_state
+[8/30]  state  empty
+        GlanceState.Empty (vehicles resolved, no vehicle) ; GlancePage.cs::BuildEmpty (TsEmptyState, glance.noVehicle).
+        evidence-test: No_vehicle_projects_empty_state, ViewModel_empty_fleet_sets_empty_state
+[9/30]  state  error
+        GlanceState.Error ; GlancePageViewModel.ErrorTextFor ; GlancePage.cs::BuildError (TsQueryError + Retry).
+        evidence-test: Failed_model_projects_error_state, ViewModel_load_failure_sets_error_state
+[10/30] state  success
+        GlanceState.Success ; GlancePageViewModel.LoadAsync -> state+location ; GlancePage.cs::BuildSuccess.
+        evidence-test: Resolved_vehicle_projects_success_state, ViewModel_load_populates_success_with_state_and_location
+[11/30] string glance.action.climateOff   GlanceProjection climateOffAction = localizer.GetString("glance.action.climateOff", …)
+[12/30] string glance.action.climateOn    GlanceProjection climateOnAction  = localizer.GetString("glance.action.climateOn", …)
+[13/30] string glance.action.horn         GlanceProjection hornAction       = localizer.GetString("glance.action.horn", …)
+[14/30] string glance.action.lock         GlanceProjection lockAction       = localizer.GetString("glance.action.lock", …)
+[15/30] string glance.action.unlock       GlanceProjection unlockAction     = localizer.GetString("glance.action.unlock", …)
+[16/30] string glance.battery             GlanceProjection batteryLabel     = localizer.GetString("glance.battery", …)
+[17/30] string glance.defaultName         GlanceProjection defaultName      = localizer.GetString("glance.defaultName", …)
+[18/30] string glance.location.favorite   GlanceProjection favoriteText     = localizer.GetString("glance.location.favorite", …)
+[19/30] string glance.location.home       GlanceProjection homeText         = localizer.GetString("glance.location.home", …)
+[20/30] string glance.location.work       GlanceProjection workText         = localizer.GetString("glance.location.work", …)
+[21/30] string glance.locationLabel       GlanceProjection locationLabel    = localizer.GetString("glance.locationLabel", …)
+[22/30] string glance.locked              GlanceProjection lockedText       = localizer.GetString("glance.locked", …)
+[23/30] string glance.noVehicle           GlanceProjection noVehicle        = localizer.GetString("glance.noVehicle", …)
+[24/30] string glance.openApp             GlanceProjection openApp          = localizer.GetString("glance.openApp", …)
+[25/30] string glance.range               GlanceProjection rangeLabel       = localizer.GetString("glance.range", …)
+[26/30] string glance.security            GlanceProjection securityLabel    = localizer.GetString("glance.security", …)
+[27/30] string glance.temp                GlanceProjection interiorLabel    = localizer.GetString("glance.temp", …)
+[28/30] string glance.title               GlanceProjection/Registration title = localizer.GetString("glance.title", …)
+[29/30] string glance.unknown             GlanceProjection unknown          = localizer.GetString("glance.unknown", …)
+[30/30] string glance.unlocked            GlanceProjection unlockedText     = localizer.GetString("glance.unlocked", …)
+# All twenty string keys asserted resolved headlessly via a RecordingLocalizer:
+#   GlancePageTests.Projection_resolves_every_required_string_key (+ Manifest_requires_twenty_strings).
+# All four data states + the five panels + the gauge assert their render from the bound GlanceDisplay state holder
+#   (ViewModel_* + Projection_* tests). Source request shaping (Operations.Vehicles.List/State,
+#   Operations.Locations.SnapshotLatest vehicle_id=, post_api_v1_vehicles_vehicleID_command) is pinned by the JSON
+#   parse tests (Vehicle_state_parses_canonical_state_object, Location_parses_flags_and_destination,
+#   Vehicle_resolves_first_or_explicit) + ViewModel_command_sends_then_reloads_state.
+# a11y: AutomationProperties names on the page, status badge, gauge ring, each metric card, each quick-action button
+#   and the open-app link; the gauge canvas/value are AccessibilityView.Raw; loading/empty/error are TsFeedbackState
+#   live regions. Light/dark + Mica honoured through the W2 design tokens (no hardcoded colours).
+# No map for this unit (manifest declares 0 maps).
+
+PARITY_COVERED=30
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Dashboard does not
+# exist in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/GlancePage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/GlancePageTests.cs -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); the only warnings are pre-existing TeslaSync.App.Core CA*)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <GlancePage Model/Source/ViewModel/view
+#   + GlancePageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# Test gate scoped to the headless unit project, per the established W7 convention (DashboardPage/QuickStatsPage logs
+# gate dotnet test on TeslaSync.App.Tests). The WinAppDriver UI-automation project (TeslaSync.App.UITests, W9)
+# requires a UI runner that is absent here (nothing on http://127.0.0.1:4723/, WinAppDriver.exe not installed); those
+# 147 failures are environmental (UiAutomationUnavailableException) and identical for every page, not caused by this
+# change, and out of scope for this page prompt.
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29914, Failed: 0, Skipped: 0
+#   (incl. 35 GlancePageTests)
+TEST_EXIT=0
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/GlancePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/GlancePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-dashboard-GlancePage.log
+# git commit -m "feat(apps/windows): GlancePage at web parity (W7 dashboard)"
+
+EXIT=0
+STATUS=DONE

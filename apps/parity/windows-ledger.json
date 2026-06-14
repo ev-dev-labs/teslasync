@@ -126,6 +126,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingSessionsMap.log"
   },
   {
+    "unitId": "page:dashboard/Glance",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p2-windows/W7/windows-page-dashboard-GlancePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-GlancePage.log"
+  },
+  {
     "unitId": "page:dashboard/QuickStats",
     "platform": "windows",
     "status": "done",
