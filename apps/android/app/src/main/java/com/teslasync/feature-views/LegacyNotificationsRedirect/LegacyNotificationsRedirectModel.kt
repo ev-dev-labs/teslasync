@@ -165,9 +165,9 @@ internal object LegacyQueryParams {
     fun serialize(params: List<Pair<String, String>>): String =
         params.joinToString("&") { (key, value) -> "${encode(key)}=${encode(value)}" }
 
-    private fun decode(value: String): String = URLDecoder.decode(value, Charsets.UTF_8)
+    private fun decode(value: String): String = URLDecoder.decode(value, "UTF-8")
 
-    private fun encode(value: String): String = URLEncoder.encode(value, Charsets.UTF_8)
+    private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 }
 
 /**
