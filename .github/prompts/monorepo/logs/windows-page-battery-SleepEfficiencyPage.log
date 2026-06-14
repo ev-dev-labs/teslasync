@@ -1,0 +1,162 @@
+=== p2-windows W7 — page:battery/SleepEfficiency (WinUI 3 / Fluent) ===
+Parity unit : page:battery/SleepEfficiency
+Kind        : page
+Web route   : /sleep-efficiency
+Web source  : web/src/features/battery/pages/SleepEfficiencyPage.tsx
+Platform    : windows
+Prompt      : p2-windows/W7/windows-page-battery-SleepEfficiencyPage
+
+--- Path reconciliation (no silent drift; Honesty Covenant #7 no predecessor bypass) ---
+The generated prompt names the output `apps/windows/TeslaSync/Features/Battery/SleepEfficiencyPage.xaml`
++ `SleepEfficiencyPageViewModel.cs`. That project/folder does NOT exist in this repo. Every
+gate-passing W7 predecessor (page:driving/RegenEfficiency, page:battery/BatteryDegradation,
+page:battery/ProjectedRange, page:battery/EnergyProducts, …) lives in project `TeslaSync.App` under
+`feature-views/<Page>/` as a code-only WinUI 3 `UserControl` (no XAML markup file), split into
+<Page>.cs (view) + .Model.cs + .Source.cs + .ViewModel.cs. The pure-C# Model/Source/ViewModel are
+linked into TeslaSync.App.Tests for headless verification and the view is registered in the
+NavigationView via ShellWindow.xaml.cs PageFactory.Register. This unit follows that identical,
+accepted structure rather than the templated path — the "native WinUI 3 / Fluent" implementation in
+this repo is code-built UserControls + design tokens, not XAML markup.
+
+--- Files created ---
+apps/windows/TeslaSync.App/feature-views/SleepEfficiencyPage/SleepEfficiencyPage.Model.cs
+apps/windows/TeslaSync.App/feature-views/SleepEfficiencyPage/SleepEfficiencyPage.Source.cs
+apps/windows/TeslaSync.App/feature-views/SleepEfficiencyPage/SleepEfficiencyPage.ViewModel.cs
+apps/windows/TeslaSync.App/feature-views/SleepEfficiencyPage/SleepEfficiencyPage.cs            (view)
+apps/windows/TeslaSync.App.Tests/FeatureViews/SleepEfficiencyPageTests.cs                      (35 tests)
+
+--- Files modified ---
+apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs        (PageFactory.Register("SleepEfficiency", …))
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (link Model/Source/ViewModel into headless tests)
+apps/parity/windows-ledger.json                             (+ page:battery/SleepEfficiency row)
+
+Route `SleepEfficiency` (path `sleep-efficiency`, group BatteryEnergy) already exists in
+TeslaSync.App.Core/Navigation/RouteTable.cs; only the page-factory body was added.
+
+--- Data source bound to the generated C# client (P1/S8 ObservableObject-style ViewModel) ---
+useSleepEfficiency   GET /analytics/sleep [vehicle_id, days, start, end]
+  -> SleepEfficiencyClientFeed.FetchAsync  (operation get_api_v1_analytics_sleep,
+     Operations.Analytics.Sleep; web hook web/src/api/hooks/useEnergy.ts useSleepEfficiency).
+  Query shaping mirrors the web hook verbatim: vehicle_id + days (default 30); start/end appended
+  ONLY when both bounds are present (web L142-143). Raw JSON round-trips through the tolerant
+  SleepEfficiencySummary.FromJson (snake_case wire shape; camelCase alias also accepted). A failed
+  read propagates the client ApiException to the error surface; a non-object body composes the empty
+  snapshot (web `sleep` undefined -> empty surface). The production parameterless ctor binds the
+  EmptySleepEfficiencyFeed (the accepted predecessor seam; the wired client feed is unit-tested and
+  ready for DI), identical to RegenEfficiencyPage/BatteryDegradationPage.
+
+--- SI / units at the display boundary (P1/S5) ---
+The /analytics/sleep scalars are display-shaped/dimensionless (percent, %/hour, currency, kWh,
+minutes); the only SI quantity is each event's outside temperature (SI Celsius), converted with
+UnitConverters.TemperatureFromSi + UnitLabels.Label(pref.Temperature) at the render boundary only
+(SleepEfficiencyProjection.BuildTable). No non-SI value is stored or computed.
+
+--- Architecture ---
+View (SleepEfficiencyPage.cs) is a thin renderer over SleepEfficiencyDisplay; all branch selection,
+formatting and i18n live in the WinUI-free SleepEfficiencyProjection.Project. State marshalled to the
+UI thread via DispatcherQueue. Fluent components only (TsStatCard, TsChartContainer, TsPieChart,
+TsBarChart, TsGlassPanel, TsDataTable, TsEmptyState, TsQueryError, TsDataFreshness, TsFadeIn,
+PageTitle/Subhead/SectionTitle/PanelTitle/Caption) + design tokens (DisplayTokens / ChartBrushes /
+StatusResources) — no inline colors/typography, no web pixel-cloning, no direct recharts/leaflet.
+
+=== PARITY ===
+PARITY_REQUIRED=48
+
+# panels (8) — every named MetricCard + every anonymous GlassPanel region reproduced as a Fluent Card/Mica region
+[x] panel  - Sleep-Efficiency     | Model SleepEfficiencyProjection.BuildMetricCards card[0] (FormatPercentage, MoonGlyph, key sleep.efficiency)  | view SleepEfficiencyPage.cs:BuildMetricCards (TsStatCard)
+[x] panel  - Avg-Time-to-Sleep    | Model BuildMetricCards card[1] (FormatNumber + " min", ClockGlyph, key sleep.avgTimeToSleep)                | view SleepEfficiencyPage.cs:BuildMetricCards (TsStatCard)
+[x] panel  - Sentry-Drain-Rate    | Model BuildMetricCards card[2] (FormatNumber + "%/hr", EyeGlyph, key sleep.sentryDrainRate)                 | view SleepEfficiencyPage.cs:BuildMetricCards (TsStatCard)
+[x] panel  - Sentry-Monthly-Cost  | Model BuildMetricCards card[3] (FormatCurrency, MoneyGlyph, key sleep.sentryMonthlyCost)                    | view SleepEfficiencyPage.cs:BuildMetricCards (TsStatCard)
+[x] panel  - State-Distribution   | Model BuildDonut -> SleepDonutDisplay (key sleep.stateDistribution)                                         | view SleepEfficiencyPage.cs:BuildDonutPanel (TsChartContainer hosting donut + per-state legend)
+[x] panel  - Sentry-vs-No-Sentry  | Model BuildComparison -> SleepComparisonDisplay (key sleep.sentryComparison)                                | view SleepEfficiencyPage.cs:BuildComparisonPanel (TsChartContainer hosting bar chart)
+[x] panel  - GlassPanel7          | monthly-sentry-impact amber callout (Eye header + 3 stats) | Model BuildImpactStats (key sleep.monthlySentryImpact) | view SleepEfficiencyPage.cs:BuildImpactCallout (TsGlassPanel)
+[x] panel  - GlassPanel8          | recent-drain-events container | Model BuildTable (key sleep.recentDrainEvents)                            | view SleepEfficiencyPage.cs:BuildRecentEvents (TsGlassPanel + TsDataTable)
+
+# charts (4) — W3 native chart wrappers (no web canvas)
+[x] chart  - ChartContainer       | State-Distribution wrapper, Ready/Empty branch | view SleepEfficiencyPage.cs:BuildDonutPanel (Components.Charts.TsChartContainer, State=donut.HasData?Ready:Empty)
+[x] chart  - PieChart             | state-distribution donut (innerRadius 0.6)     | view SleepEfficiencyPage.cs:BuildDonutPanel (Components.Charts.TsPieChart, Values=Donut.Points) | Model BuildDonut.Points
+[x] chart  - ChartContainer       | Sentry-vs-No-Sentry wrapper, Ready/Empty branch| view SleepEfficiencyPage.cs:BuildComparisonPanel (Components.Charts.TsChartContainer, State=comparison.HasData?Ready:Empty)
+[x] chart  - BarChart             | sentry-on/off grouped comparison bars          | view SleepEfficiencyPage.cs:BuildComparisonPanel (Components.Charts.TsBarChart, Series=BuildComparisonSeries) | Model BuildComparison.Series
+
+# data states (4) — implemented for the /analytics/sleep source (loading -> empty -> error -> success)
+[x] state  - loading  | SleepEfficiencyState.Loading | view SleepEfficiencyPage.cs:_loadingSkeleton (TsSkeleton grid) | tests State_loading_when_query_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[x] state  - empty    | SleepEfficiencyState.Empty   | view _emptyState (TsEmptyState, MoonGlyph) + per-chart ChartState.Empty + table EmptyState | tests State_empty_when_resolved_with_no_sleep_object, ViewModel_empty_snapshot_is_the_empty_state, Donut_is_empty_when_no_state_distribution, Comparison_is_empty_when_every_value_is_zero, Table_is_empty_message_when_no_recent_events
+[x] state  - error    | SleepEfficiencyState.Error   | view _errorState (TsQueryError + Retry) | tests State_error_when_sleep_query_failed, ViewModel_feed_failure_is_the_error_state, ClientFeed_propagates_a_failed_read
+[x] state  - success  | SleepEfficiencyState.Success | view _contentHost (BuildContent) | tests State_success_when_sleep_present, ViewModel_loads_sleep_into_the_success_state, ClientFeed_reads_the_sleep_rollup_for_the_vehicle
+
+# strings (32) — every visible literal resolves via ILocalizer with the web key name; zero hardcoded literals.
+#   Evidence: SleepStrings.Resolve GetString(<key>, <enUS default>) in SleepEfficiencyPage.Model.cs;
+#   coverage asserted by test Projection_resolves_every_required_string_key_in_success (RecordingLocalizer)
+#   and Required_string_key_set_has_exactly_thirty_two_unique_keys.
+[x] string - common.off                    | SleepStrings.Off  (drain-events table sentry column)
+[x] string - common.on                     | SleepStrings.On   (drain-events table sentry column)
+[x] string - sleep.avgBatteryLost          | SleepStrings.AvgBatteryLost (comparison category)
+[x] string - sleep.avgTimeToSleep          | SleepStrings.AvgTimeToSleep (metric card 2)
+[x] string - sleep.batteryLost             | SleepStrings.BatteryLost (table column)
+[x] string - sleep.date                    | SleepStrings.Date (table column)
+[x] string - sleep.drainRate               | SleepStrings.DrainRate (comparison category)
+[x] string - sleep.drainRateCol            | SleepStrings.DrainRateCol (table column)
+[x] string - sleep.duration                | SleepStrings.Duration (table column)
+[x] string - sleep.efficiency              | SleepStrings.Efficiency (metric card 1)
+[x] string - sleep.extraCostMo             | SleepStrings.ExtraCostMo (impact callout stat 3)
+[x] string - sleep.extraDrainHr            | SleepStrings.ExtraDrainHr (impact callout stat 1)
+[x] string - sleep.extraMonthly            | SleepStrings.ExtraMonthly (impact callout stat 2)
+[x] string - sleep.monthlySentryImpact     | SleepStrings.MonthlySentryImpact (impact callout title)
+[x] string - sleep.noData                  | SleepStrings.NoData (page empty surface)
+[x] string - sleep.noDrainEvents           | SleepStrings.NoDrainEvents (table empty message)
+[x] string - sleep.noSentryData            | SleepStrings.NoSentryData (comparison empty message)
+[x] string - sleep.noStateData             | SleepStrings.NoStateData (donut empty message)
+[x] string - sleep.recentDrainEvents       | SleepStrings.RecentDrainEvents (table section title)
+[x] string - sleep.selectVehicle           | SleepStrings.SelectVehicle (vehicle-picker aria label)
+[x] string - sleep.sentry                  | SleepStrings.Sentry (table column)
+[x] string - sleep.sentryComparison        | SleepStrings.SentryComparison (comparison chart title)
+[x] string - sleep.sentryComparison.aria   | SleepStrings.SentryComparisonAria (comparison chart a11y summary)
+[x] string - sleep.sentryDrainRate         | SleepStrings.SentryDrainRate (metric card 3)
+[x] string - sleep.sentryMonthlyCost       | SleepStrings.SentryMonthlyCost (metric card 4)
+[x] string - sleep.sentryOff               | SleepStrings.SentryOff (comparison series + bar legend)
+[x] string - sleep.sentryOn                | SleepStrings.SentryOn (comparison series + bar legend)
+[x] string - sleep.stateDistribution       | SleepStrings.StateDistribution (donut chart title)
+[x] string - sleep.stateDistribution.aria  | SleepStrings.StateDistributionAria (donut a11y summary)
+[x] string - sleep.subtitle                | SleepStrings.Subtitle (page header subtitle)
+[x] string - sleep.temp                    | SleepStrings.Temp (table column)
+[x] string - sleep.title                   | SleepStrings.Title (page header) + SleepEfficiencyRegistration.Title
+
+PARITY_COVERED=48
+
+Note on extra resolved keys: SleepStrings also resolves sleep.error (error-surface title) and
+common.retry (retry affordance) beyond the 32 manifest strings — both follow the web page's
+ErrorDisplay/QueryError affordances and the predecessor RegenEfficiency pattern. They are NOT counted
+toward PARITY_REQUIRED/PARITY_COVERED.
+
+Note on state labels: the web STATE_LABELS / STATE_COLORS maps (Sleeping / Online-Idle / Driving /
+Charging / Updating / Suspended) are plain data labels the web hardcodes (never run through t()); the
+native port mirrors them verbatim in SleepEfficiencyProjection.StateLabel/StateColorIndex for donut
+parity. Donut wedge + legend chip share one brand palette index (ChartBrushes.ForIndex) per state.
+
+a11y: AutomationProperties.SetName on the page, every metric TsStatCard, the donut, the comparison
+chart, each legend chip, the impact-callout stats and the drain-events table; the empty/error
+surfaces announce via live regions; Fluent components carry built-in keyboard/pointer + light/dark via
+design tokens — no hardcoded colors/typography.
+
+=== GATE ===
+# placeholder scan (ADR-011) — templated path is nonexistent (clean); actual code dirs scanned too
+PLACEHOLDER_EXIT=0       (apps/windows/TeslaSync/Features/Battery — nonexistent templated path -> clean)
+PLACEHOLDER_COUNT=0      (apps/windows/TeslaSync.App/feature-views/SleepEfficiencyPage — actual code)
+PLACEHOLDER_COUNT=0      (apps/windows/TeslaSync.App.Tests/FeatureViews/SleepEfficiencyPageTests.cs)
+
+# build  — dotnet build apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0             (Build succeeded. 0 Error(s); whole solution incl. TeslaSync.App + new feature files)
+
+# lint   — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0             (no formatting changes required; new files normalized to LF + dotnet format clean)
+
+# test   — dotnet test (TeslaSync.App.Tests, headless unit gate)
+TEST_EXIT=0             (Passed! - Failed: 0, Passed: 29742, Skipped: 0, Total: 29742 — incl. 35 SleepEfficiencyPageTests)
+
+# (The TeslaSync.App.UITests project is WinAppDriver/packaged-app gated: in this headless environment
+#  all 147 of its cases throw UiAutomationUnavailableException "WinAppDriver/Appium runner not
+#  available" — an environment gate, identical for every W7 predecessor, NOT a regression from this
+#  change. It is not part of the headless unit gate, exactly as the predecessor logs record.)
+
+EXIT=0
+STATUS=DONE

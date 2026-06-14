@@ -108,6 +108,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:battery/SleepEfficiency",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p2-windows/W7/windows-page-battery-SleepEfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-SleepEfficiencyPage.log"
+  },
+  {
     "unitId": "page:charging/TeslaChargingSessionsMap",
     "platform": "windows",
     "status": "done",
