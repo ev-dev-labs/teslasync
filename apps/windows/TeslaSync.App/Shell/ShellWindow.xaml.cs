@@ -167,6 +167,10 @@ public sealed partial class ShellWindow : Window
         // Telemetry / Signal Log Viewer page (P2/W7) — parity port of web SignalLogViewerPage at route /signal-log.
         _viewModel.PageFactory.Register("SignalLogViewer", static () => new FeatureViews.Telemetry.SignalLogViewerPage());
 
+        // Telemetry / Signal Explorer page (P2/W7) — parity port of web SignalExplorerPage at route /signal-explorer.
+        // RouteTable already maps Page("SignalExplorer","signal-explorer",RouteGroup.TelemetrySignals).
+        _viewModel.PageFactory.Register("SignalExplorer", static () => new FeatureViews.Telemetry.SignalExplorerPage());
+
         // Notifications / Alert rules page (P2/W7) — parity port of web AlertRulesPage at route /notifications/rules.
         // The rule-name links and the "Open Alert Studio" affordances navigate to the studio route.
         _viewModel.PageFactory.Register("NotificationsRules", () =>
