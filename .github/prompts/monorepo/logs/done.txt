@@ -848,3 +848,4 @@ p3-android/shared-meaningful/A-0191-FadeIn.prompt.md
 p3-android/shared-meaningful/A-0194-StaggerItem.prompt.md
 p3-android/shared-meaningful/A-0192-RouteTransition.prompt.md
 p3-android/shared-meaningful/A-0196-ActionItem.prompt.md
+p3-android/shared-meaningful/A-0195-SignalQueryControls.prompt.md
