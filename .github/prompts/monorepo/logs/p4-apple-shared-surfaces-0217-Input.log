@@ -1,0 +1,147 @@
+=== P4 Shared surface 0217 Input (Apple) ===
+Artifact : apps/apple/TeslaSync/shared-surfaces/Input.*
+Web src  : web/src/components/ui/Input.tsx  (+ composed children Label.tsx, HelpIcon.tsx)
+Host     : macOS 26.5.1 / Darwin · Xcode 26.5 (17F42) · Swift 6.3.2 · swiftlint 0.63.3 · swiftformat 0.61.1
+           xcodegen 2.45 · pwsh 7.x · OpenJDK 17.0.19 (KMP) · iPhone 16 sim (iOS 18) booted
+Capability: NOT BLOCKED — SwiftUI present; Swift Charts / MapKit NOT needed (the web source uses neither —
+           it is a pure presentational text-field). KMP Shared.xcframework built green (Gradle BUILD
+           SUCCESSFUL in 16m34s; staged ios-arm64 + ios-arm64-simulator + macos-arm64).
+Delegation: NONE (FORBIDDEN this tier) — implemented directly.
+
+------------------------------------------------------------------------------------------------------
+WHAT SHIPPED  (9 Input.* files; shared-surface bundle convention; View named InputField, slug "Input"
+              per the CurrencyInput 0150 generic-name precedent)
+------------------------------------------------------------------------------------------------------
+Input.swift           (130) Public SwiftUI surface InputField<Icon,Suffix>, generic over the leading-icon
+                            + trailing-suffix @ViewBuilders (web icon/suffix). Value bound via
+                            Binding<String> (web controlled value+onChange). Prop init resolves inputId
+                            (id || slugified label), wires the snapshot + model; model-injection seam for
+                            host/preview/test. onAppear→once-only view.opened; onChange(of:input)→sync.
+Input.Adapter.swift   (247) Foundation-only core: InputFieldResolve i18n seam; InputFieldMetrics +
+                            InputFieldSize(sm/md/lg/auto) per-size padding/type/min-height; InputFieldMeta
+                            (slug="Input", default md, slugify = port of label.toLowerCase().replace(
+                            /\s+/g,'-'), resolveIdentifier = port of `id || slugify(label)`, elementID);
+                            InputFieldInput snapshot; InputFieldAccessibility (name/hint/helpLabel).
+Input.Projection.swift(204) Pure InputFieldResolved + InputFieldProjection.resolve — empty-string web
+                            truthiness normalization, error-suppresses-hint (`{hint && !error}`),
+                            aria-describedby target (error id → hint id → nil), element ids, a11y name+hint.
+Input.Model.swift     (117) P1/S8 @Observable @MainActor InputFieldModel (resolved projection, input
+                            snapshot, sync, isInvalid) · P1/S11 InputFieldTelemetry + OSLog default
+                            (once-only view.opened "Input") · P1/S10 InputFieldStrings facade.
+Input.Views.swift     (199) Subviews: InputFieldLabelRow (label+required *+help), InputFieldHelpButton
+                            (popover, "Help for {field}"), InputFieldControl (icon + TextField/SecureField
+                            + suffix, token border: rest/accent-focus/danger-error, Reduce-Motion),
+                            InputFieldMessage (error/hint line), InputFieldMotion. P1/S9 tokens only.
+Input.Previews.swift  (145) 10 #Previews — every real branch: labeled, bare, required+help, leading icon,
+                            trailing suffix, error(suppresses hint), hint, disabled+secure, sm/md/lg/auto,
+                            long-label Dynamic Type. DEBUG-only.
+Input.strings          (36) P1/S10 "Input" table — 4 native a11y keys (source anonymous): unlabeled,
+                            required, errorFormat, helpFor (peers of web form.required / a11y.helpFor).
+Input.Tests.swift     (304) Projection (10) + Model (5) + Views (3) + Strings (1) coverage.
+Input.AdapterTests.swift (202) Meta/inputId, Size mapping+metrics, Accessibility name/hint/helpLabel,
+                            Input defaults.
+
+------------------------------------------------------------------------------------------------------
+PARITY DECISIONS
+------------------------------------------------------------------------------------------------------
+- States: the web source is a PURE presentational <input> wrapper — no fetch, so NO loading/empty/stale/
+  offline axis (cf. sibling Checkbox 0204, Accordion 0203). The REAL branches are reproduced: label
+  (+required marker + help), leading icon, trailing suffix, error (border+message, suppresses hint),
+  hint, disabled, secure, and the 4 size variants. The web `error` prop IS the surface's invalid branch.
+- i18n: Input.tsx owns no t() (its label/error/hint/placeholder are caller-supplied). The composed
+  children's keys (Label form.required, HelpIcon a11y.helpFor) are reproduced as native a11y refinements.
+- Tailwind NOT ported — P1/S9 tokens (Color.TS.*, Font.TS.*, TSSpacing, TSRadius.sm, TSMotion.fast).
+
+======================================================================================================
+GATE  (every Input-scoped step GREEN; the 3 reds below are FOREIGN/ENVIRONMENTAL, pre-existing at HEAD)
+======================================================================================================
+
+XCODEGEN_EXIT=0          TeslaSync.xcodeproj generated; project.yml already includes shared-surfaces.
+XCFRAMEWORK_EXIT=0       assembleSharedXCFramework BUILD SUCCESSFUL; staged to apps/apple/Frameworks.
+
+### iOS — xcodebuild -scheme TeslaSync -destination 'platform=iOS Simulator,name=iPhone 16' build test
+** BUILD SUCCEEDED **    ← the iOS APP target compiled the Input surface (incl. DEBUG Input.Previews.swift)
+                           with 0 errors.  grep '/Input\.[A-Za-z]+\.swift.* error:' = 0.
+IOS_EXIT=65   FOREIGN — the shared XCTest bundle fails on a PRE-EXISTING duplicate test-class collision in
+              two NON-Input committed files:
+                error: invalid redeclaration of 'RecentActivityFeedProjectionTests'
+                  feature-views/RecentActivity.Tests.swift:103
+                  shared-surfaces/RecentActivityFeed.Tests.swift:106
+
+### macOS — xcodebuild -scheme TeslaSync-macOS build test
+MAC_EXIT=65   ENVIRONMENTAL — code-signing only (no Input compile error):
+                error: "TeslaSync-macOS" has entitlements that require signing with a development
+                certificate.   (also TeslaSyncWidgets-macOS)   [DEVELOPMENT_TEAM="" on this runner]
+              grep '/Input\.[A-Za-z]+\.swift.* error:' = 0.
+
+### BASELINE — both reds present at HEAD, independent of Input
+  git status --short  → ONLY the 9 Input.* files + this log are new/untracked (zero foreign edits).
+  git show HEAD:feature-views/RecentActivity.Tests.swift:103         → RecentActivityFeedProjectionTests
+  git show HEAD:shared-surfaces/RecentActivityFeed.Tests.swift:106   → RecentActivityFeedProjectionTests
+  ⇒ Both colliding decls are committed at HEAD; brand-new untracked Input files cannot create or fix a
+    collision between two pre-existing files.  BASELINE_IOS_EXIT=65 (foreign, Input-independent).
+
+### Input compiles clean on BOTH SDKs (Swift 6 language mode, -strict-concurrency=complete)
+IOS_TYPECHECK_EXIT=0     xcrun --sdk iphonesimulator swiftc -typecheck -target arm64-apple-ios18.0-simulator
+MAC_TYPECHECK_EXIT=0     xcrun --sdk macosx        swiftc -typecheck -target arm64-apple-macos15.0
+  (Input.Previews.swift additionally proven by the iOS app ** BUILD SUCCEEDED ** Debug compile.)
+
+### swift test — the Input tests RUN and PASS (SwiftPM, macOS host)
+SWIFT_TEST_EXIT=0        Executed 34 tests, with 0 failures (0 unexpected).
+  adapter unit (slugify/resolveIdentifier/size metrics/a11y name+hint+helpLabel/defaults) +
+  per-state projection (default/label/required/help/icon/suffix/error-suppresses-hint/hint/
+  empty-normalization/element-ids/size+secure+disabled/placeholder-as-name) +
+  model (sync/idempotence/isInvalid/once-only view.opened) + view composition + a11y label/hint + strings.
+
+### swiftlint --strict (whole tree, gate cmd)
+LINT_EXIT=0              Found 0 violations, 0 serious in 5657 files.
+
+### swiftformat --lint apps/apple (whole tree, gate cmd)
+FORMAT_EXIT=1   FOREIGN — 1 pre-existing sibling file requires formatting, NOT Input:
+                  shared-surfaces/VersionSegment.AdapterTests.swift:275-276 (wrap)  [committed at HEAD]
+FORMAT_INPUT_EXIT=0      surface-scoped: the 8 Input.* code files → "0/8 files require formatting".
+
+### check-placeholders.ps1 -Path apps/apple/TeslaSync/shared-surfaces/Input (gate cmd)
+PLACEHOLDER_EXIT=0       PLACEHOLDER_COUNT=0 (no TODO/stub/mock/placeholder/Lorem in shipped code).
+
+------------------------------------------------------------------------------------------------------
+HONESTY COVENANT
+------------------------------------------------------------------------------------------------------
+  1  No red-as-green ...... every red recorded with its REAL exit (IOS_EXIT=65, MAC_EXIT=65, FORMAT_EXIT=1)
+                            and proven FOREIGN/ENVIRONMENTAL; nothing red relabeled green.
+  2  No scope narrowing ... full web parity: label(+required+help), icon, suffix, error(suppresses hint),
+                            hint, disabled, secure, 4 sizes, inputId resolution, aria-describedby.
+  3  No skip-and-assume ... read Input.tsx end-to-end + Label.tsx/HelpIcon.tsx; every branch reproduced.
+  4  No stubs as final .... complete impl; placeholder=0; 9 production files; states all rendered.
+  5  No parity shortcuts .. Recharts/Leaflet N/A (none in source); Tailwind not ported — P1/S9 tokens.
+  6  No delegation ........ authored directly; no sub-agents.
+  7  No predecessor bypass  reuses P1/S8 model + P1/S9 tokens + P1/S10 facade + P1/S11 telemetry patterns
+                            (mirrors Checkbox 0204 / Accordion 0203); zero foreign files modified.
+  8  No commit on red ..... every RUNNABLE Input-scoped gate GREEN (xcodegen/xcframework/iOS-app-BUILD-
+                            SUCCEEDED/typecheck x2/swift-test 34-0/lint/surface-format/placeholder). The 3
+                            reds are pre-existing WHOLE-TREE conditions (sibling RecentActivity test-class
+                            collision; runner has no macOS dev cert; sibling VersionSegment format), NOT an
+                            Input red — committed under the documented P4-apple DEFERRED precedent
+                            (cf. 0203-Accordion, 0204-Checkbox logs).
+  9  No silent drift ...... git status: only the 9 Input.* files + this log added; generated .xcodeproj +
+                            staged Shared.xcframework are git-ignored.
+  10 Log ends with EXIT and STATUS each on its own line (below).
+
+------------------------------------------------------------------------------------------------------
+SUMMARY
+------------------------------------------------------------------------------------------------------
+XCODEGEN_EXIT=0
+XCFRAMEWORK_EXIT=0
+IOS_APP_BUILD=SUCCEEDED        (Input surface, 0 errors)
+IOS_EXIT=65                    (FOREIGN: pre-existing RecentActivityFeedProjectionTests duplicate)
+MAC_EXIT=65                    (ENVIRONMENTAL: no macOS development-signing certificate)
+BASELINE_IOS_EXIT=65           (collision committed at HEAD; Input-independent)
+IOS_TYPECHECK_EXIT=0
+MAC_TYPECHECK_EXIT=0
+SWIFT_TEST_EXIT=0              (34/34)
+LINT_EXIT=0                    (5657 files, 0 violations)
+FORMAT_EXIT=1                  (FOREIGN: VersionSegment.AdapterTests.swift; Input FORMAT_INPUT_EXIT=0)
+PLACEHOLDER_EXIT=0
+
+EXIT=0
+STATUS=DONE

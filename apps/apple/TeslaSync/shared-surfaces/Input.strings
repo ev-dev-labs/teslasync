@@ -1,0 +1,36 @@
+/*
+  Input.strings
+  TeslaSync — P4 shared surface · 0217 · Input (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source (components/ui/Input.tsx)
+  renders NO translatable copy of its own: its `label` / `error` / `hint` / `placeholder` are supplied
+  by the caller (already-localized strings). The translatable strings in the composed tree come from
+  its children — `<Label>` (`form.required`) and `<HelpIcon>` (`a11y.helpFor`). There are therefore no
+  source `t()` keys owned by Input itself to reproduce.
+
+  The keys below are native accessibility refinements that reproduce that composed behavior. The web
+  field exposes its required state through the `<Label>`'s visually-hidden `form.required`, its help
+  trigger through the HelpIcon's `a11y.helpFor` aria-label, and its error / hint through
+  `aria-describedby`; an unlabeled `<input>` is left unnamed. The native surface always voices a name
+  (label, placeholder, or fallback), appends the spoken "required", voices the error as
+  "Error: {message}", and names the help trigger "Help for {field}". Each is resolved through the
+  injected facade (with the English fallback below) so no user-facing English is hardcoded in Swift.
+  The per-surface table name ("Input") folds into the app Localizable.xcstrings master catalog at
+  integration time; in test / preview bundles NSLocalizedString returns the value below, keeping the
+  labels deterministic.
+*/
+
+/* VoiceOver name for a field that was given no visible label or placeholder (native refinement; the
+   web leaves an unlabeled input unnamed). */
+"input.accessibility.unlabeled" = "Input field";
+
+/* Spoken suffix appended to a required field's name (native peer of the web Label `form.required`). */
+"input.accessibility.required" = "required";
+
+/* Spoken hint for an invalid field — `%@` is the caller's error message (native peer of the web
+   `aria-describedby={id}-error`). */
+"input.accessibility.errorFormat" = "Error: %@";
+
+/* Accessible name of the help trigger — `%@` is the field name (native peer of the web HelpIcon
+   `a11y.helpFor` → "Help for {field}"). */
+"input.accessibility.helpFor" = "Help for %@";
