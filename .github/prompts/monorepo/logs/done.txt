@@ -859,3 +859,4 @@ p3-android/pages/admin/BackupRestorePage.prompt.md
 p3-android/pages/admin/FeedbackQueuePage.prompt.md
 p3-android/pages/admin/FeatureFlagsPage.prompt.md
 p3-android/pages/admin/DiskForecastPage.prompt.md
+p3-android/pages/admin/GasPriceAutoPollPage.prompt.md
