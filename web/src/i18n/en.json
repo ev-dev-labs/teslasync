@@ -1,4 +1,7 @@
 {
+  "widgetStatusGrid": {
+    "noData": "No status data available"
+  },
   "uptimeHeatmap": {
     "title": "Uptime — last {{days}} days",
     "uptimeSuffix": "{{percent}} uptime",

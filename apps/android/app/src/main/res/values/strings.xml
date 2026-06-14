@@ -8221,4 +8221,5 @@
   <string name="translation_uptimeHeatmap_emptyTitle">No uptime data</string>
   <string name="translation_uptimeHeatmap_empty">No status history to show yet.</string>
   <string name="translation_uptimeHeatmap_resourceName">Uptime history</string>
+  <string name="translation_widgetStatusGrid_noData">No status data available</string>
 </resources>
