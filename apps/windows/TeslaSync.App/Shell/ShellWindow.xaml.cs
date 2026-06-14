@@ -152,6 +152,9 @@ public sealed partial class ShellWindow : Window
         // shell-registered page mounts against the no-backend EmptyLiveSignalMonitorFeed (the live store feed
         // is wired separately from the shared live layer), rendering the Disconnected + waiting initial state.
         _viewModel.PageFactory.Register("LiveSignalMonitor", static () => new FeatureViews.Telemetry.LiveSignalMonitorPage());
+        // Telemetry / Signal Diff page (P2/W7) — parity port of web SignalDiffPage at route /signal-diff.
+        // RouteTable already maps Page("SignalDiff","signal-diff",RouteGroup.TelemetrySignals).
+        _viewModel.PageFactory.Register("SignalDiff", static () => new FeatureViews.Telemetry.SignalDiffPage());
 
         // Admin / Redis Signal Viewer page (P2/W7) — parity port of web RedisSignalViewerPage at route /redis-signals.
         // RouteTable already maps Page("RedisSignalViewer","redis-signals",RouteGroup.TelemetrySignals).
