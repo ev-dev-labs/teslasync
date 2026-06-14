@@ -1,0 +1,136 @@
+================================================================================
+P3-ANDROID A7 — page:admin/SlowQueries  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/SlowQueriesPage.tsx
+promptId: p3-android/pages/admin/SlowQueriesPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : Android Studio jbr 21 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+Note: the prompt gate text addresses ':app:'; this repo's single app module's Gradle path is ':android'
+      (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")), so the
+      canonical ':android:' tasks are invoked, exactly as every prior P3/A7 android page gate did.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPage.kt          (@Composable screen: SlowQueriesPage + SlowQueriesPageContent + table/states)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; setOrderBy/setLimit/refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPageSource.kt    (S8 data seam over OperatorConfidenceStore.slowQueries(orderBy, limit))
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPageModel.kt     (framework-free model: isEmptyRows, cacheHitPercent, fingerprintOrDash, order/limit catalogs, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPageIcons.kt     (Timer / AlertCircle glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SlowQueriesPageHost.kt      (PageHosts.register(adminSlowQueries){ SlowQueriesRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt       (NavHost wiring: + SlowQueriesPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                 (+20 page keys; admin.subsystem.unavailableTitle pre-existing/reused)
+apps/android/app/src/main/res/values-ar/strings.xml                              (+20 page keys, EN fallback per existing admin pattern)
+apps/android/app/src/main/res/values-he/strings.xml                              (+20 page keys, EN fallback per existing admin pattern)
+apps/parity/android-ledger.json                                                  (ledger row page:admin/SlowQueries 22/22)
+.github/prompts/monorepo/logs/android-page-admin-SlowQueriesPage.log             (this log)
+
+Data   : single read — SlowQueriesPageViewModel binds shared S8 OperatorConfidenceStore.slowQueries(orderBy, limit)
+         (web useSlowQueries ▸ GET /admin/observability/slow-queries?order_by&limit) via asSlowQueriesSource(); no HTTP in the view.
+         order-by + limit live in the SlowQueriesInteraction snapshot; a change re-keys the shared feed
+         (combine ▸ flatMapLatest), reproducing the web hook's param-driven refetch. HTTP 503
+         SUBSYSTEM_NOT_CONFIGURED (pg_stat_statements not installed) preserved through UiState.httpStatus ->
+         subsystem-unavailable banner.
+Strings: 20 page keys added to res/values/strings.xml (+ values-ar / values-he); web key names preserved
+         (admin.slowQueries.* -> translation_admin_slowQueries_* ; admin.subsystem.unavailableTitle ->
+         translation_admin_subsystem_unavailableTitle, pre-existing). The 17 manifest strings + the 4 web
+         ORDER_BY_OPTIONS labels (orderMean/orderTotal/orderCalls/orderMax, less one overlap) all resolve via
+         stringResource; zero hardcoded literals.
+Nav    : Destinations 'adminSlowQueries' -> /admin/slow-queries pre-existing (count unchanged); host wired via
+         PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  # first pass flagged 1 false positive: SlowQueriesPageModel.kt `.toDouble()` contains the substring "toDo"
+  # (case-insensitive "TODO"); rewritten as `hit * PERCENT_SCALE / total` (Long*Double/Long -> Double, same
+  # value). Re-run: PLACEHOLDER_COUNT=0. No parity:allow opt-out used.
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 1m 38s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 12m 44s (0 errors)
+  # clean on first pass; Locale.ROOT used as the locale fallback (FeedbackQueue/SchemaDrift precedent) so the
+  # NonObservableLocale check is satisfied — locale is read from LocalConfiguration at the render boundary.
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 40s
+  # full JVM unit suite: 1287 suite files, 16515 tests, 0 failures, 0 errors.
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=22
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (Surface) ; bound state holder = SlowQueriesPageViewModel.state
+[COVERED] panel  GlassPanel1   -> SlowQueriesPage.kt:227 SlowQueriesPanel() -> :237 GlassPanel(PanelPadding.Md){ PanelTitle "Top queries" + order-by/limit Selects + 7-col table }  (web SlowQueriesPage single <GlassPanel className="p-6">)
+# (+ web 503 subsystem-unavailable banner reproduced: SlowQueriesPage.kt:211 SubsystemUnavailableBanner() AlertBanner(Tone.Warning))
+
+# data states (4 required) — bound to SlowQueriesPageViewModel.state : StateFlow<UiState<SlowQueriesResponse>>
+[COVERED] state  loading       -> SlowQueriesPage.kt:253 state.isLoading -> SlowQueriesLoadingState() Spinner ; asUiState -> UiState.loading()
+[COVERED] state  empty         -> SlowQueriesPage.kt:255 state.isEmpty -> SlowQueriesEmptyState() (Timer/title/message) ; UiPhase.Empty via SlowQueriesPageModel.isEmptyRows (web rows.length===0)
+[COVERED] state  error         -> SlowQueriesPage.kt:254 state.isError -> SlowQueriesErrorState(onRetry=actions.onRetry) ; SlowQueriesPageViewModel.retry()
+[COVERED] state  success       -> SlowQueriesPage.kt:256 else -> SlowQueriesTable(rows=rows) ; UiPhase.Content (7-column table)
+
+# strings (17) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string admin.slowQueries.colCache       -> SlowQueriesPage.kt:355 HeaderCell(colCache)
+[COVERED] string admin.slowQueries.colCalls       -> SlowQueriesPage.kt:350 HeaderCell(colCalls)
+[COVERED] string admin.slowQueries.colFingerprint -> SlowQueriesPage.kt:349 HeaderCell(colFingerprint)
+[COVERED] string admin.slowQueries.colMax         -> SlowQueriesPage.kt:352 HeaderCell(colMax)
+[COVERED] string admin.slowQueries.colMean        -> SlowQueriesPage.kt:351 HeaderCell(colMean)
+[COVERED] string admin.slowQueries.colRows        -> SlowQueriesPage.kt:354 HeaderCell(colRows)
+[COVERED] string admin.slowQueries.colTotal       -> SlowQueriesPage.kt:353 HeaderCell(colTotal)
+[COVERED] string admin.slowQueries.emptyMessage   -> SlowQueriesPage.kt:453 EmptyState(message=...emptyMessage)
+[COVERED] string admin.slowQueries.emptyTable     -> SlowQueriesPage.kt:320 SlowQueriesTable empty -> BodyText(...emptyTable)  (web DataTable emptyMessage)
+[COVERED] string admin.slowQueries.emptyTitle     -> SlowQueriesPage.kt:455 EmptyState(title=...emptyTitle)
+[COVERED] string admin.slowQueries.limit          -> SlowQueriesPage.kt:291 Caption(...limit) + limit Select
+[COVERED] string admin.slowQueries.notConfigured  -> SlowQueriesPage.kt:213 AlertBanner(message=...notConfigured)
+[COVERED] string admin.slowQueries.orderBy        -> SlowQueriesPage.kt:283 Caption(...orderBy) + order-by Select
+[COVERED] string admin.slowQueries.pageTitle      -> SlowQueriesPage.kt:201 PageTitle(...pageTitle)
+[COVERED] string admin.slowQueries.subtitle       -> SlowQueriesPage.kt:203 BodyText(...subtitle)
+[COVERED] string admin.slowQueries.tableTitle     -> SlowQueriesPage.kt:234/241 PanelTitle(...tableTitle)
+[COVERED] string admin.subsystem.unavailableTitle -> SlowQueriesPage.kt:215 AlertBanner(title=...unavailableTitle)
+
+# (+ web ORDER_BY_OPTIONS labels, also localized, not part of the 22-item manifest count)
+[EXTRA]   string admin.slowQueries.orderMean      -> SlowQueriesPage.kt:270 SelectOption(MEAN_TIME)
+[EXTRA]   string admin.slowQueries.orderTotal     -> SlowQueriesPage.kt:271 SelectOption(TOTAL_TIME)
+[EXTRA]   string admin.slowQueries.orderCalls     -> SlowQueriesPage.kt:272 SelectOption(CALLS)
+[EXTRA]   string admin.slowQueries.orderMax       -> SlowQueriesPage.kt:273 SelectOption(MAX_TIME)
+
+PARITY_COVERED=22
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : SlowQueriesPageViewModel binds shared S8 OperatorConfidenceStore.slowQueries(orderBy, limit)
+               (web useSlowQueries) via asSlowQueriesSource(); typed SlowQueriesResponse round-trips; no HTTP in
+               the view. order-by/limit are the SlowQueriesInteraction snapshot; a change re-keys the shared
+               feed (combine ▸ flatMapLatest), the web param-driven refetch. The 503 SUBSYSTEM_NOT_CONFIGURED
+               branch (web error.status===503) is carried through UiState.httpStatus.
+si/units     : slow-query payload carries no unit-bearing fields (counts, the millisecond timings the backend
+               already computed, a derived cache-hit percentage) — round-trips verbatim, no SI conversion;
+               locale number formatting at the render boundary (SlowQueriesNumberFormats: grouped integers for
+               calls/rows, 2-dp mean/max, whole-ms total, 1-dp cache ratio — the web fmtNumber(value, decimals)).
+a11y/theme   : shared components supply semantics content descriptions (panel semantics{contentDescription},
+               EmptyState/AlertBanner built-ins), >=48dp targets (Material Button/Select), dynamic-color + dark
+               theme via MaterialTheme (A2 tokens); Compose-native (no webview). Table scrolls horizontally so
+               all seven columns stay legible on a phone.
+nav          : Destinations 'adminSlowQueries' -> /admin/slow-queries (pre-existing) wired to SlowQueriesRoute()
+               via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(22) == PARITY_REQUIRED(22)
+[PASS] all android triad gates green; parity 22/22; android ledger row page:admin/SlowQueries status=done.
+EXIT=0
+STATUS=DONE
