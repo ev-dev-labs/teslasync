@@ -189,6 +189,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-HelpPage.log"
   },
   {
+    "unitId": "page:system/Chatbot",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 18,
+    "requiredCount": 18,
+    "promptId": "p2-windows/W7/windows-page-system-ChatbotPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-ChatbotPage.log"
+  },
+  {
     "unitId": "page:system/StatusApiDocs",
     "platform": "windows",
     "status": "done",

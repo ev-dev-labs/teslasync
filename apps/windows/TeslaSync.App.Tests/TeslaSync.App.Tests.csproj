@@ -551,6 +551,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTab\ChargingTab.ViewModel.cs" Link="FeatureViews\ChargingTab\ChargingTab.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" Link="FeatureViews\ChargingTelemetrySection\ChargingTelemetrySection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChartsRow.Model.cs" Link="FeatureViews\ChartsRow.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChatbotPage\ChatbotPage.Model.cs" Link="FeatureViews\ChatbotPage\ChatbotPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChatbotPage\ChatbotPage.Source.cs" Link="FeatureViews\ChatbotPage\ChatbotPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\ChatbotPage\ChatbotPage.ViewModel.cs" Link="FeatureViews\ChatbotPage\ChatbotPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ChatMessageItem.Model.cs" Link="FeatureViews\ChatMessageItem.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Model.cs" Link="FeatureViews\ClientUtilitiesSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ClientUtilitiesSection.Source.cs" Link="FeatureViews\ClientUtilitiesSection.Source.cs" />

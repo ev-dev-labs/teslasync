@@ -460,6 +460,12 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // System / Chatbot (Helix) page (P2/W7) — parity port of web ChatbotPage at route /chatbot. RouteTable
+        // already maps Page("Chatbot","chatbot",RouteGroup.SystemOps). The default-feed ctor renders the empty
+        // welcome (How can Helix help you? + suggested prompts) until a DI host supplies the generated-client feed.
+        _viewModel.PageFactory.Register(
+            FeatureViews.SystemOps.ChatbotRegistration.RouteName,
+            static () => new FeatureViews.SystemOps.ChatbotPage());
         // System / Data Export page (P2/W7) — parity port of web DataExportPage at route /data-export.
         _viewModel.PageFactory.Register("DataExport", static () => new FeatureViews.SystemOps.DataExportPage());
         // Maps / Temperature Impact page (P2/W7) — parity port of web TemperatureImpactPage at route /temperature-impact.
