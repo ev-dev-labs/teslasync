@@ -951,3 +951,4 @@ p2-windows/pages/system/IncidentTimelinePage.prompt.md
 p2-windows/pages/system/ChatbotPage.prompt.md
 p2-windows/pages/system/TeslaAccountPage.prompt.md
 p2-windows/pages/telemetry/LiveSignalMonitorPage.prompt.md
+p2-windows/pages/telemetry/SignalExplorerPage.prompt.md
