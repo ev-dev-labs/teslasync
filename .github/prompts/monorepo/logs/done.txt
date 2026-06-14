@@ -925,3 +925,4 @@ p2-windows/pages/admin/UsersPage.prompt.md
 p2-windows/pages/analytics/LifetimeStatsPage.prompt.md
 p2-windows/pages/analytics/AnalyticsPage.prompt.md
 p2-windows/pages/analytics/FleetComparePage.prompt.md
+p2-windows/pages/analytics/MileagePage.prompt.md
