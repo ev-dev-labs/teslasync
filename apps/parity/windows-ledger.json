@@ -171,6 +171,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-onboarding-OnboardingPage.log"
   },
   {
+    "unitId": "page:settings/Privacy",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-settings-PrivacyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-settings-PrivacyPage.log"
+  },
+  {
     "unitId": "page:settings/Settings",
     "platform": "windows",
     "status": "done",

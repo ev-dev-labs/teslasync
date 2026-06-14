@@ -925,6 +925,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.Model.cs" Link="FeatureViews\PresetGallery\PresetGallery.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.Source.cs" Link="FeatureViews\PresetGallery\PresetGallery.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PresetGallery\PresetGallery.ViewModel.cs" Link="FeatureViews\PresetGallery\PresetGallery.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PrivacyPage\PrivacyPage.Model.cs" Link="FeatureViews\PrivacyPage\PrivacyPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PrivacyPage\PrivacyPage.Source.cs" Link="FeatureViews\PrivacyPage\PrivacyPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\PrivacyPage\PrivacyPage.ViewModel.cs" Link="FeatureViews\PrivacyPage\PrivacyPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.Consent.cs" Link="FeatureViews\PrivacySection\PrivacySection.Consent.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.Model.cs" Link="FeatureViews\PrivacySection\PrivacySection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\PrivacySection\PrivacySection.Source.cs" Link="FeatureViews\PrivacySection\PrivacySection.Source.cs" />
