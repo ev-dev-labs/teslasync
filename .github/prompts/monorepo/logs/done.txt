@@ -819,3 +819,4 @@ p3-android/shared-meaningful/A-0235-VehicleTwin.prompt.md
 p3-android/widget-primitives/A-0008-WidgetMapView.prompt.md
 p3-android/widget-primitives/A-0005-WidgetEventFeed.prompt.md
 p3-android/widget-primitives/A-0006-WidgetFlowDiagram.prompt.md
+p3-android/widget-primitives/A-0009-WidgetRankedList.prompt.md
