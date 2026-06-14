@@ -1,0 +1,46 @@
+/*
+  AIChargingCurveFingerprintClustering.strings
+  TeslaSync — P4 shared surface · 0010 · AIChargingCurveFingerprintClustering (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native
+  `AIChargingCurveFingerprintClustering` resolves (table "AIChargingCurveFingerprintClustering") lives
+  here with its web English value. These entries fold into the app `Localizable.xcstrings` master
+  catalog at integration time; they are kept in a per-surface table so each parallel surface prompt
+  owns its own strings without editing the shared catalog.
+
+  The first group is the parity set extracted from the web source
+  (web/src/components/ai/AIChargingCurveFingerprintClustering.tsx + the shared AIFeatureCard /
+  AiOutputPanel / AIThinkingIndicator literals it composes). The second group backs the native P4 leaf
+  chrome (the freshness / connectivity / loading / error copy) so the Swift sources hold no English
+  prose.
+*/
+
+/* --- Parity: the web source's t(key, default) calls --- */
+"charging.aiClustering.title" = "Explain the charging-curve cluster fingerprints";
+"charging.aiClustering.description" = "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.";
+"charging.aiClustering.generateButton" = "Explain clusters";
+"charging.aiClustering.badge" = "Helix";
+
+/* --- Parity: shared AIFeatureCard / AiOutputPanel / AIThinkingIndicator literals --- */
+"helix.askHelix" = "Ask Helix";
+"helix.thinking" = "Helix is thinking…";
+"helix.errorLabel" = "Helix error:";
+"ai.common.errorUnknown" = "unknown";
+
+/* --- Output panel: friendly empty hints (P4 "never a blank box") --- */
+"charging.aiClustering.output.a11yTitle" = "Charging-curve cluster narrative";
+"charging.aiClustering.output.emptyHint" = "No explanation yet — ask Helix to name and explain this vehicle’s charging-curve cluster fingerprints.";
+"charging.aiClustering.output.noVehicleHint" = "Select a vehicle to explain its charging-curve cluster fingerprints.";
+
+/* --- Native chrome: P4 leaf freshness / connectivity --- */
+"charging.aiClustering.live" = "Live";
+"charging.aiClustering.stale" = "Stale";
+"charging.aiClustering.offline" = "Offline";
+"charging.aiClustering.staleBanner" = "Reconnecting — Helix may be stale";
+"charging.aiClustering.offlineBanner" = "Offline — showing the last known explanation";
+"charging.aiClustering.refresh" = "Refresh";
+
+/* --- Native chrome: loading / error states --- */
+"charging.aiClustering.loadingA11y" = "Loading charging-curve cluster explanation";
+"charging.aiClustering.errorTitle" = "Couldn't load Helix";
+"charging.aiClustering.retry" = "Retry";
