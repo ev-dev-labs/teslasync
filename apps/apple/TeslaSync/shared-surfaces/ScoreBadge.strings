@@ -1,0 +1,39 @@
+/*
+  ScoreBadge.strings
+  TeslaSync — P4 shared surface · 0103 · ScoreBadge (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The web source
+  (components/data-display/ScoreBadge.tsx) routes only the aria label through `t()`
+  (`t('score.aria', 'Score {{grade}}', { grade })`); that key is reproduced verbatim here with the web
+  English fallback, with the i18next `{{grade}}` interpolation rewritten as the platform `%@` token.
+  The grade glyphs (A+ / A / B / C / D / F / —) are hardcoded in the web shared palette, so they are
+  lifted into keys with the verbatim glyph as the fallback (native code holds no hardcoded literals).
+  The native P4 leaf chrome (loading / unavailable / stale / offline) and the VoiceOver strings round
+  it out. These entries fold into the app `Localizable.xcstrings` master catalog at integration time;
+  they are kept in a per-surface table ("ScoreBadge") so each parallel surface prompt owns its strings.
+*/
+
+/* --- Aria label (verbatim web `t('score.aria', 'Score {{grade}}', { grade })`; %@ = grade glyph) --- */
+"score.aria" = "Score %@";
+
+/* --- Grade glyphs (web shared `GRADE_PALETTE` labels, lifted into keys) --- */
+"score.grade.aPlus.label" = "A+";
+"score.grade.a.label" = "A";
+"score.grade.b.label" = "B";
+"score.grade.c.label" = "C";
+"score.grade.d.label" = "D";
+"score.grade.f.label" = "F";
+"score.grade.unrated.label" = "—";
+
+/* --- Loading chrome (native P4 leaf state) --- */
+"score.loadingA11y" = "Loading score";
+
+/* --- Unavailable chrome (native P4 leaf state — feed failed) --- */
+"score.unavailable" = "Score unavailable";
+"score.unavailableA11y" = "Score unavailable — tap to retry";
+
+/* --- Stale chrome (native P4 leaf state — past freshness window) --- */
+"score.staleA11y" = "Score may be out of date";
+
+/* --- Offline chrome (native P4 leaf state — connectivity lost) --- */
+"score.offlineA11y" = "Offline — showing the last known score";
