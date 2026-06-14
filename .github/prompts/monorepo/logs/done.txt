@@ -835,3 +835,4 @@ p3-android/dashboard-widgets/A-0108-VehicleHeroWidget.prompt.md
 p3-android/dashboard-widgets/A-0112-WallConnectorWidget.prompt.md
 p3-android/dashboard-widgets/A-0117-WeeklySummaryCardWidget.prompt.md
 p3-android/dashboard-widgets/A-0115-WeatherAtCarWidget.prompt.md
+p3-android/feature-views/A-0002-BackendTool.prompt.md
