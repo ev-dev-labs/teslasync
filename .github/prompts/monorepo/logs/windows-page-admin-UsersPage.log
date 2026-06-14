@@ -1,0 +1,154 @@
+p2-windows/W7 — page:admin/Users — native WinUI 3 UsersPage at web parity
+================================================================================================
+Web source : web/src/features/admin/pages/UsersPage.tsx  (the admin "Subjects" impersonation
+             target picker; also reuses the already-ported web/src/features/admin/components/
+             UserImpersonateButton.tsx)
+Web route  : (unrouted)  — the web page ships unrouted (no routeRegistry entry); it is an
+             importable-but-unrouted symbol reachable only from another bootstrap point.
+Output     : apps/windows/TeslaSync.App/feature-views/UsersPage/{UsersPage.cs,
+             UsersPage.Model.cs, UsersPage.Source.cs, UsersPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Admin/
+              UsersPage.xaml path does NOT exist — the Windows app is TeslaSync.App with
+              C#-markup feature-views, not XAML-per-page, and the platform string catalog lives at
+              apps/windows/Strings/*.resw. This mirrors every prior W7 page in
+              apps/parity/windows-ledger.json, e.g. windows-page-settings-ActiveSessionsPage.log.)
+
+Shape of the parity unit (manifest id=page:admin/Users, requiredCount=10)
+-------------------------------------------------------------------------
+The web page is a <PageContainer title subtitle> hosting a single <GlassPanel> (GlassPanel1) whose
+body switches between five render branches, composed from two hooks:
+  • useImpersonationStatus (GET /admin/impersonate)         -> open / inactive / active
+  • useImpersonationCandidates (GET /admin/impersonate/candidates, enabled:!open)
+  render: open ? openMode notice : candidates.isLoading ? Spinner : candidates.isError ?
+          ErrorDisplay+retry : subjects.length===0 ? EmptyState : list of subjects, each row a
+          <UserImpersonateButton subject disabled={active} />.
+Manifest declares 4 data states (loading/empty/error/success), 1 panel (GlassPanel1) and 5 strings
+(impersonation.users.{title,subtitle,openMode,emptyTitle,emptyMessage}). Honouring "no scope
+narrowing / no stubs as final", the open-mode branch is also implemented in full (it carries the
+impersonation.users.openMode manifest string) and the per-row impersonate action reuses the already
+W7-ported native UserImpersonateButton surface (predecessor reuse; no second copy).
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011)
+--------------------------------------------------------------
+- UsersPage : UserControl — mounts the shared PageContainer (parity port of web PageContainer) with
+  PageContent = a Fluent TsGlassPanel (GlassPanel1) whose body switches between the loading notice
+  (Spinner + caption), the open-mode notice (Warning glyph + HelperText), the failure surface
+  (TsErrorDisplay + Retry), the empty surface (TsEmptyState title+message) and the subjects list
+  (one Border row per subject: a monospace Code subject + a native UserImpersonateButton). Design
+  tokens + a11y (AutomationProperties, Group peer, live-region feedback states) throughout. The
+  per-row impersonate affordance is built by an injected factory; the parameterless (shell) page
+  uses an inert IImpersonationSource (never invoked — the empty feed yields no rows), and the
+  generated-client UsersPage.Create wires UserImpersonateButton.Create(api,engine,options,localizer).
+- UsersPageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Reads the status
+  through IImpersonationSubjectsFeed (web useImpersonationStatus); when not open, reads the
+  candidates (web useImpersonationCandidates, enabled:!open); projects UsersDisplay so the view is a
+  thin renderer. LoadAsync/RefreshAsync; superseding CTS; no I/O in the view. A status transport
+  fault resolves to Inactive (web parity: a status error leaves open/active false, so the candidates
+  query still runs); a candidates failure drives the error surface.
+- UsersProjection / UsersModel / UsersDisplay — pure projection (no WinUI types) resolving the
+  five-branch matrix (open-mode / loading / error / empty / populated) in the web precedence order
+  (ResolveState), the subjects = candidates.mode==='session'?candidates:[] rule, and the per-row
+  disabled flag (web disabled={active}). ImpersonationCandidatesSnapshot.FromJson — tolerant parser
+  ({mode,candidates} object, {data:[…]} envelope, bare array; explicit mode:'open' -> open snapshot).
+- UsersPageRegistration — RouteName="Users", Slug="UsersPage", the two generated operation ids
+  (get_api_v1_admin_impersonate, get_api_v1_admin_impersonate_candidates) + AUTH_MODE_OPEN sentinel,
+  and every localized string keyed exactly as the web t(...) calls with the same English fallbacks.
+- EmptyImpersonationSubjectsFeed — the no-backend default the parameterless (shell-registered) page
+  hosts itself against (Inactive status + empty session candidates -> the friendly empty state, the
+  web "single-subject install" case), mirroring the other W7 pages' Empty feeds.
+  ImpersonationSubjectsClientFeed — the generated-OpenAPI-client adapter (ADR-004): the two GETs,
+  mapping the 501 AUTH_MODE_OPEN to the open signal exactly as web useImpersonationStatus /
+  useImpersonationCandidates do.
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("Users", () => new FeatureViews.Admin.UsersPage()). The web page is unrouted
+  (no RouteTable entry), so this is a latent page-factory seam mirroring the web's wired-but-unrouted
+  state — the same approach the shell already uses for the unrouted Diagnostic / RbacMatrix pages.
+
+i18n note (R3/ADR-014)
+----------------------
+impersonation.users.{title,subtitle,openMode,emptyTitle,emptyMessage} (the five manifest strings) —
+plus the ported supporting keys impersonation.users.{loading,error} and the shared common.retry —
+are NOT catalog entries in either the web i18n source or the generated platform catalog
+(apps/windows/Strings/{en,ar,he}/Resources.resw); the web resolves them as inline t(key, default)
+fallbacks. The native surface resolves them the same way: keyed ILocalizer.GetString(key, <same
+English default>) flowing through ShellLocalizer -> shell Localization (resw lookup -> English
+fallback). Zero hardcoded literals; the auto-generated resw is left untouched (it is machine-
+generated from web i18n; hand-editing would strand drift).
+
+=== PARITY ===
+PARITY_REQUIRED=10
+[x] panel  - GlassPanel1
+        -> UsersPage._panel (new TsGlassPanel { Glow = GlassGlow.None }) hosting the five-branch
+           _stateHost, mounted as PageContainer.PageContent (UsersPage.cs BuildPanel/ctor).
+[x] state  - loading data state
+        -> UsersPageState.Loading + UsersDisplay.ShowLoading (UsersProjection.ResolveState/Project,
+           UsersPage.Model.cs) -> UsersPage.cs Render (_loadingHost: Spinner + caption).
+           Tests: State_loading_when_first_query_in_flight; ViewModel Loading on first paint.
+[x] state  - empty data state
+        -> UsersPageState.Empty + UsersDisplay.ShowEmpty -> UsersPage.cs _emptyState (TsEmptyState).
+           Tests: State_empty_when_no_other_subjects; ViewModel_empty_candidates_is_the_empty_state;
+           Open_candidates_mode_is_treated_as_no_subjects.
+[x] state  - error data state
+        -> UsersPageState.Error + UsersDisplay.ShowError -> UsersPage.cs _errorState (TsErrorDisplay
+           + Retry, ActionInvoked -> RefreshAsync). Tests: State_error_shows_failure_and_retry;
+           ViewModel_candidates_failure_is_the_error_state.
+[x] state  - success data state
+        -> UsersPageState.Populated + UsersDisplay.ShowList + UsersDisplay.Rows -> UsersPage.cs
+           _listRoot (one Border row per subject: Code subject + UserImpersonateButton). Tests:
+           State_populated_when_subjects_present; ViewModel_loads_subjects_into_the_populated_state;
+           Rows_are_disabled_while_an_impersonation_session_is_active (web disabled={active}).
+[x] string - impersonation.users.emptyMessage
+        -> UsersPageRegistration.EmptyMessage (UsersPage.Model.cs)
+           GetString("impersonation.users.emptyMessage","No other subjects have an active session
+           right now. Sign someone else in to enable impersonation.")
+           -> UsersDisplay.EmptyMessage -> _emptyState.Message (UsersPage.cs Render).
+[x] string - impersonation.users.emptyTitle
+        -> UsersPageRegistration.EmptyTitle GetString("impersonation.users.emptyTitle","No other
+           subjects") -> UsersDisplay.EmptyTitle -> _emptyState.Title (UsersPage.cs Render).
+[x] string - impersonation.users.openMode
+        -> UsersPageRegistration.OpenModeText GetString("impersonation.users.openMode","Impersonation
+           requires forward-auth mode. This install is in open mode, so per-user identity is not
+           available.") -> UsersDisplay.OpenModeText -> _openModeText (UsersPage.cs Render).
+[x] string - impersonation.users.subtitle
+        -> UsersPageRegistration.Subtitle GetString("impersonation.users.subtitle","Active subjects
+           you can impersonate for support. Sessions are limited to 15 minutes and recorded in the
+           audit log.") -> UsersDisplay.Subtitle + UsersPageViewModel.Subtitle -> PageContainer.Subtitle.
+[x] string - impersonation.users.title
+        -> UsersPageRegistration.Title GetString("impersonation.users.title","Subjects")
+           -> UsersDisplay.Title + UsersPageViewModel.Title -> PageContainer title (UsersPage.cs).
+PARITY_COVERED=10
+# All 10 items asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/UsersPageTests.cs:
+#   Projection_resolves_the_five_manifest_string_keys_in_one_pass records the 5 manifest keys through
+#   a RecordingLocalizer; Registration_exposes_the_manifest_string_defaults pins the English
+#   fallbacks; the five State_* / ViewModel_* cases assert each branch's flags; the wider fidelity
+#   (tolerant candidates parse, the status->candidates compose with enabled:!open, the active-disable
+#   rule, generated-client request shaping incl. the AUTH_MODE_OPEN mapping, registration +
+#   PII-safe diagnostics) is covered by the remaining cases — 29/29 UsersPage cases passed.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/UsersPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (only the pre-existing TeslaSync.App.Core CA1716 warning on LoadState<T>.Error; no new warnings)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  (whole solution; UsersPage sources,
+#   ShellWindow registration, the test and the linked-source csproj entries all LF-normalised + style-clean)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 29586, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=10
+PARITY_REQUIRED=10
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/UsersPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/UsersPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-UsersPage.log
+# git commit -m "feat(apps/windows): UsersPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

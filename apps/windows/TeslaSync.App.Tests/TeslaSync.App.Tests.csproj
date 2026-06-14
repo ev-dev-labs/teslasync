@@ -1086,6 +1086,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Model.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.Source.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" Link="FeatureViews\UserImpersonateButton\UserImpersonateButton.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UsersPage\UsersPage.Model.cs" Link="FeatureViews\UsersPage\UsersPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UsersPage\UsersPage.Source.cs" Link="FeatureViews\UsersPage\UsersPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\UsersPage\UsersPage.ViewModel.cs" Link="FeatureViews\UsersPage\UsersPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.Model.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\UuidGenerator\UuidGenerator.ViewModel.cs" Link="FeatureViews\UuidGenerator\UuidGenerator.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCard\VehicleCard.Model.cs" Link="FeatureViews\VehicleCard\VehicleCard.Model.cs" />
