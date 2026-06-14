@@ -1,0 +1,211 @@
+================================================================================
+p2-windows · W7 · page:driving/DrivesList — WinUI 3 / Fluent parity port
+Generated artifact: windows-page-driving-DrivesListPage
+Web source : web/src/features/driving/pages/DrivesListPage.tsx  (route /drives)
+Output     : apps/windows/TeslaSync.App/feature-views/DrivesListPage/**
+             (the actual repo layout uses TeslaSync.App/feature-views/<Page>/ —
+              the prompt's templated TeslaSync/Features/Driving path is mapped to it,
+              consistent with every prior W7 page e.g. ChargingListPage, DriveScorePage)
+Nav        : RouteTable already maps Page("Drives","drives",RouteGroup.TripsDriving);
+             registered in Shell/ShellWindow.xaml.cs via DrivesListRegistration.RouteName
+Namespace  : TeslaSync.App.FeatureViews.Driving
+================================================================================
+
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + maui-windows
+              workload — NOT blocked. Native WinUI 3 / Windows App SDK 2.1.0 builds.
+
+Honesty Covenant (binding): every gate command below was actually executed and its
+raw exit code pasted; no red reported as green; no scope narrowed; no stubs as final
+(placeholder scan green); no delegation; predecessors (W1 generated client, W2 tokens,
+W3 component library, W4 shell/nav, P1 shared state holders / SI converters) consumed,
+not bypassed. Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+--------------------------------------------------------------------------------
+Files (parity port mirrors the ChargingListPage analog — a sibling refactored list
+page — adapted to the simpler Drives page: no density control, no conditional
+analytical sections; web drivesAggregation.ts is ported verbatim):
+  DrivesListPage.Model.cs       — DriveListItem(+ParseList/FromJson, snake_case wire),
+                                  DrivesListState{Loading,Empty,Error,Success},
+                                  DriveCollectionKind, DriveSortField, DriveGrade,
+                                  DrivesPeriodStats, DrivesAggregation (GetEfficiency,
+                                  GradeFromEfficiency/Numeric, ComputePeriodStats,
+                                  PriorPeriod, DetectAnomalies/Notable/Commutes,
+                                  DailyTrend, DayKey), DrivesListRegistration, Diagnostics
+  DrivesListPage.Display.cs      — DrivesListFilters, DriveKpiCard, DriveRowModel,
+                                  DriveDateGroup, DrivesListDisplay (every visible literal)
+  DrivesListPage.Search.cs       — DriveSearch (score:/from:/distance:/free-text, AND)
+  DrivesListPage.Source.cs       — IDrivesListSource(+Empty,+DrivesListSource
+                                  get_api_v1_drives), DrivesListResultMapper,
+                                  IDriveBulkDeleteService(+Null,+DriveBulkDeleteClient
+                                  delete_api_v1_drives_bulk { ids } → { deleted })
+  DrivesListPage.Projection.cs   — DrivesListProjection.Project / FilterAndSort /
+                                  BuildCsv / BuildJson (all SI→display conversion here)
+  DrivesListPage.ViewModel.cs    — DrivesListPageViewModel : INotifyPropertyChanged
+                                  (LoadAsync/RefreshAsync/RetryAsync, search/collection/
+                                  sort/trend/range/page/selection/delete/unit reproject)
+  DrivesListPage.cs              — WinUI 3 view (PageContainer chrome; thin renderer)
+  + TeslaSync.App.Tests/FeatureViews/DrivesListPageTests.cs (48 headless tests)
+  + Strings/en/Resources.resw (+36 drives.* / bulk.noun.drive_* keys; 29 already present)
+  + apps/parity/windows-ledger.json (page:driving/DrivesList row)
+  + Shell/ShellWindow.xaml.cs (nav factory registration)
+
+=== PARITY ===
+PARITY_REQUIRED=77
+
+-- panels (7) — DrivesListProjection.BuildKpiCards builds 6 KPI tiles; the view's
+   RenderOverview renders each as a Tokenized TsMetricCard in _kpiGrid; the 7th panel
+   is the no-stats Mica/glass region (_noStatsPanel : TsGlassPanel) ---------------
+[x] panel  Drives        — DriveKpiCard key="drives"      (Projection.BuildKpiCards, label drives.totalDrives) → TsMetricCard (DrivesListPage.cs RenderOverview)
+[x] panel  MetricCard2   — DriveKpiCard key="distance"    (Projection.BuildKpiCards, label drives.distance+unit) → TsMetricCard
+[x] panel  Drive-time    — DriveKpiCard key="driveTime"   (Projection.BuildKpiCards, label drives.driveTime, FormatDurationMinutes) → TsMetricCard
+[x] panel  Avg-score     — DriveKpiCard key="score"       (Projection.BuildKpiCards, label drives.avgScore, GradeFromNumeric) → TsMetricCard
+[x] panel  MetricCard5   — DriveKpiCard key="efficiency"  (Projection.BuildKpiCards, label drives.efficiency+unit) → TsMetricCard
+[x] panel  Cost          — DriveKpiCard key="cost"        (Projection.BuildKpiCards, label drives.cost, FmtCurrency) → TsMetricCard
+[x] panel  GlassPanel7   — DrivesListDisplay.NoStatsMessage (drives.noStatsRange) → _noStatsPanel TsGlassPanel + TsEmptyState (DrivesListPage.cs RenderOverview, web `<GlassPanel><EmptyState/>`)
+
+-- chart (1) — W3 native MetricSwitcherChart wrapper (LiveCharts2/WinUI), not a web canvas
+[x] chart  MetricSwitcherChart — DrivesListPage.cs RenderTrend (MetricSwitcherChartStore + MetricSwitcherChart) bound to Projection.BuildTrendSeries (5 series: drives/distance/score/efficiency/cost) + BuildTrendMetrics (5 MetricDefinition pills); titles drives.overTime / .aria / .empty
+
+-- maps (0) — web source has no map -------------------------------------------------
+   (none)
+
+-- data states (4) — implemented for the bound source; mutually exclusive ----------
+[x] state  loading  — DrivesListState.Loading  → _loadingHost (3× TsSkeleton shimmer) ; ViewModel.SetLoading
+[x] state  empty    — DrivesListState.Empty    → _pageEmpty (TsEmptyState, drives.emptyTitle/emptyMessage/empty.cta) ; ViewModel.SetEmpty
+[x] state  error    — DrivesListState.Error    → _errorState (TsQueryError + Retry, AttemptCount) ; ViewModel.SetError
+[x] state  success  — DrivesListState.Success  → _successBody (sticky+search+KPIs+trend+collections+sort+list+pager) ; ViewModel.ApplySnapshot
+
+-- strings (65) — every visible literal resolves from Strings/en/Resources.resw via
+   ILocalizer.GetString("<web key>", "<verbatim English default>"); call sites in
+   DrivesListPage.Projection.cs (29 keys pre-existing in resw, 36 added by this change).
+   Web key names preserved verbatim. Headless test
+   DrivesListPageTests.Projection_resolves_every_required_string_key_through_the_facade
+   asserts all 65 keys are requested through a RecordingLocalizer.
+[x] string bulk.actions.delete            — Projection: BulkDeleteLabel
+[x] string bulk.deleteConfirmDescription  — Projection: BulkConfirmDescription
+[x] string bulk.deleteConfirmTitle        — Projection: BuildBulkConfirmTitle ("Delete {0} {1}?")
+[x] string bulk.noun.drive_one            — Projection: BuildBulkConfirmTitle / BuildGroups noun (singular)
+[x] string bulk.noun.drive_other          — Projection: BuildBulkConfirmTitle / BuildGroups noun (plural)
+[x] string common.delete                  — Projection: CommonDeleteLabel
+[x] string common.noData                  — Projection: NoDataLabel
+[x] string drives.allDrives               — Projection: ListHeading
+[x] string drives.anomalyCount            — Projection: BuildAnomalyCallout ("{0} {1} in this range")
+[x] string drives.anomaly_one             — Projection: BuildAnomalyCallout noun (1 anomaly)
+[x] string drives.anomaly_other           — Projection: BuildAnomalyCallout noun (>1 anomalies)
+[x] string drives.avg                     — Projection: BuildRow AvgText
+[x] string drives.avgDur                  — Projection: BuildSecondaryLine
+[x] string drives.avgScore                — Projection: BuildKpiCards (score) + BuildStickySummary
+[x] string drives.avgTrip                 — Projection: BuildSecondaryLine
+[x] string drives.coll.all                — Projection: BuildCollectionOptions / CollectionLabel
+[x] string drives.coll.anomalies          — Projection: BuildCollectionOptions / CollectionLabel
+[x] string drives.coll.commutes           — Projection: BuildCollectionOptions / CollectionLabel
+[x] string drives.coll.notable            — Projection: BuildCollectionOptions / CollectionLabel
+[x] string drives.coll.tagged             — Projection: BuildCollectionOptions (disabled pill) / CollectionLabel
+[x] string drives.collections.aria        — Projection: CollectionsAria
+[x] string drives.cost                    — Projection: BuildKpiCards (cost)
+[x] string drives.distance                — Projection: BuildKpiCards (distance, WithUnit)
+[x] string drives.driveTime               — Projection: BuildKpiCards (driveTime)
+[x] string drives.efficiency              — Projection: BuildKpiCards (efficiency, WithUnit)
+[x] string drives.empty.cta               — Projection: EmptyCta
+[x] string drives.emptyForCollection      — Projection: EmptyForCollectionTitle
+[x] string drives.emptyForCollection.msg  — Projection: EmptyForCollectionMessage
+[x] string drives.emptyMessage            — Projection: EmptyMessage
+[x] string drives.emptyTitle              — Projection: EmptyTitle
+[x] string drives.filterLabel.collection  — Projection: FilterCollectionLabel
+[x] string drives.filterLabel.search      — Projection: FilterSearchLabel
+[x] string drives.highSpeed               — Projection: BuildRow HighSpeedLabel (maxSpeedMps>58.1152)
+[x] string drives.inProgress              — Projection: BuildRow primary badge (no end ts, no data)
+[x] string drives.longest                 — Projection: BuildSecondaryLine
+[x] string drives.lowEfficiencyBadge      — Projection: BuildRow AnomalyLabel
+[x] string drives.max                     — Projection: BuildRow MaxText
+[x] string drives.metric.cost             — Projection: BuildTrendMetrics
+[x] string drives.metric.distance         — Projection: BuildTrendMetrics
+[x] string drives.metric.drives           — Projection: BuildTrendMetrics
+[x] string drives.metric.efficiency       — Projection: BuildTrendMetrics
+[x] string drives.metric.score            — Projection: BuildTrendMetrics
+[x] string drives.noPriorData             — Projection: BuildPriorLabel (prior window empty)
+[x] string drives.noStatsRange            — Projection: NoStatsMessage (panel GlassPanel7)
+[x] string drives.noTelemetry             — Projection: BuildRow primary badge (completed, no data)
+[x] string drives.overTime                — Projection: TrendTitle
+[x] string drives.overTime.aria           — Projection: TrendAria
+[x] string drives.overTime.empty          — Projection: TrendEmpty
+[x] string drives.overview                — Projection: OverviewTitle
+[x] string drives.priorPeriod             — Projection: BuildPriorLabel ("prior period: {0} – {1}")
+[x] string drives.results                 — Projection: BuildResultsLabel / BuildStickySummary
+[x] string drives.scoreAria               — Projection: BuildRow ScoreAria ("Score {0}")
+[x] string drives.searchPlaceholder       — Projection: SearchPrompt (required web i18n key; parity:allow)
+[x] string drives.selectDrive             — Projection: BuildRow SelectAria ("Select drive on {0}")
+[x] string drives.sortByAria              — Projection: BuildSortAria ("Sort by {0}")
+[x] string drives.sortDistance            — Projection: BuildSortOptions / BuildSortAria
+[x] string drives.sortEfficiency          — Projection: BuildSortOptions / BuildSortAria
+[x] string drives.sortRecent              — Projection: BuildSortOptions / BuildSortAria
+[x] string drives.stickyBar.aria          — Projection: StickyAria
+[x] string drives.subtitle                — Projection: Subtitle
+[x] string drives.title                   — Projection: Title / BuildStickySummary
+[x] string drives.topSpeed                — Projection: BuildSecondaryLine
+[x] string drives.totalDrives             — Projection: BuildKpiCards (drives)
+[x] string drives.viewAnomalies           — Projection: ViewAnomaliesLabel
+[x] string filter.pending                 — Projection: FilterPendingLabel
+
+PARITY_COVERED=77
+
+Verification command output:
+  (feature-source key scan) STRING keys referenced in feature source: 65/65
+  (KPI tiles) Projection Kpi(...) cards = 6 ; view TsMetricCard render loop present
+  (panel 7)  TsGlassPanel occurrences = 3 (overview, no-stats=GlassPanel7, list)
+  (chart)    MetricSwitcherChart references = 4 (store+chart+host wiring)
+  (states)   DrivesListState.{Loading,Empty,Error,Success} all present
+
+--------------------------------------------------------------------------------
+GATE (windows triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DrivesListPage -Language csharp
+  PLACEHOLDER_ALLOWED=1   (drives.searchPlaceholder — required web i18n key name, // parity:allow)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded. 0 Error(s)
+BUILD_EXIT=0
+
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (clean — all new files normalized to LF per apps/.editorconfig end_of_line=lf)
+LINT_EXIT=0
+
+$ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  - Failed: 0, Passed: 30785, Skipped: 0, Total: 30785
+  (includes the 48 DrivesListPageTests — parse, aggregation, search, mapper, source
+   request shape, projection state-matrix + KPI + collections + pagination + sort +
+   row badges, CSV/JSON export, view-model state matrix, 65-key i18n coverage,
+   registration + diagnostics)
+TEST_EXIT=0
+
+# NOTE: apps/windows/TeslaSync.App.UITests is an end-to-end WinAppDriver/Appium suite;
+# it is environment-gated (UiAutomationUnavailableException: nothing listening on
+# http://127.0.0.1:4723 and WinAppDriver.exe absent). This repo-wide E2E-runner gap is
+# pre-existing and NOT introduced by this change (the suite exercises W4 shell/nav, not
+# this page's logic). The per-page completion gate is the headless TeslaSync.App.Tests
+# suite above, exactly as the sibling W7 pages (e.g. VehicleListPage) recorded. The
+# native WinUI view itself compiles in the Release solution build (BUILD_EXIT=0); its
+# per-state branch selection is driven entirely by the asserted state + display model.
+
+--------------------------------------------------------------------------------
+Acceptance Criteria
+--------------------------------------------------------------------------------
+[x] Every named panel implemented (6 KPI MetricCards + GlassPanel7 no-stats); every
+    anonymous region from the web source reproduced (sticky bar, search + active-filter
+    chips, overview, trend chart, collection pills, sort controls, date-grouped list
+    with bulk toolbar + CSV/JSON export, pager).
+[x] All 77 parity items render from the bound C# state holder (DrivesListPageViewModel
+    → DrivesListDisplay).
+[x] loading / empty / error / success implemented for the bound drives source.
+[x] All visible strings sourced from .resw; zero hardcoded literals; web key names match.
+[x] Dark mode + accessibility (AutomationProperties on panels/chart/rows/controls) +
+    SI units honored (UnitConverters at the display boundary only); Fluent-native.
+[x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (77).
+[x] windows ledger row for page:driving/DrivesList set covered (77/77, status=done).
+
+PARITY_COVERED=77
+PARITY_REQUIRED=77
+EXIT=0
+STATUS=DONE
