@@ -1,0 +1,111 @@
+p2-windows/W7 — page:telemetry/LiveSignalMonitor — native WinUI 3 LiveSignalMonitorPage at web parity
+====================================================================================================
+Web source : web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx
+Web route  : /live-monitor  (nav name "Live Monitor")
+Output     : apps/windows/TeslaSync.App/feature-views/LiveSignalMonitorPage/{LiveSignalMonitorPage.cs,
+             LiveSignalMonitorPage.Model.cs, LiveSignalMonitorPage.Source.cs, LiveSignalMonitorPage.ViewModel.cs}
+             (real in-repo path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path
+              does not exist — the Windows app is TeslaSync.App with C#-markup feature-views, not
+              XAML-per-page, and the platform string catalog lives at apps/windows/Strings/*.resw.
+              This mirrors every prior W7 page in apps/parity/windows-ledger.json. No silent drift.)
+
+Shape of the parity unit (apps/parity/parity-manifest.json id=page:telemetry/LiveSignalMonitor)
+----------------------------------------------------------------------------------------------
+requiredCount=4 = 4 strings. 0 charts, 0 maps, 0 named panels. Data sources: none declared (the page
+renders from the shared live SSE stream / local state). The web page is a thin wrapper that mounts the
+shared LiveSignalTail inside a PageContainer, driven by the shared useLiveSignalStream SSE hook
+(web/src/features/telemetry/hooks/useLiveSignalStream.ts → useRealtimeEvents). The native port reproduces
+the whole tree natively and reads the layered live state (ADR-004) rather than re-fetching history.
+
+Native realisation (Fluent / WinUI 3, ADR-002/004/005/006/011/013/014/015)
+--------------------------------------------------------------------------
+- LiveSignalMonitorPage : UserControl — mounts the shared PageContainer (title liveMonitor.title, subtitle
+  liveMonitor.subtitle, the live connection TsBadge in the header Actions) whose PageContent is the tail
+  TsGlassPanel: the filter TsInput (search-prefixed), the Pause/Resume + Auto-scroll + Clear TsButtons, the
+  four TsStatCards (Signals/sec, Buffer Size [+ "/ 500" sub-line], Unique Signals, Filtered) and the
+  scrolling five-column table (Time / Signal / Value / Type / Freshness) — the Type cell is a semantic
+  TsBadge, the Value cell tints from the same number→info / boolean→warning / string→success token map the
+  web uses, and the Freshness cell is the TsFreshnessIndicator (ADR-013 two-minute window). Thin renderer:
+  every label/value/visibility flows from LiveSignalMonitorDisplay; live SSE events arrive through the
+  injected ILiveSignalMonitorFeed and are marshalled onto the UI thread before reaching the view-model; a
+  1 Hz DispatcherQueueTimer drives the rate window; Group automation peer; tokens only (no literal colours).
+- LiveSignalMonitorPageViewModel : INotifyPropertyChanged — UI-thread-free state holder. Owns the
+  newest-first rolling buffer (cap 500, web TAIL_MAX), the signals/sec counter (web's 1 Hz reset), the
+  pause / auto-scroll / filter controls and the connection state; ApplyVehicleUpdate / SetConnected /
+  SetConnecting / SetErrored / SetFilter / TogglePaused / ToggleAutoScroll / Clear / SetVehicle /
+  AdvanceRateWindow; projects LiveSignalMonitorDisplay. No I/O in the view.
+- LiveSignalMonitorProjection / LiveSignalMonitorModel / LiveSignalMonitorDisplay — pure projection (no
+  WinUI types) resolving every liveMonitor.* key on every call (the 4 manifest keys + the full tail label
+  set), the filtered rows + unique/filtered/buffer/rate stat values (fmtInt port), and the
+  loading/empty/streaming/error body-state flags. LiveSignalTailParser — the native port of the web
+  handleVehicleUpdate firehose: the vehicle-scope filter, the cold[] / tables{} / signals{} (→ payload
+  fallback) shapes, detectType and String(value) coercion, reserved-key + compound-value skipping.
+  LiveSignalMonitorRegistration — RouteName="LiveSignalMonitor" (matches RouteTable.cs
+  Page("LiveSignalMonitor","live-monitor",TelemetrySignals)), Slug, TailMax. PII-safe diagnostics (view.opened only).
+- ILiveSignalMonitorFeed / EmptyLiveSignalMonitorFeed (no-backend default the shell-registered page mounts
+  against — renders the Disconnected + waiting initial state) / LiveStoreSignalMonitorFeed (the live-store
+  adapter binding L1 LiveSignalStore.VehicleUpdated + LiveConnectionMonitor → LiveConnectionMapping.IsLive,
+  ADR-004; never reconstructs history from the stream).
+- Shell registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs registers
+  PageFactory.Register("LiveSignalMonitor", () => new FeatureViews.Telemetry.LiveSignalMonitorPage()).
+
+i18n note (R3/ADR-014)
+----------------------
+Every liveMonitor.* key is resolved through keyed ILocalizer.GetString(key, <web default>) flowing through
+ShellLocalizer -> shell Localization (resw lookup -> English fallback), exactly as the web resolves the
+inline t(key, default) fallbacks. All keys already exist in apps/windows/Strings/*.resw; zero hardcoded
+literals; the auto-generated resw is left untouched. The web i18n key "liveMonitor.filterPlaceholder"
+necessarily contains the substring the placeholder gate forbids, so its single call site carries an explicit
+`// parity:allow` opt-out with reason (PLACEHOLDER_ALLOWED=1) — it is a real translation key, not a stub.
+
+=== PARITY ===
+PARITY_REQUIRED=4
+# strings (4) — LiveSignalMonitorProjection.Project resolves localizer.GetString("<key>", "<web default>");
+#   coverage asserted by Projection_resolves_all_4_manifest_string_keys_in_one_pass (RecordingLocalizer)
+[x] string - liveMonitor.connected     -> Display.ConnectionLabel (connectedLabel)    -> _connectionBadge (TsBadge, Success)
+[x] string - liveMonitor.disconnected  -> Display.ConnectionLabel (disconnectedLabel) -> _connectionBadge (TsBadge, Danger)
+[x] string - liveMonitor.subtitle      -> Display.Subtitle                            -> PageContainer.Subtitle
+[x] string - liveMonitor.title         -> Display.Title                               -> PageContainer.Title
+PARITY_COVERED=4
+
+# Regions reproduced from the web LiveSignalTail (no named panels in the manifest; every web region ported):
+#   filter TsInput, Pause/Resume + Auto-scroll + Clear TsButtons, 4 TsStatCards (sigPerSec/bufferSize/
+#   uniqueSignals/filtered), 5-column scrolling table (time/signal/value/type/freshness), connection TsBadge.
+# Data states for the live SSE source (loading / empty / error) + streaming + filtered-empty:
+[x] state - loading  -> BodyState.Loading (connecting shimmer)  :: State_loading_when_connecting_with_no_rows
+[x] state - empty    -> BodyState.Empty (liveMonitor.waiting)   :: State_empty_is_the_waiting_default
+[x] state - error    -> BodyState.Error (error.loadFailed+retry):: State_error_wins_over_rows / ViewModel_error_drives_the_error_state
+[x] state - streaming-> BodyState.Streaming (table)             :: State_streaming_when_rows_present
+[x] state - no-match -> ShowNoMatch (liveMonitor.noMatch)       :: Filtered_empty_shows_the_no_match_message
+# Coverage asserted headlessly in apps/windows/TeslaSync.App.Tests/FeatureViews/LiveSignalMonitorPageTests.cs
+# (36 cases): the 4-key one-pass coverage (+ the full tail-key set, idle and while streaming), the connection
+# badge text, the four stat-card values, the filter narrowing, the pause label, the four data states + the
+# filtered-empty no-match copy, the firehose parser (cold/tables/signals + payload fallback, vehicle-scope,
+# system-event passthrough, reserved/compound skipping, timestamp), the view-model buffer/cap/pause/rate/
+# filter/clear/vehicle-switch/scope/connection/error/auto-scroll flows, and the empty + live-store feeds. All pass.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/LiveSignalMonitorPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Telemetry path does not exist in-repo)
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing Core analyzer warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30583, Failed: 0, Skipped: 0
+#   (scoped to the headless unit-test project, as every prior W7 page log; the App.UITests project needs a
+#    WinAppDriver UI host and is out of scope for this gate)
+TEST_EXIT=0
+PARITY_COVERED=4
+PARITY_REQUIRED=4
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/LiveSignalMonitorPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/LiveSignalMonitorPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-telemetry-LiveSignalMonitorPage.log
+# git commit -m "feat(apps/windows): LiveSignalMonitorPage at web parity (W7 telemetry)"
+
+EXIT=0
+STATUS=DONE
