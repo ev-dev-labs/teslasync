@@ -467,6 +467,10 @@
     <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.Projection.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.Projection.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.Source.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DriveScorePage\DriveScorePage.ViewModel.cs" Link="FeatureViews\DriveScorePage\DriveScorePage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivetrainHealthPage\DrivetrainHealthPage.Model.cs" Link="FeatureViews\DrivetrainHealthPage\DrivetrainHealthPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivetrainHealthPage\DrivetrainHealthPage.Projection.cs" Link="FeatureViews\DrivetrainHealthPage\DrivetrainHealthPage.Projection.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivetrainHealthPage\DrivetrainHealthPage.Source.cs" Link="FeatureViews\DrivetrainHealthPage\DrivetrainHealthPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DrivetrainHealthPage\DrivetrainHealthPage.ViewModel.cs" Link="FeatureViews\DrivetrainHealthPage\DrivetrainHealthPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LocationsPage\LocationsPage.Model.cs" Link="FeatureViews\LocationsPage\LocationsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LocationsPage\LocationsPage.Source.cs" Link="FeatureViews\LocationsPage\LocationsPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LocationsPage\LocationsPage.ViewModel.cs" Link="FeatureViews\LocationsPage\LocationsPage.ViewModel.cs" />
