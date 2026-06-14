@@ -18,6 +18,7 @@ import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
 import io.teslasync.shared.core.data.repo.HttpOperatorConfidenceRepository
 import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
+import io.teslasync.shared.core.data.repo.HttpUserRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
@@ -28,6 +29,7 @@ import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
 import io.teslasync.shared.core.presentation.operatorconfidence.OperatorConfidenceStore
 import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
+import io.teslasync.shared.core.presentation.user.UserStore
 import io.teslasync.shared.core.presentation.vehicles.VehiclesStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -72,6 +74,7 @@ class DataContainer(
     private val feedbackRepository = HttpFeedbackRepository(api, cacheStore, clock)
     private val ingestXRayRepository = HttpIngestXRayRepository(api, cacheStore, clock)
     private val operatorConfidenceRepository = HttpOperatorConfidenceRepository(api, cacheStore, clock)
+    private val userRepository = HttpUserRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -117,6 +120,12 @@ class DataContainer(
      * admin surface binds to.
      */
     val operatorConfidenceStore = OperatorConfidenceStore(operatorConfidenceRepository, scope)
+
+    /**
+     * Shared User/Account domain state holder (web `useUser` port) — the cache-then-network Tesla region feed
+     * (`/tesla/user/region`) + its refresh mutation the A7 TeslaRegionPage admin surface binds to.
+     */
+    val userStore = UserStore(userRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

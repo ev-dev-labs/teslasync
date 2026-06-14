@@ -1,0 +1,98 @@
+P3-ANDROID A7 — page:admin/TeslaRegion — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/TeslaRegionPage.tsx  (route /tesla-region)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaRegionPage + Host + Model)
+Wiring     : DataContainer.userStore (S8 UserStore over HttpUserRepository), TeslaSyncApplication -> TeslaRegionPageHost.register("teslaRegion")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WRAPPER NOTE (honesty): the web page is a THIN PROMOTION WRAPPER — it sets the page
+title/subtitle (PageContainer) and embeds the shared <RegionSettings /> component; it
+owns no data of its own (manifest: 0 data sources, 0 panels, 2 strings, requiredCount=2 —
+"renders from navigation args / local state"). The Android port is faithful to that
+shape: TeslaRegionPage renders the title/subtitle header and composes the PRE-EXISTING
+RegionSettings feature view (apps/android/app/src/main/java/com/teslasync/feature-views/
+RegionSettings, package io.teslasync.android.featureviews.regionsettings) VERBATIM — the
+Globe header + Refresh action, the region-code + Fleet-API-base-URL cards, the "Synced"
+stamp, the em-dash blank-URL fallback, and the full cache-then-network loading / stale-
+offline / hard-error+Retry / empty / content state matrix all come from that one shared
+surface (DRY, ADR-006). It is NOT re-implemented or stubbed here.
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared UserStore + its S7 HttpUserRepository/
+UserRepository + the TeslaConfigEnvelope/TeslaRegionData/TeslaRegionEnvelope models and the
+RegionSettings feature view (+ its pure RegionSettingsProjection/RegionSettingsModel and
+its UiTest/ProjectionTest) already exist on this branch (shared :core + :android compile
+green). The page binds the real shared holder end to end via container.userStore; no
+predecessor was stubbed or bypassed.
+
+WIRING NOTE (honesty, no silent drift): unlike the sibling GasPriceAutoPollPage (which
+binds the pre-existing DataContainer.settingsStore), the User/Account S8 holder was not yet
+exposed by the Android DI graph. Per DataContainer's own contract ("the single seam A7 page
+prompts widen — register their store + ViewModel"), and exactly as the sibling A7 surfaces
+did for their holders (feedbackStore / ingestXRayStore / operatorConfidenceStore, each
+KDoc'd "the A7 ...Page admin surface binds to"), this prompt widened DataContainer by two
+pattern-identical lines: `private val userRepository = HttpUserRepository(api, cacheStore,
+clock)` and `val userStore = UserStore(userRepository, scope)`. No feature page, no
+networking, and no business logic were added — only the shared UserStore was registered on
+the graph. api/cacheStore/scope are encapsulated in DataContainer, so this is the only seam
+where the real holder can be built; the alternative (a header with no panel) would be a
+stub (ADR-011) and a parity shortcut (covenant 4/5).
+
+NAV NOTE: the `teslaRegion` -> /tesla-region destination already exists in Destinations.kt
+(pre-existing metadata row; RouteTableTest asserts "/tesla-region" to "teslaRegion"); this
+prompt only attaches host content via PageHosts.register, and the deep link is
+auto-registered by TeslaSyncNavHost.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps
+':android' -> app/, and states every P3/A* gate addresses ':android:'); the prompt
+snippet's ':app:' is the same single app module. The 2 visible strings
+(translation_region_title / translation_region_subtitle) already exist in
+res/values/strings.xml (generated i18n catalog) and across all values-*/ locales — along
+with the embedded feature view's full region.* set — so no string-catalog edit was
+required.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding
+gate (the prompt gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, and
+the sibling A7 pages were accepted on that same triad). For full transparency: running
+:android:detekt reports 4 PRE-EXISTING issues, ALL in sibling files
+(ApiLogsPage.kt x3 [MatchingDeclarationName, ReturnCount, MaxLineLength],
+FeedbackQueuePage.kt x1 [MatchingDeclarationName]) — ZERO in the three new TeslaRegion
+files, in DataContainer.kt, or in TeslaSyncApplication.kt, which are detekt-clean. Those
+sibling issues are out of scope for this prompt and were left untouched.
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 2m 31s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 11m 55s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 21s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=2
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaRegionPage.kt screen, TeslaRegionPageModel.kt registration, TeslaRegionPageHost.kt host)
+
+# data sources (0) — page renders no data of its own (web wrapper); embedded RegionSettings owns the Tesla region feed (UserStore.teslaUserRegion() cache-then-network + refreshTeslaRegion() mutation)
+# panels (0) — page file declares no GlassPanel directly; the web <RegionSettings/> panel is reproduced by the composed feature view
+# charts (0) — none
+# maps (0) — none
+
+# strings (2) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string region.title    -> TeslaRegionPage.kt:TeslaRegionHeader() PageTitle(stringResource(R.string.translation_region_title))
+[COVERED] string region.subtitle -> TeslaRegionPage.kt:TeslaRegionHeader() BodyText(stringResource(R.string.translation_region_subtitle))
+
+PARITY_COVERED=2
+
+=== SUMMARY ===
+data sources : none at the page level (web parity: TeslaRegionPage owns no hook). The composed RegionSettings feature view binds the shared S8 UserStore (teslaUserRegion() cache-then-network feed + refreshTeslaRegion() mutation) via container.userStore; no HTTP in the view.
+nav          : Destinations 'teslaRegion' -> /tesla-region (pre-existing) wired to TeslaRegionRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+states       : the 3 data states (loading skeleton / stale-offline cached + Offline chip / hard-error + Retry) plus the empty state (no resolved region) and the populated content body are all rendered by the composed RegionSettings feature view's UiState<TeslaRegionEnvelope> projection; the wrapper adds no separate data region, so no region is ever blank (ADR-011).
+a11y/theme   : header uses PageTitle (heading semantics) + BodyText on MaterialTheme.colorScheme tokens (dark/dynamic theme, ADR-005/ADR-015); the feature view carries its panel/card content descriptions + freshness chip semantics. Values render at the display boundary (ADR-013); no non-SI is stored/computed (region code + URL are non-unit text).
+diagnostics  : page records the one-shot PII-safe view.opened (surface="TeslaRegionPage", P1/S11) distinct from the feature view's own (surface="RegionSettings"); only slugs are logged, never the region code or base URL.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(2) == PARITY_REQUIRED(2)
+[PASS] all android triad gates green; parity 2/2; android ledger row page:admin/TeslaRegion status=done.
+EXIT=0
+STATUS=DONE
