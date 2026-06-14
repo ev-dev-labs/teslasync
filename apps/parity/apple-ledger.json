@@ -289,6 +289,24 @@
       "requiredCount": 32,
       "promptId": "p4-apple/P7/page:admin/APIKeys",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-APIKeysPage.log"
+    },
+    {
+      "unitId": "page:admin/GDPRExport",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 42,
+      "requiredCount": 42,
+      "promptId": "p4-apple/P7/page:admin/GDPRExport",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-GDPRExportPage.log"
+    },
+    {
+      "unitId": "page:admin/GDPRExport",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 42,
+      "requiredCount": 42,
+      "promptId": "p4-apple/P7/page:admin/GDPRExport",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-GDPRExportPage.log"
     }
   ]
 }
