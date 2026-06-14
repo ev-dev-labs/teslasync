@@ -1,0 +1,23 @@
+/*
+  Tooltip.strings
+  TeslaSync — P4 shared surface · 0231 · Tooltip (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface — the native peer of the localizable text in
+  `components/ui/Tooltip.tsx`. The native surface routes every string through the facade per the
+  no-hardcoded-English rule.
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("Tooltip") so each parallel surface prompt owns its own strings without editing the
+  shared catalog. In test / preview bundles `NSLocalizedString` returns the value below, keeping the labels
+  deterministic.
+
+  The web `<Tooltip>` extracts no `t()` keys of its own: the tooltip BODY is caller-supplied (the web
+  `content` prop) and is resolved against the caller's own key, not listed here. The single surface-owned
+  string is the floating bubble's VoiceOver role — the native peer of the web `role="tooltip"`, which the
+  platform speaks for free in the browser but not for a custom SwiftUI view.
+*/
+
+/* The floating tooltip bubble's VoiceOver role — the native peer of the web `role="tooltip"`. Spoken when a
+   VoiceOver user lands on the revealed bubble; the body copy itself reaches VoiceOver through the trigger's
+   `aria-describedby` peer (its accessibility hint). */
+"tooltip.a11y.role" = "Tooltip";
