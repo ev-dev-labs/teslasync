@@ -846,3 +846,4 @@ p3-android/shared-meaningful/A-0190-CarAnimation.prompt.md
 p3-android/shared-meaningful/A-0100-RecentActivityFeed.prompt.md
 p3-android/shared-meaningful/A-0191-FadeIn.prompt.md
 p3-android/shared-meaningful/A-0194-StaggerItem.prompt.md
+p3-android/shared-meaningful/A-0192-RouteTransition.prompt.md
