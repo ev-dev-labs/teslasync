@@ -162,6 +162,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AlertRulesPage.log"
   },
   {
+    "unitId": "page:notifications/AuditLog",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "p2-windows/W7/windows-page-notifications-AuditLogPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-notifications-AuditLogPage.log"
+  },
+  {
     "unitId": "page:onboarding/Onboarding",
     "platform": "windows",
     "status": "done",

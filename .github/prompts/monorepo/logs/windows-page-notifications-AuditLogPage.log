@@ -1,0 +1,84 @@
+=== ARTIFACT ===
+# p2-windows W7 page:notifications/AuditLog — native WinUI 3 / Fluent parity port of the web page
+# web/src/features/notifications/pages/AuditLogPage.tsx (route /notifications/audit, useAuditLogs -> GET /system/audit).
+# NOT the admin AuditLog page (that already ships as FeatureViews.Admin.AuditLogPage); this is the distinct
+# notifications surface (single GlassPanel: Recent Activity heading + search + active-filter chip + Time/Action/
+# Resource/Details DataTable, with loading / empty / error / no-matches states).
+#
+# Output (real in-repo paths; the generated prompt's apps/windows/TeslaSync/Features/Notifications path does not
+# exist in-repo — the Windows app is apps/windows/TeslaSync.App with code-based feature views under feature-views/):
+#   apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage/NotificationsAuditLogPage.Model.cs
+#   apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage/NotificationsAuditLogPage.Source.cs
+#   apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage/NotificationsAuditLogPage.ViewModel.cs
+#   apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage/NotificationsAuditLogPage.cs
+#   apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs                 (NavigationView registration: "NotificationsAudit")
+#   apps/windows/TeslaSync.App.Tests/FeatureViews/NotificationsAuditLogPageTests.cs (+ 3 Compile links in the test csproj)
+#
+# Architecture: MVVM via INotifyPropertyChanged state holder (NotificationsAuditLogPageViewModel) over the generated
+# C# client feed (AuditLogsClientFeed : IAuditLogsFeed -> IApiClient.SendAsync, operation get_api_v1_system_audit).
+# The view is a thin renderer over NotificationsAuditLogProjection.Project (all i18n + formatting + branch flags).
+# PageContainer chrome (localized title + subtitle) hosts the TsGlassPanel; SI not applicable (no unit fields on
+# this surface). Strings resolve through ILocalizer with the web key + English default (ShellLocalizer bridges the
+# Strings/*.resw catalog; the headless gate uses PassthroughLocalizer), matching the sibling admin AuditLogPage and
+# every other W7 page — the auto-generated resw is not hand-edited.
+
+=== PARITY ===
+# PARITY_REQUIRED=15 (1 panel + 2 states + 12 strings). Each item below carries file+symbol evidence.
+[x] panel  - GlassPanel1                                                  -> NotificationsAuditLogPage._panel (TsGlassPanel) built in NotificationsAuditLogPage.BuildPanelBody(); web <GlassPanel>
+[x] state  - loading                                                      -> NotificationsAuditLogProjection.Project ShowLoading + NotificationsAuditLogPage._loadingPanel (5x TsSkeleton); test State_loading_when_query_in_flight
+[x] state  - success                                                      -> NotificationsAuditLogProjection.Project ShowContent/ShowTable + NotificationsAuditLogPage._table (TsDataTable, 4 columns); test State_success_when_rows_present
+[x] string - Action                                                       -> NotificationsAuditLogProjection.Project localizer.GetString("Action", "Action") (ActionHeader -> _colAction.Header)
+[x] string - Audit Log                                                    -> NotificationsAuditLogProjection.Project / NotificationsAuditLogRegistration.Title localizer.GetString("Audit Log", "Audit Log") (PageContainer title)
+[x] string - Details                                                      -> NotificationsAuditLogProjection.Project localizer.GetString("Details", "Details") (DetailsHeader -> _colDetails.Header)
+[x] string - Failed to load audit logs                                    -> NotificationsAuditLogProjection.Project localizer.GetString("Failed to load audit logs", "Failed to load audit logs") (ErrorText -> _errorText, _errorPanel)
+[x] string - No audit entries found                                       -> NotificationsAuditLogProjection.Project localizer.GetString("No audit entries found", "No audit entries found") (EmptyText -> _emptyState.Title)
+[x] string - Recent Activity                                              -> NotificationsAuditLogProjection.Project localizer.GetString("Recent Activity", "Recent Activity") (RecentActivityTitle -> _recentTitle PanelTitle)
+[x] string - Recent system-level changes recorded by the audit subsystem  -> NotificationsAuditLogProjection.Project localizer.GetString("Recent system-level changes recorded by the audit subsystem", <same>) (Subtitle -> PageContainer.Subtitle)
+[x] string - Resource                                                     -> NotificationsAuditLogProjection.Project localizer.GetString("Resource", "Resource") (ResourceHeader -> _colResource.Header)
+[x] string - Time                                                         -> NotificationsAuditLogProjection.Project localizer.GetString("Time", "Time") (TimeHeader -> _colTime.Header)
+[x] string - audit.filterLabel.search                                     -> NotificationsAuditLogProjection.Project localizer.GetString("audit.filterLabel.search", "Search") (SearchChipLabel -> TsActiveFilterChips FilterChip.Label)
+[x] string - audit.noMatches                                              -> NotificationsAuditLogProjection.Project localizer.GetString("audit.noMatches", "No audit entries match your search.") (NoMatchesText -> _noMatchesText, ShowNoMatches branch)
+[x] string - audit.searchPlaceholder                                      -> NotificationsAuditLogProjection.Project localizer.GetString("audit.searchPlaceholder", "Search by action, resource, or details...") (SearchPrompt -> TsSearchInput.PromptText)
+
+PARITY_COVERED=15
+# Coverage asserted headlessly: NotificationsAuditLogPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records all 12 keys through a RecordingLocalizer; the four state tests
+# (State_loading / State_empty / State_error / State_success), the search/no-matches tests, the column-header test,
+# the tolerant-parser tests, the registration test and the five view-model tests assert each panel + state renders
+# from the bound NotificationsAuditLogDisplay state holder. 21 tests, all green.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Notifications path does not exist in-repo)
+#   plus the test file apps/windows/TeslaSync.App.Tests/FeatureViews/NotificationsAuditLogPageTests.cs
+#   PLACEHOLDER_ALLOWED=1 on each (the required web i18n key "audit.searchPlaceholder" carries a // parity:allow marker)
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (NotificationsAuditLogPage sources +
+#   ShellWindow registration + test file all clean)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30257, Failed: 0, Skipped: 0
+#   (NotificationsAuditLogPageTests: 21 passed). The W7 page test gate is the headless TeslaSync.App.Tests project,
+#   consistent with the sibling windows-page-admin-ApiLogsPage W7 log. The solution-level dotnet test additionally
+#   discovers TeslaSync.App.UITests (147 W9 WinAppDriver/Appium UI-automation tests) which require a UI-automation
+#   runner listening on http://127.0.0.1:4723/; that runner is absent in this environment, so those tests raise
+#   UiAutomationUnavailableException. They are out of scope for this W7 page prompt (W9 owns them) and unaffected by
+#   this change; the .NET/Windows build+test runner itself IS available (build + lint + 30257 headless tests green).
+TEST_EXIT=0
+PARITY_COVERED=15
+PARITY_REQUIRED=15
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/NotificationsAuditLogPage \
+#         apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/NotificationsAuditLogPageTests.cs \
+#         apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json \
+#         .github/prompts/monorepo/logs/windows-page-notifications-AuditLogPage.log
+# git commit -m "feat(apps/windows): AuditLogPage at web parity (W7 notifications)"
+
+EXIT=0
+STATUS=DONE
