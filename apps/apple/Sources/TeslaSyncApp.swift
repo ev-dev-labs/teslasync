@@ -69,29 +69,33 @@ struct TeslaSyncApp: App {
                 .teslaSyncTheme()
         } else {
             RootView(coordinator: auth, selection: $selection)
-                .environment(\.routeHosts, FeatureFlagsRouteRegistration.registry(
-                    base: AuditLogRouteRegistration.registry(
-                        base: AutomationsListRouteRegistration.registry(
-                            base: BatteryCellsRouteRegistration.registry(
-                                base: StatisticsRouteRegistration.registry(
-                                    base: FleetCompareRouteRegistration.registry(
-                                        base: TeslaOrdersRouteRegistration.registry(
-                                            base: LiveSignalInspectorRouteRegistration.registry(
-                                                base: SchemaDriftRouteRegistration.registry(
-                                                    base: FleetTelemetryCoverageRouteRegistration.registry(
-                                                        base: DiskForecastRouteRegistration.registry(
-                                                            base: ApiPlaygroundRouteRegistration.registry(
-                                                                base: SettingsRouteRegistration.registry(
-                                                                    model: settingsModel,
-                                                                    onOpenNotifications: { selection = .notifications }
+                .environment(\.routeHosts, ApiLogsRouteRegistration.registry(
+                    base: FeatureFlagsRouteRegistration.registry(
+                        base: AuditLogRouteRegistration.registry(
+                            base: AutomationsListRouteRegistration.registry(
+                                base: BatteryCellsRouteRegistration.registry(
+                                    base: StatisticsRouteRegistration.registry(
+                                        base: FleetCompareRouteRegistration.registry(
+                                            base: TeslaOrdersRouteRegistration.registry(
+                                                base: LiveSignalInspectorRouteRegistration.registry(
+                                                    base: SchemaDriftRouteRegistration.registry(
+                                                        base: FleetTelemetryCoverageRouteRegistration.registry(
+                                                            base: DiskForecastRouteRegistration.registry(
+                                                                base: ApiPlaygroundRouteRegistration.registry(
+                                                                    base: SettingsRouteRegistration.registry(
+                                                                        model: settingsModel,
+                                                                        onOpenNotifications: {
+                                                                            selection = .notifications
+                                                                        }
+                                                                    )
                                                                 )
                                                             )
                                                         )
                                                     )
                                                 )
-                                            )
-                                        ),
-                                        onNavigate: { selection = $0 }
+                                            ),
+                                            onNavigate: { selection = $0 }
+                                        )
                                     )
                                 )
                             )

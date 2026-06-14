@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiPlayground, auditLog, featureFlags, fleetTelemetryCoverage
+    case admin, apiPlayground, apiLogs, auditLog, featureFlags, fleetTelemetryCoverage
     case liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -44,6 +44,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: "battery-cells"
         case .powerUser: "power-user"
         case .apiPlayground: "api-playground"
+        case .apiLogs: "api-logs"
         case .auditLog: "audit-log"
         case .featureFlags: "feature-flags"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
@@ -81,6 +82,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .diagnostics: "stethoscope"
         case .admin: "person.badge.key.fill"
         case .apiPlayground: "curlybraces"
+        case .apiLogs: "doc.text.magnifyingglass"
         case .auditLog: "list.bullet.rectangle.portrait"
         case .featureFlags: "flag.fill"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
@@ -106,7 +108,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: .energy
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiPlayground, .auditLog, .featureFlags, .fleetTelemetryCoverage, .liveSignals,
+        case .admin, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetTelemetryCoverage, .liveSignals,
              .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
