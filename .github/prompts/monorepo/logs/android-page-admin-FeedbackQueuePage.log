@@ -1,0 +1,97 @@
+P3-ANDROID A7 — page:admin/FeedbackQueue — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/FeedbackQueuePage.tsx  (route /admin/feedback)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (FeedbackQueuePage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.feedbackStore (S8 FeedbackStore over HttpFeedbackRepository), TeslaSyncApplication -> FeedbackQueuePageHost.register("adminFeedback")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared FeedbackStore
+(io.teslasync.shared.core.presentation.feedback.FeedbackStore) + its S7
+HttpFeedbackRepository + the FeedbackEntry/FeedbackListResponse/FeedbackUpdateInput/
+FeedbackListParams models already exist on this branch (shared :core compiles green,
+UP-TO-DATE). The Android DI graph was widened — the documented A7 seam (DataContainer
+"the single seam A7 page prompts widen … register their store") — to expose
+`feedbackStore`, exactly mirroring the pre-existing `adminStore`. No predecessor was
+stubbed or bypassed; the page binds the real shared holder end to end.
+
+NAV NOTE: the `adminFeedback` -> /admin/feedback destination already exists in
+Destinations.kt (pre-existing metadata row); this prompt only attaches host content
+via PageHosts.register, and the deep link is auto-registered by TeslaSyncNavHost.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps
+':android' -> app/); the prompt snippet's ':app:' is the same module. The 38 visible
+strings already exist in res/values/strings.xml (generated i18n catalog), so no
+string-catalog edit was required.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 2m 28s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 14m 41s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 2m 1s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=43
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (FeedbackQueuePage.kt screen, FeedbackQueuePageViewModel.kt, FeedbackQueuePageModel.kt)
+
+# panels (1) — Material 3 Card/Surface (GlassPanel)
+[COVERED] panel  GlassPanel1   -> FeedbackQueuePage.kt:FeedbackQueuePageContent() GlassPanel(PanelPadding.Md) wrapping filters + table
+
+# data states (4) — bound to FeedbackQueuePageViewModel.state: StateFlow<UiState<FeedbackListResponse>>
+[COVERED] state  loading       -> FeedbackQueuePage.kt:FeedbackLoadingState() (state.isLoading) Spinner
+[COVERED] state  empty         -> FeedbackQueuePage.kt:FeedbackEmptyState() (UiPhase.Empty via FeedbackListResponse.isEmptyQueue)
+[COVERED] state  error         -> FeedbackQueuePage.kt:FeedbackErrorState() (state.isError) ErrorText + Retry; ResourceUiState -> UiPhase.Error
+[COVERED] state  success       -> FeedbackQueuePage.kt:FeedbackTable()/FeedbackRow() content branch (UiState.Content)
+
+# strings (38) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string common.next                       -> FeedbackQueuePage.kt:FeedbackPaginationFooter() Next Button (translation_common_next)
+[COVERED] string common.previous                   -> FeedbackQueuePage.kt:FeedbackPaginationFooter() Previous Button (translation_common_previous)
+[COVERED] string common.refresh                    -> FeedbackQueuePage.kt:FeedbackQueueFilters() Refresh Button (translation_common_refresh)
+[COVERED] string feedback.category.bug             -> FeedbackQueuePage.kt:categoryFilterOptions()+categoryLabel() (translation_feedback_category_bug)
+[COVERED] string feedback.category.feature         -> FeedbackQueuePage.kt:categoryFilterOptions()+categoryLabel() (translation_feedback_category_feature)
+[COVERED] string feedback.category.other           -> FeedbackQueuePage.kt:categoryFilterOptions()+categoryLabel() (translation_feedback_category_other)
+[COVERED] string feedback.queue.action.changeStatus-> FeedbackQueuePage.kt:FeedbackTriageControls() status Select label (translation_feedback_queue_action_changeStatus)
+[COVERED] string feedback.queue.action.forward     -> FeedbackQueuePage.kt:FeedbackTriageControls() Forward Button (translation_feedback_queue_action_forward)
+[COVERED] string feedback.queue.action.githubUrl   -> FeedbackQueuePage.kt:FeedbackTriageControls() URL Input label (translation_feedback_queue_action_githubUrl)
+[COVERED] string feedback.queue.action.saveUrl     -> FeedbackQueuePage.kt:FeedbackTriageControls() Save Button (translation_feedback_queue_action_saveUrl)
+[COVERED] string feedback.queue.bridgeDisabled     -> FeedbackQueuePage.kt:FeedbackQueueFilters() HelperText (translation_feedback_queue_bridgeDisabled)
+[COVERED] string feedback.queue.col.category       -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_category)
+[COVERED] string feedback.queue.col.created        -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_created)
+[COVERED] string feedback.queue.col.github         -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_github)
+[COVERED] string feedback.queue.col.pageRoute      -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_pageRoute)
+[COVERED] string feedback.queue.col.reporter       -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_reporter)
+[COVERED] string feedback.queue.col.status         -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_status)
+[COVERED] string feedback.queue.col.title          -> FeedbackQueuePage.kt:FeedbackTableHeader() HeaderCell (translation_feedback_queue_col_title)
+[COVERED] string feedback.queue.empty              -> FeedbackQueuePage.kt:FeedbackEmptyState() EmptyState title (translation_feedback_queue_empty)
+[COVERED] string feedback.queue.emptyMessage       -> FeedbackQueuePage.kt:FeedbackEmptyState() EmptyState message (translation_feedback_queue_emptyMessage)
+[COVERED] string feedback.queue.expand.appVersion  -> FeedbackQueuePage.kt:FeedbackDetail()->DetailField (translation_feedback_queue_expand_appVersion)
+[COVERED] string feedback.queue.expand.body        -> FeedbackQueuePage.kt:FeedbackDetail() body PanelTitle (translation_feedback_queue_expand_body)
+[COVERED] string feedback.queue.expand.consoleTail -> FeedbackQueuePage.kt:FeedbackDetail()->ExpandableJsonSection (translation_feedback_queue_expand_consoleTail)
+[COVERED] string feedback.queue.expand.recentErrors-> FeedbackQueuePage.kt:FeedbackDetail()->ExpandableJsonSection (translation_feedback_queue_expand_recentErrors)
+[COVERED] string feedback.queue.expand.submitter   -> FeedbackQueuePage.kt:FeedbackDetail()->DetailField (translation_feedback_queue_expand_submitter)
+[COVERED] string feedback.queue.expand.userAgent   -> FeedbackQueuePage.kt:FeedbackDetail()->DetailField (translation_feedback_queue_expand_userAgent)
+[COVERED] string feedback.queue.expand.userEmail   -> FeedbackQueuePage.kt:FeedbackEmailField() Caption (translation_feedback_queue_expand_userEmail)
+[COVERED] string feedback.queue.filter.allCategories-> FeedbackQueuePage.kt:categoryFilterOptions()+FeedbackQueueFilters() Select emptyLabel (translation_feedback_queue_filter_allCategories)
+[COVERED] string feedback.queue.filter.allStatuses -> FeedbackQueuePage.kt:statusFilterOptions()+FeedbackQueueFilters() Select emptyLabel (translation_feedback_queue_filter_allStatuses)
+[COVERED] string feedback.queue.filter.category    -> FeedbackQueuePage.kt:FeedbackQueueFilters() category Select label (translation_feedback_queue_filter_category)
+[COVERED] string feedback.queue.filter.status      -> FeedbackQueuePage.kt:FeedbackQueueFilters() status Select label (translation_feedback_queue_filter_status)
+[COVERED] string feedback.queue.maskedEmail        -> FeedbackQueuePage.kt:FeedbackEmailField() MaskedValue accessibleName (translation_feedback_queue_maskedEmail)
+[COVERED] string feedback.queue.openIssue          -> FeedbackQueuePage.kt:FeedbackRow() LinkText GitHub cell (translation_feedback_queue_openIssue)
+[COVERED] string feedback.queue.pageOf             -> FeedbackQueuePage.kt:FeedbackPaginationFooter() Caption (translation_feedback_queue_pageOf)
+[COVERED] string feedback.queue.status.closed      -> FeedbackQueuePage.kt:statusFilterOptions()+statusEditOptions()+statusLabel() (translation_feedback_queue_status_closed)
+[COVERED] string feedback.queue.status.new         -> FeedbackQueuePage.kt:statusFilterOptions()+statusEditOptions()+statusLabel() (translation_feedback_queue_status_new)
+[COVERED] string feedback.queue.status.triaged     -> FeedbackQueuePage.kt:statusFilterOptions()+statusEditOptions()+statusLabel() (translation_feedback_queue_status_triaged)
+[COVERED] string feedback.queue.title              -> FeedbackQueuePage.kt:FeedbackQueuePageContent() PageTitle (translation_feedback_queue_title)
+
+PARITY_COVERED=43
+
+=== SUMMARY ===
+data sources : FeedbackQueuePageViewModel binds shared S8 FeedbackStore.feedbackList(params) (typed FeedbackListResponse, cache-then-network Resource) via asFeedbackQueueSource(); updateFeedback (status / save-URL / forward, web useUpdateFeedback) routed through the same seam; the store refreshes every observed feed on success (web invalidateQueries(feedbackKeys.all)); no HTTP in the view.
+nav          : Destinations 'adminFeedback' -> /admin/feedback (pre-existing) wired to FeedbackQueueRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(43) == PARITY_REQUIRED(43)
+[PASS] all android triad gates green; parity 43/43; android ledger row page:admin/FeedbackQueue status=done.
+EXIT=0
+STATUS=DONE
