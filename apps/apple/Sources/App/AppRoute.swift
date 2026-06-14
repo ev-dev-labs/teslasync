@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
     case fleetCompare, batteryCells
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiPlayground, apiLogs, auditLog, featureFlags, fleetTelemetryCoverage
+    case admin, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case liveSignals, schemaDrift, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -47,6 +47,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiLogs: "api-logs"
         case .auditLog: "audit-log"
         case .featureFlags: "feature-flags"
+        case .fleetAPI: "fleet-api"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
@@ -85,6 +86,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiLogs: "doc.text.magnifyingglass"
         case .auditLog: "list.bullet.rectangle.portrait"
         case .featureFlags: "flag.fill"
+        case .fleetAPI: "antenna.radiowaves.left.and.right"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .liveSignals: "waveform.path.ecg"
         case .schemaDrift: "tablecells.badge.ellipsis"
@@ -108,8 +110,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: .energy
         case .analytics, .telemetry, .fleetCompare: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetTelemetryCoverage, .liveSignals,
-             .schemaDrift, .powerUser, .system: .system
+        case .admin, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI, .fleetTelemetryCoverage,
+             .liveSignals, .schemaDrift, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
     }
