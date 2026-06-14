@@ -216,6 +216,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-IncidentTimelinePage.log"
   },
   {
+    "unitId": "page:system/StateMachineDebugger",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 63,
+    "requiredCount": 63,
+    "promptId": "p2-windows/W7/windows-page-system-StateMachineDebuggerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-StateMachineDebuggerPage.log"
+  },
+  {
     "unitId": "page:system/StatusApiDocs",
     "platform": "windows",
     "status": "done",
