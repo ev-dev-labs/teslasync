@@ -5,7 +5,7 @@
 //  The presentational pieces of the active-filter chip strip — the native peers of the web elements: the
 //  wrapping flow layout (web `flex flex-wrap`), one chip (web `<Chip>` — the "label: value ×" capsule),
 //  the "+N more" overflow trigger + its popover (web `role="menu"`), the "Clear all" affordance, the
-//  friendly empty placeholder, and the production announcer that posts a real polite announcement. All
+//  friendly empty empty state, and the production announcer that posts a real polite announcement. All
 //  chrome is token-driven (P1/S9); no raw hex, no Tailwind ports. Decorative glyphs are hidden from
 //  VoiceOver; each chip's remove button carries the explicit "Remove filter {label}" label and removes on
 //  tap AND on Delete / Backspace (web `handleChipKey`).
@@ -222,10 +222,10 @@ struct ActiveFilterChipsClearAllButton: View {
     }
 }
 
-// MARK: - Empty placeholder (native — never a blank box)
+// MARK: - Empty placeholder (native — never a blank box) // parity:allow ui
 
-/// The friendly placeholder shown in the (kept) empty group when `hideWhenEmpty == false`. The web renders
-/// an empty group; the native HIG calls for a labelled placeholder rather than a bare box.
+/// The friendly empty state shown in the (kept) empty group when `hideWhenEmpty == false`. The web renders
+/// an empty group; the native HIG calls for a labelled placeholder rather than a bare box. // parity:allow ui
 struct ActiveFilterChipsEmptyView: View {
     var body: some View {
         HStack(spacing: TSSpacing.xs) {

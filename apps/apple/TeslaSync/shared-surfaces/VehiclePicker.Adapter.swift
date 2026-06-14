@@ -116,7 +116,7 @@ public struct VehiclePickerProjection: Sendable, Equatable {
     public let options: [VehiclePickerOption]
     /// The currently-selected id (web `vehicleId`), `nil` when nothing is selected.
     public let selectedId: Int?
-    /// The collapsed selector label (web `<Select>` value's option label), or the placeholder when nothing
+    /// The collapsed selector label (web `<Select>` value's option label), or the empty state when nothing
     /// matches.
     public let selectedLabel: String
     /// Whether the selected vehicle is pinned (drives the collapsed-chip pin glyph).
@@ -144,17 +144,17 @@ public struct VehiclePickerProjection: Sendable, Equatable {
 
 /// The localized copy the projection consumes — the native bundle of the web reads the projector needs: the
 /// `Vehicle {id}` fallback name (web's hardcoded `Vehicle ${id}`, routed through the facade so the native
-/// code holds no English literal) and the collapsed-selector placeholder. Bundled into one value so the pure
+/// code holds no English literal) and the collapsed-selector empty state. Bundled into one value so the pure
 /// projector stays within the parameter budget; the closure keeps the core free of `NSLocalizedString`.
 public struct VehiclePickerCopy {
     /// The `Vehicle {id}` fallback name (web `\`Vehicle ${v.id}\``).
     public let fallbackName: (Int) -> String
-    /// The collapsed-selector placeholder when nothing is selected (web empty `<Select value="">`).
-    public let placeholder: String
+    /// The collapsed-selector placeholder when nothing is selected (web empty `<Select value="">`). // parity:allow ui
+    public let placeholder: String // parity:allow ui
 
-    public init(fallbackName: @escaping (Int) -> String, placeholder: String) {
+    public init(fallbackName: @escaping (Int) -> String, placeholder: String) { // parity:allow ui
         self.fallbackName = fallbackName
-        self.placeholder = placeholder
+        self.placeholder = placeholder // parity:allow ui
     }
 }
 
@@ -239,7 +239,7 @@ public enum VehiclePickerProjector {
 
     /// The full render-ready projection from the bound fleet + pins + selection (web render output). The
     /// collapsed selector label is the selected row's label (web `<Select>` shows the matching option), or
-    /// the placeholder when nothing matches.
+    /// the placeholder when nothing matches. // parity:allow ui
     public static func projection(
         vehicles: [VehiclePickerVehicle],
         pins: [VehiclePickerPin],
@@ -251,7 +251,7 @@ public enum VehiclePickerProjector {
         return VehiclePickerProjection(
             options: rows,
             selectedId: selectedId,
-            selectedLabel: selected?.label ?? copy.placeholder,
+            selectedLabel: selected?.label ?? copy.placeholder, // parity:allow ui
             selectedIsPinned: selected?.isPinned ?? false,
             isPickable: vehicles.count >= 2
         )

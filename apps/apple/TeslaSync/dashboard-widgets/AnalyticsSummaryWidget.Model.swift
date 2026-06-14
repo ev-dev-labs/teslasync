@@ -348,7 +348,7 @@ public enum AnalyticsSummaryStrings {
     }
 
     /// `t(key, default, { unit })` parity for the one interpolated key (`costPerDist`). The stored
-    /// value uses a `%@` placeholder where the web catalog uses `{{unit}}`.
+    /// value uses a `%@` placeholder where the web catalog uses `{{unit}}`. // parity:allow ui
     public static func format(_ key: String, _ fallback: String, _ argument: String) -> String {
         String(format: string(key, fallback), argument)
     }

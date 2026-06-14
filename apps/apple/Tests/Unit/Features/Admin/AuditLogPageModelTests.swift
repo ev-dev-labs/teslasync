@@ -335,7 +335,9 @@ extension AuditLogPageModelTests {
         XCTAssertEqual(Set(all.map(\.id)).count, all.count, "row ids are unique")
         let filtered = try await source.loadLog(AuditLogQuery(actions: ["login"]))
         XCTAssertTrue(filtered.allSatisfy { $0.action == "login" })
-        await XCTAssertFalse(try source.loadCategories().isEmpty)
-        await XCTAssertFalse(try source.loadActions().isEmpty)
+        let categories = try await source.loadCategories()
+        XCTAssertFalse(categories.isEmpty)
+        let actions = try await source.loadActions()
+        XCTAssertFalse(actions.isEmpty)
     }
 }

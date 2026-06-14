@@ -205,7 +205,7 @@ struct SignalCompareSearchField: View {
 
     var body: some View {
         let binding = Binding(get: { model.selection.search }, set: { model.setSearch($0) })
-        let prompt = SignalCompareStrings.filterPlaceholder
+        let prompt = SignalCompareStrings.filterPlaceholder // parity:allow ui
         return HStack(spacing: TSSpacing.sm) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))

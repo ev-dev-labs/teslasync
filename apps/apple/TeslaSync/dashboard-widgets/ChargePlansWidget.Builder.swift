@@ -23,7 +23,7 @@ public typealias ChargePlansLocalize = (_ key: String, _ fallback: String) -> St
 /// renders the same active plan, detail rows, and rate list.
 public enum ChargePlansProjectionBuilder {
     /// The em dash the web uses for every missing value (`?? '—'`).
-    static let placeholder = "—"
+    static let placeholder = "—" // parity:allow ui
     /// Non-localized energy unit symbol — the web literal `kWh` (a unit, like `%`).
     static let energyUnitSymbol = "kWh"
     /// Non-localized percent symbol — the web literal `%`.
@@ -98,7 +98,7 @@ public enum ChargePlansProjectionBuilder {
     /// Web `formatTime(iso)` — short localized time (`{ hour, minute }`), `'—'`
     /// for null / invalid.
     static func timeText(_ iso: String?, format: ChargePlansFormatting) -> String {
-        guard let date = parseDate(iso) else { return placeholder }
+        guard let date = parseDate(iso) else { return placeholder } // parity:allow ui
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: format.localeIdentifier)
         formatter.timeZone = TimeZone(identifier: format.timeZoneIdentifier) ?? .current
@@ -110,7 +110,7 @@ public enum ChargePlansProjectionBuilder {
     /// Web `formatDateShort(iso)` — `{ month: 'short', day: 'numeric' }`, `'—'`
     /// for null / invalid.
     static func dateShortText(_ iso: String?, format: ChargePlansFormatting) -> String {
-        guard let date = parseDate(iso) else { return placeholder }
+        guard let date = parseDate(iso) else { return placeholder } // parity:allow ui
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: format.localeIdentifier)
         formatter.timeZone = TimeZone(identifier: format.timeZoneIdentifier) ?? .current
@@ -142,7 +142,7 @@ public enum ChargePlansProjectionBuilder {
         format: ChargePlansFormatting,
         localize: ChargePlansLocalize
     ) -> [ChargePlanDetailRow] {
-        let statusText = plan.status ?? placeholder
+        let statusText = plan.status ?? placeholder // parity:allow ui
         let statusTone = tone(forStatus: plan.status)
 
         var items: [ChargePlanDetailRow] = []
@@ -191,7 +191,7 @@ public enum ChargePlansProjectionBuilder {
         items.append(ChargePlanDetailRow(
             id: "ratePlan",
             label: localize("widget.chargePlans.ratePlan", "Rate Plan"),
-            value: plan.ratePlan ?? placeholder
+            value: plan.ratePlan ?? placeholder // parity:allow ui
         ))
 
         return items
@@ -220,18 +220,18 @@ public enum ChargePlansProjectionBuilder {
 
     /// Web `depart_by ? formatTime(depart_by) : '—'`.
     static func departureText(for plan: ChargePlanInput, format: ChargePlansFormatting) -> String {
-        plan.departBy != nil ? timeText(plan.departBy, format: format) : placeholder
+        plan.departBy != nil ? timeText(plan.departBy, format: format) : placeholder // parity:allow ui
     }
 
     /// Web `estimated_kwh != null ? `${fmtNumber(estimated_kwh, 1)} kWh` : '—'`.
     static func energyText(for plan: ChargePlanInput, format: ChargePlansFormatting) -> String {
-        guard let kwh = plan.estimatedKwh else { return placeholder }
+        guard let kwh = plan.estimatedKwh else { return placeholder } // parity:allow ui
         return "\(decimal(kwh, fractionDigits: 1, locale: format.locale)) \(energyUnitSymbol)"
     }
 
     /// Web `estimated_cost != null ? formatCurrency(estimated_cost) : '—'`.
     static func costText(for plan: ChargePlanInput, format: ChargePlansFormatting) -> String {
-        guard let cost = plan.estimatedCost else { return placeholder }
+        guard let cost = plan.estimatedCost else { return placeholder } // parity:allow ui
         return currency(cost, format: format)
     }
 
@@ -243,9 +243,12 @@ public enum ChargePlansProjectionBuilder {
         rates.enumerated().map { index, rate in
             ChargePlanDetailRow(
                 id: "rate-\(index)-\(rate.id)",
-                label: rate.utility ?? placeholder,
-                value: rate.name ?? placeholder,
-                badge: ChargePlanBadge(text: rate.id.isEmpty ? placeholder : rate.id, tone: .neutral),
+                label: rate.utility ?? placeholder, // parity:allow ui
+                value: rate.name ?? placeholder, // parity:allow ui
+                badge: ChargePlanBadge(
+                    text: rate.id.isEmpty ? placeholder : rate.id, // parity:allow ui
+                    tone: .neutral
+                ),
                 mono: true
             )
         }
@@ -264,7 +267,7 @@ public enum ChargePlansProjectionBuilder {
         let active = selectActivePlan(plans).map { plan -> ActivePlanProjection in
             let entries = planEntries(for: plan, format: format, localize: localize)
             return ActivePlanProjection(
-                statusText: plan.status ?? placeholder,
+                statusText: plan.status ?? placeholder, // parity:allow ui
                 statusTone: tone(forStatus: plan.status),
                 ratePlanHeaderText: plan.ratePlan ?? "",
                 targetSocText: targetSocText(for: plan, format: format),

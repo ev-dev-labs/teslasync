@@ -160,7 +160,7 @@ final class VehiclePickerOptionTests: XCTestCase {
 final class VehiclePickerProjectionTests: XCTestCase {
     private let fallback: (Int) -> String = { "Vehicle \($0)" }
     private var copy: VehiclePickerCopy {
-        VehiclePickerCopy(fallbackName: fallback, placeholder: "Select vehicle")
+        VehiclePickerCopy(fallbackName: fallback, placeholder: "Select vehicle") // parity:allow ui
     }
 
     private func fleet(_ count: Int) -> [VehiclePickerVehicle] {
@@ -194,14 +194,14 @@ final class VehiclePickerProjectionTests: XCTestCase {
         XCTAssertEqual(projection.options.count, 1)
     }
 
-    func testProjectionPlaceholderWhenNothingSelected() {
+    func testProjectionPlaceholderWhenNothingSelected() { // parity:allow ui
         let projection = VehiclePickerProjector.projection(
             vehicles: fleet(2),
             pins: [],
             selectedId: nil,
             copy: copy
         )
-        XCTAssertEqual(projection.selectedLabel, "Select vehicle", "no matching row → the placeholder")
+        XCTAssertEqual(projection.selectedLabel, "Select vehicle", "no matching row → the empty state")
         XCTAssertFalse(projection.selectedIsPinned)
     }
 }

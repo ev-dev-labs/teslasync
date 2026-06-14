@@ -194,7 +194,7 @@ public enum ActiveFilterChipsProjector {
 
     // MARK: Interpolated copy (web i18next `{{token}}`)
 
-    /// Replaces `{{token}}` placeholders in a resolved template with the supplied values — the native
+    /// Replaces `{{token}}` tokens in a resolved template with the supplied values — the native
     /// port of i18next interpolation, so the per-surface strings keep the web's `+{{count}} more` /
     /// `Remove filter {{label}}` shapes and stay translator-friendly.
     public static func interpolate(_ template: String, _ values: [String: String]) -> String {

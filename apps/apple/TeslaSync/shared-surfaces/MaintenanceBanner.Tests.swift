@@ -98,7 +98,7 @@ final class MaintenanceFingerprintTests: XCTestCase {
 
 // MARK: - Instant parsing (web `Date.parse(until)`)
 
-final class MaintenanceInstantTests: XCTestCase {
+final class MaintenanceBannerInstantTests: XCTestCase {
     func testParsesPlainRFC3339() {
         XCTAssertEqual(MaintenanceBannerInstant.parseMs("1970-01-01T00:00:01Z"), 1000)
     }
@@ -254,7 +254,7 @@ final class MaintenanceMessageTests: XCTestCase {
 
 // MARK: - Accessibility (combined VoiceOver label)
 
-final class MaintenanceAccessibilityTests: XCTestCase {
+final class MaintenanceBannerAccessibilityTests: XCTestCase {
     func testJoinsTitleBodyCountdown() {
         let label = MaintenanceBannerAccessibility.bannerLabel(
             title: "Scheduled maintenance",

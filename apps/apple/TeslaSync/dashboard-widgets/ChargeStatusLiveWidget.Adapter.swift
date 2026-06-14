@@ -40,7 +40,7 @@ func convertChargeEnergyFromSI(_ wh: Double, to unit: ChargeEnergyUnit) -> Doubl
 /// Numeric + time formatting ported from the web widget. Pure so the value pipeline is pinned by
 /// unit tests without rendering.
 public enum LiveChargeStatusFormat {
-    /// The em-dash placeholder the web widget renders for an absent metric (`'—'`).
+    /// The em-dash placeholder the web widget renders for an absent metric (`'—'`). // parity:allow ui
     public static let emptyDash = "—"
 
     /// `safeNumber` from numberFormat.ts: non-finite inputs collapse to 0.
@@ -96,7 +96,7 @@ public enum LiveChargeStatusFormat {
 // MARK: - Projected metric (web `MetricCell`)
 
 /// One projected metric cell: an SF Symbol, a localized label, and a value string that already
-/// carries its unit symbol (or the em-dash placeholder). Mirrors the web `MetricCell`.
+/// carries its unit symbol (or the em-dash placeholder). Mirrors the web `MetricCell`. // parity:allow ui
 public struct LiveChargeMetric: Identifiable, Equatable, Sendable {
     public let id: String
     public let systemImage: String

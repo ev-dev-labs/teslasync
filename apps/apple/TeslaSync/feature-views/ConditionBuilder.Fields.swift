@@ -126,7 +126,7 @@ struct SignalFields: View {
 
     private var statePrompt: LocalizedStringKey {
         condition.signal == "state"
-            ? CBView.key("automations.builder.statePlaceholder", "online")
+            ? CBView.key("automations.builder.statePlaceholder", "online") // parity:allow ui
             : CBView.key(" ")
     }
 

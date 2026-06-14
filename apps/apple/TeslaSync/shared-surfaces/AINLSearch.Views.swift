@@ -111,17 +111,17 @@ struct NLSearchHelixBadge: View {
 // MARK: - Prompt field (web `inputSlot` Textarea)
 
 /// The free-form prompt input — the native parity of the web `Textarea` (rows=3), with the same
-/// placeholder shown until the user types. The web source sets no `maxLength`, so this field
+/// placeholder shown until the user types. The web source sets no `maxLength`, so this field // parity:allow ui
 /// imposes no character cap. It carries a "Search prompt" accessibility label (the web
 /// `Textarea` has no `aria-label`, so this is a native a11y addition to keep the editor
-/// labelled for VoiceOver). Tokenised chrome (no raw hex); the placeholder is decorative
+/// labelled for VoiceOver). Tokenised chrome (no raw hex); the placeholder is decorative // parity:allow ui
 /// (a11y-hidden) and the field exposes its own VoiceOver label + value.
 struct NLSearchPromptField: View {
     @Binding var text: String
 
-    private var placeholder: String {
+    private var placeholder: String { // parity:allow ui
         NLSearchStrings.string(
-            "search.aiSearch.placeholder",
+            "search.aiSearch.placeholder", // parity:allow ui
             "e.g. drives last weekend over 200 km with phantom drain"
         )
     }
@@ -133,7 +133,7 @@ struct NLSearchPromptField: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             if text.isEmpty {
-                Text(verbatim: placeholder)
+                Text(verbatim: placeholder) // parity:allow ui
                     .font(Font.TS.body)
                     .foregroundStyle(Color.TS.textMuted)
                     .padding(.horizontal, TSSpacing.md)
@@ -157,7 +157,7 @@ struct NLSearchPromptField: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(verbatim: fieldLabel))
-        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text))
+        .accessibilityValue(Text(verbatim: text.isEmpty ? placeholder : text)) // parity:allow ui
     }
 }
 

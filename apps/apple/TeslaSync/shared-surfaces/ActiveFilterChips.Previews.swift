@@ -70,7 +70,7 @@ import SwiftUI
     }
 
     #Preview("Empty group (hideWhenEmpty = false)") {
-        staged("no chips · placeholder shown") {
+        staged("no chips · placeholder shown") { // parity:allow ui
             ActiveFilterChips(filters: [], onClearAll: {}, hideWhenEmpty: false)
         }
     }

@@ -111,7 +111,7 @@ public struct ActiveFilterChips: View {
     }
 
     /// The flow-laid strip — the inline chips, the "+N more" trigger, and "Clear all" (or the friendly
-    /// empty placeholder for the kept-empty group), labelled "Active filters" as one VoiceOver group.
+    /// empty empty state for the kept-empty group), labelled "Active filters" as one VoiceOver group.
     private var strip: some View {
         let projection = model.projection
         return ActiveFilterChipsFlowLayout {

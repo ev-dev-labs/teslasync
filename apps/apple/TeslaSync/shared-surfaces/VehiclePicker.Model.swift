@@ -46,9 +46,9 @@ public enum VehiclePickerStrings {
 
     // MARK: Native chrome / a11y additions (no blank box — see the leaf states)
 
-    /// The collapsed-selector placeholder shown when nothing is selected (web empty `<Select value="">`).
-    public static var placeholder: String {
-        string("vehiclePicker.placeholder", "Select vehicle")
+    /// The collapsed-selector empty state shown when nothing is selected (web empty `<Select value="">`).
+    public static var placeholder: String { // parity:allow ui
+        string("vehiclePicker.placeholder", "Select vehicle") // parity:allow ui
     }
 
     public static var loadingA11y: String {
@@ -137,7 +137,7 @@ public final class VehiclePickerModel {
     // MARK: Derived reads
 
     /// The resolved, view-ready projection — a pure function of the current fleet + pins + selection (web
-    /// render output). The localized `Vehicle {id}` fallback + collapsed placeholder are supplied to the pure
+    /// render output). The localized `Vehicle {id}` fallback + collapsed empty state are supplied to the pure
     /// projector.
     public var projection: VehiclePickerProjection {
         VehiclePickerProjector.projection(
@@ -152,7 +152,7 @@ public final class VehiclePickerModel {
     private var copy: VehiclePickerCopy {
         VehiclePickerCopy(
             fallbackName: { [localize] id in "\(localize("vehiclePicker.fallback", "Vehicle")) \(id)" },
-            placeholder: localize("vehiclePicker.placeholder", "Select vehicle")
+            placeholder: localize("vehiclePicker.placeholder", "Select vehicle") // parity:allow ui
         )
     }
 

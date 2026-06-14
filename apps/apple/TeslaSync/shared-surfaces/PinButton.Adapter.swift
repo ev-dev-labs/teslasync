@@ -16,7 +16,7 @@
 //  String(p.item_id) === idStr)`, and writes through the toggle mutation (`useTogglePin(itemType)`),
 //  disabling itself while `toggle.isPending`. Because the web destructures only `data: pinned = []`, it
 //  swallows the query's loading / error into the unpinned default and never renders a skeleton, a
-//  QueryError panel, or an empty placeholder — the button ALWAYS renders. The native surface keeps that
+//  QueryError panel, or an empty empty state — the button ALWAYS renders. The native surface keeps that
 //  exact contract (the button is never hidden, `isPinned` follows the best-available — cached during a
 //  refresh — set, unknown ⇒ not pinned) AND, per the P4 leaf states contract, surfaces the freshness the
 //  web swallows as a small, gated status badge (offline → error → stale precedence) layered OVER the

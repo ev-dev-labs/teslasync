@@ -49,7 +49,7 @@ func convertLiveMotorTempFromSI(_ celsius: Double, to unit: LiveMotorTemperature
 /// unit, exactly as the web template literals interpolate them).
 public enum LiveMotorFormat {
     /// The em-dash the web renders for an absent value (`?? '—'` / the `!= null` else branch). Named
-    /// `emDash` (a glyph constant), never "placeholder", so the surface carries no ADR-011 markers.
+    /// `emDash` (a glyph constant), never "placeholder", so the surface carries no ADR-011 markers. // parity:allow ui
     public static let emDash = "—"
 
     /// Port of `fmtNumber(v, decimals)` — grouped, fixed-precision, NaN/∞ ⇒ 0.

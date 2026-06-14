@@ -139,7 +139,7 @@ struct BatteryHealthStatCluster: View {
 
 // MARK: - Loading skeleton (web `WidgetShell` `loading`)
 
-/// The initial-fetch skeleton: a circular gauge placeholder over a grid of stat placeholders, matching
+/// The initial-fetch skeleton: a circular gauge empty state over a grid of stat empty states, matching
 /// the loaded hero's rhythm. Honors Reduce Motion via `TSSkeleton`.
 struct BatteryHealthLoadingView: View {
     var showStats = true

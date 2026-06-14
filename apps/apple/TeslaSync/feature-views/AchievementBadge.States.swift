@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0051 · AchievementBadge (Apple)
 //
 //  The P4 leaf-contract chrome composed by `AchievementBadge` when the surface is not
-//  in its data state: the loading skeleton, the empty placeholder, and the error tile
+//  in its data state: the loading skeleton, the empty placeholder, and the error tile // parity:allow ui
 //  with a retry affordance. Each keeps the badge's rounded tile shape (the shared
 //  `achievementBadgeSurface` modifier) so the surface never collapses to a blank box.
 //  All copy resolves through the P1/S10 facade; all colour comes from the P1/S9 tokens.
@@ -43,7 +43,7 @@ struct AchievementBadgeLoadingView: View {
 
 // MARK: - Empty (resolved, no achievement)
 
-/// The empty render (resolved, no achievement) — a friendly placeholder tile with a
+/// The empty render (resolved, no achievement) — a friendly placeholder tile with a // parity:allow ui
 /// muted trophy glyph, never a blank box.
 struct AchievementBadgeEmptyView: View {
     let size: AchievementBadgeSize

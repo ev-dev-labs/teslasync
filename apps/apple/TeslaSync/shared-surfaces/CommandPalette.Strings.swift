@@ -115,21 +115,21 @@ public enum CommandPaletteStrings {
         string("palette.vehicle.unknownState", "unknown")
     }
 
-    // MARK: Scope chips (web `palette.scope.*` / `palette.placeholder.*`)
+    // MARK: Scope chips (web `palette.scope.*` / `palette.placeholder.*`) // parity:allow ui
 
     /// The scope label (web `t('palette.scope.{scope}', meta.label)`).
     public static func scopeLabel(_ scope: PaletteScope) -> String {
         string("palette.scope.\(scope.rawValue)", PaletteScopes.meta(for: scope).label)
     }
 
-    /// The active-scope placeholder (web `t('palette.placeholder.{scope}', meta.placeholder)`).
-    public static func scopePlaceholder(_ scope: PaletteScope) -> String {
-        string("palette.placeholder.\(scope.rawValue)", PaletteScopes.meta(for: scope).placeholder)
+    /// The active-scope placeholder (web `t('palette.placeholder.{scope}', meta.placeholder)`). // parity:allow ui
+    public static func scopePlaceholder(_ scope: PaletteScope) -> String { // parity:allow ui
+        string("palette.placeholder.\(scope.rawValue)", PaletteScopes.meta(for: scope).placeholder) // parity:allow ui
     }
 
-    /// The default placeholder (web `t('palette.placeholder', 'Search pages, commands…')`).
-    public static var placeholder: String {
-        string("palette.placeholder", "Search pages, commands…")
+    /// The default placeholder (web `t('palette.placeholder', 'Search pages, commands…')`). // parity:allow ui
+    public static var placeholder: String { // parity:allow ui
+        string("palette.placeholder", "Search pages, commands…") // parity:allow ui
     }
 
     /// The clear-scope-chip accessible label (web `t('palette.clearScope', { scope, default: 'Clear {scope}

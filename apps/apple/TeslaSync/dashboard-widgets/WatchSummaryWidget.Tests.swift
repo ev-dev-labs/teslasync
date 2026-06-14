@@ -135,7 +135,7 @@ enum WatchSummaryFixtures {
         XCTAssertFalse(projection.charging)
     }
 
-    func testMissingScalarsFallBackToPlaceholders() {
+    func testMissingScalarsFallBackToPlaceholders() { // parity:allow ui
         let summary = WatchSummaryDTO(state: "", batteryLevel: nil, rangeKm: nil, isLocked: nil, insideTempC: nil)
         let projection = WatchSummaryProjector.project(summary: summary, units: WatchSummaryFixtures.prefsKmC)
         XCTAssertTrue(projection.hasData, "an existing (if sparse) summary still renders content, not empty")

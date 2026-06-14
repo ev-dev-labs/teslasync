@@ -91,7 +91,7 @@ public enum FleetCompareFormat {
 
     /// Web `${a ?? '—'}% vs ${b ?? '—'}%`.
     public static func batteryHighlight(_ valueA: Int?, _ valueB: Int?) -> String {
-        "\(valueA.map { "\($0)" } ?? emptyValue)% vs \(valueB.map { "\($0)" } ?? emptyValue)%"
+        "\(valueA.map { "\($0)%" } ?? emptyValue) vs \(valueB.map { "\($0)%" } ?? emptyValue)"
     }
 
     /// Web efficiency highlight `${fmtNumber(effA)} vs ${fmtNumber(effB)}` + unit.

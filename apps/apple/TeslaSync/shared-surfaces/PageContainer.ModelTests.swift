@@ -12,6 +12,7 @@
 //
 
 import Foundation
+import SwiftUI
 import XCTest
 @testable import TeslaSync
 

@@ -24,8 +24,8 @@
             return (0 ..< count).map { index in
                 let itemID = Int64(index + 1)
                 let start = base.addingTimeInterval(Double(-index) * 7200)
-                let distance: Double = Double((index % 7) + 1) * 8540
-                let duration: Double = Double((index % 5) + 1) * 1080
+                let distance = Double((index % 7) + 1) * 8540
+                let duration = Double((index % 5) + 1) * 1080
                 let startSOC: Double = 82 - Double(index % 30)
                 let endSOC: Double? = index == 1 ? nil : 64 - Double(index % 20)
                 return RecentDriveItem(

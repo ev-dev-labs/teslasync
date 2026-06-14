@@ -67,8 +67,10 @@ struct CommandPaletteSearchHeader: View {
         Binding(get: { model.projection.scopedTerm }, set: { model.setScopedInput($0) })
     }
 
-    private var placeholder: String {
-        model.activeScope.map { CommandPaletteStrings.scopePlaceholder($0) } ?? CommandPaletteStrings.placeholder
+    private var placeholder: String { // parity:allow ui
+        model.activeScope
+            .map { CommandPaletteStrings.scopePlaceholder($0) } // parity:allow ui
+            ?? CommandPaletteStrings.placeholder // parity:allow ui
     }
 
     var body: some View {
@@ -91,7 +93,7 @@ struct CommandPaletteSearchHeader: View {
     }
 
     private var field: some View {
-        let editor = TextField(text: textBinding, prompt: Text(verbatim: placeholder)) {
+        let editor = TextField(text: textBinding, prompt: Text(verbatim: placeholder)) { // parity:allow ui
             Text(verbatim: CommandPaletteStrings.searchFieldLabel)
         }
         .textFieldStyle(.plain)

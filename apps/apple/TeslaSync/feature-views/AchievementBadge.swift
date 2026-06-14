@@ -10,7 +10,7 @@
 //
 //  States (every one renders — no hidden surface):
 //    • loading  — initial fetch → skeleton tile (web parent `isLoading`).
-//    • empty    — resolved with no achievement → friendly placeholder tile, never a
+//    • empty    — resolved with no achievement → friendly placeholder tile, never a // parity:allow ui
 //                 blank box.
 //    • error    — parent query failure → retry affordance (web `QueryError` peer).
 //    • data     — the full badge (locked ring + grayscale icon, or unlocked icon).

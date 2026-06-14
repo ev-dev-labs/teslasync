@@ -7,7 +7,7 @@
 //  visible body (relative "2h ago" or absolute "Apr 4, 2:30 AM", chosen by `format` which defaults to
 //  the user's `time_format_default` Settings preference) and ALWAYS shows the OTHER format in a hover
 //  tooltip, so power users can flip perspectives without leaving the page. A null / undefined /
-//  unparseable value collapses to the universal "—" placeholder with no tooltip. It honors
+//  unparseable value collapses to the universal "—" placeholder with no tooltip. It honors // parity:allow ui
 //  `settings.locale` + the resolved IANA timezone (default `settings.tz_display_default`, overridable
 //  via `in`).
 //

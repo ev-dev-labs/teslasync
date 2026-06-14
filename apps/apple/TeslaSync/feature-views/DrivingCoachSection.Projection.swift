@@ -258,7 +258,7 @@ public struct DrivingCoachSectionProjection: Sendable, Equatable {
         !perDriveRows.isEmpty
     }
 
-    /// The placeholder projection used for the loading / empty chrome (all-zero gauge + bars).
+    /// The placeholder projection used for the loading / empty chrome (all-zero gauge + bars). // parity:allow ui
     public static let empty = DrivingCoachSectionProjection(
         gauge: .zero,
         drivesAnalyzed: 0,

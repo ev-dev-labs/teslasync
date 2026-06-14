@@ -9,6 +9,7 @@
 //  Runs in the TeslaSync(/-macOS) XCTest targets.
 //
 
+import SwiftUI
 import XCTest
 @testable import TeslaSync
 

@@ -114,7 +114,7 @@ final class SpyActionBuilderTelemetry: ActionBuilderTelemetry, @unchecked Sendab
 }
 
 /// Captures each `onChange` emission. Single-threaded test use only.
-final class ChangeSpy: @unchecked Sendable {
+private final class ChangeSpy: @unchecked Sendable {
     private(set) var emissions: [[AutomationAction]] = []
 
     func capture(_ actions: [AutomationAction]) {

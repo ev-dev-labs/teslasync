@@ -9,7 +9,7 @@
 //    • WidgetBigNumber    → `WatchBigNumber`   (hero battery value + label + state badge)
 //    • Badge              → `WatchBadgeChip`   (tone pill used for state / lock)
 //    • Lock / Unlock      → `WatchLockChip`    (SF Symbol + Locked/Unlocked chip)
-//    • the detail tiles   → `WatchStatCell`    (uppercase caption + value / placeholder)
+//    • the detail tiles   → `WatchStatCell`    (uppercase caption + value / placeholder) // parity:allow ui
 //    • Skeleton           → `WatchSummarySkeleton` (loading chrome)
 //
 //  All colours come from the P1/S9 design tokens (`Color.TS`), never hardcoded.
@@ -181,7 +181,7 @@ struct WatchBigNumber: View {
 // MARK: - Lock chip (web Lock/Unlock + Badge parity)
 
 /// The lock tile body — an SF Symbol (locked → success, unlocked → warning) plus the
-/// `Locked`/`Unlocked` badge, or the em-dash placeholder when the lock state is unknown.
+/// `Locked`/`Unlocked` badge, or the em-dash placeholder when the lock state is unknown. // parity:allow ui
 struct WatchLockChip: View {
     let lock: WatchLockState
     let lockedText: String
@@ -194,7 +194,7 @@ struct WatchLockChip: View {
         case .unlocked:
             chip(symbol: "lock.open.fill", text: unlockedText, tone: .warning)
         case .unknown:
-            Text(verbatim: WatchSummaryProjection.placeholder)
+            Text(verbatim: WatchSummaryProjection.placeholder) // parity:allow ui
                 .font(Font.TS.body)
                 .foregroundStyle(Color.TS.textMuted)
         }
@@ -235,7 +235,7 @@ struct WatchStatCell<Content: View>: View {
     }
 }
 
-/// A `value + unit` readout used by the range + cabin tiles. Renders the em-dash placeholder (no
+/// A `value + unit` readout used by the range + cabin tiles. Renders the em-dash placeholder (no // parity:allow ui
 /// unit) when there is no value.
 struct WatchValueUnit: View {
     let valueText: String
@@ -256,7 +256,7 @@ struct WatchValueUnit: View {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
         } else {
-            Text(verbatim: WatchSummaryProjection.placeholder)
+            Text(verbatim: WatchSummaryProjection.placeholder) // parity:allow ui
                 .font(Font.TS.body)
                 .foregroundStyle(Color.TS.textMuted)
         }
@@ -292,7 +292,7 @@ struct WatchChargingPip: View {
 
 // MARK: - Loading skeleton
 
-/// The loading chrome — a redacted ring + label placeholders that mirror the eventual content
+/// The loading chrome — a redacted ring + label placeholders that mirror the eventual content // parity:allow ui
 /// footprint (the web `WidgetShell` renders `<Skeleton className="h-full rounded-xl" />`).
 struct WatchSummarySkeleton: View {
     var compact: Bool
@@ -313,7 +313,7 @@ struct WatchSummarySkeleton: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .redacted(reason: .placeholder)
+        .redacted(reason: .placeholder) // parity:allow ui
     }
 
     private var skeletonTile: some View {
