@@ -99,6 +99,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-TriggerConfigurator.log"
   },
   {
+    "unitId": "page:battery/BatteryHealth",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 147,
+    "requiredCount": 147,
+    "promptId": "p2-windows/W7/windows-page-battery-BatteryHealthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-BatteryHealthPage.log"
+  },
+  {
     "unitId": "page:battery/EnergyProducts",
     "platform": "windows",
     "status": "done",

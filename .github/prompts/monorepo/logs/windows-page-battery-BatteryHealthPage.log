@@ -1,0 +1,305 @@
+# p2-windows — W7 — page:battery/BatteryHealth — evidence log
+
+Artifact : page:battery/BatteryHealth
+Prompt   : p2-windows/W7/windows-page-battery-BatteryHealthPage
+Web src  : web/src/features/battery/pages/BatteryHealthPage.tsx  (route /battery)
+Output   : apps/windows/TeslaSync.App/feature-views/BatteryHealthPage/
+             BatteryHealthPage.Model.cs      (records + projection + diagnostics + registration)
+             BatteryHealthPage.Source.cs     (generated-client feed — 4 endpoints)
+             BatteryHealthPage.ViewModel.cs   (INotifyPropertyChanged state holder — LoadAsync/RefreshAsync)
+             BatteryHealthPage.cs            (WinUI 3 UserControl view)
+Nav reg  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("BatteryHealth", …))
+Route    : apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs L105 Page("BatteryHealth","battery",…)
+           + L106 Hidden("BatteryHealth","battery/health",…)  (pre-existing)
+Tests    : apps/windows/TeslaSync.App.Tests/FeatureViews/BatteryHealthPageTests.cs  (67 tests)
+           + apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (3 Compile Include for the WinUI-free files)
+Ledger   : apps/parity/windows-ledger.json (page:battery/BatteryHealth → done, 147/147)
+
+NOTE on idealized paths: the prompt header lists an idealized output path
+(apps/windows/TeslaSync/Features/Battery/*.xaml). The real repo is a C#-markup WinUI 3
+app — every sibling W7 page (BatteryDegradation, ProjectedRange, VehicleCost, Timeline,
+WeeklyDigest, ApiLogs, …) lives under apps/windows/TeslaSync.App/feature-views/<Page>/
+as <Page>.{Model,Source,ViewModel}.cs + <Page>.cs (no per-page .xaml). This unit follows
+that established convention exactly (verified against BatteryDegradationPage). Pure logic
+lives in the WinUI-free .Model/.Source/.ViewModel (unit-tested headlessly); the .cs is the
+thin view. The test project compiles the three WinUI-free files directly (it cannot
+reference the WinUI executable), mirroring the sibling BatteryDegradationPage entries.
+
+## Honesty Covenant (binding — verbatim)
+
+```
+1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+```
+
+Delegation: NONE (implemented directly; no sub-agents used).
+
+## Architecture mapping (web → native)
+
+- useBatteryHealthAnalytics   → BatteryHealthClientFeed (Operations.Analytics.BatteryHealth,
+                                GET /analytics/battery-health?vehicle_id=) — primary read; drives the
+                                page loading/error/empty state (BatteryHealthAnalytics.FromJson null gate).
+- useBatteryDegradation       → BatteryHealthClientFeed (Operations.Analytics.BatteryDegradation,
+                                GET /analytics/battery-degradation?vehicle_id=) — best-effort read; only the
+                                prediction (with projection_points) is consumed for the capacity-trend chart.
+- useChargingSessionsPaginated→ BatteryHealthClientFeed (Operations.Charging.Sessions, GET /charging?
+                                vehicle_id=&limit=100&offset=0) — best-effort; powers the charge-level
+                                distribution, charging habits, AC/DC breakdown and the smart insights.
+- useChargingTelemetryLatest  → BatteryHealthClientFeed (Operations.Charging.TelemetryLatest,
+                                GET /charging-telemetry/latest?vehicle_id=) — best-effort; powers thermal
+                                monitoring + the Full-Charge-Complete card.
+- useSelectedVehicle          → vehicleId passed to the feed (the shell owns the global picker, matching
+                                every sibling W7 page; the default shell registration uses the empty feed).
+- useUnits / convertTempFromSI / convertDistanceFromSI / convertEnergyFromSI →
+                                UnitConverters.TemperatureFromSi/DistanceFromSi/EnergyFromSi +
+                                ScalarFormatters at the display boundary (SI on the wire: °C, km*1000→metres,
+                                Wh). UnitPref flows ViewModel → BatteryHealthProjection.Project(... units ...).
+- i18n t(...)                 → ILocalizer.GetString(webKey, englishDefault) via BatteryHealthStrings.Resolve;
+                                web key names preserved verbatim. The ShellLocalizer is resw-backed (the same
+                                Strings/{lang}/Resources.resw pipeline the shell chrome uses) with the English
+                                default as fallback in headless/unpackaged contexts — the established sibling
+                                convention (BatteryDegradationPage resolves its keys the identical way).
+- SectionErrorBoundary        → BatteryHealthPage.Section(fallbackTitle, build) guard — surfaces the localized
+                                section-failed title if a section build throws (the 10 battery.section.* keys).
+
+## === PARITY ===
+
+PARITY_REQUIRED=147
+
+# panels (27) — file : symbol
+[x] panel  GlassPanel1               : View.cs BuildHero (TsGlassPanel — health-score hero: 4 TsRadialGauge + TsBadge + years-to-80 column)
+[x] panel  GlassPanel2               : View.cs BuildMetricBars (TsGlassPanel — 3 TsMetricBar + captions)
+[x] panel  State-of-Health           : Model.cs BuildSummaryCards[0] (MetricSoh, Pct2(current_soh)) ; View.cs BuildCards→TsStatCard
+[x] panel  Current-Capacity          : Model.cs BuildSummaryCards[1] (MetricCurrentCap, Num1+" kWh") ; View.cs TsStatCard
+[x] panel  Original-Capacity         : Model.cs BuildSummaryCards[2] (MetricOriginalCap, Num1+" kWh") ; View.cs TsStatCard
+[x] panel  Degradation-Rate          : Model.cs BuildSummaryCards[3] (MetricDegradation, Num2+"%/"+Yr) ; View.cs TsStatCard
+[x] panel  Total-Cycles              : Model.cs BuildSummaryCards[4] (MetricCycles, Int0) ; View.cs TsStatCard
+[x] panel  Battery-Age               : Model.cs BuildSummaryCards[5] (MetricAge, months/"—") ; View.cs TsStatCard
+[x] panel  Full-Charge-Complete      : Model.cs BuildSummaryCards[6] (MetricFullChargeComplete, Yes/No/"—") ; View.cs TsStatCard
+[x] panel  GlassPanel10              : View.cs BuildThermal (TsGlassPanel — Thermal Monitoring section)
+[x] panel  Module-Temp-Max           : Model.cs BuildThermalCards[0] (TemperatureFromSi + module# sublabel) ; View.cs TsStatCard
+[x] panel  Module-Temp-Min           : Model.cs BuildThermalCards[1] (TemperatureFromSi + module# sublabel) ; View.cs TsStatCard
+[x] panel  Battery-Heater            : Model.cs BuildThermalCards[2] (On/Off/"—") ; View.cs TsStatCard
+[x] panel  Temperature-Spread        : Model.cs BuildThermalCards[3] (max−min converted) ; View.cs TsStatCard
+[x] panel  GlassPanel15              : View.cs BuildInsights (StackPanel + per-insight TsGlassPanel via BuildInsightCard)
+[x] panel  Capacity-Trend-Prediction : View.cs BuildCapacityTrend (TsChartContainer hosting TsComposedChart)
+[x] panel  Estimated-Range-Over-Time : View.cs BuildRangeTrend (TsChartContainer hosting TsAreaChart)
+[x] panel  GlassPanel18              : View.cs BuildChargeDist (TsGlassPanel — Charge Level Distribution + habits)
+[x] panel  GlassPanel19              : View.cs BuildNewVsNow (TsGlassPanel — Capacity & Range: New vs Now outer panel)
+[x] panel  GlassPanel20              : Model.cs BuildNewVsNow[0] (NewVsNowCapNew) ; View.cs BuildNewVsNowCard (inner TsGlassPanel)
+[x] panel  GlassPanel21              : Model.cs BuildNewVsNow[1] (NewVsNowCapNow + lost-capacity delta) ; View.cs BuildNewVsNowCard
+[x] panel  GlassPanel22              : Model.cs BuildNewVsNow[2] (NewVsNowRangeNew) ; View.cs BuildNewVsNowCard
+[x] panel  GlassPanel23              : Model.cs BuildNewVsNow[3] (NewVsNowRangeNow + lost-range delta) ; View.cs BuildNewVsNowCard
+[x] panel  AC-DC-Energy-Breakdown    : View.cs BuildAcDc (TsChartContainer hosting TsPieChart — AC/DC kWh share)
+[x] panel  GlassPanel25              : View.cs BuildAcDc (Charging-Statistics TsGlassPanel — 5 HealthStatRow)
+[x] panel  GlassPanel26              : View.cs BuildQuickLinks (TsGlassPanel — 6 TsButton tiles → NavigationRequested)
+[x] panel  GlassPanel27              : View.cs BuildRecommendations (TsGlassPanel — Recommendations badge + tip rows)
+
+# charts (11) — W3 native wrappers, never a web canvas
+[x] chart  RadialGauge               : View.cs BuildHero→BuildGauge[0] → Components.Charts.TsRadialGauge ; Model.cs BuildGauges[0] (Health Score, /100, GaugeColorIndex)
+[x] chart  RadialGauge               : View.cs BuildGauge[1] → TsRadialGauge ; Model.cs BuildGauges[1] (Capacity %, estimated/original clamped 0..100)
+[x] chart  RadialGauge               : View.cs BuildGauge[2] → TsRadialGauge ; Model.cs BuildGauges[2] (Degradation %/yr, max 10)
+[x] chart  RadialGauge               : View.cs BuildGauge[3] → TsRadialGauge ; Model.cs BuildGauges[3] (Cycles, max 1500)
+[x] chart  ChartContainer            : View.cs BuildCapacityTrend → Components.Charts.TsChartContainer (State Ready/Empty, AccessibleSummary capacityTrend.aria)
+[x] chart  ComposedChart             : View.cs BuildCapacityTrend → Components.Charts.TsComposedChart ; Model.cs BuildCapacityTrend (actual Area + projected Line joined + 80/70 ChartAnnotation reference lines)
+[x] chart  ChartContainer            : View.cs BuildRangeTrend → Components.Charts.TsChartContainer (State Ready/Empty, AccessibleSummary rangeTrend.aria)
+[x] chart  AreaChart                 : View.cs BuildRangeTrend → Components.Charts.TsAreaChart ; Model.cs BuildRangeTrend (per-snapshot range in user units)
+[x] chart  BarChart                  : View.cs BuildChargeDist → Components.Charts.TsBarChart ; Model.cs BuildChargeDist (Charge Started / Charge Ended decile series)
+[x] chart  ChartContainer            : View.cs BuildAcDc → Components.Charts.TsChartContainer (State Ready/Empty, AccessibleSummary acdc.aria)
+[x] chart  PieChart                  : View.cs BuildAcDc → Components.Charts.TsPieChart ; Model.cs BuildAcDc (AC vs DC kWh ChartPoint share, InnerRadiusRatio 0.5)
+
+# data states (4) — implemented for the data sources; never a blank region
+[x] state  loading                   : Model.cs Project→State.Loading/ShowLoading ; View.cs _loadingSkeleton (TsSkeleton shimmer) ; Test State_loading_when_query_in_flight
+[x] state  empty                     : Model.cs Project→State.Empty/ShowEmpty ; View.cs _emptyState (TsEmptyState) + per-section TsEmptyState (insights/chargeDist/acdc/stats) + thermal/range/trend em-dash & no-data fallbacks ; Test State_empty_when_resolved_with_no_health_object
+[x] state  error                     : Model.cs Project→State.Error/ShowError ; View.cs _errorState (TsQueryError + Retry) ; Test State_error_when_health_query_failed
+[x] state  success                   : Model.cs Project→State.Success/ShowContent ; View.cs BuildContent ; Test State_success_when_health_present
+
+# strings (105) — resolved through ILocalizer (web key names preserved) in BatteryHealthStrings.Resolve;
+#                 asserted in BatteryHealthPageTests.RequiredStringKeys + Projection_resolves_every_required_string_key
+[x] string  battery.bar.capacity                  : Model.cs BatteryHealthStrings.Resolve (BarCapacity)
+[x] string  battery.bar.cycles                    : Model.cs BatteryHealthStrings.Resolve (BarCycles)
+[x] string  battery.bar.degradation               : Model.cs BatteryHealthStrings.Resolve (BarDegradation)
+[x] string  battery.chart.acdc                    : Model.cs BatteryHealthStrings.Resolve (ChartAcdc)
+[x] string  battery.chart.acdc.aria               : Model.cs BatteryHealthStrings.Resolve (ChartAcdcAria)
+[x] string  battery.chart.actual                  : Model.cs BatteryHealthStrings.Resolve (ChartActual)
+[x] string  battery.chart.capacityTrend           : Model.cs BatteryHealthStrings.Resolve (ChartCapacityTrend)
+[x] string  battery.chart.capacityTrend.aria      : Model.cs BatteryHealthStrings.Resolve (ChartCapacityTrendAria)
+[x] string  battery.chart.chargeDist              : Model.cs BatteryHealthStrings.Resolve (ChartChargeDist)
+[x] string  battery.chart.chargeDistSub           : Model.cs BatteryHealthStrings.Resolve (ChartChargeDistSub)
+[x] string  battery.chart.chargeEnded             : Model.cs BatteryHealthStrings.Resolve (ChartChargeEnded)
+[x] string  battery.chart.chargeStarted           : Model.cs BatteryHealthStrings.Resolve (ChartChargeStarted)
+[x] string  battery.chart.dashedProjected         : Model.cs BatteryHealthStrings.Resolve (ChartDashedProjected)
+[x] string  battery.chart.noBreakdown             : Model.cs BatteryHealthStrings.Resolve (ChartNoBreakdown)
+[x] string  battery.chart.noRange                 : Model.cs BatteryHealthStrings.Resolve (ChartNoRange)
+[x] string  battery.chart.noSessions              : Model.cs BatteryHealthStrings.Resolve (ChartNoSessions)
+[x] string  battery.chart.noTrend                 : Model.cs BatteryHealthStrings.Resolve (ChartNoTrend)
+[x] string  battery.chart.predicted               : Model.cs BatteryHealthStrings.Resolve (ChartPredicted)
+[x] string  battery.chart.range                   : Model.cs BatteryHealthStrings.Resolve (ChartRange)
+[x] string  battery.chart.rangeTrend              : Model.cs BatteryHealthStrings.Resolve (ChartRangeTrend)
+[x] string  battery.chart.rangeTrend.aria         : Model.cs BatteryHealthStrings.Resolve (ChartRangeTrendAria)
+[x] string  battery.empty                         : Model.cs BatteryHealthStrings.Resolve (Empty)
+[x] string  battery.gauge.capacity                : Model.cs BatteryHealthStrings.Resolve (GaugeCapacity)
+[x] string  battery.gauge.cycles                  : Model.cs BatteryHealthStrings.Resolve (GaugeCycles)
+[x] string  battery.gauge.degradation             : Model.cs BatteryHealthStrings.Resolve (GaugeDegradation)
+[x] string  battery.gauge.health                  : Model.cs BatteryHealthStrings.Resolve (GaugeHealth)
+[x] string  battery.habit.avgEnd                  : Model.cs BatteryHealthStrings.Resolve (HabitAvgEnd)
+[x] string  battery.habit.avgStart                : Model.cs BatteryHealthStrings.Resolve (HabitAvgStart)
+[x] string  battery.habit.home                    : Model.cs BatteryHealthStrings.Resolve (HabitHome)
+[x] string  battery.habit.supercharger            : Model.cs BatteryHealthStrings.Resolve (HabitSupercharger)
+[x] string  battery.health.degraded               : Model.cs BatteryHealthStrings.Resolve (HealthDegraded)
+[x] string  battery.health.excellent              : Model.cs BatteryHealthStrings.Resolve (HealthExcellent)
+[x] string  battery.health.good                   : Model.cs BatteryHealthStrings.Resolve (HealthGood)
+[x] string  battery.insight.concernDesc           : Model.cs BatteryHealthStrings.Resolve (InsightConcernDesc) + Project Soh interpolation
+[x] string  battery.insight.concernTitle          : Model.cs BatteryHealthStrings.Resolve (InsightConcernTitle)
+[x] string  battery.insight.deepDischargeDesc     : Model.cs BatteryHealthStrings.Resolve (InsightDeepDischargeDesc) + {{count}} interpolation
+[x] string  battery.insight.deepDischargeTitle    : Model.cs BatteryHealthStrings.Resolve (InsightDeepDischargeTitle)
+[x] string  battery.insight.excellentDesc         : Model.cs BatteryHealthStrings.Resolve (InsightExcellentDesc) + {{soh}} interpolation
+[x] string  battery.insight.excellentTitle        : Model.cs BatteryHealthStrings.Resolve (InsightExcellentTitle)
+[x] string  battery.insight.goodDesc              : Model.cs BatteryHealthStrings.Resolve (InsightGoodDesc) + {{soh}} interpolation
+[x] string  battery.insight.goodHabitsDesc        : Model.cs BatteryHealthStrings.Resolve (InsightGoodHabitsDesc)
+[x] string  battery.insight.goodHabitsTitle       : Model.cs BatteryHealthStrings.Resolve (InsightGoodHabitsTitle)
+[x] string  battery.insight.goodTitle             : Model.cs BatteryHealthStrings.Resolve (InsightGoodTitle)
+[x] string  battery.insight.highFastChargeDesc    : Model.cs BatteryHealthStrings.Resolve (InsightHighFastChargeDesc) + {{pct}} interpolation
+[x] string  battery.insight.highFastChargeTitle   : Model.cs BatteryHealthStrings.Resolve (InsightHighFastChargeTitle)
+[x] string  battery.insight.highSuperchargerDesc  : Model.cs BatteryHealthStrings.Resolve (InsightHighSuperchargerDesc) + {{count}} interpolation
+[x] string  battery.insight.highSuperchargerTitle : Model.cs BatteryHealthStrings.Resolve (InsightHighSuperchargerTitle)
+[x] string  battery.insight.lowDegDesc            : Model.cs BatteryHealthStrings.Resolve (InsightLowDegDesc) + {{rate}} interpolation
+[x] string  battery.insight.lowDegTitle           : Model.cs BatteryHealthStrings.Resolve (InsightLowDegTitle)
+[x] string  battery.insights.empty                : Model.cs BatteryHealthStrings.Resolve (InsightsEmpty)
+[x] string  battery.insights.title                : Model.cs BatteryHealthStrings.Resolve (InsightsTitle)
+[x] string  battery.metric.age                    : Model.cs BatteryHealthStrings.Resolve (MetricAge)
+[x] string  battery.metric.currentCap             : Model.cs BatteryHealthStrings.Resolve (MetricCurrentCap)
+[x] string  battery.metric.cycles                 : Model.cs BatteryHealthStrings.Resolve (MetricCycles)
+[x] string  battery.metric.degradation            : Model.cs BatteryHealthStrings.Resolve (MetricDegradation)
+[x] string  battery.metric.fullChargeComplete     : Model.cs BatteryHealthStrings.Resolve (MetricFullChargeComplete)
+[x] string  battery.metric.originalCap            : Model.cs BatteryHealthStrings.Resolve (MetricOriginalCap)
+[x] string  battery.metric.soh                    : Model.cs BatteryHealthStrings.Resolve (MetricSoh)
+[x] string  battery.months                        : Model.cs BatteryHealthStrings.Resolve (Months)
+[x] string  battery.newVsNow.capNew               : Model.cs BatteryHealthStrings.Resolve (NewVsNowCapNew)
+[x] string  battery.newVsNow.capNow               : Model.cs BatteryHealthStrings.Resolve (NewVsNowCapNow)
+[x] string  battery.newVsNow.lost                 : Model.cs BatteryHealthStrings.Resolve (NewVsNowLost)
+[x] string  battery.newVsNow.rangeNew             : Model.cs BatteryHealthStrings.Resolve (NewVsNowRangeNew)
+[x] string  battery.newVsNow.rangeNow             : Model.cs BatteryHealthStrings.Resolve (NewVsNowRangeNow)
+[x] string  battery.newVsNow.title                : Model.cs BatteryHealthStrings.Resolve (NewVsNowTitle)
+[x] string  battery.perYear                       : Model.cs BatteryHealthStrings.Resolve (PerYear)
+[x] string  battery.recommendations.title         : Model.cs BatteryHealthStrings.Resolve (RecommendationsTitle)
+[x] string  battery.section.acdcFailed            : Model.cs BatteryHealthStrings.Resolve (SectionAcdcFailed) ; View.cs Section guard
+[x] string  battery.section.capacityRangeFailed   : Model.cs BatteryHealthStrings.Resolve (SectionCapacityRangeFailed) ; View.cs Section guard
+[x] string  battery.section.chargeDistFailed      : Model.cs BatteryHealthStrings.Resolve (SectionChargeDistFailed) ; View.cs Section guard
+[x] string  battery.section.heroFailed            : Model.cs BatteryHealthStrings.Resolve (SectionHeroFailed) ; View.cs Section guard
+[x] string  battery.section.insightsFailed        : Model.cs BatteryHealthStrings.Resolve (SectionInsightsFailed) ; View.cs Section guard
+[x] string  battery.section.metricBarsFailed      : Model.cs BatteryHealthStrings.Resolve (SectionMetricBarsFailed) ; View.cs Section guard
+[x] string  battery.section.quickLinksFailed      : Model.cs BatteryHealthStrings.Resolve (SectionQuickLinksFailed) ; View.cs Section guard
+[x] string  battery.section.recommendationsFailed : Model.cs BatteryHealthStrings.Resolve (SectionRecommendationsFailed) ; View.cs Section guard
+[x] string  battery.section.summaryCardsFailed    : Model.cs BatteryHealthStrings.Resolve (SectionSummaryCardsFailed) ; View.cs Section guard
+[x] string  battery.section.thermalFailed         : Model.cs BatteryHealthStrings.Resolve (SectionThermalFailed) ; View.cs Section guard
+[x] string  battery.stats.acSessions              : Model.cs BatteryHealthStrings.Resolve (StatsAcSessions)
+[x] string  battery.stats.cycles                  : Model.cs BatteryHealthStrings.Resolve (StatsCycles)
+[x] string  battery.stats.dcSessions              : Model.cs BatteryHealthStrings.Resolve (StatsDcSessions)
+[x] string  battery.stats.empty                   : Model.cs BatteryHealthStrings.Resolve (StatsEmpty)
+[x] string  battery.stats.title                   : Model.cs BatteryHealthStrings.Resolve (StatsTitle)
+[x] string  battery.stats.totalEnergy             : Model.cs BatteryHealthStrings.Resolve (StatsTotalEnergy)
+[x] string  battery.stats.totalSessions           : Model.cs BatteryHealthStrings.Resolve (StatsTotalSessions)
+[x] string  battery.subtitle                      : Model.cs BatteryHealthStrings.Resolve (Subtitle)
+[x] string  battery.thermal.heater                : Model.cs BatteryHealthStrings.Resolve (ThermalHeater)
+[x] string  battery.thermal.moduleNumber          : Model.cs BatteryHealthStrings.Resolve (ThermalModuleNumber) + ModuleNumber {{n}} interpolation
+[x] string  battery.thermal.moduleTempMax         : Model.cs BatteryHealthStrings.Resolve (ThermalModuleTempMax)
+[x] string  battery.thermal.moduleTempMin         : Model.cs BatteryHealthStrings.Resolve (ThermalModuleTempMin)
+[x] string  battery.thermal.tempSpread            : Model.cs BatteryHealthStrings.Resolve (ThermalTempSpread)
+[x] string  battery.thermal.title                 : Model.cs BatteryHealthStrings.Resolve (ThermalTitle)
+[x] string  battery.tip.aboveAvg                  : Model.cs BatteryHealthStrings.Resolve (TipAboveAvg)
+[x] string  battery.tip.avoid100                  : Model.cs BatteryHealthStrings.Resolve (TipAvoid100)
+[x] string  battery.tip.avoidDeep                 : Model.cs BatteryHealthStrings.Resolve (TipAvoidDeep)
+[x] string  battery.tip.great                     : Model.cs BatteryHealthStrings.Resolve (TipGreat)
+[x] string  battery.tip.reduceFast                : Model.cs BatteryHealthStrings.Resolve (TipReduceFast)
+[x] string  battery.title                         : Model.cs BatteryHealthStrings.Resolve (Title) + Registration.Title
+[x] string  battery.warrantyLimit                 : Model.cs BatteryHealthStrings.Resolve (WarrantyLimit)
+[x] string  battery.warrantyNote                  : Model.cs BatteryHealthStrings.Resolve (WarrantyNote)
+[x] string  battery.yearsTo80                     : Model.cs BatteryHealthStrings.Resolve (YearsTo80)
+[x] string  battery.yr                            : Model.cs BatteryHealthStrings.Resolve (Yr)
+[x] string  common.no                             : Model.cs BatteryHealthStrings.Resolve (CommonNo)
+[x] string  common.off                            : Model.cs BatteryHealthStrings.Resolve (CommonOff)
+[x] string  common.on                             : Model.cs BatteryHealthStrings.Resolve (CommonOn)
+[x] string  common.yes                            : Model.cs BatteryHealthStrings.Resolve (CommonYes)
+
+PARITY_COVERED=147
+
+## Implementation-spec conformance
+
+- Navigation entry         : ShellWindow.xaml.cs PageFactory.Register("BatteryHealth", …) wiring NavigationRequested→NavigateTo;
+                             route pre-existing in RouteTable.cs L105 (visible /battery) + L106 (hidden battery/health alias).
+- Page scaffold            : BatteryHealthPage : UserControl + BatteryHealthPageViewModel : INotifyPropertyChanged
+                             (LoadAsync/RefreshAsync, NotifyOpened); no business logic in the view (thin renderer; the VM
+                             owns all state and re-projection, marshalled to the UI thread).
+- Panels via design tokens : DisplayTokens.* brushes + TsGlassPanel (Mica/Acrylic glass) — no hardcoded colours; accents via
+                             StatusResources.AccentBrushKey / token brush keys.
+- 4 data states / source   : page-level loading/empty/error (TsSkeleton / TsEmptyState / TsQueryError) AND per-section empties
+                             (insights / charge-dist / AC-DC pie / charging-stats render TsEmptyState; thermal cards + new-vs-now
+                             range + capacity/range trends fall back to em-dash / no-data bodies) — never a blank region.
+- i18n                     : every visible literal flows through ILocalizer (BatteryHealthStrings) with web key names; zero
+                             hardcoded literals in the view; resw-backed with English fallback (sibling convention).
+- a11y                     : AutomationProperties.SetName on the page, every gauge/card/bar/badge/insight/new-vs-now/stat-row/
+                             quick-link; decorative FontIcons left to the panel name; TsChartContainer publishes an
+                             AccessibleSummary (the chart aria strings); AutomationPeer reports Group.
+- Units                    : SI converted only at the render boundary via UnitConverters/ScalarFormatters (°C→user temp with the
+                             web's spread = ΔconvertedTemp identity; km*1000→metres→user distance; Wh→kWh for the breakdown);
+                             ViewModel sources UnitPref; nothing non-SI stored/computed.
+- Live data                : the thermal source (useChargingTelemetryLatest) is the page's live input; freshness is surfaced via
+                             the header TsDataFreshness chip (UpdatedAt/IsFetching/IsError), consistent with the sibling W7 pages.
+
+## Gate
+
+```
+# 1) placeholder / stub scan (ADR-011) — actual feature dir
+& ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/BatteryHealthPage -Language csharp
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# 2) build (full solution)
+dotnet build apps/windows/TeslaSync.sln -c Release
+  Build succeeded.  0 Error(s)  (17 pre-existing Core analyzer warnings, identical to baseline)
+BUILD_EXIT=0
+
+# 3) lint / format verify (full solution)
+dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+  (clean — the 5 new files were normalized by `dotnet format --include` before verify)
+LINT_EXIT=0
+
+# 4) test
+#   4a) unit + projection suite (TeslaSync.App.Tests — includes the 67 BatteryHealthPage tests that exercise this
+#       page's projection, parsers, four-state matrix, gauges/bars/cards/thermal/insights/charts/breakdown,
+#       view-model lifecycle and the 4-endpoint client feed):
+dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  Failed: 0, Passed: 29698, Skipped: 0, Total: 29698
+  (BatteryHealthPageTests: Passed 67 / Failed 0)
+UNIT_TEST_EXIT=0
+
+#   4b) UI-automation suite (TeslaSync.App.UITests) — environment-blocked, NOT a code failure:
+#   Verified WinAppDriver/Appium runner is absent in this environment:
+#     Test-NetConnection 127.0.0.1:4723 → Listening=False
+#     WinAppDriver.exe not found on PATH nor under Program Files (x86)/Program Files.
+#   The TeslaSync.App.UITests shell suite cannot start an automation session without that host — a pre-existing,
+#   repo-wide environmental condition this parity unit neither introduces nor touches (it adds NO UI-automation
+#   tests and changes none). Reported honestly (covenant #1): UITests = BLOCKED-on-environment (runner absent).
+TEST_EXIT(code-level / unit) = 0   |   UITests = BLOCKED (WinAppDriver/Appium runner absent)
+
+# 5) parity coverage
+PARITY_REQUIRED=147
+PARITY_COVERED=147
+```
+
+## Disposition
+
+Every code-level gate is green: placeholder scan (0/0), full-solution build (0 errors; the same 17 pre-existing
+Core analyzer warnings as the baseline), format/lint verify (clean), the unit + projection suite (29698 passed /
+0 failed, including the 67 new BatteryHealthPage tests), and parity coverage (147/147). The only suite not run
+green is TeslaSync.App.UITests, which is uniformly blocked by the absent WinAppDriver/Appium runner (no
+interactive UI-automation host in this environment — verified: nothing listening on 127.0.0.1:4723 and
+WinAppDriver.exe absent) — a pre-existing, repo-wide condition that this parity unit neither introduces nor
+touches (no UITests added/changed). Consistent with the sibling W7 page ledger entries, the page-parity unit is
+complete and verified at the code level.
+
+EXIT=0
+STATUS=DONE
