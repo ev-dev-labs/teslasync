@@ -8208,4 +8208,17 @@
   <string name="translation_insights_rangeOptimization_body">At your average efficiency of %1$s Wh/km, your effective range is ~%2$s km (%3$s%% of rated range).</string>
   <string name="translation_insights_rangeOptimization_adviceImprove">Consider preconditioning and reducing highway speed for better range.</string>
   <string name="translation_insights_rangeOptimization_adviceGood">Your driving style is range-efficient — great work!</string>
+  <string name="translation_uptimeHeatmap_title">Uptime — last %1$s days</string>
+  <string name="translation_uptimeHeatmap_uptimeSuffix">%1$s uptime</string>
+  <string name="translation_uptimeHeatmap_listLabel">Daily status history</string>
+  <string name="translation_uptimeHeatmap_dayLabel">%1$s: %2$s</string>
+  <string name="translation_uptimeHeatmap_aria">Uptime — daily status heatmap</string>
+  <string name="translation_uptimeHeatmap_status_healthy">Operational</string>
+  <string name="translation_uptimeHeatmap_status_degraded">Degraded</string>
+  <string name="translation_uptimeHeatmap_status_unhealthy">Outage</string>
+  <string name="translation_uptimeHeatmap_status_unknown">Unknown</string>
+  <string name="translation_uptimeHeatmap_status_maintenance">Maintenance</string>
+  <string name="translation_uptimeHeatmap_emptyTitle">No uptime data</string>
+  <string name="translation_uptimeHeatmap_empty">No status history to show yet.</string>
+  <string name="translation_uptimeHeatmap_resourceName">Uptime history</string>
 </resources>
