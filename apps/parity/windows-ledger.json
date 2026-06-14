@@ -117,6 +117,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:charging/TeslaChargingHistory",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p2-windows/W7/windows-page-charging-TeslaChargingHistoryPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-charging-TeslaChargingHistoryPage.log"
+  },
+  {
     "unitId": "page:charging/TeslaChargingSessionsMap",
     "platform": "windows",
     "status": "done",

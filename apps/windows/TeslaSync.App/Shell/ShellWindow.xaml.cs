@@ -337,6 +337,9 @@ public sealed partial class ShellWindow : Window
         // Charging / Tesla fleet charging sessions page (P2/W7) — parity port of web TeslaChargingSessionsPage at
         // route /tesla-charging-sessions.
         _viewModel.PageFactory.Register("TeslaChargingSessions", static () => new FeatureViews.Charging.TeslaChargingSessionsPage());
+        // Charging / Tesla charging history page (P2/W7) — parity port of web TeslaChargingHistoryPage at
+        // route /tesla-charging-history.
+        _viewModel.PageFactory.Register("TeslaChargingHistory", static () => new FeatureViews.Charging.TeslaChargingHistoryPage());
 
         // Vehicle systems / Climate Control page (P2/W7) — parity port of web ClimateControlPage at route /climate
         // (nav route "ClimateControl" / "climate-control", hidden alias "climate").

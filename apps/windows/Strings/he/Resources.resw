@@ -18811,6 +18811,9 @@
   <data name="translation.tesla_charging.col.cost" xml:space="preserve">
     <value>Cost</value>
   </data>
+  <data name="translation.tesla_charging.col.cost_decimal" xml:space="preserve">
+    <value>Cost</value>
+  </data>
   <data name="translation.tesla_charging.col.date" xml:space="preserve">
     <value>Date</value>
   </data>
@@ -18847,6 +18850,9 @@
   <data name="translation.tesla_charging.monthlySpending" xml:space="preserve">
     <value>Monthly Spending</value>
   </data>
+  <data name="translation.tesla_charging.monthlySpending.aria" xml:space="preserve">
+    <value>Monthly Tesla charging spending bar chart</value>
+  </data>
   <data name="translation.tesla_charging.noChartData" xml:space="preserve">
     <value>No spending data yet. Click "Refresh from Tesla" to sync.</value>
   </data>
@@ -18864,6 +18870,9 @@
   </data>
   <data name="translation.tesla_charging.searchPlaceholder" xml:space="preserve">
     <value>Search by location…</value>
+  </data>
+  <data name="translation.tesla_charging.selectVehicle" xml:space="preserve">
+    <value>Select vehicle</value>
   </data>
   <data name="translation.tesla_charging.sessions" xml:space="preserve">
     <value>Charging Sessions</value>
