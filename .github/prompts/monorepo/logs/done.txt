@@ -931,3 +931,4 @@ p2-windows/pages/analytics/PeriodComparePage.prompt.md
 p2-windows/pages/battery/BatteryCellsPage.prompt.md
 p2-windows/pages/battery/BatteryHealthPage.prompt.md
 p2-windows/pages/battery/SleepEfficiencyPage.prompt.md
+p2-windows/pages/battery/PowerFlowDashboardPage.prompt.md
