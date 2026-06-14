@@ -1,0 +1,46 @@
+/*
+  RoutePlayback.strings
+  TeslaSync — P4 shared surface · 0187 · RoutePlayback (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. The two keys lifted directly from the web
+  source (components/maps/RoutePlayback.tsx) are the empty-state message and the map accessibility name;
+  the remaining keys cover the chrome the native surface introduces around the MapKit map: the anchor /
+  playhead / layer-switcher accessibility names, the inline metric chip's speed unit + sample summary,
+  the P4 leaf connectivity axis (chip + banner), and the loading / error states (every state renders).
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are
+  kept in a per-surface table ("RoutePlayback") so each parallel surface prompt owns its own strings.
+*/
+
+/* --- Web source keys (components/maps/RoutePlayback.tsx) --- */
+"maps.routePlayback.empty" = "No GPS points to replay for this route.";
+"maps.routePlayback.mapLabel" = "Route playback map";
+
+/* --- Map furniture accessibility (anchors / playhead / switcher) --- */
+"routePlayback.start" = "Start";
+"routePlayback.end" = "End";
+"routePlayback.playhead" = "Current position";
+"routePlayback.layerSwitcher" = "Map style";
+
+/* --- Inline metric chip (web top-right overlay) --- */
+"routePlayback.speedUnit" = "km/h";
+"routePlayback.sampleOfCount" = "Sample %1$d of %2$d";
+
+/* --- Loading / error states (every state renders) --- */
+"routePlayback.loading" = "Loading route…";
+"routePlayback.error" = "Couldn't load the route";
+"routePlayback.errorDetail" = "We couldn't update the route. Showing the last loaded trail.";
+
+/* --- Shared actions --- */
+"action.retry" = "Retry";
+
+/* --- Freshness (P4 connectivity axis) --- */
+"routePlayback.live" = "Live";
+"routePlayback.stale" = "Stale";
+"routePlayback.offline" = "Offline";
+"routePlayback.staleA11y" = "Stale — tap refresh to update";
+"routePlayback.offlineA11y" = "Offline — showing the last loaded route";
+"routePlayback.refresh" = "Refresh";
+
+/* --- Connectivity banner (P4 leaf state) --- */
+"routePlayback.staleBanner" = "Reconnecting — the route may be stale";
+"routePlayback.offlineBanner" = "Offline — showing the last loaded route";
