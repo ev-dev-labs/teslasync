@@ -291,6 +291,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationsListPage.log"
     },
     {
+      "unitId": "page:automations/AutomationBuilder",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 48,
+      "requiredCount": 48,
+      "promptId": "p4-apple/P7/page:automations/AutomationBuilder",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationBuilderPage.log"
+    },
+    {
+      "unitId": "page:automations/AutomationBuilder",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 48,
+      "requiredCount": 48,
+      "promptId": "p4-apple/P7/page:automations/AutomationBuilder",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationBuilderPage.log"
+    },
+    {
       "unitId": "page:battery/BatteryCells",
       "platform": "apple-macos",
       "status": "done",
