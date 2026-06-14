@@ -1,0 +1,67 @@
+/*
+  OnboardingWizard.strings
+  TeslaSync — P4 shared surface · 0131 · OnboardingWizard (Apple)
+
+  The P1/S10 i18n catalog contribution for the first-run intro. The web
+  `components/feedback/OnboardingWizard.tsx` is anonymous — it renders hardcoded English and calls no `t()` —
+  so, per the no-English-literals rule, every web literal is promoted to a key here with the source's copy as
+  the value. The four step titles + bodies are the verbatim web `steps[]` strings; Skip / Next / Get Started
+  are the verbatim web button labels; the remaining entries are the native a11y additions (the ✕ / backdrop
+  label + dismiss hint, the dialog label, and the spoken "Step N of M" progress that has no on-screen web
+  peer).
+
+  These entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table ("OnboardingWizard") so each parallel surface prompt owns its own strings. In test /
+  preview bundles `NSLocalizedString` returns the value below, keeping the copy deterministic.
+*/
+
+/* --- Step copy (verbatim web steps[]) --- */
+
+/* Step 1 title — web steps[0].title. */
+"onboardingWizard.welcome.title" = "Welcome to TeslaSync";
+
+/* Step 1 body — web steps[0].description. */
+"onboardingWizard.welcome.body" = "Your all-in-one Tesla fleet management dashboard. Track drives, monitor battery health, analyze energy usage, and control your vehicles — all in one place.";
+
+/* Step 2 title — web steps[1].title. */
+"onboardingWizard.connect.title" = "Connect Your Tesla";
+
+/* Step 2 body — web steps[1].description. */
+"onboardingWizard.connect.body" = "Head to Settings and link your Tesla account via OAuth. TeslaSync will securely poll your vehicle data and keep everything in sync automatically.";
+
+/* Step 3 title — web steps[2].title. */
+"onboardingWizard.configure.title" = "Configure Settings";
+
+/* Step 3 body — web steps[2].description. */
+"onboardingWizard.configure.body" = "Customize your polling interval, distance units, energy cost per kWh, notification preferences, and MQTT integration to match your setup.";
+
+/* Step 4 title — web steps[3].title. */
+"onboardingWizard.allSet.title" = "You're All Set!";
+
+/* Step 4 body — web steps[3].description. */
+"onboardingWizard.allSet.body" = "Your dashboard is ready. Explore drives, charging sessions, efficiency analytics, and more. You can always revisit settings to fine-tune your experience.";
+
+/* --- Buttons (verbatim web labels) --- */
+
+/* Left dismiss action — web `Skip`. */
+"onboardingWizard.skip" = "Skip";
+
+/* Trailing advance affordance for a non-final step — web `Next`. */
+"onboardingWizard.next" = "Next";
+
+/* Trailing affordance for the final step — web `Get Started`. */
+"onboardingWizard.getStarted" = "Get Started";
+
+/* --- Native a11y additions (no web t() key exists; the source is anonymous) --- */
+
+/* VoiceOver label for the ✕ close control + the tap-to-dismiss backdrop (web icon-only / unlabelled). */
+"onboardingWizard.close" = "Close";
+
+/* VoiceOver label for the dialog container (the web modal carries no label). */
+"onboardingWizard.dialogLabel" = "Welcome walkthrough";
+
+/* VoiceOver hint describing what the ✕ / backdrop does. */
+"onboardingWizard.dismissHint" = "Dismisses the walkthrough";
+
+/* Spoken progress for the indicator row — "Step N of M" (no on-screen web peer). */
+"onboardingWizard.progress" = "Step %1$d of %2$d";
