@@ -114,7 +114,7 @@ public final class PollingVersionSegmentSource: VersionSegmentSource {
     private let versionInterval: TimeInterval
     private let updateInterval: TimeInterval
 
-    private var versionInfo: VersionInfo?
+    private var versionInfo: VersionSegmentInfo?
     private var updateCheck: UpdateCheckResult?
     private var unseenCount = 0
     private var connection: VersionSegmentConnection = .live

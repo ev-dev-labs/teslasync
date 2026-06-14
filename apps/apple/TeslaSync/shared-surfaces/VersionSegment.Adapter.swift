@@ -6,7 +6,7 @@
 //  of `components/layout/status-bar/VersionSegment.tsx`. Everything here is pure (Foundation only): the
 //  surface identity (the diagnostics slug + the two web poll cadences + the release-notes URL), the
 //  freshness axis (``VersionSegmentConnection``), the value-typed peers of the web API responses
-//  (``VersionInfo`` ← `/system/version`, ``UpdateCheckResult`` ← `/system/update-check`), the build-time
+//  (``VersionSegmentInfo`` ← `/system/version`, ``UpdateCheckResult`` ← `/system/update-check`), the build-time
 //  provenance (``VersionSegmentBuildInfo`` — the native peer of `VITE_APP_VERSION` / `VITE_GIT_SHA`), the
 //  coalesced ``VersionSegmentSnapshot`` (the two queries + the changelog unseen count + the probe
 //  lifecycle), the combined ``VersionSegmentInput`` (snapshot + build info), the view-ready
@@ -84,10 +84,10 @@ public enum VersionSegmentConnection: String, Sendable, Equatable, CaseIterable 
 
 // MARK: - API value types (web `/system/version` + `/system/update-check`)
 
-/// The value-typed native peer of the web `VersionInfo` (`/system/version`) — only the fields the
+/// The value-typed native peer of the web `VersionSegmentInfo` (`/system/version`) — only the fields the
 /// segment renders. All are optional because the probe may resolve before every field is populated and
 /// because the web guards each with a presence check before rendering its modal row.
-public struct VersionInfo: Sendable, Equatable {
+public struct VersionSegmentInfo: Sendable, Equatable {
     /// The deployed app version (web `app_version`); the server sentinel `"unknown"` is treated as absent.
     public let appVersion: String?
     /// The Helm chart version (web `chart_version`); `"unknown"` is treated as absent.
@@ -163,7 +163,7 @@ public struct VersionSegmentBuildInfo: Sendable, Equatable {
 /// keeps implicit (`isLoading` while the first version probe is in flight with nothing cached,
 /// `errorMessage` when it failed with nothing cached, and the connectivity axis).
 public struct VersionSegmentSnapshot: Sendable, Equatable {
-    public let versionInfo: VersionInfo?
+    public let versionInfo: VersionSegmentInfo?
     public let updateCheck: UpdateCheckResult?
     /// The number of changelog entries newer than the user's last-seen version (web `newEntries.length`);
     /// `hasUnseen` is derived as `> 0`.
@@ -175,7 +175,7 @@ public struct VersionSegmentSnapshot: Sendable, Equatable {
     public let connection: VersionSegmentConnection
 
     public init(
-        versionInfo: VersionInfo? = nil,
+        versionInfo: VersionSegmentInfo? = nil,
         updateCheck: UpdateCheckResult? = nil,
         changelogUnseenCount: Int = 0,
         isLoading: Bool = false,

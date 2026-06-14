@@ -4,7 +4,7 @@
 //
 //  The two network probe seams the production polling source fetches through — the native peers of the
 //  web component's two `useQuery` calls. ``VersionInfoProbe`` is the `/system/version` hit (web
-//  `request<VersionInfo>('/system/version')`); ``UpdateCheckProbe`` is the `/system/update-check` hit
+//  `request<VersionSegmentInfo>('/system/version')`); ``UpdateCheckProbe`` is the `/system/update-check` hit
 //  (web `request<UpdateCheckResult>('/system/update-check')`). Each comes with a `@Sendable`-closure
 //  production adapter (the host wires its API client) and a deterministic scripted actor double for
 //  tests, so no networking lives in the surface. The outcome enums carry an `offline` flag so the
@@ -15,16 +15,16 @@ import Foundation
 
 // MARK: - Version-info probe (web `/system/version`)
 
-/// The outcome of one `/system/version` probe — the native peer of the web `request<VersionInfo>` result.
-/// `info` carries the parsed ``VersionInfo`` (web success); `failed` carries a reason plus whether the
+/// The outcome of one `/system/version` probe — the native peer of the web `request<VersionSegmentInfo>` result.
+/// `info` carries the parsed ``VersionSegmentInfo`` (web success); `failed` carries a reason plus whether the
 /// cause was a lost connection.
 public enum VersionInfoProbeOutcome: Sendable, Equatable {
-    case info(VersionInfo)
+    case info(VersionSegmentInfo)
     case failed(message: String, offline: Bool)
 }
 
 /// The seam the polling source probes the running version through — the native peer of the web
-/// `request<VersionInfo>('/system/version')` call. Kept off the view so no networking lives in the
+/// `request<VersionSegmentInfo>('/system/version')` call. Kept off the view so no networking lives in the
 /// surface: the production app injects a ``ClosureVersionInfoProbe`` wrapping its API client; tests
 /// inject a ``ScriptedVersionInfoProbe``.
 public protocol VersionInfoProbe: Sendable {

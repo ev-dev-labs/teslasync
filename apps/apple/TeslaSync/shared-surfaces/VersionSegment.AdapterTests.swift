@@ -136,21 +136,21 @@ final class VersionSegmentProjectorTests: XCTestCase {
     }
 
     func testReadyFromServerVersion() {
-        let result = resolve(VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "9.9.9")))
+        let result = resolve(VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "9.9.9")))
         XCTAssertEqual(result.phase, .ready)
         XCTAssertEqual(result.data?.appVersion, "9.9.9")
     }
 
     func testShaAndHasShaFromBuild() {
         let dev = VersionSegmentProjection.resolve(VersionSegmentInput(
-            snapshot: VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1.0")),
+            snapshot: VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1.0")),
             buildInfo: VersionSegmentBuildInfo(buildVersion: "1.0", buildSHA: "dev")
         ))
         XCTAssertEqual(dev.data?.sha, "dev")
         XCTAssertFalse(dev.data?.hasSHA ?? true)
 
         let real = VersionSegmentProjection.resolve(VersionSegmentInput(
-            snapshot: VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1.0")),
+            snapshot: VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1.0")),
             buildInfo: VersionSegmentBuildInfo(buildVersion: "1.0", buildSHA: "a1b2c3d")
         ))
         XCTAssertEqual(real.data?.sha, "a1b2c3d")
@@ -159,7 +159,7 @@ final class VersionSegmentProjectorTests: XCTestCase {
 
     func testUpdateAndChangelogFields() {
         let result = resolve(VersionSegmentSnapshot(
-            versionInfo: VersionInfo(appVersion: "1.0"),
+            versionInfo: VersionSegmentInfo(appVersion: "1.0"),
             updateCheck: UpdateCheckResult(updateAvailable: true, latest: "2.0", message: "fixes"),
             changelogUnseenCount: 4
         ))
@@ -198,7 +198,7 @@ final class VersionSegmentDotTests: XCTestCase {
 // MARK: - Provenance rows + platform label (web `<dl>` presence guards)
 
 final class VersionSegmentProvenanceTests: XCTestCase {
-    private func rows(_ info: VersionInfo?, uptime: String? = nil) -> [VersionProvenanceRow] {
+    private func rows(_ info: VersionSegmentInfo?, uptime: String? = nil) -> [VersionProvenanceRow] {
         VersionSegmentProjection.provenanceRows(appVersion: "1.0", sha: "abc", info: info, uptime: uptime)
     }
 
@@ -211,14 +211,14 @@ final class VersionSegmentProvenanceTests: XCTestCase {
     }
 
     func testChartSkippedWhenUnknownOrAbsent() {
-        XCTAssertFalse(rows(VersionInfo(chartVersion: "unknown")).contains { $0.id == "chart" })
-        XCTAssertFalse(rows(VersionInfo(chartVersion: nil)).contains { $0.id == "chart" })
-        let withChart = rows(VersionInfo(chartVersion: "1.4.0"))
+        XCTAssertFalse(rows(VersionSegmentInfo(chartVersion: "unknown")).contains { $0.id == "chart" })
+        XCTAssertFalse(rows(VersionSegmentInfo(chartVersion: nil)).contains { $0.id == "chart" })
+        let withChart = rows(VersionSegmentInfo(chartVersion: "1.4.0"))
         XCTAssertEqual(withChart.first { $0.id == "chart" }?.value, "v1.4.0")
     }
 
     func testGoAndUptimeRows() {
-        let withGo = rows(VersionInfo(goVersion: "go1.25"))
+        let withGo = rows(VersionSegmentInfo(goVersion: "go1.25"))
         XCTAssertEqual(withGo.first { $0.id == "go" }?.value, "go1.25")
         let withUptime = rows(nil, uptime: "3d 4h")
         let uptimeRow = withUptime.first { $0.id == "uptime" }
@@ -262,14 +262,17 @@ final class VersionSegmentAccessibilityTests: XCTestCase {
 
 final class VersionSegmentValueTypeTests: XCTestCase {
     func testSnapshotEquality() {
-        let lhs = VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1.0"), connection: .stale)
-        let rhs = VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1.0"), connection: .stale)
+        let lhs = VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1.0"), connection: .stale)
+        let rhs = VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1.0"), connection: .stale)
         XCTAssertEqual(lhs, rhs)
-        XCTAssertNotEqual(lhs, VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1.1"), connection: .stale))
+        XCTAssertNotEqual(
+            lhs,
+            VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1.1"), connection: .stale)
+        )
     }
 
     func testProbeOutcomeEquality() {
-        XCTAssertEqual(VersionInfoProbeOutcome.info(VersionInfo(appVersion: "1")), .info(VersionInfo(appVersion: "1")))
+        XCTAssertEqual(VersionInfoProbeOutcome.info(VersionSegmentInfo(appVersion: "1")), .info(VersionSegmentInfo(appVersion: "1")))
         XCTAssertEqual(
             UpdateCheckProbeOutcome.failed(message: "x", offline: true),
             .failed(message: "x", offline: true)

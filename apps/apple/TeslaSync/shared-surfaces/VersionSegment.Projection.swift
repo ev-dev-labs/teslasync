@@ -76,7 +76,7 @@ public enum VersionSegmentProjection {
     static func provenanceRows(
         appVersion: String,
         sha: String,
-        info: VersionInfo?,
+        info: VersionSegmentInfo?,
         uptime: String?
     ) -> [VersionProvenanceRow] {
         var rows: [VersionProvenanceRow] = [

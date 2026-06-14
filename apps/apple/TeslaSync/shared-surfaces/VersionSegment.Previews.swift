@@ -22,7 +22,7 @@ import SwiftUI
         return model
     }
 
-    private let previewInfo = VersionInfo(
+    private let previewInfo = VersionSegmentInfo(
         appVersion: "2026.6.2",
         chartVersion: "1.4.0",
         goVersion: "go1.25.0",

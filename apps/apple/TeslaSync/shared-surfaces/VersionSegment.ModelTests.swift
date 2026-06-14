@@ -38,7 +38,7 @@ final class VersionSegmentModelTests: XCTestCase {
     }
 
     private func ready(_ connection: VersionSegmentConnection = .live) -> VersionSegmentSnapshot {
-        VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "2026.6.2"), connection: connection)
+        VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "2026.6.2"), connection: connection)
     }
 
     private let noBuild = VersionSegmentBuildInfo(buildVersion: nil, buildSHA: nil)
@@ -178,7 +178,7 @@ final class VersionSegmentViewTests: XCTestCase {
 
     func testSurfaceComposesForEveryPhase() {
         let noBuild = VersionSegmentBuildInfo(buildVersion: nil, buildSHA: nil)
-        let ready = VersionSegmentSnapshot(versionInfo: VersionInfo(appVersion: "1"))
+        let ready = VersionSegmentSnapshot(versionInfo: VersionSegmentInfo(appVersion: "1"))
         _ = VersionSegment(model: model(VersionSegmentSnapshot(isLoading: true), build: noBuild))
         _ = VersionSegment(model: model(VersionSegmentSnapshot(), build: noBuild))
         _ = VersionSegment(model: model(VersionSegmentSnapshot(errorMessage: "x"), build: noBuild))
@@ -188,7 +188,7 @@ final class VersionSegmentViewTests: XCTestCase {
 
     func testProductionInitComposes() {
         _ = VersionSegment(
-            versionProbe: ScriptedVersionInfoProbe([.info(VersionInfo(appVersion: "1.0"))]),
+            versionProbe: ScriptedVersionInfoProbe([.info(VersionSegmentInfo(appVersion: "1.0"))]),
             updateProbe: ScriptedUpdateCheckProbe([.result(UpdateCheckResult(updateAvailable: false))]),
             changelog: InMemoryChangelogObserver()
         )
@@ -206,7 +206,7 @@ final class VersionSegmentViewTests: XCTestCase {
     func testModalContentComposes() throws {
         let resolved = VersionSegmentProjection.resolve(VersionSegmentInput(
             snapshot: VersionSegmentSnapshot(
-                versionInfo: VersionInfo(
+                versionInfo: VersionSegmentInfo(
                     appVersion: "1.0",
                     chartVersion: "1.4.0",
                     goVersion: "go1.25",

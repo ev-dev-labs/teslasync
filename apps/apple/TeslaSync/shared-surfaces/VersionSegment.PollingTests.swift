@@ -71,13 +71,13 @@ final class VersionSegmentSeamTests: XCTestCase {
 final class VersionSegmentProbeTests: XCTestCase {
     func testScriptedVersionProbeOrderThenRepeatsLast() async {
         let probe = ScriptedVersionInfoProbe([
-            .info(VersionInfo(appVersion: "1")),
+            .info(VersionSegmentInfo(appVersion: "1")),
             .failed(message: "boom", offline: true)
         ])
         let first = await probe.probe()
         let second = await probe.probe()
         let third = await probe.probe()
-        XCTAssertEqual(first, .info(VersionInfo(appVersion: "1")))
+        XCTAssertEqual(first, .info(VersionSegmentInfo(appVersion: "1")))
         XCTAssertEqual(second, .failed(message: "boom", offline: true))
         XCTAssertEqual(third, .failed(message: "boom", offline: true))
         let count = await probe.probeCount
@@ -102,9 +102,9 @@ final class VersionSegmentProbeTests: XCTestCase {
     }
 
     func testClosureProbeForwards() async {
-        let probe = ClosureVersionInfoProbe { .info(VersionInfo(appVersion: "9")) }
+        let probe = ClosureVersionInfoProbe { .info(VersionSegmentInfo(appVersion: "9")) }
         let outcome = await probe.probe()
-        XCTAssertEqual(outcome, .info(VersionInfo(appVersion: "9")))
+        XCTAssertEqual(outcome, .info(VersionSegmentInfo(appVersion: "9")))
     }
 }
 
@@ -132,7 +132,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
         let versionPoller = ManualVersionSegmentPoller()
         let updatePoller = ManualVersionSegmentPoller()
         let source = makeSource(
-            version: [.info(VersionInfo(appVersion: "1"))],
+            version: [.info(VersionSegmentInfo(appVersion: "1"))],
             versionPoller: versionPoller,
             updatePoller: updatePoller
         )
@@ -148,7 +148,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
     }
 
     func testVersionSuccessEmitsReadySnapshot() async {
-        let source = makeSource(version: [.info(VersionInfo(appVersion: "2026.6.2"))])
+        let source = makeSource(version: [.info(VersionSegmentInfo(appVersion: "2026.6.2"))])
         var last: VersionSegmentSnapshot?
         source.onUpdate = { last = $0 }
         await source.probeVersionOnce()
@@ -179,7 +179,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
 
     func testLaterVersionFailureKeepsCachedAndGoesStale() async {
         let source = makeSource(version: [
-            .info(VersionInfo(appVersion: "2026.6.2")),
+            .info(VersionSegmentInfo(appVersion: "2026.6.2")),
             .failed(message: "blip", offline: false)
         ])
         var last: VersionSegmentSnapshot?
@@ -193,7 +193,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
 
     func testLaterVersionFailureOfflineKeepsCached() async {
         let source = makeSource(version: [
-            .info(VersionInfo(appVersion: "2026.6.2")),
+            .info(VersionSegmentInfo(appVersion: "2026.6.2")),
             .failed(message: "blip", offline: true)
         ])
         var last: VersionSegmentSnapshot?
@@ -206,7 +206,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
 
     func testUpdateSuccessAndSwallowedFailure() async {
         let source = makeSource(
-            version: [.info(VersionInfo(appVersion: "1"))],
+            version: [.info(VersionSegmentInfo(appVersion: "1"))],
             update: [
                 .result(UpdateCheckResult(updateAvailable: true, latest: "2.0")),
                 .failed(message: "x", offline: false)
@@ -222,7 +222,7 @@ final class PollingVersionSegmentSourceTests: XCTestCase {
     }
 
     func testChangelogCountFlowsIntoSnapshot() {
-        let source = makeSource(version: [.info(VersionInfo(appVersion: "1"))], unseen: 4)
+        let source = makeSource(version: [.info(VersionSegmentInfo(appVersion: "1"))], unseen: 4)
         var last: VersionSegmentSnapshot?
         source.onUpdate = { last = $0 }
         source.start()
