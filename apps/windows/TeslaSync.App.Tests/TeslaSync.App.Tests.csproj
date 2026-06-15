@@ -1284,6 +1284,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleSettingsTab\VehicleSettingsTab.ViewModel.cs" Link="FeatureViews\VehicleSettingsTab\VehicleSettingsTab.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.Model.cs" Link="FeatureViews\VinDecoder\VinDecoder.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VinDecoder\VinDecoder.ViewModel.cs" Link="FeatureViews\VinDecoder\VinDecoder.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WatchFacePage\WatchFacePage.Model.cs" Link="FeatureViews\WatchFacePage\WatchFacePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WatchFacePage\WatchFacePage.Source.cs" Link="FeatureViews\WatchFacePage\WatchFacePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\WatchFacePage\WatchFacePage.ViewModel.cs" Link="FeatureViews\WatchFacePage\WatchFacePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.Model.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.Source.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\WebhookChannelsSection\WebhookChannelsSection.ViewModel.cs" Link="FeatureViews\WebhookChannelsSection\WebhookChannelsSection.ViewModel.cs" />

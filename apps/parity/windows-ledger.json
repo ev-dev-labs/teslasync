@@ -340,5 +340,14 @@
     "requiredCount": 27,
     "promptId": "p2-windows/W7/windows-page-diagnostics-AnomalyDashboardPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-diagnostics-AnomalyDashboardPage.log"
+  },
+  {
+    "unitId": "page:watch/WatchFace",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-watch-WatchFacePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-watch-WatchFacePage.log"
   }
 ]
