@@ -516,6 +516,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnomalyDashboardPage\AnomalyDashboardPage.Model.cs" Link="FeatureViews\AnomalyDashboardPage\AnomalyDashboardPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnomalyDashboardPage\AnomalyDashboardPage.Source.cs" Link="FeatureViews\AnomalyDashboardPage\AnomalyDashboardPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnomalyDashboardPage\AnomalyDashboardPage.ViewModel.cs" Link="FeatureViews\AnomalyDashboardPage\AnomalyDashboardPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Model.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Display.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Display.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DrivingDynamicsPage\DrivingDynamicsPage.Projection.cs" Link="FeatureViews\DrivingDynamicsPage\DrivingDynamicsPage.Projection.cs" />

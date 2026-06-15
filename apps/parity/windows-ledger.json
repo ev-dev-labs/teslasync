@@ -331,5 +331,14 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-admin-TeslaRegionPage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaRegionPage.log"
+  },
+  {
+    "unitId": "page:diagnostics/AnomalyDashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 27,
+    "requiredCount": 27,
+    "promptId": "p2-windows/W7/windows-page-diagnostics-AnomalyDashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-diagnostics-AnomalyDashboardPage.log"
   }
 ]
