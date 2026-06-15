@@ -197305,6 +197305,29 @@
         }
       }
     },
+    "route.teslaRegion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Region & API"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Region & API"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Region & API"
+          }
+        }
+      }
+    },
     "route.users": {
       "extractionState": "manual",
       "localizations": {

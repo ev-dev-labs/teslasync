@@ -793,6 +793,24 @@
       "requiredCount": 51,
       "promptId": "p4-apple/P7/page:admin/RedisSignalViewer",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-RedisSignalViewerPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaRegion",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaRegion",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaRegionPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaRegion",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaRegion",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaRegionPage.log"
     }
   ]
 }

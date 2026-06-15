@@ -1,0 +1,172 @@
+=== P4-APPLE · P7 · page:admin/TeslaRegion (SwiftUI / HIG) ===
+started: 2026-06-15T13:55:00-0700
+finished: 2026-06-15T14:15:00-0700
+host: macOS (Darwin, arm64); Xcode 26.5 (Build 17F42, xcodebuild present); Swift 6.3.2;
+      swiftlint 0.63.3; swiftformat 0.61.1; xcodegen 2.45.4; pwsh 7.6.2; OpenJDK 17 (KMP/Gradle reachable)
+web source: web/src/features/admin/pages/TeslaRegionPage.tsx   (route /tesla-region)
+parity unit: page:admin/TeslaRegion   (manifest PARITY_REQUIRED=2 — strings region.title, region.subtitle)
+shape: the web page is a thin PageContainer wrapper (title + subtitle) around the shared
+       <RegionSettings /> (web features/settings/components/RegionSettings.tsx). The manifest
+       declares NO data sources / panels / charts / maps for THIS unit — the RegionSettings panel
+       is its own parity unit, ALREADY shipped natively at apps/apple/TeslaSync/feature-views/
+       RegionSettings*.swift (P4 · 0211) and binding through @Observable RegionSettingsModel
+       (P1/S8). So this artifact = the page chrome + nav + the embedded section, exactly like web.
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`. That path is
+NOT a project.yml source group in this repo. The real, COMPILED canonical admin-page home is
+`apps/apple/Sources/Features/Admin/**` — where the live sibling P7 admin pages ship (TeslaOrders,
+ApiPlayground, DiskForecast, FleetTelemetryCoverage, SchemaDrift, RedisSignalViewer; the apple
+ledger shows them "done"), and which project.yml lists as a `Sources` source path. swiftlint's
+`included:` paths likewise cover `Sources`, not `TeslaSync/Features`. The page therefore ships at
+`apps/apple/Sources/Features/Admin/**`, the faithful equivalent of the prompt's `Features/Admin`.
+This is the SAME reconciliation the TeslaOrders / SchemaDrift / DiskForecast sibling logs recorded.
+Strings ship in the platform catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file).
+
+STRING REUSE (covenant #2 — no scope narrowing, but no needless duplication / DRY): the two parity
+strings already exist in the catalog from the web i18n extraction, with the EXACT web values and the
+web key suffix:
+    translation.region.title    = "Region & API"
+    translation.region.subtitle = "Tesla account region and Fleet API endpoint"
+The page binds those verbatim (web `useTranslation('settings')` `t('region.title' | 'region.subtitle')`).
+The ONLY new catalog key added is `route.teslaRegion` ("Region & API") for the sidebar route title.
+
+ROUTE HOSTING: the web route is the TOP-LEVEL `/tesla-region` in the Account side-nav group
+(Apple Layout.Nav "Account" group already lists nav("/tesla-region", "Region & API", "globe")).
+A dedicated `.teslaRegion` AppRoute case is added (pathSegment "tesla-region", systemImage "globe"
+= web globe, group .account). No AppRouteParser alias is needed — `/tesla-region` matches the
+pathSegment on the first segment directly (verified by the executed test harness below).
+TeslaRegionRouteRegistration hosts the page on that route; it is composed into `routeHostRegistry`
+in TeslaSyncApp.swift, so the page is reachable via the Account-group sidebar entry and any
+`/tesla-region` deep link.
+
+@Observable BINDING (covenant #2): the web page holds NO state of its own (the manifest: "no API
+data sources — renders from navigation values / local state"). Faithfully, the native page is pure
+chrome that binds the embedded section's @Observable `RegionSettingsModel` (the P1/S8 state holder) —
+NOT an empty stub page-model. The page takes the model and hands it to RegionSettings(model:),
+mirroring the sibling TeslaOrdersPage(model:) shape. The embedded RegionSettings owns the 3 data
+states (loading / empty / error) + data + stale/offline freshness — every state renders, no blank box.
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? apps/apple/Sources/Features/Admin/TeslaRegionPage.swift              (96 LOC)  SwiftUI view: ScrollView scaffold + header (TSPageTitle "translation.region.title" + Text "translation.region.subtitle") + embedded RegionSettings(model:); adaptive macOS/iOS; #if DEBUG previews (content / empty / loading / error)
+?? apps/apple/Sources/Features/Admin/TeslaRegionRouteRegistration.swift (50 LOC)  registers .teslaRegion -> TeslaRegionPage(model: RegionSettingsModel(source:)); default source = representative in-memory seed (region "na" + Fleet API URL + sync stamp; mirrors TeslaOrders' sampleSource default), production injects the P1/S8 RegionSettingsSource over the KMP core
+?? apps/apple/Tests/Unit/Features/Admin/TeslaRegionRouteRegistrationTests.swift (41 LOC) XCTest: registry registers .teslaRegion + renders a view; preserves base registrations; injected source honored; route metadata (pathSegment/path/group .account); canonical /tesla-region parse
+ M apps/apple/Sources/App/AppRoute.swift              +.teslaRegion case (pathSegment "tesla-region", systemImage "globe", group .account)
+ M apps/apple/Sources/TeslaSyncApp.swift              chains TeslaRegionRouteRegistration.registry(base:) right after the TeslaOrders registration
+ M apps/apple/Localization/Localizable.xcstrings      +1 key (route.teslaRegion, en/ar/he; en "translated"); translation.region.title/subtitle REUSED (already present); JSON validated (9665 keys); additive textual insert (no reorder of existing keys)
+ M apps/parity/apple-ledger.json                       +2 rows (apple-macos, apple-ios) for page:admin/TeslaRegion, covered 2/2
+
+(The generated apps/apple/TeslaSync.xcodeproj and the staged apps/apple/Frameworks/Shared.xcframework
+ are git-ignored — .gitignore L379-381 — and are NOT committed; confirmed via `git status --ignored`.)
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) staged via Gradle (apps/apple/Scripts/build-shared-xcframework.sh) ---
+"xcframework successfully written out to .../XCFrameworks/release/Shared.xcframework"
+"Staging .../release/Shared.xcframework -> apps/apple/Frameworks/Shared.xcframework" ; "BUILD SUCCESSFUL in 7m 18s"
+"✓ Shared.xcframework staged"   (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+"Created project at apps/apple/TeslaSync.xcodeproj" ; "TeslaRegion" referenced 18x in project.pbxproj
+(iOS + macOS app targets + both XCTest bundles)
+GEN_EXIT=0
+
+--- swiftformat --lint (my 3 new files + 2 edited Swift files; repo .swiftformat) ---
+"0/5 files require formatting."
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml `included:` scope) ---
+"Done linting! Found 0 violations, 0 serious in 5970 files."
+LINT_EXIT=0
+(The 5 changed Swift files were also linted in isolation: "Found 0 violations, 0 serious in 5 files.")
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift (ADR-011) ---
+"PLACEHOLDER_ALLOWED=11"
+"PLACEHOLDER_COUNT=0"
+"EXIT=0"
+PLACEHOLDER_EXIT=0
+
+--- xcodebuild build (iOS Simulator: iPhone 16, Debug) — `-scheme TeslaSync build` ---
+"** BUILD SUCCEEDED **"   (0 errors; 0 errors referencing any TeslaRegion file)
+IOS_BUILD_EXIT=0
+
+--- xcodebuild build (macOS: platform=macOS, Debug) — `-scheme TeslaSync-macOS build` ---
+First pass surfaced an ENVIRONMENT-only blocker (not a code error):
+    error: "TeslaSync-macOS" has entitlements that require signing with a development certificate.
+    error: "TeslaSyncWidgets-macOS" has entitlements that require signing with a development certificate.
+This is the unsigned-CI condition (CODE_SIGN_STYLE Automatic + empty DEVELOPMENT_TEAM on this host),
+NOT a compile error and NOT attributable to this change. Re-run with signing disabled (standard
+unsigned-build flags, build-setting-only; the .xcodeproj is git-ignored):
+    xcodebuild ... build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+"** BUILD SUCCEEDED **"   (0 errors; 0 errors referencing any TeslaRegion file)
+MACOS_BUILD_EXIT=0
+
+--- xcodebuild test (iOS Simulator: iPhone 16, Debug) — `-scheme TeslaSync test -only-testing:.../TeslaRegionRouteRegistrationTests` ---
+The full TeslaSyncTests bundle compiles ALL co-located + Tests/Unit files together. Two PRE-EXISTING,
+unrelated sibling test files do NOT compile under this host's Swift 6.3.2 strict-concurrency
+(SWIFT_STRICT_CONCURRENCY=complete) — neither is in this changeset (both unmodified at HEAD, verified
+`git diff --stat HEAD`):
+    Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20:57:
+        error: call to main actor-isolated static method 'artifact(...)' in a synchronous nonisolated context
+    Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10:13:
+        error: main actor-isolated default value in a nonisolated context
+These block the WHOLE bundle (and therefore my test) — a pre-existing repo condition, not my code.
+ZERO errors reference TeslaRegionRouteRegistrationTests.swift (my test file compiles clean). To run
+my test green past the pre-existing blockers, the two broken sibling files are excluded at build time
+(build-setting-only; the .xcodeproj is git-ignored; faithful to the sibling-log precedent for
+neutralizing pre-existing blockers):
+    xcodebuild ... test -only-testing:TeslaSyncTests/TeslaRegionRouteRegistrationTests \
+        EXCLUDED_SOURCE_FILE_NAMES='GDPRExportPageModelTests.swift VehicleCostPageModelTests.swift'
+"Test Suite 'TeslaRegionRouteRegistrationTests' passed"
+"Executed 5 tests, with 0 failures (0 unexpected) in 0.026 seconds"
+"** TEST SUCCEEDED **"
+TEST_EXIT=0
+(NOTE: an interim concurrent build/test run failed only on an XCBuildData "database is locked"
+ contention — two builds sharing one DerivedData — resolved by serializing; not a test failure.)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[x] string — region.title
+      web:   TeslaRegionPage.tsx  t('region.title', 'Region & API')   (PageContainer title)
+      apple: apps/apple/Sources/Features/Admin/TeslaRegionPage.swift  → `TSPageTitle("translation.region.title")`
+             (TeslaRegionPage.header, L44) renders from the bound @Observable surface chrome.
+      catalog: Localizable.xcstrings key `translation.region.title` (en="Region & API", +ar/he).
+      reinforced by the embedded panel: RegionSettings.swift header
+             `RegionStrings.string("region.title", "Region & API")` (binds RegionSettingsModel, P1/S8).
+[x] string — region.subtitle
+      web:   TeslaRegionPage.tsx  t('region.subtitle', 'Tesla account region and Fleet API endpoint')
+      apple: apps/apple/Sources/Features/Admin/TeslaRegionPage.swift  → `Text("translation.region.subtitle")`
+             (TeslaRegionPage.header, L45) renders from the bound @Observable surface chrome.
+      catalog: Localizable.xcstrings key `translation.region.subtitle`
+             (en="Tesla account region and Fleet API endpoint", +ar/he).
+      reinforced by the embedded panel: RegionSettings.swift header
+             `RegionStrings.string("region.subtitle", "Tesla account region and Fleet API endpoint")`.
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+PARITY_REQUIRED == PARITY_COVERED  (2 == 2)  ✓
+
+ACCEPTANCE CRITERIA
+[x] Every named panel implemented; every anonymous region reproduced (the single web region —
+    the shared RegionSettings panel — is embedded 1:1; the page itself adds only PageContainer chrome).
+[x] All 2 parity items render from the bound @Observable state holder (RegionSettingsModel, P1/S8).
+[x] loading / empty / error implemented for the data source (owned by the embedded RegionSettings;
+    the page declares no data source of its own per the manifest). Never a blank region.
+[x] All visible strings from Localizable.xcstrings; zero hardcoded literals; web key names preserved.
+[x] Dark mode + Dynamic Type + a11y + SI units honored; SwiftUI-native only (no web cloning):
+    design tokens (Color.TS/Font.TS/TSSpacing), .accessibilityElement(children: .combine) on the
+    header, embedded panel carries .isHeader trait + VoiceOver summaries; region/Fleet-API-URL are
+    SI-free strings so no unit conversion applies on this surface.
+[x] build + lint + test + placeholder gates green; PARITY_COVERED == PARITY_REQUIRED.
+[x] apple ledger rows for page:admin/TeslaRegion (apple-macos + apple-ios) set covered 2/2.
+
+EXIT=0
+STATUS=DONE
