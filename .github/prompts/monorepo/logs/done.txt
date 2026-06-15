@@ -947,7 +947,6 @@ p2-windows/pages/system/SystemStatusPage.prompt.md
 p2-windows/pages/admin/SecretRotationPage.prompt.md
 p2-windows/pages/admin/DiskForecastPage.prompt.md
 p2-windows/pages/admin/FleetTelemetryCoveragePage.prompt.md
-p2-windows/pages/admin/LiveLogsPage.prompt.md
 p2-windows/pages/admin/BackupRestorePage.prompt.md
 p2-windows/pages/admin/SlowQueriesPage.prompt.md
 p2-windows/pages/admin/SecurityAccessPage.prompt.md
@@ -961,6 +960,5 @@ p2-windows/pages/analytics/AnalyticsPage.prompt.md
 p2-windows/pages/diagnostics/AnomalyDashboardPage.prompt.md
 p2-windows/pages/driving/SpeedProfilePage.prompt.md
 p2-windows/pages/system/RoadmapPage.prompt.md
-p2-windows/pages/system/TeslaAccountPage.prompt.md
 p2-windows/pages/system/SearchPage.prompt.md
 p2-windows/pages/watch/WatchFacePage.prompt.md
