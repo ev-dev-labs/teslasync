@@ -14,6 +14,7 @@ import io.teslasync.android.analytics.statistics.StatisticsPageHost
 import io.teslasync.android.analytics.yearreview.YearReviewPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.battery.batteryhealth.BatteryHealthPageHost
+import io.teslasync.android.battery.energyproducts.EnergyProductsPageHost
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
@@ -76,6 +77,8 @@ class TeslaSyncApplication : Application() {
         YearReviewPageHost.register()
         // Register the native battery-health screen for the /battery route (P3/A7). Idempotent.
         BatteryHealthPageHost.register()
+        // Register the native energy-products screen for the /energy-products route (P3/A7). Idempotent.
+        EnergyProductsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
