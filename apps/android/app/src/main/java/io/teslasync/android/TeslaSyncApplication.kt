@@ -32,6 +32,7 @@ import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.settings.privacy.PrivacyPageHost
 import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
+import io.teslasync.android.system.commands.CommandsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -121,6 +122,8 @@ class TeslaSyncApplication : Application() {
         SqlPlaygroundPageHost.register()
         // Register the native public shared-drive report screen for the /s/{token} route (P3/A7). Idempotent.
         SharedDrivePageHost.register()
+        // Register the native vehicle-commands control-center screen for the /commands route (P3/A7). Idempotent.
+        CommandsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
