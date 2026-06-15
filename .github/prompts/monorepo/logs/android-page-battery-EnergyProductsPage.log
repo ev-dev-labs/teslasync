@@ -1,0 +1,124 @@
+================================================================================
+p3-android  A7  page:battery/EnergyProducts  (Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/EnergyProductsPage.tsx
+================================================================================
+artifact      : page:battery/EnergyProducts   (kind=page, web route /energy-products)
+web source    : web/src/features/battery/pages/EnergyProductsPage.tsx
+output dir    : apps/android/app/src/main/kotlin/com/teslasync/battery/
+package       : io.teslasync.android.battery.energyproducts
+                (mandated surface dir com/teslasync/battery diverges from the io.teslasync.android.*
+                 package -> @file:Suppress("InvalidPackageDeclaration"), as the sibling BatteryHealthPage)
+
+data sources  : all four web hooks bound through the shared S8 EnergyStore (reads + refresh mutations
+                already exposed) + SettingsStore (locale). The view performs NO HTTP (ADR-002/ADR-004).
+  - useTeslaEnergySites          GET  /tesla/energy-sites                     -> EnergyStore.teslaEnergySites()
+  - useTeslaEnergySiteInfo       GET  /tesla/energy-sites/{id}/site-info      -> EnergyStore.teslaEnergySiteInfo(id)
+  - useRefreshTeslaEnergySites   POST /tesla/energy-sites/refresh             -> EnergyStore.refreshTeslaEnergySites()
+  - useRefreshTeslaEnergySiteInfo POST /tesla/energy-sites/{id}/site-info/refresh -> EnergyStore.refreshTeslaEnergySiteInfo(id)
+  web hook names kept verbatim at the Kotlin seam: EnergyProductsPageSource.energySites /
+  energySiteInfo / refreshEnergySites / refreshEnergySiteInfo (EnergyProductsPageSource.kt L37-58).
+
+files created :
+  EnergyProductsPageModel.kt      framework-free: Registration, EnergySite/EnergySiteInfo/EnergyComponentFlag/
+                                  EnergyProductsSummary, parseEnergySites/parseSiteInfo, EnergyDisplayPrefs
+                                  (W->kW / Wh->kWh scaling + locale number/date fmt), operationModeLabel/
+                                  resourceLabel, recordEnergyProductsOpened, mapData. JVM-unit-testable.
+  EnergyProductsPageSource.kt     seam + energyProductsPageSourceOf(energyStore, settingsStore).
+  EnergyProductsPageViewModel.kt  BaseFeedViewModel: sites StateFlow<UiState<List<EnergySite>>>, summary,
+                                  memoized per-site siteInfo(id) StateFlow<UiState<EnergySiteInfo?>>, displayPrefs,
+                                  refreshSites/refreshSiteInfo/manageTouPlan/retry/recordViewOpened.
+  EnergyProductsPageIcons.kt      EnergyGlyphs: reuse Battery/Bolt/Shield/Gauge/Info/Clock/Refresh from shared
+                                  catalogs; author Sun/Grid/CloudLightning/Activity/Settings/Cpu locally.
+  EnergyProductsPage.kt           stateless Compose render layer: chrome + always-on summary grid + catalog-gated
+                                  body (skeleton/empty/cards) + per-site SiteConfigSection + RadialGauge.
+  EnergyProductsPageHost.kt       PageHosts.register("energyProducts") for the /energy-products destination.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=51   (13 panels + 1 chart + 4 states + 33 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  Powerwalls         -> EnergyProductsPage.kt:706 SiteInfoStatsRow StatCard (battery_count, translation_energy_siteInfo_batteryCount)
+[COVERED] panel  Rated-Power        -> EnergyProductsPage.kt:712 SiteInfoStatsRow StatCard (prefs.power nameplate_power W->kW, translation_energy_siteInfo_ratedPower)
+[COVERED] panel  Rated-Energy       -> EnergyProductsPage.kt:720 SiteInfoStatsRow StatCard (prefs.energy nameplate_energy Wh->kWh, translation_energy_siteInfo_ratedEnergy)
+[COVERED] panel  GlassPanel4        -> EnergyProductsPage.kt:366 EnergySiteCard GlassPanel (per-site card; web per-site <GlassPanel> L263)
+[COVERED] panel  Charge             -> EnergyProductsPage.kt:433 SiteStatsRow StatCard (prefs.chargePercent percentage_charged, translation_energy_products_charge)
+[COVERED] panel  Capacity           -> EnergyProductsPage.kt:439 SiteStatsRow StatCard (prefs.energy total_pack_energy, translation_energy_products_capacity)
+[COVERED] panel  Type               -> EnergyProductsPage.kt:447 SiteStatsRow StatCard (resourceLabel, translation_energy_products_type)
+[COVERED] panel  Energy-Sites       -> EnergyProductsPage.kt:281 SummaryStatsGrid StatCard (summary.totalSites, translation_energy_products_totalSites)
+[COVERED] panel  With-Solar         -> EnergyProductsPage.kt:287 SummaryStatsGrid StatCard (summary.withSolar, translation_energy_products_withSolar)
+[COVERED] panel  With-Battery       -> EnergyProductsPage.kt:295 SummaryStatsGrid StatCard (summary.withBattery, translation_energy_products_withBattery)
+[COVERED] panel  Backup-Capable     -> EnergyProductsPage.kt:301 SummaryStatsGrid StatCard (summary.backupCapable, translation_energy_products_backupCapable)
+[COVERED] panel  GlassPanel12       -> EnergyProductsPage.kt:313 EnergyProductsSkeleton GlassPanel (loading skeleton cards; web loading <GlassPanel> L389)
+[COVERED] panel  GlassPanel13       -> EnergyProductsPage.kt:327 EnergyProductsEmptyPanel GlassPanel (empty state; web empty <GlassPanel> L405)
+[COVERED] chart  RadialGauge        -> EnergyProductsPage.kt:658 SiteConfigOverview RadialGauge (backup_reserve_percent, max=100; web <RadialGauge value max={100} /> L137)
+[COVERED] state  loading            -> EnergyProductsPage.kt:202 EnergyProductsPageContent when sites.isLoading -> EnergyProductsSkeleton() (UiPhase.Loading)
+[COVERED] state  empty              -> EnergyProductsPage.kt:203 EnergyProductsPageContent when sites.isEmpty -> EnergyProductsEmptyPanel() (UiPhase.Empty)
+[COVERED] state  error              -> EnergyProductsPage.kt:196 EnergyProductsPageContent if sites.isError -> EnergyProductsError(onRetry) (UiPhase.Error + retry)
+[COVERED] state  success            -> EnergyProductsPage.kt:204 EnergyProductsPageContent else -> SiteCardsList(sites.data) (UiPhase.Content); per-site SiteConfigSection L548 also renders loading/content/empty
+[COVERED] string energy.products.backup        -> EnergyProductsPage.kt:480 translation_energy_products_backup
+[COVERED] string energy.products.backupCapable -> EnergyProductsPage.kt:301 translation_energy_products_backupCapable
+[COVERED] string energy.products.battery       -> EnergyProductsPage.kt:470 translation_energy_products_battery
+[COVERED] string energy.products.capacity      -> EnergyProductsPage.kt:439 translation_energy_products_capacity
+[COVERED] string energy.products.charge        -> EnergyProductsPage.kt:433 translation_energy_products_charge
+[COVERED] string energy.products.empty         -> EnergyProductsPage.kt:330 translation_energy_products_empty (ADDED to res/values/strings.xml; web inline-default only)
+[COVERED] string energy.products.grid          -> EnergyProductsPage.kt:475 translation_energy_products_grid
+[COVERED] string energy.products.lastFetched   -> EnergyProductsPage.kt:387 translation_energy_products_lastFetched
+[COVERED] string energy.products.refresh       -> EnergyProductsPage.kt:248 translation_energy_products_refresh
+[COVERED] string energy.products.solar         -> EnergyProductsPage.kt:465 translation_energy_products_solar
+[COVERED] string energy.products.stormActive   -> EnergyProductsPage.kt:491 translation_energy_products_stormActive
+[COVERED] string energy.products.stormWatch    -> EnergyProductsPage.kt:485 translation_energy_products_stormWatch
+[COVERED] string energy.products.subtitle      -> EnergyProductsPage.kt:233 translation_energy_products_subtitle
+[COVERED] string energy.products.title         -> EnergyProductsPage.kt:231 translation_energy_products_title
+[COVERED] string energy.products.totalSites    -> EnergyProductsPage.kt:281 translation_energy_products_totalSites
+[COVERED] string energy.products.type          -> EnergyProductsPage.kt:447 translation_energy_products_type
+[COVERED] string energy.products.unnamed       -> EnergyProductsPage.kt:414 translation_energy_products_unnamed
+[COVERED] string energy.products.withBattery   -> EnergyProductsPage.kt:295 translation_energy_products_withBattery
+[COVERED] string energy.products.withSolar     -> EnergyProductsPage.kt:287 translation_energy_products_withSolar
+[COVERED] string energy.siteInfo.backupReserve -> EnergyProductsPage.kt:650 translation_energy_siteInfo_backupReserve
+[COVERED] string energy.siteInfo.batteryCount  -> EnergyProductsPage.kt:706 translation_energy_siteInfo_batteryCount
+[COVERED] string energy.siteInfo.empty         -> EnergyProductsPage.kt:623 translation_energy_siteInfo_empty (ADDED to res/values/strings.xml; web inline-default only)
+[COVERED] string energy.siteInfo.firmware      -> EnergyProductsPage.kt:741 translation_energy_siteInfo_firmware
+[COVERED] string energy.siteInfo.lastFetched   -> EnergyProductsPage.kt:613 translation_energy_siteInfo_lastFetched
+[COVERED] string energy.siteInfo.operationMode -> EnergyProductsPage.kt:644 translation_energy_siteInfo_operationMode
+[COVERED] string energy.siteInfo.ratedEnergy   -> EnergyProductsPage.kt:720 translation_energy_siteInfo_ratedEnergy
+[COVERED] string energy.siteInfo.ratedPower    -> EnergyProductsPage.kt:712 translation_energy_siteInfo_ratedPower
+[COVERED] string energy.siteInfo.refresh       -> EnergyProductsPage.kt:571 translation_energy_siteInfo_refresh
+[COVERED] string energy.siteInfo.title         -> EnergyProductsPage.kt:568 translation_energy_siteInfo_title
+[COVERED] string energy.tou.editPlan           -> EnergyProductsPage.kt:772 translation_energy_tou_editPlan (TOU Update button aria via semantics contentDescription L805)
+[COVERED] string energy.tou.noPlan             -> EnergyProductsPage.kt:798 translation_energy_tou_noPlan
+[COVERED] string energy.tou.sectionTitle       -> EnergyProductsPage.kt:796 translation_energy_tou_sectionTitle
+[COVERED] string energy.tou.updateButton       -> EnergyProductsPage.kt:801 translation_energy_tou_updateButton
+--------------------------------------------------------------------------------
+PARITY_COVERED=51
+================================================================================
+
+panel map    : the 13 manifest panels = 10 web <StatCard> tiles (named) + the 3 web <GlassPanel> usages
+               (anonymous -> GlassPanel4 per-site card L263, GlassPanel12 loading L389, GlassPanel13 empty L405).
+               All 10 StatCards always render (em-dash when a field is absent) -> no hidden panels (ADR-011 #6).
+chart        : single RadialGauge (the A3 native Compose-canvas wrapper, no webview) swept to backup_reserve_percent.
+states       : the catalog feed drives loading/empty/error/success; each per-site SiteConfigSection additionally
+               renders its own loading(skeleton)/content/empty(siteInfo.empty) surface (web nested SiteInfoSection).
+units (SI)   : nameplate_power(W)->kW, nameplate_energy/total_pack_energy(Wh)->kWh scaled only at the render
+               boundary via EnergyDisplayPrefs.power/energy (Phase-48 SI-canonical / unit-conversion.instructions).
+i18n         : every visible literal via stringResource (ADR-014); web key names kept. 31 keys already in the
+               generated res/values catalog; 2 keys (energy.products.empty, energy.siteInfo.empty) were web
+               inline-defaults only (absent from web/src/i18n/*.json) -> ADDED to res/values, res/values-ar and
+               res/values-he strings.xml (English fallback for ar/he, matching the generator's ships-every-locale
+               convention + the sibling BatteryHealthPage precedent; web renders the English inline default for all
+               locales too). lint MissingTranslation/ExtraTranslation disabled for the generated catalog.
+a11y         : Compose semantics content descriptions on the RadialGauge (component), the TOU Update button
+               (energy.tou.editPlan), and StatCards; >=48dp Material 3 targets; dynamic-color + dark theme via
+               MaterialTheme tokens; no hardcoded colors/typography.
+nav          : Destinations 'energyProducts' -> /energy-products pre-existing (Destinations.kt L84, count unchanged);
+               host wired via PageHosts.register("energyProducts") in TeslaSyncApplication.onCreate; deep link
+               auto-registered by the NavHost. DataContainer untouched (EnergyStore/SettingsStore already wired).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 3m 07s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 12m 14s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 38s
+parity       : PARITY_COVERED(51) == PARITY_REQUIRED(51)
+[PASS] all android triad gates green; parity 51/51; android ledger row page:battery/EnergyProducts status=done.
+EXIT=0
+STATUS=DONE

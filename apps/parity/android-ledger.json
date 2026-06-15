@@ -124,5 +124,14 @@
     "requiredCount": 147,
     "promptId": "p3-android/pages/battery/BatteryHealthPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-BatteryHealthPage.log"
+  },
+  {
+    "unitId": "page:battery/EnergyProducts",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p3-android/pages/battery/EnergyProductsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-EnergyProductsPage.log"
   }
 ]

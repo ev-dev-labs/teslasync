@@ -3449,6 +3449,7 @@
   <string name="translation_energy_products_battery">Battery</string>
   <string name="translation_energy_products_capacity">Capacity</string>
   <string name="translation_energy_products_charge">Charge</string>
+  <string name="translation_energy_products_empty">No energy products found. Click \"Refresh from Tesla\" to discover your Powerwalls and Solar installations.</string>
   <string name="translation_energy_products_grid">Grid</string>
   <string name="translation_energy_products_lastFetched">Last fetched</string>
   <string name="translation_energy_products_refresh">Refresh from Tesla</string>
@@ -3466,6 +3467,7 @@
   <string name="translation_energy_sessions_title">Recent Charging Sessions</string>
   <string name="translation_energy_siteInfo_backupReserve">Backup Reserve</string>
   <string name="translation_energy_siteInfo_batteryCount">Powerwalls</string>
+  <string name="translation_energy_siteInfo_empty">No site configuration loaded yet. Click refresh to fetch from Tesla.</string>
   <string name="translation_energy_siteInfo_firmware">Firmware</string>
   <string name="translation_energy_siteInfo_lastFetched">Site info fetched</string>
   <string name="translation_energy_siteInfo_operationMode">Operation Mode</string>
