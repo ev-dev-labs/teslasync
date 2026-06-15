@@ -1256,6 +1256,37 @@ public sealed partial class ShellWindow : Window
                 new FeatureViews.Vehicles.VehicleDetailPageClientFeed(_data.Api),
                 _data.Localizer,
                 ParseSessionId(_viewModel.Current.Param("id"))));
+
+        // ── Batch 6: remaining feeds incl. pages with extra constructor deps (Empty/Noop/real source impls). ─
+        _viewModel.PageFactory.Register("Onboarding", () =>
+            new FeatureViews.Onboarding.OnboardingPage(
+                new FeatureViews.Onboarding.OnboardingStatusClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Explore", () =>
+            new FeatureViews.Explore.ExplorePage(
+                new FeatureViews.Explore.ExploreClientFeed(_data.Api),
+                _data.Localizer,
+                new FeatureViews.Explore.StaticExploreRecentSource()));
+
+        _viewModel.PageFactory.Register("PowerFlowDashboard", () =>
+            new FeatureViews.Battery.PowerFlowDashboardPage(
+                new FeatureViews.Battery.PowerFlowClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("WeeklyDigest", () =>
+            new FeatureViews.Analytics.WeeklyDigestPage(
+                new FeatureViews.Analytics.WeeklyDigestClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("RbacMatrix", () =>
+            new FeatureViews.Admin.RbacMatrixPage(
+                new FeatureViews.Admin.RbacMatrixClientFeed(_data.Api),
+                new FeatureViews.Admin.RbacUpsertClientService(_data.Api),
+                _data.Localizer));
+
+        _viewModel.PageFactory.Register("LiveSignalInspector", () =>
+            new FeatureViews.Admin.LiveSignalInspectorPage(
+                new FeatureViews.Admin.LiveSignalInspectorClientFeed(_data.Api),
+                FeatureViews.Admin.EmptyLiveSignalsTableSource.Instance,
+                _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
