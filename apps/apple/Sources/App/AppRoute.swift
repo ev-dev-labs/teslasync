@@ -25,7 +25,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// routes. Each carries its canonical path, title, icon, and sidebar group; one enum
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
+    case dashboard, vehicles, charging, powershare, trips, energy, driving, analytics, maps
     case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
@@ -76,6 +76,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .dashboard: "square.grid.2x2.fill"
         case .vehicles: "car.2.fill"
         case .charging: "bolt.fill"
+        case .powershare: "bolt.house.fill"
         case .trips: "map.fill"
         case .energy: "battery.100"
         case .batteryCells: "square.grid.3x3.fill"
@@ -120,7 +121,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var group: AppRouteGroup {
         switch self {
         case .dashboard, .explore, .search: .overview
-        case .vehicles, .charging, .trips, .driving, .vehicleSystems, .maps: .vehicle
+        case .vehicles, .charging, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
