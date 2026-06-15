@@ -1,0 +1,120 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/YearReview  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/YearReviewPage.tsx
+promptId: p3-android/pages/analytics/YearReviewPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9
+Gradle      : 8.14.5 wrapper; app module Gradle path = :android (settings.gradle.kts include(":android"); projectDir = file("app")),
+              shared KMP core consumed via composite build :shared:core.
+SDK present => gate executed (NOT BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:` (sibling
+              analytics-page logs), so invocations below use `:android:`.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPage.kt           (@Composable screen: YearReviewPage + YearReviewPageContent + YearReviewDeck + slide dispatch + story chrome)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<JsonElement>> + vehicleOptions + selectedVehicleId + select())
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPageSource.kt     (S8 data seam over VehiclesStore + AnalyticsStore + SettingsStore; + SummarySlide sub-seam)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPageModel.kt      (framework-free: vehicle options, no-data gate hasYearReviewData, yearOf, comparisonsFrom, per-slide decoders)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPageIcons.kt      (3 authored lucide glyphs: Close / ChevronLeft / ChevronRight)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/YearReviewPageHost.kt       (PageHosts.register(yearReview){ reads :year route arg -> YearReviewRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt           (NavHost wiring: + YearReviewPageHost.register())
+apps/parity/android-ledger.json                                                       (ledger row page:analytics/YearReview, 12/12)
+.github/prompts/monorepo/logs/android-page-analytics-YearReviewPage.log               (this log)
+
+Strings: all 9 page keys ALREADY present in res/values/strings.xml as translation_yearReview_{close,goBack,loading,
+         next,noData,noDataHint,pageTitle,prev,selectVehicle}; no catalog edit needed.
+Nav    : Destinations 'yearReview' -> /year-review/:year pre-existing (Destinations.kt L97 standalone, arg "year"; count unchanged);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris). DataContainer
+         already exposes vehiclesStore + analyticsStore + settingsStore (no container edit needed).
+Data   : useVehicles -> VehiclesStore.vehicles() (scope picker options + auto-selected default, web vehicleList[0].id);
+         useYearReview -> AnalyticsStore.yearReview(year, vehicleId) (web enabled: !!vehicleId). JsonElement decode happens
+         per-slide in the child feature-views (each @Serializable, snake_case @SerialName) via YearReviewPageModel decoders.
+Slides : the 12-slide deck is composed via the shared SlideRenderer feature-view + its slideContent slot mapping each
+         SlideContent -> the concrete child feature-view (Title/StatHero/StatChart/DriveHighlight/ChargingBreakdown/Savings/
+         Environment/Patterns/Summary). The Comparisons slide (no child feature-view in repo) is drawn by the page-local
+         ComparisonsSlideBody from comparisonsFrom(data) — never blank (ADR-011). SummarySlide binds the shared S8 stores
+         via summarySlideSource and the page's selected vehicle + year.
+SI     : every distance/energy/efficiency value stays SI on the wire; conversion to the user's units happens ONLY inside the
+         child slide surfaces (their own useUnits ports). The page routes the raw SI document; nothing non-SI stored/computed.
+Divergence (Honesty #9): the web page renders an optional <AIYearReviewNarration> overlay below the slide counter. That is a
+         SEPARATE shared surface (its own P3 prompt); per its own source header the production data source (AI-mode feature gate +
+         the /ai/.../narrate SSE stream client) is an out-of-scope, not-yet-shipped shared-core AI-streaming bundle that the app
+         DataContainer does not expose, and wiring it is outside this page's allowed-files scope. It renders nothing in baseline
+         off-mode and is not one of this unit's parity items, so it is omitted here and documented (not silently dropped).
+States : web `isLoading || !data` -> the loading screen folds the UiState Loading AND Error phases (Error has no cached data, web
+         shows the loading screen on a hard error too). Empty = the web no-data gate. Content = the slide deck.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 3m 02s (compileDebugKotlin + dex + packageDebug executed)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 10m 25s (lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 28s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=12
+--------------------------------------------------------------------------------
+# data states (3 required) — bound to YearReviewPageViewModel.state : StateFlow<UiState<JsonElement>>
+[COVERED] state  loading  -> YearReviewPage.kt:209 else -> YearReviewLoading() (L216 fun; L218 Spinner(label=translation_yearReview_loading)); UiState Loading (and Error, web `isLoading || !data`) via asUiState; null vehicle -> PENDING_FEED Loading (YearReviewPageViewModel.kt)
+[COVERED] state  empty    -> YearReviewPage.kt:198 state.isEmpty -> YearReviewNoData(year=yearOf(data,year), onGoBack=onClose) (L227 fun); UiPhase.Empty via asUiState(isEmpty={ !hasYearReviewData(it) }) — web `total_drives === 0 && total_charge_sessions === 0`
+[COVERED] state  success  -> YearReviewPage.kt:199 state.isContent && data != null -> YearReviewDeck(...) (L269 fun) renders the 12-slide deck via SlideRenderer + slideContent dispatch (YearReviewSlideBody L364) + SummarySlide + ComparisonsSlideBody
+
+# strings (9) — every visible literal via stringResource(R.string.translation_yearReview_*); web key names preserved
+[COVERED] string yearReview.close         -> YearReviewPage.kt:341 close IconButton contentDescription (translation_yearReview_close)
+[COVERED] string yearReview.goBack        -> YearReviewPage.kt:253 no-data Button label (translation_yearReview_goBack)
+[COVERED] string yearReview.loading       -> YearReviewPage.kt:218 loading-screen Spinner label (translation_yearReview_loading)
+[COVERED] string yearReview.next          -> YearReviewPage.kt:331 next-arrow contentDescription + :488 right tap-zone onClickLabel (translation_yearReview_next)
+[COVERED] string yearReview.noData        -> YearReviewPage.kt:239 no-data title, arg year (translation_yearReview_noData)
+[COVERED] string yearReview.noDataHint    -> YearReviewPage.kt:246 no-data hint (translation_yearReview_noDataHint)
+[COVERED] string yearReview.pageTitle     -> YearReviewPage.kt:188 root semantics paneTitle, arg year (translation_yearReview_pageTitle)
+[COVERED] string yearReview.prev          -> YearReviewPage.kt:321 prev-arrow contentDescription + :487 left tap-zone onClickLabel (translation_yearReview_prev)
+[COVERED] string yearReview.selectVehicle -> YearReviewPage.kt:526 vehicle-picker Select contentDescription (translation_yearReview_selectVehicle)
+
+PARITY_COVERED=12
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : YearReviewPageViewModel binds shared S8 VehiclesStore.vehicles() (web useVehicles) + AnalyticsStore.yearReview(year,
+               vehicleId) (web useYearReview) via yearReviewPageSourceOf(); selected vehicle = explicit pick or first enrolled
+               (web URL vehicle_id / auto-select). No HTTP in the view.
+panels       : no named panels in the manifest for this unit; the page is a full-screen 12-slide story deck composed from the shared
+               SlideRenderer + the concrete child slide feature-views, with the Comparisons slide drawn page-local (no child
+               feature-view exists) and SummarySlide self-contained over the shared stores.
+charts/maps  : none declared for this unit (the bar/pie charts live inside the StatChart/ChargingBreakdown child feature-views, out
+               of scope here); no webview.
+si/units     : SI read off the wire; converted only at the display boundary inside the child slide surfaces (their useUnits ports);
+               the page routes the raw SI document. No miles/mph/kWh stored or computed at the page level.
+a11y/theme   : story chrome icons carry contentDescription (close/prev/next); tap zones carry onClickLabel (prev/next); the surface
+               carries an accessible paneTitle (web usePageTitle); the Select picker carries a contentDescription. Compose-native
+               (no webview). The fixed-black immersive backdrop + the slide gradients are decorative story chrome (the SlideRenderer
+               design note: slide bg has no design-token equivalent); child slide bodies use the A2 MaterialTheme tokens.
+nav          : Destinations 'yearReview' -> /year-review/:year (pre-existing standalone) wired to YearReviewRoute() via
+               PageHosts.register; the :year route arg is read in the host (web useParams().year); deep link auto-registered.
+divergence   : optional AIYearReviewNarration overlay omitted — separate surface, out-of-scope AI-streaming source not exposed by
+               DataContainer, renders nothing in baseline off-mode, not a parity item (documented above, Honesty #9).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(12) == PARITY_REQUIRED(12)
+[PASS] all android triad gates green; parity 12/12; android ledger row page:analytics/YearReview status=done.
+EXIT=0
+STATUS=DONE

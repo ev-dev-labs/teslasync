@@ -11,6 +11,7 @@ import io.teslasync.android.admin.schemadrift.SchemaDriftPageHost
 import io.teslasync.android.admin.slowqueries.SlowQueriesPageHost
 import io.teslasync.android.analytics.lifetimestats.LifetimeStatsPageHost
 import io.teslasync.android.analytics.statistics.StatisticsPageHost
+import io.teslasync.android.analytics.yearreview.YearReviewPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -70,6 +71,8 @@ class TeslaSyncApplication : Application() {
         LifetimeStatsPageHost.register()
         // Register the native statistics analytics screen for the /statistics route (P3/A7). Idempotent.
         StatisticsPageHost.register()
+        // Register the native year-in-review story screen for the /year-review/:year route (P3/A7). Idempotent.
+        YearReviewPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
