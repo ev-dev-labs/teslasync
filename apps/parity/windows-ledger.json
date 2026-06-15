@@ -63,6 +63,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-SchemaDriftPage.log"
   },
   {
+    "unitId": "page:admin/DiskForecast",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p2-windows/W7/windows-page-admin-DiskForecastPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-DiskForecastPage.log"
+  },
+  {
     "unitId": "page:admin/VehicleCost",
     "platform": "windows",
     "status": "done",

@@ -233,6 +233,11 @@ public sealed partial class ShellWindow : Window
         // Admin / Schema drift page (P2/W7) — parity port of web SchemaDriftPage at route /admin/schema-drift.
         _viewModel.PageFactory.Register("SchemaDrift", static () => new FeatureViews.Admin.SchemaDriftPage());
 
+        // Admin / Disk Forecast page (P2/W7) — parity port of web DiskForecastPage at route /admin/disk-forecast.
+        // RouteTable already maps Page("DiskForecast","admin/disk-forecast",RouteGroup.AdminDevTools). The
+        // per-hypertable forecast (web useDiskForecast) drives the fleet-totals stat grid + the hypertables table.
+        _viewModel.PageFactory.Register("DiskForecast", static () => new FeatureViews.Admin.DiskForecastPage());
+
         // Admin / DLQ Inspector page (P2/W7) — parity port of web DLQInspectorPage at route /admin/dlq.
         _viewModel.PageFactory.Register("DLQInspector", static () => new FeatureViews.Admin.DLQInspectorPage());
 
