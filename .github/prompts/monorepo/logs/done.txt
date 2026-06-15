@@ -961,3 +961,4 @@ p2-windows/pages/analytics/AnalyticsPage.prompt.md
 p2-windows/pages/diagnostics/AnomalyDashboardPage.prompt.md
 p2-windows/pages/driving/SpeedProfilePage.prompt.md
 p2-windows/pages/system/RoadmapPage.prompt.md
+p2-windows/pages/system/TeslaAccountPage.prompt.md
