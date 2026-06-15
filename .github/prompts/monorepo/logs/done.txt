@@ -776,3 +776,6 @@ p4-apple/pages/admin/SecretRotationPage.prompt.md
 p4-apple/pages/admin/SystemPage.prompt.md
 p4-apple/pages/admin/VehicleCostPage.prompt.md
 p4-apple/pages/analytics/LifetimeStatsPage.prompt.md
+p4-apple/pages/admin/GasPriceAutoPollPage.prompt.md
+p4-apple/pages/admin/TeslaFeatureFlagsPage.prompt.md
+p4-apple/pages/analytics/MileagePage.prompt.md
