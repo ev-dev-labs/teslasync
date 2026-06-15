@@ -10,6 +10,7 @@ public enum AppRouteParser {
         "/battery/health": .energy,
         "/charging/curves": .charging,
         "/performance": .driving,
+        "/drive-score": .driving,
         "/statistics": .analytics,
         "/analytics/tco": .tco,
         "/tco": .tco,
