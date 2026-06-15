@@ -14,6 +14,7 @@ import io.teslasync.shared.core.cache.SystemClock
 import io.teslasync.shared.core.data.repo.HttpAdminRepository
 import io.teslasync.shared.core.data.repo.HttpAnalyticsRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
+import io.teslasync.shared.core.data.repo.HttpEnergyRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
 import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
 import io.teslasync.shared.core.data.repo.HttpOperatorConfidenceRepository
@@ -26,6 +27,7 @@ import io.teslasync.shared.core.net.ApiHttpClient
 import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.analytics.AnalyticsStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
+import io.teslasync.shared.core.presentation.energy.EnergyStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
 import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
 import io.teslasync.shared.core.presentation.operatorconfidence.OperatorConfidenceStore
@@ -60,8 +62,8 @@ import kotlinx.coroutines.flow.stateIn
  * @param clock wall-clock seam for cache freshness; injectable for tests.
  */
 class DataContainer(
-    api: ApiHttpClient,
-    cacheStore: CacheStore,
+    val api: ApiHttpClient,
+    val cacheStore: CacheStore,
     private val scope: CoroutineScope,
     val logger: Logger,
     val liveSessionStore: LiveSessionStore,
@@ -70,6 +72,7 @@ class DataContainer(
     // S7 repositories — HTTP-backed, cache-then-network, over the shared resilient client + offline cache.
     private val vehiclesRepository = HttpVehiclesRepository(api, cacheStore, clock)
     private val analyticsRepository = HttpAnalyticsRepository(api, cacheStore, clock)
+    private val energyRepository = HttpEnergyRepository(api, cacheStore, clock)
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
     private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
@@ -90,6 +93,12 @@ class DataContainer(
      * surface binds to.
      */
     val analyticsStore = AnalyticsStore(analyticsRepository, scope)
+
+    /**
+     * Shared Energy/battery read-model state holder (web `useEnergy` port) — the memoized, multi-observer raw-JSON
+     * feeds (`/analytics/battery-health`, …) the A7 StatisticsPage analytics surface binds to for its battery panel.
+     */
+    val energyStore = EnergyStore(energyRepository, scope)
 
     /** Shared Dashboard domain state holder (web `useDashboard` port). */
     val dashboardStore = DashboardStore(dashboardRepository, scope)
