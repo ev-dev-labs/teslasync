@@ -151,5 +151,14 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/charging/PowersharePage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-PowersharePage.log"
+  },
+  {
+    "unitId": "page:charging/TeslaChargingSessionsMap",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "p3-android/pages/charging/TeslaChargingSessionsMap",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsMap.log"
   }
 ]
