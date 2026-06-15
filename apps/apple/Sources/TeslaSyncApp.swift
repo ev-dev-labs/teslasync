@@ -109,6 +109,7 @@ struct TeslaSyncApp: App {
         registry = SecretRotationRouteRegistration.registry(base: registry)
         registry = VehicleCostRouteRegistration.registry(base: registry)
         registry = LiveSignalInspectorRouteRegistration.registry(base: registry)
+        registry = RedisSignalViewerRouteRegistration.registry(base: registry)
         registry = TeslaOrdersRouteRegistration.registry(base: registry)
         registry = FleetCompareRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = StatisticsRouteRegistration.registry(base: registry)

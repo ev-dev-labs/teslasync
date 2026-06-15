@@ -1,6 +1,512 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "redis.allCategories" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All Categories"
+          }
+        }
+      }
+    },
+    "redis.autoRefresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-refresh"
+          }
+        }
+      }
+    },
+    "redis.booleans" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Booleans"
+          }
+        }
+      }
+    },
+    "redis.category" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Category"
+          }
+        }
+      }
+    },
+    "redis.headerChip.l1Seen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L1 last: %@"
+          }
+        }
+      }
+    },
+    "redis.headerChip.mode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode: %@"
+          }
+        }
+      }
+    },
+    "redis.maskedCoord" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coordinate, click to reveal"
+          }
+        }
+      }
+    },
+    "redis.noMatch" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No signals match the current filter"
+          }
+        }
+      }
+    },
+    "redis.numbers" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numbers"
+          }
+        }
+      }
+    },
+    "redis.purgeAllButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge All Redis"
+          }
+        }
+      }
+    },
+    "redis.purgeAllButtonTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation."
+          }
+        }
+      }
+    },
+    "redis.purgeAllConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge All Vehicles"
+          }
+        }
+      }
+    },
+    "redis.purgeAllMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge All Redis again to drain."
+          }
+        }
+      }
+    },
+    "redis.purgeAllPartial" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis L2 cache partially purged"
+          }
+        }
+      }
+    },
+    "redis.purgeAllPartialDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed %1$@ of up to %2$@ vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain."
+          }
+        }
+      }
+    },
+    "redis.purgeAllSuccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis L2 cache purged"
+          }
+        }
+      }
+    },
+    "redis.purgeAllSuccessDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed %@ vehicle HSET(s) from Redis. L1 in-memory caches on each pod will refill from new telemetry."
+          }
+        }
+      }
+    },
+    "redis.purgeAllTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge ALL Redis (L2) caches?"
+          }
+        }
+      }
+    },
+    "redis.purgeAllTypedLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type PURGE ALL to confirm"
+          }
+        }
+      }
+    },
+    "redis.purgeButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge Redis (L2)"
+          }
+        }
+      }
+    },
+    "redis.purgeButtonTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this vehicle’s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry."
+          }
+        }
+      }
+    },
+    "redis.purgeConfirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge Redis (L2)"
+          }
+        }
+      }
+    },
+    "redis.purgeError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge failed"
+          }
+        }
+      }
+    },
+    "redis.purgeMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This deletes the Redis HSET for this vehicle (L2 cache only). The L1 in-memory cache on this pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives."
+          }
+        }
+      }
+    },
+    "redis.purgeNoOpDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ had no cached signals in Redis."
+          }
+        }
+      }
+    },
+    "redis.purgeNoOpTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing to purge"
+          }
+        }
+      }
+    },
+    "redis.purgeSuccess" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis L2 cache purged"
+          }
+        }
+      }
+    },
+    "redis.purgeSuccessDetail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: Redis HSET removed. L1 in-memory caches on each pod will refill from new telemetry."
+          }
+        }
+      }
+    },
+    "redis.purgeTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Purge Redis (L2) cache for %@?"
+          }
+        }
+      }
+    },
+    "redis.refresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh"
+          }
+        }
+      }
+    },
+    "redis.searchPlaceholder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter signals…"
+          }
+        }
+      }
+    },
+    "redis.selectPrompt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle to view its cached Redis signals"
+          }
+        }
+      }
+    },
+    "redis.selectVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select vehicle…"
+          }
+        }
+      }
+    },
+    "redis.signalName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signal Name"
+          }
+        }
+      }
+    },
+    "redis.strings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Strings"
+          }
+        }
+      }
+    },
+    "redis.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inspect cached signal values in Redis"
+          }
+        }
+      }
+    },
+    "redis.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis Signal Viewer"
+          }
+        }
+      }
+    },
+    "redis.totalSignals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Signals"
+          }
+        }
+      }
+    },
+    "redis.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "redis.value" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Value"
+          }
+        }
+      }
+    },
+    "route.redisSignals" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis Signals"
+          }
+        }
+      }
+    },
+    "redis.vehiclesError" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t load vehicles. Tap Retry to try again."
+          }
+        }
+      }
+    },
+    "redis.outcomeDismiss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dismiss"
+          }
+        }
+      }
+    },
+    "redis.diagnostic.empty.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No signals cached for this vehicle"
+          }
+        }
+      }
+    },
+    "redis.diagnostic.empty.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redis (L2) holds no cached signals for this vehicle yet. Signals appear once Fleet Telemetry streams data and the pipeline mirrors the live state into Redis."
+          }
+        }
+      }
+    },
+    "redis.diagnostic.error.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load Redis signals"
+          }
+        }
+      }
+    },
     "toast.feedback.update.error" : {
       "extractionState" : "manual",
       "localizations" : {
