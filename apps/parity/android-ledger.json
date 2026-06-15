@@ -214,5 +214,14 @@
     "requiredCount": 36,
     "promptId": "p3-android/pages/maps/TemperatureImpactPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-TemperatureImpactPage.log"
+  },
+  {
+    "unitId": "page:notifications/Archived",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p3-android/pages/notifications/ArchivedPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-ArchivedPage.log"
   }
 ]
