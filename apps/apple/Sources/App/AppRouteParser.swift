@@ -23,6 +23,7 @@ public enum AppRouteParser {
         "/admin/live-signals": .liveSignals,
         "/admin/schema-drift": .schemaDrift,
         "/admin/slow-queries": .slowQueries,
+        "/admin/secret-rotation": .secretRotation,
         "/admin/audit-log": .auditLog,
         "/admin/api-logs": .apiLogs,
         "/admin/flags": .featureFlags,

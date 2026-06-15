@@ -489,6 +489,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-GDPRExportPage.log"
     },
     {
+      "unitId": "page:admin/SecretRotation",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:admin/SecretRotation",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SecretRotationPage.log"
+    },
+    {
+      "unitId": "page:admin/SecretRotation",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 30,
+      "requiredCount": 30,
+      "promptId": "p4-apple/P7/page:admin/SecretRotation",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SecretRotationPage.log"
+    },
+    {
       "unitId": "page:admin/SlowQueries",
       "platform": "apple-macos",
       "status": "done",
