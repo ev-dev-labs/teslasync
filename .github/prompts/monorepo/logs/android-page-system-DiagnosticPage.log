@@ -1,0 +1,122 @@
+================================================================================
+P3-ANDROID A7 — page:system/Diagnostic — Jetpack Compose / Material 3 parity port
+Web source : web/src/features/system/pages/DiagnosticPage.tsx
+Output dir : apps/android/app/src/main/kotlin/com/teslasync/system/
+Package    : io.teslasync.android.system.diagnostic
+Prompt     : p3-android/pages/system/DiagnosticPage
+================================================================================
+
+--- ENVIRONMENT ---
+JDK            : openjdk 21.0.9
+Gradle wrapper : 8.14.5
+Kotlin         : 2.4.0
+Android SDK    : C:\Users\AtulM\AppData\Local\Android\Sdk (minSdk 26)
+Gradle project : root 'teslasync-android' → module ':android' (settings.gradle.kts maps app/ → :android).
+                 The prompt's gate template names ':app'; the actual module path is ':android', so the gate
+                 tasks are run as ':android:assembleDebug' / ':android:lintDebug' / ':android:testDebugUnitTest'
+                 (no ':app' project exists in this build). This is a task-name resolution only — same triad.
+
+--- FILES CREATED (allowed path apps/android/app/src/main/kotlin/com/teslasync/system/**) ---
+  DiagnosticPageModel.kt      registration + recorder + tones + filename stamp + report JSON + DiagnosticUiState
+  DiagnosticPageSource.kt     DiagnosticPageSource seam + diagnosticPageSourceOf(SystemDiagnosticStore)
+  DiagnosticPageViewModel.kt  BaseFeedViewModel holder: StateFlow<DiagnosticUiState>, run(), recordViewOpened()
+  DiagnosticPageIcons.kt      8 lucide stroked glyphs (Activity/AlertTriangle/CheckCircle/Download/PlayCircle/
+                              RefreshCw/ShieldAlert/XCircle)
+  DiagnosticPage.kt           stateful entry + DiagnosticPageContent + 5 panels + 4 phases + tone mappers
+  DiagnosticPageHost.kt       PageHosts.register("DiagnosticPage") over a page-local SystemDiagnosticStore
+
+--- NAVHOST REGISTRATION (allowed: NavHost registration) ---
+  app/src/main/java/io/teslasync/android/navigation/TeslaSyncNavHost.kt
+      The web route is (unrouted): no App.tsx route ⇒ no Destinations row. Added an explicit standalone
+      composable("DiagnosticPage") destination after the metadata-driven loop, resolved through the PageHosts
+      seam (NotFound fallback), keeping the nav module decoupled from the feature page.
+  app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt
+      DiagnosticPageHost.register() wired at process start (idempotent), next to CommandsPageHost.register().
+
+--- SHARED INFRA REUSED (not recreated) ---
+  KMP core  : SystemDiagnosticStore.runDiagnostic(): Result<DiagnosticReport>   (web useRunDiagnostic)
+              formatDiagnosticReportText(report)                                (web formatDiagnosticReportText)
+              DiagnosticReport / DiagnosticCheck @Serializable wire models
+  Strings   : all 16 translation_diagnostic_* + the checkCount plurals already present in
+              res/values/strings.xml + values-ar + values-he (generated catalog) — no strings.xml edit needed.
+  Display   : SI converters N/A — no field is unit-bearing (durations are raw ms, statuses are enums, stamps
+              are ISO). Live SSE / staleness N/A — the report is operator-initiated, never live (ADR-013 n/a;
+              covenant #9: no invented loading/stale lifecycle).
+
+=== PARITY ===
+PARITY_REQUIRED=24
+
+[panel  1/5] GlassPanel1  GlassPanel(accent=Danger) in DiagnosticErrorBanner        DiagnosticPage.kt:253  (web L284 error banner)
+[panel  2/5] GlassPanel2  GlassPanel(padding=Lg) in DiagnosticOverallHero           DiagnosticPage.kt:281  (web L159/L309 OverallHero)
+[panel  3/5] GlassPanel3  GlassPanel(padding=Md) in DiagnosticCheckCard             DiagnosticPage.kt:394  (web L109/L334 CheckCard)
+[panel  4/5] GlassPanel4  GlassPanel(padding=Lg) in DiagnosticRunningPanel          DiagnosticPage.kt:440  (web L343 Spinner panel)
+[panel  5/5] GlassPanel5  GlassPanel(padding=Sm) in DiagnosticEmptyReport           DiagnosticPage.kt:456  (web L350 EmptyState panel)
+
+[state  1/3] loading  DiagnosticUiState.Running → `uiState.isRunning ->` branch → DiagnosticRunningPanel  DiagnosticPage.kt:198 / DiagnosticPageModel.kt (DiagnosticUiState.Running)
+[state  2/3] empty    DiagnosticUiState.Idle/Failed → `else ->` branch → DiagnosticEmptyReport            DiagnosticPage.kt:199 / DiagnosticPageModel.kt (DiagnosticUiState.Idle)
+[state  3/3] success  DiagnosticUiState.Loaded → `report != null` → DiagnosticOverallHero + DiagnosticCheckList  DiagnosticPage.kt:189-197 / DiagnosticPageModel.kt (DiagnosticUiState.Loaded)
+             (error  → DiagnosticUiState.Failed → DiagnosticErrorBanner + Run-button retry; the prompt's
+                       loading/empty/error-per-source requirement is met: every phase renders a non-blank region.)
+
+[string  1/16] diagnostic.title             R.string.translation_diagnostic_title            DiagnosticPage.kt:146,207,460
+[string  2/16] diagnostic.subtitle          R.string.translation_diagnostic_subtitle         DiagnosticPage.kt:209
+[string  3/16] diagnostic.run               R.string.translation_diagnostic_run              DiagnosticPage.kt:235,464
+[string  4/16] diagnostic.running           R.string.translation_diagnostic_running          DiagnosticPage.kt:233,446
+[string  5/16] diagnostic.rerun             R.string.translation_diagnostic_rerun            DiagnosticPage.kt:234
+[string  6/16] diagnostic.checkCount        R.plurals.translation_diagnostic_checkCount      DiagnosticPage.kt:304
+[string  7/16] diagnostic.lastRun           R.string.translation_diagnostic_lastRun          DiagnosticPage.kt:298
+[string  8/16] diagnostic.duration          R.string.translation_diagnostic_duration         DiagnosticPage.kt:416
+[string  9/16] diagnostic.remediationLabel  R.string.translation_diagnostic_remediationLabel DiagnosticPage.kt:432
+[string 10/16] diagnostic.copyReport        R.string.translation_diagnostic_copyReport       DiagnosticPage.kt:328
+[string 11/16] diagnostic.copyReportSuccess R.string.translation_diagnostic_copyReportSuccess DiagnosticPage.kt:347
+[string 12/16] diagnostic.downloadReport    R.string.translation_diagnostic_downloadReport   DiagnosticPage.kt:367
+[string 13/16] diagnostic.filename          R.string.translation_diagnostic_filename         DiagnosticPage.kt:351
+[string 14/16] diagnostic.errorTitle        R.string.translation_diagnostic_errorTitle       DiagnosticPage.kt:254
+[string 15/16] diagnostic.errorBody         R.string.translation_diagnostic_errorBody        DiagnosticPage.kt:255
+[string 16/16] diagnostic.noReport          R.string.translation_diagnostic_noReport         DiagnosticPage.kt:461
+
+(extra fidelity, not graded: diagnostic.status.{ok,warn,fail} + diagnostic.overall.{ok,degraded,down} also
+ resolved via stringResource in checkStatusLabel / overallStatusLabel — DiagnosticPage.kt.)
+
+PARITY_COVERED=24
+
+--- DATA SOURCES (web hooks ported, same names at the Kotlin call sites) ---
+  useRunDiagnostic           → DiagnosticPageSource.runDiagnostic() (over SystemDiagnosticStore.runDiagnostic),
+                               driven by DiagnosticPageViewModel.run()  (DiagnosticPageViewModel.kt)
+  formatDiagnosticReportText → io.teslasync.shared.core.presentation.systemdiagnostic.formatDiagnosticReportText
+                               called in DiagnosticDownloadButton  (DiagnosticPage.kt)
+
+--- ACCESSIBILITY / THEME / UNITS ---
+  paneTitle semantics on the page root (web usePageTitle); contentDescription on the error banner; decorative
+  glyphs pass contentDescription=null; EmptyState/Spinner carry merged accessible names. All color/typography via
+  MaterialTheme + TeslaTokens (no hardcoded colors). Dark + dynamic color inherited from TeslaSyncTheme. Buttons
+  use the shared Button (Material 3 ≥48dp targets). No SI/unit values are computed or stored.
+
+--- GATE (android triad: build + lint + test + placeholder scan) ---
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+BUILD SUCCESSFUL in 1m 48s   (:android:compileDebugKotlin executed — new sources compiled clean)
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+BUILD SUCCESSFUL in 15m 18s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+BUILD SUCCESSFUL in 1m 21s   (:android:compileDebugUnitTestKotlin executed — existing tests recompiled clean)
+TEST_EXIT=0
+
+--- LEDGER ---
+apps/parity/android-ledger.json : added row page:system/Diagnostic
+  { unitId: page:system/Diagnostic, platform: android, status: done, coveredCount: 24, requiredCount: 24,
+    promptId: p3-android/pages/system/DiagnosticPage,
+    evidenceLog: .github/prompts/monorepo/logs/android-page-system-DiagnosticPage.log }
+
+PARITY_COVERED == PARITY_REQUIRED (24 == 24); PLACEHOLDER_EXIT=0; BUILD_EXIT=0; LINT_EXIT=0; TEST_EXIT=0.
+
+EXIT=0
+STATUS=DONE

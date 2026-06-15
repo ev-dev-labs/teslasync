@@ -277,5 +277,14 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/system/CommandsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-CommandsPage.log"
+  },
+  {
+    "unitId": "page:system/Diagnostic",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 24,
+    "requiredCount": 24,
+    "promptId": "p3-android/pages/system/DiagnosticPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DiagnosticPage.log"
   }
 ]
