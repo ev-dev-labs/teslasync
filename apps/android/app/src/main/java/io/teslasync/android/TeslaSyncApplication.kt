@@ -19,6 +19,7 @@ import io.teslasync.android.charging.chargingcurve.ChargingCurvePageHost
 import io.teslasync.android.charging.powershare.PowersharePageHost
 import io.teslasync.android.dashboard.glance.GlancePageHost
 import io.teslasync.android.data.live.AppLifecycleSseBinder
+import io.teslasync.android.driving.driveslist.DrivesListPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -88,6 +89,8 @@ class TeslaSyncApplication : Application() {
         PowersharePageHost.register()
         // Register the native Glance quick-glance screen for the /glance route (P3/A7). Idempotent.
         GlancePageHost.register()
+        // Register the native drive-history screen for the /drives route (P3/A7). Idempotent.
+        DrivesListPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
