@@ -874,3 +874,4 @@ p3-android/pages/battery/BatteryHealthPage.prompt.md
 p3-android/pages/battery/EnergyProductsPage.prompt.md
 p3-android/pages/charging/ChargingCurvePage.prompt.md
 p3-android/pages/charging/PowersharePage.prompt.md
+p3-android/pages/charging/TeslaChargingSessionsMap.prompt.md
