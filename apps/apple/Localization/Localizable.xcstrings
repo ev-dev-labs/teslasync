@@ -9824,6 +9824,303 @@
         }
       }
     },
+    "admin.vehicleCost.bytesSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "96 bytes/row average"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colBytes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bytes (est.)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colFailures" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DLQ (24h)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colLastSeen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last seen"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate (rows/min, 24h)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colRows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rows"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.colVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicles have ingested signals during this window."
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.emptyTable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicle cost data"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No vehicle cost data"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.failuresSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codec or writer rejections"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.notConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated."
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Ingest Cost"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.rateSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Across all vehicles"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline."
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.tableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-vehicle breakdown"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.totalBytes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total bytes (est.)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.totalFailures" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DLQ failures (24h)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.totalRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate (rows/min, 24h)"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.totalRows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total rows"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.unnamed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle #%lld"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.window1d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 1 day"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.window30d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 30 days"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.window7d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 7 days"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.window90d" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last 90 days"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.windowLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Window"
+          }
+        }
+      }
+    },
+    "admin.vehicleCost.windowSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Window: %lldd"
+          }
+        }
+      }
+    },
     "playground.title" : {
       "extractionState": "manual",
       "localizations": {
@@ -197736,6 +198033,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Schema Drift"
+          }
+        }
+      }
+    },
+    "route.vehicleCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vehicle Cost"
           }
         }
       }

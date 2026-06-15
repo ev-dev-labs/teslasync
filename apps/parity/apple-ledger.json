@@ -525,6 +525,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SlowQueriesPage.log"
     },
     {
+      "unitId": "page:admin/VehicleCost",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 33,
+      "requiredCount": 33,
+      "promptId": "p4-apple/P7/page:admin/VehicleCost",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-VehicleCostPage.log"
+    },
+    {
+      "unitId": "page:admin/VehicleCost",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 33,
+      "requiredCount": 33,
+      "promptId": "p4-apple/P7/page:admin/VehicleCost",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-VehicleCostPage.log"
+    },
+    {
       "unitId": "page:admin/Users",
       "platform": "apple-macos",
       "status": "done",
