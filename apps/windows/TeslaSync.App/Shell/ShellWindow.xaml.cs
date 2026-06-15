@@ -1156,6 +1156,35 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("TeslaChargingSessions", () =>
             new FeatureViews.Charging.TeslaChargingSessionsPage(
                 new FeatureViews.Charging.TeslaChargingSessionsClientFeed(_data.Api), _data.Localizer));
+
+        // ── Batch 4: notifications, analytics, account, vehicles. ───────────────────────────────────────
+        _viewModel.PageFactory.Register("Analytics", () =>
+            new FeatureViews.Analytics.AnalyticsPage(
+                new FeatureViews.Analytics.AnalyticsFleetClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("NotificationsAlerts", () =>
+            new FeatureViews.Notifications.AlertsListPage(
+                new FeatureViews.Notifications.AlertsClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("NotificationsRules", () =>
+            new FeatureViews.Notifications.AlertRulesPage(
+                new FeatureViews.Notifications.AlertRulesClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("NotificationsStudio", () =>
+            new FeatureViews.Notifications.AlertStudioPage(
+                new FeatureViews.Notifications.AlertStudioClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("ActiveSessions", () =>
+            new FeatureViews.Settings.ActiveSessionsPage(
+                new FeatureViews.Settings.ActiveSessionsClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("BackupRestore", () =>
+            new FeatureViews.Admin.BackupRestorePage(
+                new FeatureViews.Admin.BackupClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DigitalTwin", () =>
+            new FeatureViews.Vehicles.DigitalTwinPage(
+                new FeatureViews.Vehicles.DigitalTwinPageClientFeed(_data.Api), _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
