@@ -88,5 +88,14 @@
     "requiredCount": 12,
     "promptId": "p3-android/pages/analytics/YearReviewPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-YearReviewPage.log"
+  },
+  {
+    "unitId": "page:automations/AutomationCard",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p3-android/pages/automations/AutomationCard",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationCard.log"
   }
 ]
