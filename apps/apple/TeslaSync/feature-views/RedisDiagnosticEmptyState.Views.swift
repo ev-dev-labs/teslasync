@@ -19,7 +19,7 @@ import SwiftUI
 /// `GlassPanel` with the `border-{tone}` / `bg-{tone}` classes).
 struct RedisDiagnosticBanner: View {
     let resolved: RedisDiagnosticResolved
-    let meta: RedisSignalsMeta?
+    let meta: RedisDiagnosticSignalsMeta?
     let chips: RedisDiagnosticChipsPhase
     let docsBaseURL: URL?
     let onRetry: () -> Void
@@ -77,7 +77,7 @@ struct RedisDiagnosticBanner: View {
 /// The diagnostic meta grid: live-store mode (badge), Redis key (code), L1/L2 counts,
 /// L1/L2 last-seen (formatted or em-dash), and the VIN (code, only when present).
 struct RedisDiagnosticMetaList: View {
-    let meta: RedisSignalsMeta
+    let meta: RedisDiagnosticSignalsMeta
 
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: TSSpacing.lg, verticalSpacing: TSSpacing.xs) {

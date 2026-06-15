@@ -25,9 +25,9 @@ public enum RedisLiveStoreMode: String, Sendable, Equatable {
     case local
 }
 
-/// The diagnostic `meta` block (web `RedisSignalsMeta`). Last-seen timestamps are
+/// The diagnostic `meta` block (web `RedisDiagnosticSignalsMeta`). Last-seen timestamps are
 /// parsed `Date?`s (web ISO strings → `new Date(...)`); an absent timestamp is `nil`.
-public struct RedisSignalsMeta: Sendable, Equatable {
+public struct RedisDiagnosticSignalsMeta: Sendable, Equatable {
     public var liveSignalStoreMode: RedisLiveStoreMode
     public var redisKey: String
     public var redisFieldCount: Int
@@ -256,7 +256,7 @@ public enum RedisDiagnosticProjection {
     /// Resolves the active branch. Error inputs take precedence over `meta`; with no
     /// error and no meta the legacy empty state is returned (web back-compat fallback).
     public static func resolve(
-        meta: RedisSignalsMeta?,
+        meta: RedisDiagnosticSignalsMeta?,
         serverError: RedisApiError?,
         networkError: Bool,
         now: Date = Date(),
@@ -319,7 +319,7 @@ public enum RedisDiagnosticProjection {
     // MARK: Meta ladder (web branches 1 – 4)
 
     private static func metaBranch(
-        _ meta: RedisSignalsMeta,
+        _ meta: RedisDiagnosticSignalsMeta,
         now: Date,
         locale: Locale,
         timeZone: TimeZone

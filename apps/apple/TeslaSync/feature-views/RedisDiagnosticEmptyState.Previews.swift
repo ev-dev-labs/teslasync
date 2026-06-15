@@ -35,8 +35,8 @@ import SwiftUI
         l1: Int = 0,
         l2: Int = 0,
         l1LastSeen: Date? = nil
-    ) -> RedisSignalsMeta {
-        RedisSignalsMeta(
+    ) -> RedisDiagnosticSignalsMeta {
+        RedisDiagnosticSignalsMeta(
             liveSignalStoreMode: mode,
             redisKey: "vehicle:7:signals",
             redisFieldCount: l2,

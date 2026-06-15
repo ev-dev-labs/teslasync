@@ -67,7 +67,7 @@ public enum RedisDiagnosticChipsPhase: Sendable, Equatable {
 /// the parent's redis-signals query + the keys query; previews/tests construct it directly.
 public struct RedisDiagnosticInput: Sendable, Equatable {
     public var vehicleId: Int
-    public var meta: RedisSignalsMeta?
+    public var meta: RedisDiagnosticSignalsMeta?
     public var serverError: RedisApiError?
     public var networkError: Bool
     public var keys: RedisDiagnosticKeysState
@@ -75,7 +75,7 @@ public struct RedisDiagnosticInput: Sendable, Equatable {
 
     public init(
         vehicleId: Int,
-        meta: RedisSignalsMeta? = nil,
+        meta: RedisDiagnosticSignalsMeta? = nil,
         serverError: RedisApiError? = nil,
         networkError: Bool = false,
         keys: RedisDiagnosticKeysState = .idle,
@@ -115,7 +115,7 @@ public protocol RedisDiagnosticSource: AnyObject {
 public final class RedisDiagnosticModel {
     public private(set) var resolved: RedisDiagnosticResolved = RedisDiagnosticProjection.legacyEmpty
     public private(set) var chips: RedisDiagnosticChipsPhase = .hidden
-    public private(set) var meta: RedisSignalsMeta?
+    public private(set) var meta: RedisDiagnosticSignalsMeta?
     public private(set) var docsBaseURL: URL? = RedisDiagnosticDocs.defaultBase
 
     @ObservationIgnored private let source: any RedisDiagnosticSource

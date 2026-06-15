@@ -26,7 +26,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 
 @MainActor final class RedisDiagnosticProjectionTests: XCTestCase {
     private func resolve(
-        meta: RedisSignalsMeta? = nil,
+        meta: RedisDiagnosticSignalsMeta? = nil,
         serverError: RedisApiError? = nil,
         networkError: Bool = false,
         now: Date = Date()
@@ -41,8 +41,8 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
         l1: Int = 0,
         l2: Int = 0,
         l1LastSeen: Date? = nil
-    ) -> RedisSignalsMeta {
-        RedisSignalsMeta(
+    ) -> RedisDiagnosticSignalsMeta {
+        RedisDiagnosticSignalsMeta(
             liveSignalStoreMode: mode,
             redisKey: "vehicle:7:signals",
             redisFieldCount: l2,
@@ -184,7 +184,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 // MARK: - Chips-phase resolution (model seam)
 
 @MainActor final class RedisDiagnosticChipsPhaseTests: XCTestCase {
-    private let metaFallthrough = RedisSignalsMeta(
+    private let metaFallthrough = RedisDiagnosticSignalsMeta(
         liveSignalStoreMode: .hybrid, redisKey: "k", redisFieldCount: 0, l1SignalCount: 0, vehicleVin: ""
     )
 
@@ -300,7 +300,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
 
     func testStartAppliesInitialAndEmitsTelemetryOnce() {
         let spy = SpyRedisDiagnosticTelemetry()
-        let meta = RedisSignalsMeta(
+        let meta = RedisDiagnosticSignalsMeta(
             liveSignalStoreMode: .local, redisKey: "k", redisFieldCount: 0, l1SignalCount: 0, vehicleVin: ""
         )
         let (model, source) = makeModel(RedisDiagnosticInput(vehicleId: 7, meta: meta), telemetry: spy)
@@ -317,7 +317,7 @@ private let fallbackLocalize: @Sendable (String, String) -> String = { _, fallba
         XCTAssertEqual(model.resolved.kind, .networkError)
         XCTAssertEqual(model.chips, .hidden)
 
-        let meta = RedisSignalsMeta(
+        let meta = RedisDiagnosticSignalsMeta(
             liveSignalStoreMode: .hybrid, redisKey: "k", redisFieldCount: 0, l1SignalCount: 0, vehicleVin: ""
         )
         let entries = [RedisSignalKeyEntry(vehicleId: 1, fieldCount: 12, displayName: "Falcon")]
