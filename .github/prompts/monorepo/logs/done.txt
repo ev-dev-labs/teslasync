@@ -947,3 +947,4 @@ p2-windows/pages/system/SystemStatusPage.prompt.md
 p2-windows/pages/admin/SecretRotationPage.prompt.md
 p2-windows/pages/admin/DiskForecastPage.prompt.md
 p2-windows/pages/admin/FleetTelemetryCoveragePage.prompt.md
+p2-windows/pages/admin/LiveLogsPage.prompt.md
