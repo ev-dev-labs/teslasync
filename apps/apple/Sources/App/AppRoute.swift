@@ -26,7 +26,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
-    case fleetCompare, lifetimeStats, mileage, batteryCells, batteryDegradation, sleepEfficiency, tco
+    case fleetCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
@@ -101,6 +101,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics: "chart.bar.fill"
         case .tco: "dollarsign.circle.fill"
         case .fleetCompare: "arrow.left.arrow.right.circle.fill"
+        case .timeline: "clock.arrow.circlepath"
         case .lifetimeStats: "trophy.fill"
         case .mileage: "gauge.with.dots.needle.bottom.50percent"
         case .maps: "mappin.and.ellipse"
@@ -154,7 +155,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energy: .energy
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
-        case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage: .insights
+        case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage, .timeline: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,

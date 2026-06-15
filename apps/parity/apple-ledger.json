@@ -1,5 +1,5 @@
 {
-  "ledger": "P4 apple program \u2014 page parity rows (apple-macos + apple-ios)",
+  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
   "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
   "rows": [
     {
@@ -829,6 +829,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:admin/TeslaRegion",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaRegionPage.log"
+    },
+    {
+      "unitId": "page:analytics/Timeline",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 35,
+      "requiredCount": 35,
+      "promptId": "p4-apple/P7/page:analytics/Timeline",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-TimelinePage.log"
+    },
+    {
+      "unitId": "page:analytics/Timeline",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 35,
+      "requiredCount": 35,
+      "promptId": "p4-apple/P7/page:analytics/Timeline",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-TimelinePage.log"
     }
   ]
 }
