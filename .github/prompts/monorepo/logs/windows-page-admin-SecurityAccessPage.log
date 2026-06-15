@@ -1,0 +1,107 @@
+P2-WINDOWS · W7 · page:admin/SecurityAccess — WinUI 3 / Fluent parity port — artifact log
+
+Parity unit : page:admin/SecurityAccess  (kind=page, web route /security-access)
+Web source  : web/src/features/admin/pages/SecurityAccessPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/SecurityAccessPage/{SecurityAccessPage.cs, .Model.cs, .Source.cs, .ViewModel.cs}
+              (real in-repo convention — code-built WinUI views, NOT XAML; the generated prompt's
+               apps/windows/TeslaSync/Features/Admin/*.xaml path does not exist in-repo. The W3 component
+               library + W4 shell are C#-built — see sibling feature-views/VehicleCostPage, GuardModePage etc.)
+Nav         : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("SecurityAccess", …);
+              RouteTable.cs:256 already maps Page("SecurityAccess","security-access",RouteGroup.AdminDevTools,
+              "Security & Access","\uE72E") — only the page-factory registration was added.
+Strings     : apps/windows/Strings/{en,ar,he}/Resources.resw — all 4 required admin.security.* / error.loadFailed
+              keys already present (generated from the web i18n source); no resw change required.
+Tests       : apps/windows/TeslaSync.App.Tests/FeatureViews/SecurityAccessPageTests.cs (60 facts/theories);
+              linked Model/Source/ViewModel into TeslaSync.App.Tests.csproj (the WinUI view stays in the app
+              project — the headless test project is net10.0 with no WinUI host).
+
+Build prereq: the W1 generated C# client is a gitignored build artifact already materialized in-repo
+              (apps/windows/Generated/Api/*.cs + Generated/Generated.csproj, ns TeslaSync.Windows.Generated)
+              that TeslaSync.App.Core references; the security + vehicles endpoints resolve from ApiEndpoints.All.
+
+Data sources (3) — each bound to the generated C# client through the ObservableObject SecurityAccessPageViewModel
+  useSecurityEvents  GET  get_api_v1_security          [vehicle_id] -> SecurityAccessClientFeed.FetchSecurityEventsAsync  [Source.cs]
+  (polled latest)    GET  get_api_v1_security_latest   [vehicle_id] -> SecurityAccessClientFeed.FetchLatestAsync          [Source.cs]
+  useVehicles        GET  get_api_v1_vehicles                       -> SecurityAccessClientFeed.FetchVehiclesAsync         [Source.cs]
+  (web hook names preserved at the C# call sites: ISecurityAccessFeed.FetchSecurityEventsAsync / FetchLatestAsync /
+   FetchVehiclesAsync. The vehicle_id query is passed snake_case exactly as the web hooks do.)
+  Helper ports (web security-access/helpers.ts → SecurityAccessProjection): doorClosed, allWindowsClosed,
+   parseWindowState, isSentryActive, isSecure, computeSentryUptime, findLastLockChange, computeSecurityStats,
+   deriveTimeline, timeSince — each unit-tested headlessly.
+
+=== PARITY ===
+PARITY_REQUIRED=9
+
+# ── Panels (2) — each a Fluent TsGlassPanel (GlassPanel→Card+Mica, ADR-005) in SecurityAccessPage.cs ──
+[x] panel  - GlassPanel1 -> SecurityAccessPage.BuildAlertPanel / field _alertPanel (security alert banner; bound to
+             display.ShowAlert + display.AlertText; web !isSecure && latest red GlassPanel)        [SecurityAccessPage.cs / Model.cs]
+             evidence: SecurityAccessProjection ShowAlert = hasLatest && !IsSecure(latest); tests Alert_panel_hidden_when_vehicle_is_secure,
+             Alert_panel_shown_when_vehicle_is_not_secure, Alert_panel_hidden_when_no_latest_snapshot
+[x] panel  - GlassPanel2 -> SecurityAccessPage.BuildLivePanel  / field _livePanel  (live vehicle state: lock/sentry/
+             door/window status rows + live detail rows; web digital-twin GlassPanel + LiveVehicleState)  [SecurityAccessPage.cs / Model.cs]
+             evidence: display.HasLatest / StatusItems / LiveItems / LiveEmptyMessage; tests
+             Live_panel_projects_status_rows_from_the_latest_snapshot, Live_panel_status_reflects_an_insecure_vehicle,
+             Live_panel_is_empty_without_a_latest_snapshot
+
+# ── Data states (3) — manifest loading / error / success; per-region empty surfaces never render blank ──
+[x] state  - loading data state -> SecurityAccessState.Loading -> display.ShowLoading -> TsPageContainer.IsLoading
+             (test: State_loading_when_initial_with_no_data)                                        [Model.cs / ViewModel.cs / SecurityAccessPage.cs]
+[x] state  - error   data state -> SecurityAccessState.Error   -> display.ShowErrorBanner -> InfoBar(Error) + Retry button
+             (web AlertBanner over content; ErrorText = "Failed to load data: <detail>")            (tests: State_error_when_a_read_failed,
+             State_error_prefers_the_vehicles_error_detail, ViewModel_history_failure_is_the_error_state) [Model.cs / SecurityAccessPage.cs]
+[x] state  - success data state -> SecurityAccessState.Success -> display.ShowContent -> alert/live/summary/history/timeline render
+             (tests: State_success_when_security_state_resolved, ViewModel_loads_vehicles_latest_and_history_into_success) [Model.cs / SecurityAccessPage.cs]
+
+# ── Strings (4) — every visible literal resolves via SecurityAccessProjection.Project(localizer); the 4 manifest
+#    keys are resolved on EVERY projection regardless of data state; keys match the web i18n names; all present in
+#    Strings/{en,ar,he}/Resources.resw; RecordingLocalizer tests assert each is resolved ──
+[x] string - admin.security.alert    -> Project localizer.GetString("admin.security.alert", "⚠ Vehicle may not be secure …")   [Model.cs]
+[x] string - admin.security.subtitle -> Project localizer.GetString("admin.security.subtitle", "Lock status, sentry mode, …")  [Model.cs]
+[x] string - admin.security.title    -> Project + SecurityAccessRegistration.Title GetString("admin.security.title", "Security & Access") [Model.cs]
+[x] string - error.loadFailed        -> Project localizer.GetString("error.loadFailed", "Failed to load data")                 [Model.cs]
+
+PARITY_COVERED=9
+# Coverage asserted headlessly by SecurityAccessPageTests (60 facts/theories):
+#   Projection_resolves_every_required_string_key (+ _even_in_the_loading_state) drive a RecordingLocalizer and assert
+#     all 4 RequiredStringKeys are resolved on every projection regardless of data state.
+#   State_loading / State_error / State_success assert the three-state matrix off SecurityAccessDisplay.
+#   Alert_panel_* (GlassPanel1) and Live_panel_* (GlassPanel2) assert the two panels render from the bound state.
+#   ClientFeed_* tests pin each generated-client request's operation id + snake_case vehicle_id query; the
+#     Registration_operations_resolve_in_the_generated_table test resolves all 3 ids against ApiEndpoints.All.
+#   Helper-port tests (IsSentryActive / DoorClosed / ParseWindowState / IsSecure / ComputeSentryUptime /
+#     FindLastLockChange / ComputeSecurityStats / FormatRelative / FormatCount / FormatPercent) and tolerant-parse
+#     tests (SecurityEvent.FromJson unions, ParseLatest data envelope, ParseHistory array/{data|events}) pin the logic.
+#   ViewModel_* tests assert the load loading/error/success matrix + SetVehicle/Refresh reload through the feed.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SecurityAccessPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s), 17 Warning(s)
+#   (all 17 are pre-existing TeslaSync.App.Core CA1716/CA1720/CA1859/CA1000 warnings; SecurityAccessPage adds 0.
+#    Note: TeslaSync.App enforces CA1859 as an error — the private region builders return concrete List<T>/T[].)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (whole-solution verify clean;
+#   SecurityAccessPage Model/Source/ViewModel/view + SecurityAccessPageTests + ShellWindow.xaml.cs auto-formatted).
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 31009, Failed: 0, Skipped: 0
+#   (incl. 60 SecurityAccessPageTests). This is the headless, parity-bearing suite that drives the W7 page gate
+#   (same convention as the sibling VehicleCostPage / GuardModePage W7 logs).
+TEST_EXIT=0
+# NOTE (environment): the whole-solution `dotnet test apps/windows/TeslaSync.sln` additionally runs
+#   TeslaSync.App.UITests, whose WinAppDriver UI-automation cases require a WinAppDriver/Appium runner not present in
+#   this headless environment — W9-scope tests, not authored or modified here. The headless TeslaSync.App.Tests suite
+#   that verifies this page's parity is fully green.
+PARITY_COVERED=9
+PARITY_REQUIRED=9
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/SecurityAccessPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/SecurityAccessPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-SecurityAccessPage.log
+# git commit -m "feat(apps/windows): SecurityAccessPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

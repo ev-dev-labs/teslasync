@@ -1266,6 +1266,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.Model.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.Source.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleCostPage\VehicleCostPage.ViewModel.cs" Link="FeatureViews\VehicleCostPage\VehicleCostPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityAccessPage\SecurityAccessPage.Model.cs" Link="FeatureViews\SecurityAccessPage\SecurityAccessPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityAccessPage\SecurityAccessPage.Source.cs" Link="FeatureViews\SecurityAccessPage\SecurityAccessPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SecurityAccessPage\SecurityAccessPage.ViewModel.cs" Link="FeatureViews\SecurityAccessPage\SecurityAccessPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.Model.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.Source.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleDetailPage\VehicleDetailPage.ViewModel.cs" Link="FeatureViews\VehicleDetailPage\VehicleDetailPage.ViewModel.cs" />
