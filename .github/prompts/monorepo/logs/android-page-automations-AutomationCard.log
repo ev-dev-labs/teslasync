@@ -1,0 +1,87 @@
+P3-ANDROID A7 — page:automations/AutomationCard — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/AutomationCard.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (AutomationCard.kt screen + AutomationCardPageViewModel + AutomationCardPageModel)
+Embeds     : the shared AutomationCard feature view (apps/android/app/src/main/java/com/teslasync/feature-views/AutomationCard/,
+             package io.teslasync.android.featureviews.automationcard) — verbatim, DRY (ADR-006), no re-implementation, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED, purely presentational card the Automations list
+renders per row (no API data source — the manifest declares none; it renders from navigation args / local state).
+The presentational surface was already implemented at full 21/21 parity by the predecessor prompt
+p3-android/feature-views/A-0082-AutomationCard (log p3-android-feature-views-0082-AutomationCard.log, committed +
+green). This page prompt targets the separate allowed-files path kotlin/com/teslasync/automations/** with a
+`@Composable screen + ViewModel` contract, so — following the sanctioned GasPriceAutoPollPage precedent — this
+layer is a THIN page wrapper that EMBEDS that one shared surface (every panel/string/data state is the
+parity-covered feature view) and adds only the page state holder + the stateless screen. Predecessor NOT bypassed.
+
+NAV NOTE (honesty): web route is "(unrouted)". DestinationsTest.registryCoversTheWholeWebTaxonomy() locks
+Destinations.all.size == 137 to the web taxonomy, and Destinations.kt's contract is "every web route recorded as
+metadata … never a fabricated page". An unrouted card has no web route, so NO synthetic nav destination is
+fabricated (doing so would break the locked test and violate the anti-fabrication rule). The page-layer is
+consumed by the Automations list exactly as the feature view is — the prompt's "(if routed)" clause does not apply.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_COUNT=0
+BUILD SUCCESSFUL in 2m 11s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 6s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 10s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=21
+binding evidence (page layer binds the StateFlow; the embedded shared feature view renders every item):
+  page layer  : apps/android/app/src/main/kotlin/com/teslasync/automations/{AutomationCard.kt, AutomationCardPageViewModel.kt, AutomationCardPageModel.kt}
+  shared view : apps/android/app/src/main/java/com/teslasync/feature-views/AutomationCard/{AutomationCard.kt, AutomationCardModel.kt}
+                (fv = io.teslasync.android.featureviews.automationcard)
+
+# panel (1) — Material 3 GlassPanel
+[COVERED] panel  GlassPanel1   -> AutomationCard.kt:AutomationCardScreen()->AutomationCardContent(); fv/AutomationCard.kt:AutomationCardContent() GlassPanel(padding=PanelPadding.Md, accent)
+
+# data states (1 declared: success) — bound to AutomationCardPageViewModel.state: StateFlow<UiState<AutomationView>>
+[COVERED] state  success       -> AutomationCardPageViewModel.kt:state/resolve() -> UiState(UiPhase.Content); fv/AutomationCard.kt:AutomationCardContent() content branch -> AutomationCardBody()
+  (loading/empty/error also reachable through the same StateFlow: fv AutomationCardLoading()/AutomationCardEmpty()/AutomationCardError(onRetry); page onRetry -> AutomationCardPageViewModel.retry())
+
+# strings (19) — every visible literal via stringResource(R.string.translation_*); web key names preserved (fv rememberAutomationCardStrings())
+[COVERED] string automations.allVehicles  -> fv/AutomationCard.kt:AutomationVehicleRow() Caption(strings.allVehicles)  (R.string.translation_automations_allVehicles)
+[COVERED] string automations.conflictWith -> fv/AutomationCard.kt:AutomationCardBody() InlineNotice conflict row       (R.string.translation_automations_conflictWith)
+[COVERED] string automations.delete       -> fv/AutomationCard.kt:automationMenuItems() delete item                    (R.string.translation_automations_delete)
+[COVERED] string automations.deleteConfirm-> fv/AutomationCard.kt:AutomationCardBody() ConfirmDialog confirmLabel       (R.string.translation_automations_deleteConfirm)
+[COVERED] string automations.deleteMessage-> fv/AutomationCard.kt:AutomationCardBody() ConfirmDialog message            (R.string.translation_automations_deleteMessage, view.name)
+[COVERED] string automations.deleteTitle  -> fv/AutomationCard.kt:AutomationCardBody() ConfirmDialog title              (R.string.translation_automations_deleteTitle)
+[COVERED] string automations.duplicate    -> fv/AutomationCard.kt:automationMenuItems() duplicate item                 (R.string.translation_automations_duplicate)
+[COVERED] string automations.export       -> fv/AutomationCard.kt:automationMenuItems() export item                    (R.string.translation_automations_export)
+[COVERED] string automations.fails        -> fv/AutomationCard.kt:AutomationStatsRow() fails chip                      (R.string.translation_automations_fails)
+[COVERED] string automations.firing       -> fv/AutomationCard.kt:FiringIndicator(label=strings.firing)                (R.string.translation_automations_firing)
+[COVERED] string automations.lastRun      -> fv/AutomationCard.kt:AutomationStatsRow() last-run chip                   (R.string.translation_automations_lastRun)
+[COVERED] string automations.menu         -> fv/AutomationCard.kt:AutomationControls() IconButton contentDescription   (R.string.translation_automations_menu)
+[COVERED] string automations.neverRun     -> fv/AutomationCard.kt:AutomationStatsRow() never-run chip                  (R.string.translation_automations_neverRun)
+[COVERED] string automations.nextFire     -> fv/AutomationCard.kt:AutomationStatsRow() next-fire chip                  (R.string.translation_automations_nextFire)
+[COVERED] string automations.reEnable     -> fv/AutomationCard.kt:automationMenuItems() re-enable item                 (R.string.translation_automations_reEnable)
+[COVERED] string automations.runs         -> fv/AutomationCard.kt:AutomationStatsRow() runs chip                       (R.string.translation_automations_runs)
+[COVERED] string automations.testRun      -> fv/AutomationCard.kt:automationMenuItems() test-run item                  (R.string.translation_automations_testRun)
+[COVERED] string automations.toggleLabel  -> fv/AutomationCard.kt:AutomationControls() Toggle semantics{contentDescription} (R.string.translation_automations_toggleLabel)
+[COVERED] string common.cancel            -> fv/AutomationCard.kt:AutomationCardBody() ConfirmDialog cancelLabel        (R.string.translation_common_cancel)
+
+PARITY_COVERED=21
+
+=== SUMMARY ===
+data sources : none (manifest declares none). AutomationCardPageViewModel exposes the host-supplied automation as
+               StateFlow<UiState<AutomationView>> (P1/S8 state-holder shape); the view performs no HTTP.
+nav          : web route "(unrouted)" — no synthetic destination fabricated (DestinationsTest locks 137 web pages;
+               Destinations.kt forbids fabricated routes). Surface is consumed by the Automations list, like the fv.
+strings      : all 19 already present in res/values/strings.xml (translation_automations_* + translation_common_cancel),
+               rendered by the embedded fv via rememberAutomationCardStrings(); zero hardcoded literals.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), TalkBack contentDescriptions, MaterialTheme tokens, reduce-motion
+               honored, freshness/age formatted at the display boundary — all from the embedded fv (ADR-005/013/014/015).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(21) == PARITY_REQUIRED(21)
+[PASS] all android triad gates green; parity 21/21; android ledger row page:automations/AutomationCard status=done.
+EXIT=0
+STATUS=DONE
