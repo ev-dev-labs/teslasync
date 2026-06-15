@@ -952,3 +952,4 @@ p2-windows/pages/admin/BackupRestorePage.prompt.md
 p2-windows/pages/admin/SlowQueriesPage.prompt.md
 p2-windows/pages/admin/SecurityAccessPage.prompt.md
 p2-windows/pages/admin/TeslaFeatureFlagsPage.prompt.md
+p2-windows/pages/admin/SystemPage.prompt.md
