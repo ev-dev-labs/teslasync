@@ -270,6 +270,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-RouteEfficiencyPage.log"
   },
   {
+    "unitId": "page:driving/SpeedProfile",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 37,
+    "requiredCount": 37,
+    "promptId": "p2-windows/W7/windows-page-driving-SpeedProfilePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-driving-SpeedProfilePage.log"
+  },
+  {
     "unitId": "page:maps/NavigationRoute",
     "platform": "windows",
     "status": "done",

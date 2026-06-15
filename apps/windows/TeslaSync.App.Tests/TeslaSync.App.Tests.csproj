@@ -513,6 +513,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" Link="FeatureViews\RegenEfficiencyPage\RegenEfficiencyPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.Model.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.Source.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.ViewModel.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" />
