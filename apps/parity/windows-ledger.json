@@ -322,5 +322,14 @@
     "requiredCount": 54,
     "promptId": "p2-windows/W7/windows-page-vehicle-systems-GuardModePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log"
+  },
+  {
+    "unitId": "page:automations/ActionBuilder",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p2-windows/W7/windows-page-automations-ActionBuilder",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-automations-ActionBuilder.log"
   }
 ]

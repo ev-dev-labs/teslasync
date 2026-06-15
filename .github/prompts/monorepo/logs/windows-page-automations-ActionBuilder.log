@@ -110,5 +110,27 @@ PARITY_REQUIRED=30
 #         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-automations-ActionBuilder.log
 # git commit -m "feat(apps/windows): ActionBuilder at web parity (W7 automations)"
 
+=== RE-VERIFICATION (ledger restore) ===
+# The original parity commit 50c1789b9 ("feat(apps/windows): ActionBuilder at web parity (W7
+# automations)") added all code/test/string changes AND the windows-ledger.json row, but a later
+# integration merge + EOL-normalization (b836aeb1c) dropped ONLY the ledger row — the code, the
+# corrected *Placeholder i18n keys, the en/ar/he resw rows and the regression test all survived in
+# the worktree. Re-applied the missing page:automations/ActionBuilder ledger row (30/30) and
+# re-ran the full windows gate on current HEAD to confirm no regression from the intervening pages:
+#   check-placeholders ActionBuilder.cs            -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+#   check-placeholders ActionBuilder.Model.cs      -> PLACEHOLDER_ALLOWED=5 PLACEHOLDER_COUNT=0 (// parity:allow web i18n key names)
+#   check-placeholders ActionBuilder.ViewModel.cs  -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=5
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release -> Build succeeded. 0 Error(s) (17 pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <the 3 ActionBuilder surface files + ActionBuilderTests.cs>
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release -> Passed: 31063, Failed: 0, Skipped: 0 (grew from 25864 as later pages landed)
+TEST_EXIT=0
+PARITY_COVERED=30
+PARITY_REQUIRED=30
+
 EXIT=0
 STATUS=DONE
