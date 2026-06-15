@@ -558,6 +558,12 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // System / Roadmap page (P2/W7) — parity port of web RoadmapPage at route /roadmap. RouteTable already
+        // maps Page("Roadmap","roadmap",RouteGroup.SystemOps). The page renders from the static curated roadmap
+        // catalog (no API data source, no internal navigation), so it is a plain factory registration.
+        _viewModel.PageFactory.Register(
+            FeatureViews.SystemOps.RoadmapRegistration.RouteName,
+            static () => new FeatureViews.SystemOps.RoadmapPage());
         // System / Chatbot (Helix) page (P2/W7) — parity port of web ChatbotPage at route /chatbot. RouteTable
         // already maps Page("Chatbot","chatbot",RouteGroup.SystemOps). The default-feed ctor renders the empty
         // welcome (How can Helix help you? + suggested prompts) until a DI host supplies the generated-client feed.
