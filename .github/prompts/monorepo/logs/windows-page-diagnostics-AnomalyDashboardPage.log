@@ -1,0 +1,161 @@
+P2-WINDOWS W7 — page:diagnostics/AnomalyDashboard — WinUI 3 / Fluent parity port
+================================================================================
+Web source : web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx (route /analytics/anomalies)
+Output     : apps/windows/TeslaSync.App/feature-views/AnomalyDashboardPage/
+             (repo convention = C#-markup feature-views UserControls, not Features/*.xaml; see sibling done pages
+              RouteEfficiencyPage / RegenEfficiencyPage / DBHealthPage. The generated prompt's path
+              apps/windows/TeslaSync/Features/Diagnostics does not exist in-repo.)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs —
+             PageFactory.Register(AnomalyDashboardRegistration.RouteName,
+                                  static () => new FeatureViews.Diagnostics.AnomalyDashboardPage())
+             (RouteTable already maps Page("AnomalyDashboard","anomaly-detection",Diagnostics,…) +
+              Hidden("AnomalyDashboard","analytics/anomalies",Diagnostics) at
+              TeslaSync.App.Core/Navigation/RouteTable.cs:249-250 — no route entry added; the web route
+              /analytics/anomalies is the existing hidden deep-link alias.)
+Operation  : added Operations.Analytics.Anomalies = "get_api_v1_analytics_anomalies"
+             (TeslaSync.App.Core/Data/Net/Operations.cs) — already present in the generated endpoint table
+             (apps/windows/Generated/Api/ApiEndpoints.cs:136, GET /analytics/anomalies, versioned).
+Strings    : apps/windows/Strings/en/Resources.resw already carries all 15 manifest translation.anomaly.* keys
+             with the exact web English defaults (catalog-generated). Every visible literal is sourced by key
+             through ILocalizer.GetString(webKey, englishDefault); none hardcoded.
+
+Files:
+  feature-views/AnomalyDashboardPage/AnomalyDashboardPage.Model.cs      (tolerant parsers + AnomalySnapshot + IAnomaliesFeed + EmptyAnomaliesFeed + display records + AnomalyStrings + projection + registration + diagnostics + AnomalyJson)
+  feature-views/AnomalyDashboardPage/AnomalyDashboardPage.Source.cs     (generated C# client GET adapter: AnomaliesClientFeed)
+  feature-views/AnomalyDashboardPage/AnomalyDashboardPage.ViewModel.cs  (INotifyPropertyChanged data holder + state matrix + units)
+  feature-views/AnomalyDashboardPage/AnomalyDashboardPage.cs            (WinUI 3 UserControl, Fluent + design tokens)
+  TeslaSync.App.Tests/FeatureViews/AnomalyDashboardPageTests.cs         (33 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj                        (link the 3 UI-free files; the WinUI view is build-only)
+  TeslaSync.App.Core/Data/Net/Operations.cs                             (+Analytics.Anomalies operation id)
+
+Data sources (P1/S8 INotifyPropertyChanged VM → generated C# client, web hook name kept at the C# call site):
+  useAnomalies -> AnomaliesClientFeed.FetchAsync, ApiRequest("get_api_v1_analytics_anomalies",
+                  Query{ vehicle_id, days }) — GET /analytics/anomalies
+                  (operation id = Operations.Analytics.Anomalies; web default days=7 preserved)
+  useSelectedVehicle -> the feed is pre-scoped with vehicleId (+ days) at construction (same seam as the sibling
+                  RouteEfficiencyClientFeed); the view binds only the resolved snapshot.
+Reused W3 component surfaces: TsStatCard (web StatCard), TsGlassPanel, TsBadge, TsBarChart (the native recharts
+  BarChart wrapper), TsEmptyState, TsQueryError, TsSkeleton, TsDataFreshness, TsFadeIn, TsDateTime (relative
+  timestamp), PageTitle/Subhead/SectionTitle/PanelTitle/Caption/Text typography, DisplayTokens/StatusResources brushes.
+Units (P1/S5): the anomaly value/baseline/z_score are per-signal scalar readings with no fixed physical unit (the web
+  renders them with fmtNumber, no unit conversion); the projection rounds at the display boundary only
+  (NumberFormatting.Format with the active UnitPref locale). No non-SI value is stored or computed.
+Live data: none (web page uses a TanStack-Query read, no useLiveX/SSE), so no SSE subscription / staleness chip
+  beyond the standard TsDataFreshness header (ADR-013 live path n/a).
+Scope note: the web page also mounts <AIAnomalyExplanations/> and <AILearnedAnomalyBaselines/> — AI-gated,
+  withAiFeature-wrapped surfaces that render only when ai_mode != 'off'. Those are their own shipped parity units
+  (components/ai/*) and are NOT among this page's 27 manifest parity items (data sources = only useAnomalies;
+  panels = 7; charts = 1), so they are out of scope here and intentionally not re-embedded — mirroring how
+  RouteEfficiencyPage delegated <AIRouteEfficiencySuggestions/> rather than re-owning it.
+
+=== PARITY ===
+PARITY_REQUIRED=27
+
+[1/27]  panel  Signals-Monitored
+        AnomalyDashboardPage.cs::BuildSummary (TsStatCard label=anomaly.monitored, glyph=Activity) ;
+        AnomalyDashboardProjection.BuildSummary -> Display.SummaryStats[0] (value = snapshot.SignalsMonitored).
+        evidence-test: Summary_projects_four_tiles_in_web_order
+[2/27]  panel  Anomalies-7d
+        AnomalyDashboardPage.cs::BuildSummary (TsStatCard label=anomaly.last7d, glyph=AlertTriangle) ;
+        AnomalyDashboardProjection.BuildSummary -> Display.SummaryStats[1] (value = snapshot.AnomaliesLast7d).
+        evidence-test: Summary_projects_four_tiles_in_web_order
+[3/27]  panel  Anomalies-24h
+        AnomalyDashboardPage.cs::BuildSummary (TsStatCard label=anomaly.last24h, glyph=Shield) ;
+        AnomalyDashboardProjection.BuildSummary -> Display.SummaryStats[2] (value = snapshot.AnomaliesLast24h).
+        evidence-test: Summary_projects_four_tiles_in_web_order
+[4/27]  panel  Health-Categories
+        AnomalyDashboardPage.cs::BuildSummary (TsStatCard label=anomaly.categories, glyph=Thermometer) ;
+        AnomalyDashboardProjection.BuildSummary -> Display.SummaryStats[3] (value = health entry count).
+        evidence-test: Summary_projects_four_tiles_in_web_order
+[5/27]  panel  GlassPanel5 (System Health card grid)
+        AnomalyDashboardPage.cs::BuildHealthPanel/BuildHealthCard (TsGlassPanel + PanelTitle anomaly.healthSummary +
+        per-category card: status-tinted FontIcon + Text + TsBadge, OR TsEmptyState anomaly.noHealth) ;
+        AnomalyDashboardProjection.BuildHealthCards -> Display.HealthCards (severityVariant mapping).
+        evidence-test: HealthCards_project_one_per_entry_with_severity_mapping
+[6/27]  panel  GlassPanel6 (Anomaly Timeline list)
+        AnomalyDashboardPage.cs::BuildTimelinePanel/BuildTimelineRow (TsGlassPanel + AlertTriangle icon +
+        SectionTitle anomaly.timeline + scrollable rows: severity TsBadge + signal + type chip + zσ + message +
+        value/baseline + TsDateTime, OR TsEmptyState anomaly.noAnomalies) ;
+        AnomalyDashboardProjection.BuildTimeline -> Display.TimelineRows.
+        evidence-test: Timeline_projects_rows_with_type_label_value_and_baseline, Timeline_shows_sigma_when_z_score_positive
+[7/27]  panel  GlassPanel7 (Most-Frequent-Anomalies)
+        AnomalyDashboardPage.cs::BuildFrequencyPanel (TsGlassPanel + PanelTitle anomaly.frequency + TsBarChart,
+        OR TsEmptyState anomaly.noFrequency) ; AnomalyDashboardProjection.BuildFrequency -> Display.Frequency.
+        evidence-test: Frequency_aggregates_sorts_descending_limits_to_ten_and_builds_one_bar_series, Frequency_is_empty_when_no_anomalies
+[8/27]  chart  BarChart
+        AnomalyDashboardPage.cs::BuildFrequencyPanel -> TsBarChart{ Series } ; AnomalyDashboardProjection.BuildFrequency
+        builds one ChartSeriesKind.Bar series "anomaly.count" over the top-10 signals (web signalFrequency .slice(0,10),
+        desc by count), each ChartPoint labelled with its signal (web vertical-layout BarChart category axis).
+        evidence-test: Frequency_aggregates_sorts_descending_limits_to_ten_and_builds_one_bar_series
+[9/27]  state  loading
+        AnomalyDashboardState.Loading ; AnomalyDashboardPageViewModel.LoadAsync sets _loading while no data ;
+        Display.ShowLoading ; AnomalyDashboardPage.cs _loadingSkeleton (TsSkeleton shimmer).
+        evidence-test: State_loading_when_query_in_flight, Projection_resolves_all_keys_even_in_the_loading_state
+[10/27] state  empty
+        AnomalyDashboardState.Empty ; snapshot.HasData==false ; Display.ShowEmpty ; AnomalyDashboardPage.cs _emptyState
+        (TsEmptyState, message common.noData). Per-panel empties (noHealth/noAnomalies/noFrequency) also render inside
+        the success content, mirroring the web's inner EmptyState gates.
+        evidence-test: State_empty_when_resolved_with_no_telemetry, Snapshot_is_empty_for_non_object_or_empty_payload, ViewModel_surfaces_the_empty_state_for_an_empty_payload
+[11/27] state  error
+        AnomalyDashboardState.Error ; AnomalyDashboardPageViewModel.SetError ; Display.ShowError ;
+        AnomalyDashboardPage.cs _errorState (TsQueryError + Retry common.retry, ActionInvoked -> RefreshAsync).
+        evidence-test: State_error_when_query_failed, ViewModel_surfaces_the_error_state_on_feed_failure, ClientFeed_propagates_a_failed_read
+[12/27] state  success
+        AnomalyDashboardState.Success ; snapshot.HasData==true ; Display.ShowContent ; the four stat tiles + health
+        grid + anomaly timeline + frequency bar chart render from the bound AnomalySnapshot.
+        evidence-test: State_success_when_data_present, State_success_when_only_signal_coverage_present, ViewModel_loads_success_from_the_feed
+[13/27] string anomaly.baseline       AnomalyStrings.Resolve Baseline = GetString("anomaly.baseline", "Baseline")
+[14/27] string anomaly.categories     AnomalyStrings.Resolve Categories = GetString("anomaly.categories", "Health Categories")
+[15/27] string anomaly.count          AnomalyStrings.Resolve Count = GetString("anomaly.count", "Anomalies") (bar-chart series name)
+[16/27] string anomaly.frequency      AnomalyStrings.Resolve Frequency = GetString("anomaly.frequency", "Most Frequent Anomalies")
+[17/27] string anomaly.healthSummary  AnomalyStrings.Resolve HealthSummary = GetString("anomaly.healthSummary", "System Health")
+[18/27] string anomaly.last24h        AnomalyStrings.Resolve Last24h = GetString("anomaly.last24h", "Anomalies (24h)")
+[19/27] string anomaly.last7d         AnomalyStrings.Resolve Last7d = GetString("anomaly.last7d", "Anomalies (7d)")
+[20/27] string anomaly.monitored      AnomalyStrings.Resolve Monitored = GetString("anomaly.monitored", "Signals Monitored")
+[21/27] string anomaly.noAnomalies    AnomalyStrings.Resolve NoAnomalies = GetString("anomaly.noAnomalies", "No anomalies detected — all systems normal.")
+[22/27] string anomaly.noFrequency    AnomalyStrings.Resolve NoFrequency = GetString("anomaly.noFrequency", "Anomaly frequency data will appear after detection runs.")
+[23/27] string anomaly.noHealth       AnomalyStrings.Resolve NoHealth = GetString("anomaly.noHealth", "Health data will appear once telemetry is available.")
+[24/27] string anomaly.subtitle       AnomalyStrings.Resolve Subtitle = GetString("anomaly.subtitle", "Automatic health monitoring and signal anomaly detection")
+[25/27] string anomaly.timeline       AnomalyStrings.Resolve Timeline = GetString("anomaly.timeline", "Anomaly Timeline")
+[26/27] string anomaly.title          AnomalyStrings.Resolve Title = GetString("anomaly.title", "Anomaly Detection")
+[27/27] string anomaly.value          AnomalyStrings.Resolve Value = GetString("anomaly.value", "Value")
+# All 15 manifest string keys asserted resolved headlessly via a RecordingLocalizer:
+#   AnomalyDashboardPageTests.Projection_resolves_every_required_string_key_in_success (single Project() call resolves
+#   every key unconditionally through AnomalyStrings.Resolve) + Projection_resolves_all_keys_even_in_the_loading_state +
+#   Required_string_key_set_has_exactly_fifteen_unique_keys.
+# All four data states + the seven panels + the bar chart assert their render from the bound AnomalyDashboardDisplay /
+#   AnomalySnapshot (State_* + Summary_* + HealthCards_* + Timeline_* + Frequency_* tests). The GET feed's request
+#   shaping (operation id, snake_case vehicle_id + days) is pinned by
+#   ClientFeed_requests_anomalies_scoped_to_the_vehicle_with_default_window + ClientFeed_uses_the_supplied_lookback_window.
+#   The tolerant parser (snake_case + camelCase + health_summary map) is pinned by Snapshot_* tests. severityVariant
+#   bands by SeverityStatus_follows_the_web_variant_bands; typeLabel by TypeLabel_follows_the_web_mapping.
+
+PARITY_COVERED=27
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Diagnostics does not exist
+# in-repo; scanned the real target instead:
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AnomalyDashboardPage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (0 warnings in the new AnomalyDashboardPage + test code; the 17 reported warnings are all pre-existing in
+#    TeslaSync.App.Core and untouched by this change.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (LF / utf-8, whole solution)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 31106, Failed: 0, Skipped: 0
+#   (incl. 33 AnomalyDashboardPageTests; full headless suite, no regressions)
+TEST_EXIT=0
+PARITY_COVERED=27
+PARITY_REQUIRED=27
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/AnomalyDashboardPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Core/Data/Net/Operations.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/AnomalyDashboardPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-diagnostics-AnomalyDashboardPage.log
+# git commit -m "feat(apps/windows): AnomalyDashboardPage at web parity (W7 diagnostics)"
+
+EXIT=0
+STATUS=DONE

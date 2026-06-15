@@ -526,6 +526,13 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("RegenEfficiency", static () => new FeatureViews.Driving.RegenEfficiencyPage());
         // Driving / Route Efficiency page (P2/W7) — parity port of web RouteEfficiencyPage at route /route-efficiency.
         _viewModel.PageFactory.Register("RouteEfficiency", static () => new FeatureViews.Driving.RouteEfficiencyPage());
+        // Diagnostics / Anomaly Dashboard page (P2/W7) — parity port of web AnomalyDashboardPage at route
+        // /analytics/anomalies. RouteTable maps Page("AnomalyDashboard","anomaly-detection",Diagnostics) plus the
+        // Hidden "analytics/anomalies" deep-link alias. The default-feed ctor renders the empty surface until a DI
+        // host supplies the generated-client source via AnomaliesClientFeed.
+        _viewModel.PageFactory.Register(
+            FeatureViews.Diagnostics.AnomalyDashboardRegistration.RouteName,
+            static () => new FeatureViews.Diagnostics.AnomalyDashboardPage());
         // Driving / Driving Dynamics page (P2/W7) — parity port of web DrivingDynamicsPage at route /driving-dynamics.
         // RouteTable already maps Page("DrivingDynamics","driving-dynamics",TripsDriving). The default-feed ctor renders
         // the loading/empty surfaces until a DI host supplies the generated-client source via DrivingDynamicsPage.Create.
