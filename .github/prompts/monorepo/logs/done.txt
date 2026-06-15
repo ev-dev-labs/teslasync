@@ -957,3 +957,4 @@ p2-windows/pages/admin/TeslaRegionPage.prompt.md
 p2-windows/pages/automations/ActionBuilder.prompt.md
 p2-windows/pages/battery/VampireDrainPage.prompt.md
 p2-windows/pages/analytics/LifetimeStatsPage.prompt.md
+p2-windows/pages/analytics/AnalyticsPage.prompt.md
