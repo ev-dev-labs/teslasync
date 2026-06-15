@@ -533,6 +533,10 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register(
             FeatureViews.Diagnostics.AnomalyDashboardRegistration.RouteName,
             static () => new FeatureViews.Diagnostics.AnomalyDashboardPage());
+        // Driving / Speed Profile page (P2/W7) — parity port of web SpeedProfilePage at route /speed-profile.
+        _viewModel.PageFactory.Register(
+            FeatureViews.Driving.SpeedProfileRegistration.RouteName,
+            static () => new FeatureViews.Driving.SpeedProfilePage());
         // Driving / Driving Dynamics page (P2/W7) — parity port of web DrivingDynamicsPage at route /driving-dynamics.
         // RouteTable already maps Page("DrivingDynamics","driving-dynamics",TripsDriving). The default-feed ctor renders
         // the loading/empty surfaces until a DI host supplies the generated-client source via DrivingDynamicsPage.Create.

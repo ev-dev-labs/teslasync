@@ -519,6 +519,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VampireDrainPage\VampireDrainPage.Model.cs" Link="FeatureViews\VampireDrainPage\VampireDrainPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VampireDrainPage\VampireDrainPage.Source.cs" Link="FeatureViews\VampireDrainPage\VampireDrainPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VampireDrainPage\VampireDrainPage.ViewModel.cs" Link="FeatureViews\VampireDrainPage\VampireDrainPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.Model.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.Source.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SpeedProfilePage\SpeedProfilePage.ViewModel.cs" Link="FeatureViews\SpeedProfilePage\SpeedProfilePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" Link="FeatureViews\RouteEfficiencyPage\RouteEfficiencyPage.ViewModel.cs" />

@@ -17833,11 +17833,17 @@
   <data name="translation.speedProfile.distribution" xml:space="preserve">
     <value>Speed Distribution</value>
   </data>
+  <data name="translation.speedProfile.distribution.aria" xml:space="preserve">
+    <value>Speed-bucket time-share distribution bar chart</value>
+  </data>
   <data name="translation.speedProfile.drives" xml:space="preserve">
     <value>Drives</value>
   </data>
   <data name="translation.speedProfile.effVsSpeed" xml:space="preserve">
     <value>Efficiency vs Speed</value>
+  </data>
+  <data name="translation.speedProfile.effVsSpeed.aria" xml:space="preserve">
+    <value>Per-drive efficiency versus speed scatter plot</value>
   </data>
   <data name="translation.speedProfile.efficient" xml:space="preserve">
     <value>Efficient</value>
