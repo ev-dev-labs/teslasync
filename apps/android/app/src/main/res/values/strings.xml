@@ -8353,4 +8353,15 @@
   <string name="translation_Radius__meters_">Radius (meters)</string>
   <string name="translation_Total_Geofences">Total Geofences</string>
   <string name="translation_geofences_bulk_deleteConfirm_body">Selected geofences will be removed permanently. Linked alert rules and automations will continue to reference their old IDs.</string>
+  <string name="translation_powerSql_title">SQL Playground</string>
+  <string name="translation_powerSql_intro">Write read-only SELECT or WITH queries against the curated schema catalog below. Queries do NOT execute from the browser; copy your query into your preferred database client.</string>
+  <string name="translation_powerSql_editor_title">Manual SQL editor</string>
+  <string name="translation_powerSql_editor_placeholder">SELECT COUNT(*) FROM drives WHERE started_at &gt;= NOW() - INTERVAL \'7 days\'</string>
+  <string name="translation_powerSql_editor_label">SQL query editor</string>
+  <string name="translation_powerSql_editor_run">Run</string>
+  <string name="translation_powerSql_editor_runEmpty">Type or paste a SELECT/WITH query above before running.</string>
+  <string name="translation_powerSql_editor_runUnavailable">Read-only execution from the browser is not enabled in this build. Copy the query into your preferred database client (psql, DBeaver, TablePlus) and run it there.</string>
+  <string name="translation_powerSql_editor_clear">Clear</string>
+  <string name="translation_powerSql_catalog_title">Curated schema catalog</string>
+  <string name="translation_powerSql_catalog_intro">These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list.</string>
 </resources>

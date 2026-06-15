@@ -1,0 +1,136 @@
+P3-ANDROID A7 — page:power-user/SqlPlayground — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/power-user/pages/SqlPlaygroundPage.tsx  (route /power/sql)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/poweruser/
+             (SqlPlaygroundPage.kt screen + SqlPlaygroundPageViewModel.kt + SqlPlaygroundPageModel.kt + SqlPlaygroundPageHost.kt)
+Wiring     : no shared store (page owns in-memory editor state only); TeslaSyncApplication -> SqlPlaygroundPageHost.register() on "powerSql"
+Strings    : +11 keys translation_powerSql_* added to app/src/main/res/values/strings.xml (web defaults verbatim)
+Ledger     : apps/parity/android-ledger.json -> page:power-user/SqlPlayground status=done covered 14/14
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PAGE SHAPE (honesty): the web page renders NO API data of its own (manifest: 0 data sources,
+2 panels, 1 state=success, 11 strings, requiredCount=14 — "renders from navigation args /
+local state"). It edits an in-memory query string against a STATIC install-wide curated
+schema catalog and surfaces a deterministic Run help message (there is NO browser SQL-
+execution endpoint). The Android port is faithful to that shape: a SqlPlaygroundPageViewModel
+hoists the editor string + Run reduction into a StateFlow<SqlPlaygroundUiState> (the native
+analogue of the web localStorage 'ai.sqlPlayground.draft' persistence, ADR-002), and the
+stateless SqlPlaygroundPageContent draws the two GlassPanels from that state. All derivation
+(runOutcomeFor / canRunSql / by-name catalog sort) lives in the framework-free
+SqlPlaygroundPageModel.kt; the composable only resolves i18n + draws.
+
+CURATED CATALOG (honesty, no scope narrowing): the web `CURATED_CATALOG` const (5 tables:
+drives, charging_sessions, vehicles, alerts, signal_log_view; 33 columns total) is ported
+VERBATIM into SqlPlaygroundCatalog. These are language-neutral schema identifiers, SQL types,
+and technical descriptions the web component itself HARDCODES (not i18n keys), stored SI
+(distance_m, duration_s, *_wh, *_mps, *_w) per the Phase-42 SI-on-disk contract — so they are
+mirrored as a static Kotlin structure, not routed through strings.xml, exactly matching the
+web's own implementation. The by-name ordering matches the web `sortedTables` memo.
+
+AI-DRAFTER BOUNDARY (honesty, no silent drift — Covenant #9): the web page also mounts the
+optional <AINLSqlPlayground onApply=…/> AI drafter via `withAiFeature('nl-sql-playground')`,
+which is ABSENT in AI-off mode (the default) and propose-only when on. That AI drafter is a
+SEPARATE, feature-gated shared-surface parity unit (its own prompt
+p3-android/shared-meaningful/A-0035-AINLSqlPlayground, its own native surface
+io.teslasync.android.sharedsurfaces.ainlsqlplayground.AINLSqlPlayground + ViewModel/Source/
+Model + unit tests already on this branch) and is NOT among THIS page's 14 required parity
+items (the prompt's PARITY block lists exactly: GlassPanel1, GlassPanel2, success state, 11
+strings). The AINLSqlPlaygroundSource binds an AI-mode gate + an AI SSE draft stream that the
+app DI graph (DataContainer) does NOT yet expose, and wiring it would require editing
+DataContainer.kt — OUTSIDE this prompt's allowed-files set (poweruser/**, NavHost
+registration, res/values*/strings.xml, this log). No page on the branch currently embeds it.
+Per Covenant #4 (no stubs as final) it is NOT embedded with a hardcoded `aiEnabled=false`
+fake gate (that would be a stub, not the real propose-only contract). The manual-editor +
+curated-catalog baseline (web ADR-015 "I3 baseline intact: renders regardless of the AI
+toggle") is implemented IN FULL; the AI section is left to its own shared-surface wiring
+phase. This boundary is documented here, not hidden.
+
+NAV NOTE: the `powerSql` -> /power/sql destination already exists in Destinations.kt L156
+(pre-existing metadata row; RouteTableTest asserts "/power/sql" to "powerSql"); this prompt
+only attaches host content via PageHosts.register("powerSql"), and the deep link is auto-
+registered by TeslaSyncNavHost. Registration is wired in TeslaSyncApplication.onCreate
+alongside the sibling A7 page hosts (idempotent).
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' ->
+app/); the prompt snippet's ':app:' is the same single app module. Tasks run were
+:android:assembleDebug / :android:lintDebug / :android:testDebugUnitTest.
+
+STRINGS-CATALOG NOTE (honesty): res/values/strings.xml is the generated i18n catalog, but the
+prompt's allowed-files set explicitly includes res/values*/strings.xml, and the 11 powerSql.*
+keys did not previously exist in it (the web page declares them via inline `t(key, default)`
+fallbacks; no shared-catalog entry exists). The 11 keys were added by hand with the web
+default strings VERBATIM. No i18n drift gradle task is wired into the gate (only
+checkDesignTokensDrift, for design tokens, exists); lint disables MissingTranslation /
+ExtraTranslation, so the default-locale-only additions are clean. Only values/ (en base) was
+edited; ar/he ship as English fallback.
+
+PLACEHOLDER-MARKER NOTE (honesty): the required string key id
+`translation_powerSql_editor_placeholder` contains the substring "Placeholder", which
+check-placeholders.ps1 forbids case-insensitively. Per the sanctioned `// parity:allow
+<reason>` escape hatch (precedent: DrivesListPage `translation_drives_searchPlaceholder`,
+GeofencesPage `translation_geofences_searchPlaceholder`) the single Textarea `hint =` line
+carries an inline marker with a reason, so it is counted as PLACEHOLDER_ALLOWED=1, not a
+violation. PLACEHOLDER_COUNT=0.
+
+DETEKT/KTLINT NOTE (honesty, no red-as-green): detekt + ktlintCheck are NOT part of this
+artifact's binding gate (the prompt gate = placeholder + assembleDebug + lintDebug +
+testDebugUnitTest, and the sibling A7 pages were accepted on that same triad). The three new
+.kt files compile clean and pass Android lint.
+
+UNITS/A11Y/THEME: no unit-bearing display value on this page (the catalog stores SI column
+names as schema text, not computed quantities), so there is no SI conversion at this boundary
+(S5 N/A here). Every color/typography is a MaterialTheme/TeslaTokens token (dark + dynamic
+theme, ADR-005/ADR-015). The two GlassPanels + each table Card carry non-merging
+Modifier.semantics contentDescription; the Run help message carries liveRegion=Polite (the
+native analogue of the web `role="status"`); Material 3 enforces the >=48dp Button targets.
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 3m 39s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 13m 33s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 29s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=14
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/poweruser/ (SqlPlaygroundPage.kt screen, SqlPlaygroundPageViewModel.kt state holder, SqlPlaygroundPageModel.kt model, SqlPlaygroundPageHost.kt host)
+
+# panels (2) — each a Material 3 surface drawn from the bound StateFlow<SqlPlaygroundUiState>
+[COVERED] panel  GlassPanel1 -> SqlPlaygroundPage.kt:SqlEditorPanel() GlassPanel { PanelTitle(editor.title) + Textarea(value=state.sql) + Run/Clear Buttons(enabled=state.canRun) + RunMessage(state.runOutcome) }
+[COVERED] panel  GlassPanel2 -> SqlPlaygroundPage.kt:SchemaCatalogPanel() GlassPanel { PanelTitle(catalog.title) + BodyText(catalog.intro) + state.tables.forEach { CatalogTableCard(table) } }
+
+# states (1) — the single success surface; no remote feed, so no loading/empty/error region exists to leave blank (ADR-011)
+[COVERED] state  success -> SqlPlaygroundPageViewModel.state: StateFlow<SqlPlaygroundUiState>; collectAsStateWithLifecycle in SqlPlaygroundPage(viewModel); every panel + string renders from this state holder
+
+# strings (11) — every visible literal via stringResource(R.string.translation_*); web key names preserved verbatim
+[COVERED] string powerSql.title              -> SqlPlaygroundPage.kt:SqlPlaygroundHeader() PageTitle(stringResource(R.string.translation_powerSql_title))
+[COVERED] string powerSql.intro              -> SqlPlaygroundPage.kt:SqlPlaygroundHeader() BodyText(stringResource(R.string.translation_powerSql_intro))
+[COVERED] string powerSql.editor.title       -> SqlPlaygroundPage.kt:SqlEditorPanel() PanelTitle(stringResource(R.string.translation_powerSql_editor_title))
+[COVERED] string powerSql.editor.label       -> SqlPlaygroundPage.kt:SqlEditorPanel() Textarea(label = stringResource(R.string.translation_powerSql_editor_label))  // web aria-label
+[COVERED] string powerSql.editor.placeholder -> SqlPlaygroundPage.kt:SqlEditorPanel() Textarea(hint = stringResource(R.string.translation_powerSql_editor_placeholder))  // web in-field example query
+[COVERED] string powerSql.editor.run         -> SqlPlaygroundPage.kt:SqlEditorPanel() Button(label = stringResource(R.string.translation_powerSql_editor_run))
+[COVERED] string powerSql.editor.runEmpty    -> SqlPlaygroundPage.kt:RunMessage() RunOutcome.Empty -> stringResource(R.string.translation_powerSql_editor_runEmpty)
+[COVERED] string powerSql.editor.runUnavailable -> SqlPlaygroundPage.kt:RunMessage() RunOutcome.Unavailable -> stringResource(R.string.translation_powerSql_editor_runUnavailable)
+[COVERED] string powerSql.editor.clear       -> SqlPlaygroundPage.kt:SqlEditorPanel() Button(label = stringResource(R.string.translation_powerSql_editor_clear))
+[COVERED] string powerSql.catalog.title      -> SqlPlaygroundPage.kt:SchemaCatalogPanel() PanelTitle(stringResource(R.string.translation_powerSql_catalog_title))
+[COVERED] string powerSql.catalog.intro      -> SqlPlaygroundPage.kt:SchemaCatalogPanel() BodyText(stringResource(R.string.translation_powerSql_catalog_intro))
+
+PARITY_COVERED=14
+
+=== SUMMARY ===
+data sources : none — the web page owns no hook; it edits in-memory SQL against a static curated catalog. SqlPlaygroundPageViewModel hoists the editor string + Run reduction into StateFlow<SqlPlaygroundUiState>; no HTTP, no shared store. View.opened diagnostic recorded once (surface="SqlPlaygroundPage", P1/S11), carrying no query text.
+nav          : Destinations 'powerSql' -> /power/sql (pre-existing metadata row) wired to SqlPlaygroundRoute() via PageHosts.register in TeslaSyncApplication.onCreate; deep link auto-registered by TeslaSyncNavHost.
+panels       : GlassPanel1 = Manual SQL editor (PanelTitle + Textarea + Run/Clear + Run help message); GlassPanel2 = Curated schema catalog (PanelTitle + intro + 5 bordered table Cards, by-name sorted, 33 columns total). Both drawn from the StateFlow.
+states       : single success state (web manifest declares only "success"). The page is always interactive against the static catalog; there is no remote feed, so there is no loading/empty/error region — nothing is ever blank (ADR-011). The Run help message renders runEmpty (defensive, button disabled while blank) and runUnavailable from state.runOutcome.
+ai-drafter   : web <AINLSqlPlayground/> is a separate feature-gated shared-surface unit (NOT in the 14 required items); its AI-gate + SSE source is not exposed by DataContainer and wiring it is outside this prompt's allowed files. Documented above; the manual baseline is implemented in full; not stubbed.
+a11y/theme   : MaterialTheme/TeslaTokens tokens only (dark + dynamic, ADR-005/015); non-merging semantics contentDescription on both panels + each table Card; liveRegion=Polite on the Run message (web role="status"); >=48dp Button targets (Material 3).
+units        : N/A at the display boundary (no unit-bearing computed value; catalog SI column names are schema text, ADR-013) — never stored/computed non-SI.
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=1: the i18n key id `translation_powerSql_editor_placeholder`, sanctioned // parity:allow inline marker).
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module; Java 21 jbr + Android SDK present)
+parity       : PARITY_COVERED(14) == PARITY_REQUIRED(14)
+[PASS] all android triad gates green; parity 14/14; android ledger row page:power-user/SqlPlayground status=done.
+EXIT=0
+STATUS=DONE
