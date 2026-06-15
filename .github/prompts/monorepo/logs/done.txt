@@ -770,3 +770,9 @@ p4-apple/pages/charging/PowersharePage.prompt.md
 p4-apple/pages/dashboard/GlancePage.prompt.md
 p4-apple/pages/driving/DriveScorePage.prompt.md
 p4-apple/pages/admin/DLQInspectorPage.prompt.md
+p4-apple/modals-dialogs/P-0001-ConfirmDialog.prompt.md
+p4-apple/pages/admin/DevToolsPage.prompt.md
+p4-apple/pages/admin/SecretRotationPage.prompt.md
+p4-apple/pages/admin/SystemPage.prompt.md
+p4-apple/pages/admin/VehicleCostPage.prompt.md
+p4-apple/pages/analytics/LifetimeStatsPage.prompt.md
