@@ -1,0 +1,146 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/LifetimeStats  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/LifetimeStatsPage.tsx
+promptId: p3-android/pages/analytics/LifetimeStatsPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : bundled (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); projectDir = file("app")), matching the
+              sibling admin-page logs. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPage.kt           (@Composable screen: LifetimeStatsPage + LifetimeStatsPageContent + 11 panels)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<LifetimeStats>> + displayPrefs; refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPageSource.kt     (S8 data seam over AnalyticsStore + SettingsStore + SelectedVehicleStore)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPageModel.kt      (framework-free: parseLifetimeStats(JsonElement), display prefs, SI/currency/date formatters, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPageIcons.kt      (9 authored lucide glyphs + 5 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/LifetimeStatsPageHost.kt       (PageHosts.register(lifetimeStats){ LifetimeStatsRoute() })
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt               (NavHost wiring: + analyticsRepository + analyticsStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt             (NavHost wiring: + LifetimeStatsPageHost.register())
+apps/parity/android-ledger.json                                                          (ledger row page:analytics/LifetimeStats, 56/56)
+.github/prompts/monorepo/logs/android-page-analytics-LifetimeStatsPage.log              (this log)
+
+Strings: all 41 page keys already present in res/values/strings.xml (+ values-ar / values-he) as translation_lifetime_*; no catalog edit needed.
+Nav    : Destinations 'lifetimeStats' -> /lifetime-stats pre-existing (Destinations.kt L96, count unchanged);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+Data   : single source useLifetimeStats -> AnalyticsStore.lifetimeStats(vehicleId?) ; scope = SelectedVehicleStore (web useSelectedVehicle);
+         display prefs (distance/speed unit + currency symbol + precision + locale) derived from SettingsStore.settings() (web useUnits/useFormatting).
+SI     : longest_drive_record.value (km) -> prefs.fromKm = convertDistanceFromSI(km*1000, unit); highest_speed_record.value (km/h)
+         -> prefs.fromKmh = convertSpeedFromSI(km/h*1000/3600, unit); max_charge_record.value rendered kWh verbatim. Converted only at the display boundary.
+Divergence (Honesty #9): an all-zero payload routes to UiPhase.Empty via LifetimeStats.hasData so each data section shows its empty-state composable
+         (the sibling LifetimeStatsWidget/AnalyticsSummaryWidget hasData gate), instead of the web's grid-of-zeros; the hero + four stat cards still render zeros. Documented in LifetimeStatsPageModel.kt header.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 2m 47s (compileDebugKotlin executed) ; re-run after edits BUILD SUCCESSFUL in 1m 10s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 12m 21s (lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 23s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=56
+--------------------------------------------------------------------------------
+# panels (11) — each a Material 3 GlassPanel (Surface) ; bound state holder = LifetimeStatsPageViewModel.state : StateFlow<UiState<LifetimeStats>>
+[COVERED] panel  GlassPanel1     -> LifetimeStatsPage.kt:258 HeroPanel() GlassPanel{ Car icon + AnimatedNumber(fromKm distance)+unit + heroSubtitle + earthCompare + since }  (web hero <GlassPanel className="p-8 text-center">)
+[COVERED] panel  Total-Drives    -> LifetimeStatsPage.kt:313 KeyStatsGrid() StatCard(label totalDrives, value integer(total_drives), icon Car, sublabel "{driving_hours} hrs")
+[COVERED] panel  Total-Distance  -> LifetimeStatsPage.kt:320 KeyStatsGrid() StatCard(label totalDistance, value number(fromKm(total_distance_km),0), unit distanceLabel, icon Gauge)
+[COVERED] panel  Total-Energy    -> LifetimeStatsPage.kt:329 KeyStatsGrid() StatCard(label totalEnergy, value number(total_energy_kwh,1), unit kWh, icon Zap, sublabel "{charge_sessions} sessions")
+[COVERED] panel  Total-Savings   -> LifetimeStatsPage.kt:337 KeyStatsGrid() StatCard(label totalSavings, value currency(total_savings,0), icon DollarSign, sublabel vsGas)
+[COVERED] panel  GlassPanel6     -> LifetimeStatsPage.kt:351 FunFactsPanel() SectionPanel(Flame, funFacts){ 4x FunFactCard earth%/moon%/trees/homes | EmptyState(noData) }
+[COVERED] panel  GlassPanel7     -> LifetimeStatsPage.kt:405 SavingsPanel() SectionPanel(DollarSign, savingsComparison){ SavingsBar(ev/gas/savings/co2) | EmptyState(noSavingsData) }
+[COVERED] panel  GlassPanel8     -> LifetimeStatsPage.kt:432 EnvironmentalPanel() SectionPanel(Leaf, environmentalImpact){ ProgressRing(co2) + AnimatedNumber + trees + coffees | EmptyState(noData) }
+[COVERED] panel  GlassPanel9     -> LifetimeStatsPage.kt:480 RecordsPanel() SectionPanel(Award, personalRecords){ 3x RecordCard longest/highest/maxCharge | EmptyState(noData) }
+[COVERED] panel  GlassPanel10    -> LifetimeStatsPage.kt:523 ActivityPanel() SectionPanel(Clock, activitySummary){ 4x MiniStat day/hour/daysOnRoad/avgEfficiency | EmptyState(noData) }
+[COVERED] panel  GlassPanel11    -> LifetimeStatsPage.kt:574 AchievementsPanel() GlassPanel{ Trophy + achievements + "{n}/{m} unlocked" + AchievementGrid(AchievementBadge) | EmptyState(noAchievements) }
+
+# data states (4 required) — bound to LifetimeStatsPageViewModel.state : StateFlow<UiState<LifetimeStats>>
+[COVERED] state  loading         -> LifetimeStatsPage.kt:178 state.isLoading -> LifetimeLoading() (L218 PageLoader spinner) ; UiState.loading() from BaseFeedViewModel.asUiState on a first load with no cache
+[COVERED] state  empty           -> per-section EmptyState reachable via LifetimeStats.hasData -> UiPhase.Empty: FunFacts L396 / Environmental L471 / Records L514 / Activity L565 (noData), Savings L423 (noSavingsData), Achievements L599 (noAchievements)
+[COVERED] state  error           -> LifetimeStatsPage.kt:179 state.isError -> LifetimeError() (L227 ErrorDisplay + Retry, onRetry=viewModel::retry) ; ResourceUiState maps Resource.Error(no cache) -> UiPhase.Error
+[COVERED] state  success         -> LifetimeStatsPage.kt:181 else -> LifetimeBody(stats=state.data) (L238) renders all 11 panels' content from the decoded LifetimeStats ; cache/refresh/stale/offline tier surfaced via DataFreshness chip (L205)
+
+# strings (41) — every visible literal via stringResource(R.string.translation_lifetime_*); web key names preserved
+[COVERED] string lifetime.achievements        -> LifetimeStatsPage.kt:588 SectionTitle(translation_lifetime_achievements)
+[COVERED] string lifetime.activitySummary     -> LifetimeStatsPage.kt:530 SectionPanel title (translation_lifetime_activitySummary)
+[COVERED] string lifetime.avgEfficiency       -> LifetimeStatsPage.kt:554 MiniStat label (translation_lifetime_avgEfficiency)
+[COVERED] string lifetime.avoided             -> LifetimeStatsPage.kt:776 SavingsBar (translation_lifetime_avoided)
+[COVERED] string lifetime.biggestCharge       -> LifetimeStatsPage.kt:508 RecordCard title (translation_lifetime_biggestCharge)
+[COVERED] string lifetime.co2Offset           -> LifetimeStatsPage.kt:452,456 EnvironmentalPanel (translation_lifetime_co2Offset)
+[COVERED] string lifetime.coffeesEquiv        -> LifetimeStatsPage.kt:467 EnvironmentalStat label (translation_lifetime_coffeesEquiv)
+[COVERED] string lifetime.days                -> LifetimeStatsPage.kt:390 FunFactCard unit (translation_lifetime_days)
+[COVERED] string lifetime.daysOnRoad          -> LifetimeStatsPage.kt:549 MiniStat label (translation_lifetime_daysOnRoad)
+[COVERED] string lifetime.earthCompare        -> LifetimeStatsPage.kt:285 HeroPanel (translation_lifetime_earthCompare, arg x)
+[COVERED] string lifetime.earthProgress       -> LifetimeStatsPage.kt:365 FunFactCard label (translation_lifetime_earthProgress)
+[COVERED] string lifetime.electricCost        -> LifetimeStatsPage.kt:754 SavingsBar CostBar label (translation_lifetime_electricCost)
+[COVERED] string lifetime.environmentalImpact -> LifetimeStatsPage.kt:439 SectionPanel title (translation_lifetime_environmentalImpact)
+[COVERED] string lifetime.funFacts            -> LifetimeStatsPage.kt:355 SectionPanel title (translation_lifetime_funFacts)
+[COVERED] string lifetime.gasCost             -> LifetimeStatsPage.kt:761 SavingsBar CostBar label (translation_lifetime_gasCost)
+[COVERED] string lifetime.heroSubtitle        -> LifetimeStatsPage.kt:279 HeroPanel (translation_lifetime_heroSubtitle, arg drives)
+[COVERED] string lifetime.highestSpeed        -> LifetimeStatsPage.kt:501 RecordCard title (translation_lifetime_highestSpeed)
+[COVERED] string lifetime.homesPowered        -> LifetimeStatsPage.kt:391 FunFactCard label (translation_lifetime_homesPowered)
+[COVERED] string lifetime.hours               -> LifetimeStatsPage.kt:317 StatCard sublabel (translation_lifetime_hours)
+[COVERED] string lifetime.longestDrive        -> LifetimeStatsPage.kt:494 RecordCard title (translation_lifetime_longestDrive)
+[COVERED] string lifetime.moonProgress        -> LifetimeStatsPage.kt:373 FunFactCard label (translation_lifetime_moonProgress)
+[COVERED] string lifetime.mostActiveDay       -> LifetimeStatsPage.kt:537 MiniStat label (translation_lifetime_mostActiveDay)
+[COVERED] string lifetime.mostActiveHour      -> LifetimeStatsPage.kt:542 MiniStat label (translation_lifetime_mostActiveHour)
+[COVERED] string lifetime.noAchievements      -> LifetimeStatsPage.kt:599 AchievementsPanel EmptyState (translation_lifetime_noAchievements)
+[COVERED] string lifetime.noData              -> LifetimeStatsPage.kt:396,471,514,565 EmptyState (translation_lifetime_noData)
+[COVERED] string lifetime.noSavingsData       -> LifetimeStatsPage.kt:423 SavingsPanel EmptyState (translation_lifetime_noSavingsData)
+[COVERED] string lifetime.personalRecords     -> LifetimeStatsPage.kt:487 SectionPanel title (translation_lifetime_personalRecords)
+[COVERED] string lifetime.savingsComparison   -> LifetimeStatsPage.kt:412 SectionPanel title (translation_lifetime_savingsComparison)
+[COVERED] string lifetime.sessions            -> LifetimeStatsPage.kt:334 StatCard sublabel (translation_lifetime_sessions)
+[COVERED] string lifetime.since               -> LifetimeStatsPage.kt:292 HeroPanel (translation_lifetime_since, args date,days)
+[COVERED] string lifetime.subtitle            -> LifetimeStatsPage.kt:197 LifetimeChrome BodyText (translation_lifetime_subtitle)
+[COVERED] string lifetime.title               -> LifetimeStatsPage.kt:195 LifetimeChrome PageTitle (translation_lifetime_title)
+[COVERED] string lifetime.totalDistance       -> LifetimeStatsPage.kt:321 StatCard label (translation_lifetime_totalDistance)
+[COVERED] string lifetime.totalDrives         -> LifetimeStatsPage.kt:314 StatCard label (translation_lifetime_totalDrives)
+[COVERED] string lifetime.totalEnergy         -> LifetimeStatsPage.kt:330 StatCard label (translation_lifetime_totalEnergy)
+[COVERED] string lifetime.totalSavings        -> LifetimeStatsPage.kt:338 StatCard label (translation_lifetime_totalSavings)
+[COVERED] string lifetime.treesEquiv          -> LifetimeStatsPage.kt:462 EnvironmentalStat label (translation_lifetime_treesEquiv)
+[COVERED] string lifetime.treesPlanted        -> LifetimeStatsPage.kt:383 FunFactCard label (translation_lifetime_treesPlanted)
+[COVERED] string lifetime.unlocked            -> LifetimeStatsPage.kt:592 AchievementsPanel count (translation_lifetime_unlocked)
+[COVERED] string lifetime.vsGas               -> LifetimeStatsPage.kt:341 StatCard sublabel (translation_lifetime_vsGas)
+[COVERED] string lifetime.youSaved            -> LifetimeStatsPage.kt:773 SavingsBar (translation_lifetime_youSaved)
+
+PARITY_COVERED=56
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : LifetimeStatsPageViewModel binds shared S8 AnalyticsStore.lifetimeStats(vehicleId?) (web useLifetimeStats) scoped to SelectedVehicleStore
+               (web useSelectedVehicle), + SettingsStore.settings() (web useUnits/useFormatting) via lifetimeStatsPageSourceOf(); JsonElement->LifetimeStats decode in
+               LifetimeStatsPageModel.parseLifetimeStats; no HTTP in the view. Vehicle scope switcher = shared VehicleSelect surface in the page chrome (web <VehicleSelect/>).
+charts/maps  : none declared for this unit (the savings bars + CO2 ProgressRing are A3 data-display primitives, not chart wrappers); no webview.
+si/units     : SI read off the wire; converted only at the display boundary via prefs.fromKm/fromKmh (convertDistanceFromSI/convertSpeedFromSI) + currency via the user's
+               settings symbol/precision/locale. No miles/mph/kWh stored or computed; max_charge kWh rendered verbatim (web parity).
+a11y/theme   : icons decorative (contentDescription=null); CO2 ProgressRing carries a contentDescription; AchievementBadge supplies its own TalkBack semantics; all color via
+               MaterialTheme.colorScheme + TeslaTokens.status (A2 tokens) — dynamic color + dark theme; typography via the role components (no raw text styles). Compose-native (no webview).
+nav          : Destinations 'lifetimeStats' -> /lifetime-stats (pre-existing) wired to LifetimeStatsRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(56) == PARITY_REQUIRED(56)
+[PASS] all android triad gates green; parity 56/56; android ledger row page:analytics/LifetimeStats status=done.
+EXIT=0
+STATUS=DONE

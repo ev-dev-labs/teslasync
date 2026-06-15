@@ -12,6 +12,7 @@ import io.teslasync.shared.core.cache.CacheStore
 import io.teslasync.shared.core.cache.Clock
 import io.teslasync.shared.core.cache.SystemClock
 import io.teslasync.shared.core.data.repo.HttpAdminRepository
+import io.teslasync.shared.core.data.repo.HttpAnalyticsRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
 import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
@@ -23,6 +24,7 @@ import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
 import io.teslasync.shared.core.presentation.admin.AdminStore
+import io.teslasync.shared.core.presentation.analytics.AnalyticsStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
 import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
@@ -67,6 +69,7 @@ class DataContainer(
 ) {
     // S7 repositories — HTTP-backed, cache-then-network, over the shared resilient client + offline cache.
     private val vehiclesRepository = HttpVehiclesRepository(api, cacheStore, clock)
+    private val analyticsRepository = HttpAnalyticsRepository(api, cacheStore, clock)
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
     private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
@@ -80,6 +83,13 @@ class DataContainer(
 
     /** Shared Vehicles domain state holder (web `useVehicles` port). */
     val vehiclesStore = VehiclesStore(vehiclesRepository, scope)
+
+    /**
+     * Shared Analytics read-model state holder (web `useAnalytics` port) — the memoized, multi-observer raw-JSON
+     * feeds (`/analytics/lifetime`, `/analytics/fleet`, `/mileage/stats`, …) the A7 LifetimeStatsPage analytics
+     * surface binds to.
+     */
+    val analyticsStore = AnalyticsStore(analyticsRepository, scope)
 
     /** Shared Dashboard domain state holder (web `useDashboard` port). */
     val dashboardStore = DashboardStore(dashboardRepository, scope)

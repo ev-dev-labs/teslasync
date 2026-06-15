@@ -61,5 +61,14 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/admin/TeslaRegionPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaRegionPage.log"
+  },
+  {
+    "unitId": "page:analytics/LifetimeStats",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 56,
+    "requiredCount": 56,
+    "promptId": "p3-android/pages/analytics/LifetimeStatsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-LifetimeStatsPage.log"
   }
 ]
