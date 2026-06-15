@@ -880,3 +880,4 @@ p3-android/pages/driving/DrivesListPage.prompt.md
 p3-android/pages/driving/RegenEfficiencyPage.prompt.md
 p3-android/pages/driving/TripPlannerPage.prompt.md
 p3-android/pages/maps/GeofencesPage.prompt.md
+p3-android/pages/maps/TemperatureImpactPage.prompt.md
