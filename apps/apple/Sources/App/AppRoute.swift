@@ -31,7 +31,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools
     case liveSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
-    case settings, onboarding, teslaOrders, explore, search, sharing, watch
+    case settings, onboarding, teslaOrders, gasPrice, explore, search, sharing, watch
 
     public var id: String {
         rawValue
@@ -64,6 +64,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .secretRotation: "secret-rotation"
         case .vehicleCost: "vehicle-cost"
         case .teslaOrders: "tesla-orders"
+        case .gasPrice: "gas-price"
         default: rawValue
         }
     }
@@ -118,6 +119,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .secretRotation: "lock.rotation"
         case .vehicleCost: "creditcard.fill"
         case .teslaOrders: "cart.fill"
+        case .gasPrice: "fuelpump.fill"
         case .powerUser: "terminal.fill"
         case .system: "server.rack"
         case .settings: "gearshape.fill"
@@ -141,7 +143,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,
              .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system: .system
-        case .settings, .onboarding, .teslaOrders: .account
+        case .settings, .onboarding, .teslaOrders, .gasPrice: .account
         }
     }
 
