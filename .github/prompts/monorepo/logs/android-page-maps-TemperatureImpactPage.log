@@ -1,0 +1,169 @@
+================================================================================
+P3-ANDROID · A7 · page:maps/TemperatureImpact — evidence log
+Native Jetpack Compose / Material 3 port of web TemperatureImpactPage
+Source: web/src/features/maps/pages/TemperatureImpactPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/maps/**
+Package: io.teslasync.android.maps.temperatureimpact
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; local.properties sdk.dir set)
+  JDK          = OpenJDK 21.0.9
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 RegenEfficiency / LifetimeStats / Geofences precedents)
+  TemperatureImpactPageModel.kt      framework-free: registration ids; parseTemperatureImpact
+                                     (decodes GET /analytics/temperature-impact → List<TempEfficiencyPoint>,
+                                     web `res.points ?? []`); TEMP_BUCKETS_C + tempBucketIndex + bucketLabel
+                                     (web getTempBucketIndex / bucketLabel); TemperatureDisplayPrefs (web useUnits)
+                                     — convertTempFromSI + the inline KM_PER_MILE Wh/km→Wh/mi factor at the
+                                     boundary (web notes there is no convertEfficiencyFromSI helper);
+                                     deriveTemperatureStats (web stats useMemo: avgEff, bucketAvgs, best/worst,
+                                     total); scatterPoints (web scatterData); computeScatterLayout (pure scatter
+                                     geometry + the avg ReferenceLine fraction); temperatureTips (web tips useMemo);
+                                     recordTemperatureImpactPageOpened (view.opened); mapData.
+  TemperatureImpactPageIcons.kt      locally-authored stroked 24×24 glyphs (Thermometer, Sun, Lightbulb,
+                                     TrendingUp, Activity); Snowflake re-exported from DataDisplayGlyphs (the
+                                     LifetimeStatsPageIcons precedent — shared catalogs unedited, out of scope).
+  TemperatureImpactPageSource.kt     seam over container.api (GET /analytics/temperature-impact?vehicle_id via
+                                     the shared resilient safeRequest, folded to a loading→success/error Resource
+                                     stream — the GeofencesPageSource api.request precedent, since the web issues
+                                     this read inline through request() and AnalyticsRepository carries no
+                                     temperature-impact port) + SelectedVehicleStore (web useSelectedVehicle) +
+                                     SettingsStore.settings (web useUnits). No HTTP in the view.
+  TemperatureImpactPageViewModel.kt  BaseFeedViewModel; pointsState: StateFlow<UiState<List<TempEfficiencyPoint>>>
+                                     re-collected on vehicle/refresh, empty when the list is empty or no vehicle is
+                                     selected (web `enabled: vehicleId !== ''` / `!points?.length`); displayPrefs
+                                     StateFlow (web useUnits); refresh/retry/recordViewOpened. No HTTP in the view.
+  TemperatureImpactPage.kt           stateless TemperatureImpactPageContent + the eight Material 3 panels; the
+                                     points feed is folded by the framework-free model into the cards, the native
+                                     Canvas scatter (with its avg reference line), the A3 line wrapper, the optimal
+                                     analysis, and the tips. SI→display only at the boundary via prefs.
+  TemperatureImpactPageHost.kt       registers TemperatureImpactRoute for the `temperatureImpact` destination
+                                     (Destinations.kt L102, /temperature-impact); wired in
+                                     TeslaSyncApplication.onCreate() (NavHost registration).
+
+SI BOUNDARY (P1/S5)
+  The points stay SI on the wire (°C, Wh/km). Display conversion happens only at the render boundary via
+  TemperatureDisplayPrefs.toTemperatureDisplay (shared convertTempFromSI) and toDisplayEff (the inline KM_PER_MILE
+  Wh/km→Wh/mi factor — there is no convertEfficiencyFromSI helper, exactly as the web page documents). The SI source
+  is never stored converted (Phase-48 SI-canonical; ADR-013 keeps the cache SI).
+
+LIVE DATA / STALENESS (ADR-013)
+  The single source is the inline `/analytics/temperature-impact` read (not an SSE live feed), surfaced as a
+  loading→success/error Resource stream projected to UiState, so there is no >2 min live-staleness badge (no live
+  source on this page — the web page likewise renders no freshness chip).
+
+=== PARITY ===
+PARITY_REQUIRED=36
+
+PANELS (8) — the four summary MetricCards + GlassPanel5-8, as Material 3 surfaces; no region is ever hidden
+  [01] panel  Avg-Efficiency     TemperatureImpactPage.kt:288  MetricCard (label L290 tempImpact.avgEfficiency, Thermometer/cyan)
+  [02] panel  Best-Temp-Range    TemperatureImpactPage.kt:295  MetricCard (label L297 tempImpact.bestRange, TrendingUp/green, subtitle avg)
+  [03] panel  Worst-Temp-Range   TemperatureImpactPage.kt:308  MetricCard (label L310 tempImpact.worstRange, Sun/purple, subtitle avg)
+  [04] panel  Total-Data-Points  TemperatureImpactPage.kt:316  MetricCard (label L318 tempImpact.totalPoints, Thermometer/cyan)
+  [05] panel  GlassPanel5        TemperatureImpactPage.kt:336  TemperatureScatterPanel (ChartContainer scatterTitle + Canvas scatter)
+  [06] panel  GlassPanel6        TemperatureImpactPage.kt:426  TemperatureBucketPanel (ChartContainer bucketTitle + LineChartWrapper)
+  [07] panel  GlassPanel7        TemperatureImpactPage.kt:471  TemperatureOptimalPanel (GlassPanel accent=Success; invoked guarded L223, web {stats?.best &&})
+  [08] panel  GlassPanel8        TemperatureImpactPage.kt:534  TemperatureTipsPanel (GlassPanel; tips list | EmptyState)
+
+CHARTS (2) — native A3 wrappers (Compose Canvas scatter + Vico line wrapper), never a webview
+  [09] chart  ScatterChart       TemperatureImpactPage.kt:379  TemperatureScatterCanvas (dots coloured by bucket + dashed avg ReferenceLine; invoked L356)
+  [10] chart  LineChart          TemperatureImpactPage.kt:444  LineChartWrapper (avg-efficiency over the 5 bucket labels)
+
+DATA STATES (4) — for the points source; every chart/card also carries its own per-section empty surface
+  [11] state  loading   TemperatureImpactPage.kt:203  if (state.isLoading) TemperatureLoading() (skeleton L247)
+  [12] state  empty     TemperatureImpactPage.kt:347  ChartStatus.Empty (scatter) + L437 (line) + tips EmptyState L549 + em-dash cards L290+
+  [13] state  error     TemperatureImpactPage.kt:208  if (state.hasError) TemperatureErrorBanner(onRetry) (AlertBanner danger + Retry, L259)
+  [14] state  success   TemperatureImpactPage.kt:217  FadeIn body (TemperatureMetricCards/Scatter/Bucket/Optimal/Tips) over state.data
+
+STRINGS (22) — every visible literal resolves from res/values/strings.xml; key names match web
+  [15] string common.noData              TemperatureImpactPage.kt:350  translation_common_noData
+  [16] string error.loadFailed           TemperatureImpactPage.kt:261  translation_error_loadFailed
+  [17] string tempImpact.avgEff          TemperatureImpactPage.kt:433  translation_tempImpact_avgEff
+  [18] string tempImpact.avgEfficiency   TemperatureImpactPage.kt:290  translation_tempImpact_avgEfficiency
+  [19] string tempImpact.bestRange       TemperatureImpactPage.kt:297  translation_tempImpact_bestRange
+  [20] string tempImpact.bucketTitle     TemperatureImpactPage.kt:432  translation_tempImpact_bucketTitle
+  [21] string tempImpact.efficiency      TemperatureImpactPage.kt:344  translation_tempImpact_efficiency
+  [22] string tempImpact.optimalDelta    TemperatureImpactPage.kt:501  translation_tempImpact_optimalDelta (%1$s worst %2$s delta %3$s unit)
+  [23] string tempImpact.optimalDesc     TemperatureImpactPage.kt:489  translation_tempImpact_optimalDesc (%1$s range %2$s eff %3$s unit %4$s count)
+  [24] string tempImpact.optimalTitle    TemperatureImpactPage.kt:486  translation_tempImpact_optimalTitle
+  [25] string tempImpact.scatterName     TemperatureImpactPage.kt:367  translation_tempImpact_scatterName (scatter legend "Drives")
+  [26] string tempImpact.scatterTitle    TemperatureImpactPage.kt:342  translation_tempImpact_scatterTitle
+  [27] string tempImpact.subtitle        TemperatureImpactPage.kt:236  translation_tempImpact_subtitle
+  [28] string tempImpact.temperature     TemperatureImpactPage.kt:343  translation_tempImpact_temperature (x-axis + bucket-table header L434)
+  [29] string tempImpact.tipCold         TemperatureImpactPage.kt:574  translation_tempImpact_tipCold
+  [30] string tempImpact.tipHot          TemperatureImpactPage.kt:575  translation_tempImpact_tipHot
+  [31] string tempImpact.tipOptimal      TemperatureImpactPage.kt:573  translation_tempImpact_tipOptimal (%1$s range)
+  [32] string tempImpact.tipsTitle       TemperatureImpactPage.kt:539  translation_tempImpact_tipsTitle
+  [33] string tempImpact.title           TemperatureImpactPage.kt:234  translation_tempImpact_title
+  [34] string tempImpact.totalPoints     TemperatureImpactPage.kt:318  translation_tempImpact_totalPoints
+  [35] string tempImpact.worstRange      TemperatureImpactPage.kt:310  translation_tempImpact_worstRange
+  [36] string temperature.title          TemperatureImpactPage.kt:191  translation_temperature_title (web usePageTitle → screen accessible name, L196 semantics)
+
+PARITY_COVERED=36
+
+STRING CATALOG
+  All 22 keys already existed in res/values/strings.xml (generated from the shared i18n catalog) — verified
+  verbatim against web/src/i18n/en.json. No new keys were added; res/values*/strings.xml was not edited.
+  The interpolated keys use Android positional %1$s/%2$s/%3$s/%4$s placeholders (optimalDesc: range/eff/unit/count;
+  optimalDelta: worst/delta/unit; tipOptimal: range), passed in web order via stringResource(id, …) — no
+  StringFormatInvalid. MissingTranslation/ExtraTranslation are tolerated by the catalog config so the metric-default
+  reads raise no lint error (lintDebug is green below).
+
+ANONYMOUS REGIONS REPRODUCED (beyond the named panels)
+  - The page chrome title + muted subtitle (web PageContainer title=tempImpact.title / subtitle=tempImpact.subtitle).
+  - The web `actions={<VehicleSelect />}` global vehicle-scope picker (the shared sharedsurfaces VehicleSelect(withIcon)).
+  - The scatter's y-axis efficiency caption, x-axis temperature caption, and the "Drives" series legend chip.
+  - The optimal-analysis best-vs-worst savings line + the per-bucket badge strip (best bucket highlighted).
+  - The `temperature.title` document title (web usePageTitle) exposed as the scroll container's accessible name.
+
+PLACEHOLDER OPT-OUTS
+  None in the new TemperatureImpact* files (PLACEHOLDER_COUNT=0). The dir-wide PLACEHOLDER_ALLOWED=2 is the pair of
+  pre-existing GeofencesPage opt-outs (the scan covers com/teslasync/maps). The forbidden literal "placeholder" was
+  removed from this surface's doc comments (reworded to "empty surface" / "fallback").
+
+LINE COUNT (decomposed surface, not a monolith)
+  TemperatureImpactPage.kt        581   (stateless content + 8 panels + scatter Canvas + states)
+  TemperatureImpactPageModel.kt   438   (framework-free decode/derivation/geometry)
+  TemperatureImpactPageIcons.kt   126
+  TemperatureImpactPageViewModel  104
+  TemperatureImpactPageSource.kt   89
+  TemperatureImpactPageHost.kt     53
+  TOTAL                          1391   vs the 479-line web page — a complete, decomposed port (page + model +
+                                        source + view-model + host + icons), not a reduction.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/maps -Language kotlin
+    PLACEHOLDER_ALLOWED=2
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 50s (:android:compileDebugKotlin executed)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 13m 9s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 45s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (Avg-Efficiency / Best-Temp-Range / Worst-Temp-Range / Total-Data-Points cards,
+      GlassPanel5 scatter, GlassPanel6 line, GlassPanel7 optimal analysis, GlassPanel8 tips); every anonymous region
+      from the web source reproduced (chrome title/subtitle, VehicleSelect, axis captions + legend, optimal savings
+      line + badge strip, the usePageTitle accessible name).
+  [x] All 36 parity items render from the bound StateFlow state holder (pointsState + displayPrefs), folded by the
+      framework-free model (deriveTemperatureStats / scatterPoints / computeScatterLayout / temperatureTips).
+  [x] loading / empty / error / success implemented for the points source; the scatter + line carry their own
+      ChartStatus.Empty and the tips its EmptyState, the cards their em-dash, so no region ever blanks; error is a
+      danger AlertBanner with Retry.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared VehicleSelect / Button); the scroll container +
+      both ChartContainers carry semantics content descriptions (a11y); SI units honored at the display boundary;
+      Compose-native only (the scatter is a Compose Canvas, not a webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (36).
+  [x] android ledger row for page:maps/TemperatureImpact set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

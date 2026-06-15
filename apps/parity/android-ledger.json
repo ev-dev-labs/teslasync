@@ -205,5 +205,14 @@
     "requiredCount": 81,
     "promptId": "p3-android/pages/maps/GeofencesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-GeofencesPage.log"
+  },
+  {
+    "unitId": "page:maps/TemperatureImpact",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 36,
+    "requiredCount": 36,
+    "promptId": "p3-android/pages/maps/TemperatureImpactPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-TemperatureImpactPage.log"
   }
 ]
