@@ -26,6 +26,7 @@ import io.teslasync.android.maps.geofences.GeofencesPageHost
 import io.teslasync.android.maps.temperatureimpact.TemperatureImpactPageHost
 import io.teslasync.android.notifications.archived.ArchivedPageHost
 import io.teslasync.android.notifications.channels.ChannelsPageHost
+import io.teslasync.android.notifications.webhooks.WebhooksPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -109,6 +110,8 @@ class TeslaSyncApplication : Application() {
         ArchivedPageHost.register()
         // Register the native notification-channels screen for the /notifications/channels route (P3/A7). Idempotent.
         ChannelsPageHost.register()
+        // Register the native custom-webhooks screen for the /notifications/webhooks route (P3/A7). Idempotent.
+        WebhooksPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

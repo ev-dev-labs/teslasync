@@ -7319,6 +7319,10 @@
       "pending": "Pending",
       "activeChannels": "Active Channels"
     },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Custom HTTPS endpoints that receive HMAC-signed event payloads."
+    },
     "channels": {
       "title": "Notification channels",
       "subtitle": "Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.",
