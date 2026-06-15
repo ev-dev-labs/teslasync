@@ -784,3 +784,4 @@ p4-apple/pages/admin/IngestXRayPage.prompt.md
 p4-apple/pages/admin/LiveLogsPage.prompt.md
 p4-apple/shared-meaningful/P-0002-RouteAnnouncer.prompt.md
 p4-apple/pages/admin/FeedbackQueuePage.prompt.md
+p4-apple/pages/admin/RedisSignalViewerPage.prompt.md
