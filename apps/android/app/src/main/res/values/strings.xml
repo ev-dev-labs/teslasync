@@ -8320,4 +8320,30 @@
   <string name="translation_drives_sortByAria">Sort by %1$s</string>
   <string name="translation_drives_stickyBar_aria">Drive history summary</string>
   <string name="translation_drives_viewAnomalies">View anomalies</string>
+  <!-- P3-ANDROID A7 maps/GeofencesPage parity keys (web/src/features/maps/pages/GeofencesPage.tsx).
+       androidName-mangled per apps/shared/i18n/generators/gen-i18n.ts; English base values. -->
+  <string name="translation_Add_Geofence">Add Geofence</string>
+  <string name="translation_Add_a_geofence_to_track_when_your_vehicle_arrives_or_leaves_a_location_">Add a geofence to track when your vehicle arrives or leaves a location.</string>
+  <string name="translation_Alert_Type">Alert Type</string>
+  <string name="translation_Are_you_sure_you_want_to_delete____name_____This_action_cannot_be_undone_">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+  <string name="translation_Clear_search">Clear search</string>
+  <string name="translation_Create_Geofence">Create Geofence</string>
+  <string name="translation_Define_locations_for_contextual_tracking_and_automation">Define locations for contextual tracking and automation</string>
+  <string name="translation_Delete_Geofence">Delete Geofence</string>
+  <string name="translation_Edit_Geofence">Edit Geofence</string>
+  <string name="translation_Entry___Exit">Entry &amp; Exit</string>
+  <string name="translation_Entry_Alerts">Entry Alerts</string>
+  <string name="translation_Exit_Alerts">Exit Alerts</string>
+  <string name="translation_Failed_to_create_geofence">Failed to create geofence</string>
+  <string name="translation_Failed_to_delete_geofence">Failed to delete geofence</string>
+  <string name="translation_Failed_to_toggle_geofence">Failed to toggle geofence</string>
+  <string name="translation_Failed_to_update_geofence">Failed to update geofence</string>
+  <string name="translation_Geofence_created">Geofence created</string>
+  <string name="translation_Geofence_deleted">Geofence deleted</string>
+  <string name="translation_Geofence_updated">Geofence updated</string>
+  <string name="translation_Minimum_10m__maximum_50000m">Minimum 10m, maximum 50000m</string>
+  <string name="translation_No_geofences_defined">No geofences defined</string>
+  <string name="translation_Radius__meters_">Radius (meters)</string>
+  <string name="translation_Total_Geofences">Total Geofences</string>
+  <string name="translation_geofences_bulk_deleteConfirm_body">Selected geofences will be removed permanently. Linked alert rules and automations will continue to reference their old IDs.</string>
 </resources>

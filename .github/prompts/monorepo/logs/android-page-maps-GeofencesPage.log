@@ -1,0 +1,143 @@
+================================================================================
+P3-ANDROID A7 — page:maps/Geofences — Compose / Material 3 parity port
+================================================================================
+Artifact      : page:maps/Geofences
+Web source    : web/src/features/maps/pages/GeofencesPage.tsx
+Web route     : /geofences
+Output        : apps/android/app/src/main/kotlin/com/teslasync/maps/GeofencesPage.kt
+                apps/android/app/src/main/kotlin/com/teslasync/maps/GeofencesPageViewModel.kt
+                apps/android/app/src/main/kotlin/com/teslasync/maps/GeofencesPageSource.kt
+                apps/android/app/src/main/kotlin/com/teslasync/maps/GeofencesPageModel.kt
+                apps/android/app/src/main/kotlin/com/teslasync/maps/GeofencesPageHost.kt
+NavHost reg.  : io/teslasync/android/TeslaSyncApplication.kt (GeofencesPageHost.register)
+                io/teslasync/android/navigation/Destinations.kt page("geofences","/geofences",NavGroup.Maps)
+Strings       : res/values/strings.xml (+24 androidName-mangled keys, gen-i18n.ts rules)
+ADR refs      : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+Architecture  : stateless @Composable screen (GeofencesPage / GeofencesPageContent) driven by a
+                Hilt-free AndroidX ViewModel (GeofencesPageViewModel : BaseFeedViewModel) that binds
+                the shared KMP core (ADR-004) via the GeofencesPageSource seam:
+                  useGeofences          -> LocationRepository.geofences()            (cache-then-network Resource)
+                  useVehicles           -> VehiclesRepository.vehicles()             (cache-then-network Resource)
+                  usePinned('geofence') -> PinnedRepository.pinned(Geofence)         (pinned-first ordering)
+                  useBulkGeofencesDelete-> LocationRepository.bulkDeleteGeofences()  (POST /geofences/bulk)
+                  create/update         -> ApiHttpClient.safeRequest (shared resilient client, JsonObject body)
+                Every panel is a Material 3 Surface/Card (GlassPanel/MetricCard); maps use the A3
+                Maps-Compose wrapper (components.maps.GeofenceDrawer -> TeslaMap + MapStyleId.Dark);
+                every string resolves from res/values via stringResource (ADR-014). SI values
+                (radius m, coordinate degrees) are display-formatted only at the render boundary.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test)
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0      (check-placeholders.ps1 -Path .../maps -Language kotlin; COUNT=0, ALLOWED=2)
+BUILD_EXIT=0            (./gradlew :android:assembleDebug — BUILD SUCCESSFUL)
+LINT_EXIT=0             (./gradlew :android:lintDebug — BUILD SUCCESSFUL, abortOnError=true)
+TEST_EXIT=0             (./gradlew :android:testDebugUnitTest — BUILD SUCCESSFUL)
+Note: settings.gradle.kts maps the app module to Gradle path :android (projectDir app/); the
+README's :app: alias resolves to :android: per the module's own comment. Baseline (pre-change)
+assemble+lint+test were independently confirmed GREEN before authoring.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=81
+--------------------------------------------------------------------------------
+-- panels (8) — Material 3 Surface/Card regions --
+[COVERED] panel  GlassPanel1        -> GeofencesPage.kt::GeofencesSummary (GlassPanel summary container)
+[COVERED] panel  Total-Geofences    -> GeofencesPage.kt::GeofencesSummary (MetricCard label=totalGeofences)
+[COVERED] panel  Active             -> GeofencesPage.kt::GeofencesSummary (MetricCard label=active)
+[COVERED] panel  Entry-Alerts       -> GeofencesPage.kt::GeofencesSummary (MetricCard label=entryAlerts)
+[COVERED] panel  Exit-Alerts        -> GeofencesPage.kt::GeofencesSummary (MetricCard label=exitAlerts)
+[COVERED] panel  GlassPanel6        -> GeofencesPage.kt::GeofencesLoading (skeleton GlassPanel)
+[COVERED] panel  GlassPanel7        -> GeofencesPage.kt::GeofenceRow (per-row GlassPanel card)
+[COVERED] panel  GlassPanel8        -> GeofencesPage.kt::GeofenceLocationPanel (use-current-location GlassPanel)
+-- maps (3) — A3 Maps-Compose / GoogleMap wrapper, never a webview --
+[COVERED] map    MapContainer       -> GeofencesPage.kt::GeofenceMapDrawer -> components.maps.GeofenceDrawer -> TeslaMap (GoogleMap surface)
+[COVERED] map    MapTileLayer       -> GeofencesPage.kt::GeofenceMapDrawer -> GeofenceDrawer(initialStyle=MapStyleId.Dark) dark tile style
+[COVERED] map    GeofenceDrawer     -> GeofencesPage.kt::GeofenceMapDrawer (components.maps.GeofenceDrawer editor, modes=[Circle], onCreate->applyDrawnCircle)
+-- data states (4) — implemented for the geofences feed --
+[COVERED] state  loading            -> GeofencesPage.kt::GeofencesPageContent (geofencesState.isLoading -> GeofencesLoading shimmer)
+[COVERED] state  empty              -> GeofencesPage.kt::GeofencesEmpty + GeofencesSummary EmptyState (no-geofences / no-data)
+[COVERED] state  error              -> GeofencesPage.kt::GeofencesError (geofencesState.isError -> ErrorDisplay + Retry)
+[COVERED] state  success            -> GeofencesPage.kt::GeofencesListSection (loaded list content)
+-- strings (66) — every visible literal from res/values via stringResource; web key names kept --
+[COVERED] string Active                                              -> rememberGeofencesStrings.active (translation_Active)
+[COVERED] string Add Geofence                                        -> rememberGeofencesStrings.addGeofence (translation_Add_Geofence)
+[COVERED] string Add a geofence to track when your vehicle arrives... -> rememberGeofencesStrings.addGeofenceHint (translation_Add_a_geofence_..._location_)
+[COVERED] string Alert Type                                          -> rememberGeofencesStrings.alertType (translation_Alert_Type)
+[COVERED] string Are you sure you want to delete "{{name}}"? ...     -> GeofencesPageContent ConfirmDialog message (translation_Are_you_sure_..._undone_, %1$s=name)
+[COVERED] string Cancel                                              -> rememberGeofencesStrings.cancel (translation_Cancel)
+[COVERED] string Clear search                                        -> rememberGeofencesStrings.clearSearch (translation_Clear_search)
+[COVERED] string Create                                              -> rememberGeofencesStrings.create (translation_Create)
+[COVERED] string Create Geofence                                     -> rememberGeofencesStrings.createGeofence (translation_Create_Geofence)
+[COVERED] string Define locations for contextual tracking...         -> rememberGeofencesStrings.subtitle (translation_Define_locations_...)
+[COVERED] string Delete                                              -> rememberGeofencesStrings.delete (translation_Delete)
+[COVERED] string Delete Geofence                                     -> rememberGeofencesStrings.deleteGeofence (translation_Delete_Geofence)
+[COVERED] string Edit Geofence                                       -> rememberGeofencesStrings.editGeofence (translation_Edit_Geofence)
+[COVERED] string Entry                                               -> rememberGeofencesStrings.entry (translation_Entry)
+[COVERED] string Entry & Exit                                        -> rememberGeofencesStrings.entryExit (translation_Entry___Exit)
+[COVERED] string Entry Alerts                                        -> rememberGeofencesStrings.entryAlerts (translation_Entry_Alerts)
+[COVERED] string Exit                                                -> rememberGeofencesStrings.exit (translation_Exit)
+[COVERED] string Exit Alerts                                         -> rememberGeofencesStrings.exitAlerts (translation_Exit_Alerts)
+[COVERED] string Failed to create geofence                           -> rememberGeofencesStrings.failedCreate (translation_Failed_to_create_geofence)
+[COVERED] string Failed to delete geofence                           -> rememberGeofencesStrings.failedDelete (translation_Failed_to_delete_geofence)
+[COVERED] string Failed to toggle geofence                           -> rememberGeofencesStrings.failedToggle (translation_Failed_to_toggle_geofence)
+[COVERED] string Failed to update geofence                           -> rememberGeofencesStrings.failedUpdate (translation_Failed_to_update_geofence)
+[COVERED] string Geofence created                                    -> rememberGeofencesStrings.toastCreated (translation_Geofence_created)
+[COVERED] string Geofence deleted                                    -> rememberGeofencesStrings.toastDeleted (translation_Geofence_deleted)
+[COVERED] string Geofence updated                                    -> rememberGeofencesStrings.toastUpdated (translation_Geofence_updated)
+[COVERED] string Geofences                                           -> rememberGeofencesStrings.title (translation_Geofences)
+[COVERED] string Home                                                -> rememberGeofencesStrings.home (translation_Home, Name field hint)
+[COVERED] string Inactive                                            -> rememberGeofencesStrings.inactive (translation_Inactive)
+[COVERED] string Latitude                                            -> rememberGeofencesStrings.latitude (translation_Latitude)
+[COVERED] string Longitude                                           -> rememberGeofencesStrings.longitude (translation_Longitude)
+[COVERED] string Minimum 10m, maximum 50000m                         -> rememberGeofencesStrings.radiusHint (translation_Minimum_10m__maximum_50000m)
+[COVERED] string Name                                                -> rememberGeofencesStrings.name (translation_Name)
+[COVERED] string No geofences defined                                -> rememberGeofencesStrings.noGeofencesDefined (translation_No_geofences_defined)
+[COVERED] string None                                                -> rememberGeofencesStrings.none (translation_None)
+[COVERED] string Radius (meters)                                     -> rememberGeofencesStrings.radiusMeters (translation_Radius__meters_)
+[COVERED] string Total Geofences                                     -> rememberGeofencesStrings.totalGeofences (translation_Total_Geofences)
+[COVERED] string Update                                              -> rememberGeofencesStrings.update (translation_Update)
+[COVERED] string common.delete                                       -> rememberGeofencesStrings.commonDelete (translation_common_delete)
+[COVERED] string common.noData                                       -> rememberGeofencesStrings.noData (translation_common_noData)
+[COVERED] string editableText.rename.geofence                        -> GeofenceRow renameLabel (translation_editableText_rename_geofence, %1$s=name)
+[COVERED] string forms.validationFailed                              -> rememberGeofencesStrings.validationFailed (translation_forms_validationFailed)
+[COVERED] string geofences.aiSuggest.pickLocation                    -> rememberGeofencesStrings.aiPickLocation (translation_geofences_aiSuggest_pickLocation)
+[COVERED] string geofences.browser                                   -> rememberGeofencesStrings.browser (translation_geofences_browser)
+[COVERED] string geofences.bulk.delete                               -> rememberGeofencesStrings.bulkDelete (translation_geofences_bulk_delete)
+[COVERED] string geofences.bulk.deleteConfirm.body                   -> rememberGeofencesStrings.bulkDeleteConfirmBody (translation_geofences_bulk_deleteConfirm_body)
+[COVERED] string geofences.bulk.deleteConfirm.title                  -> rememberGeofencesStrings.bulkDeleteConfirmTitle (translation_geofences_bulk_deleteConfirm_title)
+[COVERED] string geofences.chooseVehicle                             -> rememberGeofencesStrings.chooseVehicle (translation_geofences_chooseVehicle)
+[COVERED] string geofences.drawHint                                  -> rememberGeofencesStrings.drawHint (translation_geofences_drawHint)
+[COVERED] string geofences.drawOnMap                                 -> rememberGeofencesStrings.drawOnMap (translation_geofences_drawOnMap)
+[COVERED] string geofences.drawerLabel                               -> rememberGeofencesStrings.drawerLabel (translation_geofences_drawerLabel)
+[COVERED] string geofences.error.nameTooLong                         -> rememberGeofencesStrings.nameTooLong (translation_geofences_error_nameTooLong)
+[COVERED] string geofences.filterLabel.search                        -> rememberGeofencesStrings.filterLabelSearch (translation_geofences_filterLabel_search)
+[COVERED] string geofences.getLocation                               -> rememberGeofencesStrings.getLocation (translation_geofences_getLocation)
+[COVERED] string geofences.gettingLocation                           -> rememberGeofencesStrings.gettingLocation (translation_geofences_gettingLocation)
+[COVERED] string geofences.locationDenied                            -> rememberGeofencesStrings.locationDenied (translation_geofences_locationDenied)
+[COVERED] string geofences.locationFailed                            -> rememberGeofencesStrings.locationFailed (translation_geofences_locationFailed)
+[COVERED] string geofences.noMatches                                 -> rememberGeofencesStrings.noMatches (translation_geofences_noMatches)
+[COVERED] string geofences.noPosition                                -> rememberGeofencesStrings.noPosition (translation_geofences_noPosition)
+[COVERED] string geofences.noun.one                                  -> rememberGeofencesStrings.nounOne (translation_geofences_noun_one, BulkActionToolbar countText)
+[COVERED] string geofences.noun.other                                -> rememberGeofencesStrings.nounOther (translation_geofences_noun_other, BulkActionToolbar countText)
+[COVERED] string geofences.searchPlaceholder                         -> rememberGeofencesStrings.searchHint (translation_geofences_searchPlaceholder)
+[COVERED] string geofences.selectGeofence                            -> GeofenceRow selectLabel (translation_geofences_selectGeofence, %1$s=name)
+[COVERED] string geofences.selectVehicle                             -> rememberGeofencesStrings.selectVehicle (translation_geofences_selectVehicle)
+[COVERED] string geofences.useCurrentLocation                        -> rememberGeofencesStrings.useCurrentLocation (translation_geofences_useCurrentLocation)
+[COVERED] string geofences.vehicle                                   -> rememberGeofencesStrings.vehicle (translation_geofences_vehicle)
+[COVERED] string m                                                   -> rememberGeofencesStrings.meterUnit (translation_m, radius display)
+--------------------------------------------------------------------------------
+PARITY_COVERED=81
+================================================================================
+
+ACCEPTANCE
+[x] Every named panel implemented; every anonymous region from the web source reproduced.
+[x] All 81 parity items render from the bound StateFlow state holders.
+[x] loading / empty / error implemented for the geofences feed (vehicles/pins fold into the modal + ordering).
+[x] All visible strings from strings.xml; zero hardcoded literals; key names match web.
+[x] Dark/dynamic theme + accessibility (semantics content descriptions, >=48dp targets) + SI units honored; Compose-native only.
+[x] build + lint + test + placeholder gates GREEN; PARITY_COVERED==PARITY_REQUIRED (81).
+
+EXIT=0
+STATUS=DONE
