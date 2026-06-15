@@ -81,6 +81,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-VehicleCostPage.log"
   },
   {
+    "unitId": "page:analytics/Analytics",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p2-windows/W7/windows-page-analytics-AnalyticsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-AnalyticsPage.log"
+  },
+  {
     "unitId": "page:analytics/FleetCompare",
     "platform": "windows",
     "status": "done",

@@ -1,0 +1,110 @@
+# p2-windows · W7 · page:analytics/Analytics — evidence log
+# Native WinUI 3 / Windows App SDK / .NET 10 / Fluent parity port of the web page
+# web/src/features/analytics/pages/AnalyticsPage.tsx (route /analytics, nav name "Analytics").
+#
+# Output (actual repo layout — the generated prompt's apps/windows/TeslaSync/Features/Analytics
+# path is the idealized template; this repo ships the WinUI app as apps/windows/TeslaSync.App with
+# the Model/Source/ViewModel/View C#-markup convention under feature-views/):
+#   apps/windows/TeslaSync.App/feature-views/AnalyticsPage/AnalyticsPage.Model.cs
+#   apps/windows/TeslaSync.App/feature-views/AnalyticsPage/AnalyticsPage.Source.cs
+#   apps/windows/TeslaSync.App/feature-views/AnalyticsPage/AnalyticsPage.ViewModel.cs
+#   apps/windows/TeslaSync.App/feature-views/AnalyticsPage/AnalyticsPage.cs
+#   NavigationView registration: apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs (PageFactory.Register("Analytics"))
+#   Strings: apps/windows/Strings/en/Resources.resw (analytics.* keys already present)
+#   Tests:   apps/windows/TeslaSync.App.Tests/FeatureViews/AnalyticsPageTests.cs (+ csproj Compile links)
+#
+# Architecture: the page owns ONE GET /analytics/fleet read (web useFleetAnalytics) and feeds every tab
+# from it — the self-fetching Hero/Overview/Charging surfaces are replayed through their own result mappers
+# (Replay{HeroGauges,OverviewTab,ChargingTab}Source), and the presentational Driving/Battery surfaces are
+# handed models parsed from the same snapshot (AnalyticsProjection.Build{Driving,Battery}Model). The four
+# tab bodies (Overview/Driving/Charging/Battery) and HeroGauges are each their own already-shipped parity
+# unit; this W7 unit is the page shell (header + 3 states + 4 tab labels) per the manifest record
+# (dataSources=[useFleetAnalytics], states=[loading,error,success], strings=[analytics.{title,subtitle,
+# tabs.overview,tabs.driving,tabs.charging,tabs.battery}], requiredCount=9, no panels/charts/maps).
+
+=== PARITY ===
+PARITY_REQUIRED=9
+
+[1/9] state · loading
+      evidence: AnalyticsPageState.Loading (feature-views/AnalyticsPage/AnalyticsPage.Model.cs)
+               AnalyticsProjection.Project -> AnalyticsDisplay.ShowLoading (same file)
+               view: AnalyticsPage.Render -> _loadingSkeleton (TsSkeleton shimmer) (AnalyticsPage.cs)
+               test: AnalyticsPageTests.State_loading_when_query_in_flight  [PASS]
+      COVERED
+
+[2/9] state · error
+      evidence: AnalyticsPageState.Error (AnalyticsPage.Model.cs)
+               AnalyticsProjection.Project -> AnalyticsDisplay.ShowError + ErrorText + RetryLabel
+               view: AnalyticsPage.Render -> _errorState (TsQueryError + Retry) (AnalyticsPage.cs)
+               test: AnalyticsPageTests.State_error_when_fleet_query_failed  [PASS]
+      COVERED
+
+[3/9] state · success
+      evidence: AnalyticsPageState.Success (AnalyticsPage.Model.cs)
+               AnalyticsProjection.Project -> AnalyticsDisplay.ShowContent
+               view: AnalyticsPage.Render/RebuildTabSurfaces -> HeroGauges + TsTabs(4 tabs) (AnalyticsPage.cs)
+               tests: State_success_when_fleet_resolved, State_success_even_when_fleet_resolved_with_no_data  [PASS]
+      COVERED
+
+[4/9] string · analytics.title
+      evidence: AnalyticsProjection.Project localizer.GetString("analytics.title","Fleet Analytics") (AnalyticsPage.Model.cs)
+               resw: translation.analytics.title (apps/windows/Strings/en/Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Title_and_subtitle_use_the_web_defaults  [PASS]
+      COVERED
+
+[5/9] string · analytics.subtitle
+      evidence: AnalyticsProjection.Project localizer.GetString("analytics.subtitle","Comprehensive fleet performance insights")
+               resw: translation.analytics.subtitle (Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Title_and_subtitle_use_the_web_defaults  [PASS]
+      COVERED
+
+[6/9] string · analytics.tabs.overview
+      evidence: AnalyticsProjection.BuildTabs localizer.GetString("analytics.tabs.overview","Overview") (AnalyticsPage.Model.cs)
+               resw: translation.analytics.tabs.overview (Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Tabs_project_the_four_web_tabs_in_order  [PASS]
+      COVERED
+
+[7/9] string · analytics.tabs.driving
+      evidence: AnalyticsProjection.BuildTabs localizer.GetString("analytics.tabs.driving","Driving")
+               resw: translation.analytics.tabs.driving (Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Tabs_project_the_four_web_tabs_in_order  [PASS]
+      COVERED
+
+[8/9] string · analytics.tabs.charging
+      evidence: AnalyticsProjection.BuildTabs localizer.GetString("analytics.tabs.charging","Charging")
+               resw: translation.analytics.tabs.charging (Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Tabs_project_the_four_web_tabs_in_order  [PASS]
+      COVERED
+
+[9/9] string · analytics.tabs.battery
+      evidence: AnalyticsProjection.BuildTabs localizer.GetString("analytics.tabs.battery","Battery")
+               resw: translation.analytics.tabs.battery (Resources.resw)
+               tests: Projection_resolves_every_required_string_key, Tabs_project_the_four_web_tabs_in_order  [PASS]
+      COVERED
+
+PARITY_COVERED=9
+
+=== GATE ===
+# Placeholder / stub gate (ADR-011) over the new feature dir + test:
+#   ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/AnalyticsPage -Language csharp
+#   ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/AnalyticsPageTests.cs -Language csharp
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# dotnet build apps/windows/TeslaSync.sln -c Release  ->  Build succeeded. 0 Error(s)
+BUILD_EXIT=0
+
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  ->  no changes (whole solution)
+LINT_EXIT=0
+
+# W7 test gate runs the headless logic project (TeslaSync.App.Tests). The WinAppDriver UI-automation
+# project (TeslaSync.App.UITests) is the separate W9 workstream and requires a UI-automation runner
+# (WinAppDriver/Appium listening on 127.0.0.1:4723); it is intentionally excluded from the W7 page gate,
+# matching the precedent in windows-page-admin-APIKeysPage.log / windows-page-admin-ApiLogsPage.log.
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release
+#   -> Passed: 31092, Failed: 0, Skipped: 0   (AnalyticsPageTests: 29/29)
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE

@@ -403,6 +403,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\VehicleAccessPage\VehicleAccessPage.Source.cs" Link="FeatureViews\VehicleAccessPage\VehicleAccessPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\VehicleAccessPage\VehicleAccessPage.ViewModel.cs" Link="FeatureViews\VehicleAccessPage\VehicleAccessPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AlertsSection\AlertsSection.Model.cs" Link="FeatureViews\AlertsSection\AlertsSection.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnalyticsPage\AnalyticsPage.Model.cs" Link="FeatureViews\AnalyticsPage\AnalyticsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnalyticsPage\AnalyticsPage.Source.cs" Link="FeatureViews\AnalyticsPage\AnalyticsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\AnalyticsPage\AnalyticsPage.ViewModel.cs" Link="FeatureViews\AnalyticsPage\AnalyticsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\APIKeysPage\APIKeysPage.Model.cs" Link="FeatureViews\APIKeysPage\APIKeysPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\APIKeysPage\APIKeysPage.Source.cs" Link="FeatureViews\APIKeysPage\APIKeysPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\APIKeysPage\APIKeysPage.ViewModel.cs" Link="FeatureViews\APIKeysPage\APIKeysPage.ViewModel.cs" />
