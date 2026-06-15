@@ -73,7 +73,11 @@ public sealed partial class SettingsPage : UserControl, IDisposable
     private readonly TsButton _checklistButton = new() { Variant = ButtonVariant.Subtle, IconGlyph = SettingsRegistration.ChecklistGlyph };
 
     // Appearance — accent palette + display-mode picker (native ThemeProvider parity, applied app-wide).
-    private readonly TsGlassPanel _themePanel;
+    // Null when the shell mounts the full Appearance surface (which already contains the theme picker).
+    private readonly TsGlassPanel? _themePanel;
+
+    // Optional full settings surfaces (Appearance / General / Advanced) mounted by the shell with the live data layer.
+    private readonly IReadOnlyList<UIElement> _extraSurfaces;
 
     /// <summary>Creates the page over the default (empty) settings feed and the shell resource localizer.</summary>
     public SettingsPage()
@@ -84,11 +88,12 @@ public sealed partial class SettingsPage : UserControl, IDisposable
     /// <summary>Creates the page over an explicit settings feed and localizer (used by tests / dependency injection).</summary>
     /// <param name="feed">The settings-read data port (web <c>useSettings</c>).</param>
     /// <param name="localizer">The i18n facade every label resolves through.</param>
-    public SettingsPage(ISettingsFeed feed, ILocalizer localizer)
+    public SettingsPage(ISettingsFeed feed, ILocalizer localizer, IReadOnlyList<UIElement>? extraSurfaces = null)
     {
         ArgumentNullException.ThrowIfNull(feed);
         ArgumentNullException.ThrowIfNull(localizer);
 
+        _extraSurfaces = extraSurfaces ?? System.Array.Empty<UIElement>();
         _viewModel = new SettingsPageViewModel(feed, localizer);
 
         // Web mounts <SettingsSearch /> at the top of the page; the search forwards a deep-link the host navigates to.
@@ -104,7 +109,7 @@ public sealed partial class SettingsPage : UserControl, IDisposable
         BuildExportPanel();
         BuildTourPanel();
         BuildChecklistPanel();
-        _themePanel = BuildThemePanel(localizer);
+        _themePanel = _extraSurfaces.Count == 0 ? BuildThemePanel(localizer) : null;
 
         _container = new PageContainer(localizer, _viewModel.Display.Title)
         {
@@ -160,7 +165,20 @@ public sealed partial class SettingsPage : UserControl, IDisposable
         stack.Children.Add(_checklistToast);
         stack.Children.Add(_search);
         stack.Children.Add(_conflictBanner);
-        stack.Children.Add(Fade(_themePanel, 170));
+        if (_extraSurfaces.Count > 0)
+        {
+            int surfaceDelay = 170;
+            foreach (var surface in _extraSurfaces)
+            {
+                stack.Children.Add(Fade(surface, surfaceDelay));
+                surfaceDelay += 20;
+            }
+        }
+        else if (_themePanel is not null)
+        {
+            stack.Children.Add(Fade(_themePanel, 170));
+        }
+
         stack.Children.Add(Fade(_exportLink, 180));
         stack.Children.Add(Fade(_tourPanel, 200));
         stack.Children.Add(Fade(_checklistPanel, 220));
@@ -359,6 +377,12 @@ public sealed partial class SettingsPage : UserControl, IDisposable
         _conflictBanner.Dispose();
         _container.Dispose();
         _viewModel.Dispose();
+
+        foreach (var surface in _extraSurfaces)
+        {
+            (surface as IDisposable)?.Dispose();
+        }
+
         GC.SuppressFinalize(this);
     }
 

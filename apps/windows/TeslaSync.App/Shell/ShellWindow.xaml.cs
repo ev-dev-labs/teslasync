@@ -1287,6 +1287,26 @@ public sealed partial class ShellWindow : Window
                 new FeatureViews.Admin.LiveSignalInspectorClientFeed(_data.Api),
                 FeatureViews.Admin.EmptyLiveSignalsTableSource.Instance,
                 _data.Localizer));
+
+        // Settings hub — mount the full Appearance / General / Advanced settings surfaces (each backed by the
+        // shared settings repository over the live data layer) so the Settings page is a complete settings
+        // surface instead of a thin hub. The hub's navigation + tour-launcher wiring is preserved.
+        _viewModel.PageFactory.Register("Settings", () =>
+        {
+            var settingsRepo = new TeslaSync.App.Core.Data.Repositories.SettingsRepository(
+                _data.Api, _data.Engine, _data.Options);
+            var surfaces = new UIElement[]
+            {
+                FeatureViews.AppearanceSettings.Create(settingsRepo, _data.Api, _data.Localizer),
+                FeatureViews.GeneralSettings.Create(settingsRepo, _data.Api, _data.Localizer),
+                FeatureViews.AdvancedSettings.Create(_data.Localizer),
+            };
+            var page = new FeatureViews.Settings.SettingsPage(
+                FeatureViews.Settings.EmptySettingsFeed.Instance, _data.Localizer, surfaces);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
+            return page;
+        });
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
