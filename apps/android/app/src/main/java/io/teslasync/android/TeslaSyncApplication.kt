@@ -33,6 +33,7 @@ import io.teslasync.android.settings.privacy.PrivacyPageHost
 import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 import io.teslasync.android.system.commands.CommandsPageHost
+import io.teslasync.android.system.diagnostic.DiagnosticPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -124,6 +125,8 @@ class TeslaSyncApplication : Application() {
         SharedDrivePageHost.register()
         // Register the native vehicle-commands control-center screen for the /commands route (P3/A7). Idempotent.
         CommandsPageHost.register()
+        // Register the native system diagnostic self-test screen for the unrouted DiagnosticPage route (P3/A7).
+        DiagnosticPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
