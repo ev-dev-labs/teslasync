@@ -1,0 +1,93 @@
+================================================================================
+P3-ANDROID · A7 · page:charging/ChargingCurve — evidence log
+Native Jetpack Compose / Material 3 port of web ChargingCurvePage
+Source: web/src/features/charging/pages/ChargingCurvePage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/charging/**
+Package: io.teslasync.android.charging.chargingcurve
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 BatteryHealth / IngestXRay precedents)
+  ChargingCurvePageModel.kt      framework-free: registration ids, ChargingCurveInteraction,
+                                 ChargingSession→feature-view DTO mappers, computeStats (web
+                                 `stats` useMemo), deriveChargingCurveData (selected session +
+                                 curve), durationMinutes/avg, view.opened diagnostic.
+  ChargingCurvePageSource.kt     seam over ChargingRepository.sessionsPaginated (web
+                                 useChargingSessionsPaginated, limit 200) + SelectedVehicleStore.
+  ChargingCurvePageViewModel.kt  BaseFeedViewModel; sessionsState: StateFlow<UiState<List<ChargingSession>>>
+                                 gated on the active vehicle (web useSelectedVehicle); selectSession/refresh.
+  ChargingCurvePage.kt           stateful entry + stateless content; loading/empty/error/success;
+                                 composes the existing A3 charging-curve feature views (SummaryStatsGrid,
+                                 SessionCurveChart, SessionDetailPanel, SessionComparisonChart,
+                                 ChargerTypeChart, SpeedTrendChart, TimeToChargeSection) + the 2 inline panels.
+  ChargingCurvePageHost.kt       ChargingCurveRoute + ChargingCurvePageHost.register() for the
+                                 `chargingCurve` /charging-curve destination (Destinations.kt L58).
+  TeslaSyncApplication.kt        register() wired into onCreate (NavHost registration).
+  res/values/strings.xml         added translation_charging_curve_emptyHint + _selectSessionHint
+                                 (the 2 parity strings missing from the catalog; lint disables
+                                 MissingTranslation so the default catalog suffices).
+
+DATA SOURCE (bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useChargingSessionsPaginated → ChargingCurvePageViewModel.sessionsState (StateFlow<UiState<…>>)
+      ← ChargingCurvePageSource.sessionsPaginated
+      ← io.teslasync.shared.core.data.repo.ChargingRepository.sessionsPaginated
+        (HttpChargingRepository over the shared resilient client + offline cache; SI verbatim, ADR-013).
+
+=== PARITY ===
+PARITY_REQUIRED=11
+  [1]  panel  GlassPanel1 (no-sessions empty)      ChargingCurvePage.kt:196 ChargingCurveEmptyPanel → GlassPanel L198
+  [2]  panel  GlassPanel2 (select-session hint)    ChargingCurvePage.kt:265 GlassPanel + EmptyState(selectSessionHint) L266
+  [3]  state  loading                              ChargingCurvePage.kt:151 if (sessionsState.isLoading) → ChargingCurveLoading L152/L297
+  [4]  state  empty                                ChargingCurvePage.kt:168 sessionsState.isEmpty -> ChargingCurveEmptyPanel()
+  [5]  state  success                              ChargingCurvePage.kt:169 else -> ChargingCurveSuccess (fn L229; composes 7 feature views)
+  [6]  string charging.curve.empty                 ChargingCurvePage.kt:200 R.string.translation_charging_curve_empty
+  [7]  string charging.curve.emptyHint             ChargingCurvePage.kt:201 R.string.translation_charging_curve_emptyHint (added to strings.xml)
+  [8]  string charging.curve.selectSession         ChargingCurvePage.kt:249 R.string.translation_charging_curve_selectSession
+  [9]  string charging.curve.selectSessionHint     ChargingCurvePage.kt:266 R.string.translation_charging_curve_selectSessionHint (added to strings.xml)
+  [10] string charging.curve.subtitle              ChargingCurvePage.kt:185 R.string.translation_charging_curve_subtitle
+  [11] string charging.curve.title                 ChargingCurvePage.kt:183 R.string.translation_charging_curve_title
+PARITY_COVERED=11
+
+EXTRA WEB-PARITY (beyond the manifest's reduced 11-item contract; no scope narrowing)
+  The page composes the full set of existing, tested A3 charging-curve feature views, exactly as the
+  web page threads its loaded sessions / stats / selectedSession / curveData down to the same components:
+    SummaryStatsGrid   ChargingCurvePage.kt:254   (web <SummaryStatsGrid stats={stats}/>)
+    SessionCurveChart  ChargingCurvePage.kt:261   (web <SessionCurveChart curveData={curveData}/>)
+    SessionDetailPanel ChargingCurvePage.kt:262   (web <SessionDetailPanel session={selectedSession}/>)
+    SessionComparison  ChargingCurvePage.kt:273   (web <SessionComparisonChart sessions={sessions}/>)
+    ChargerTypeChart   ChargingCurvePage.kt:279   (web <ChargerTypeChart sessions={sessions}/>)
+    SpeedTrendChart    ChargingCurvePage.kt:280   (web <SpeedTrendChart sessions={sessions}/>)
+    TimeToChargeSection ChargingCurvePage.kt:286  (web <TimeToChargeSection sessions={sessions}/>)
+  Each feature view owns its own loading/empty/error/content matrix. The session selector reproduces
+  the web <Select>; the curve uses SessionComparisonChartProjection.generateChargingCurve (the shared
+  port of the web generateChargingCurve). SI stays SI; display conversion is the feature views' boundary.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin
+    PLACEHOLDER_ALLOWED=1   (toDouble "toDo" substring false positive, marked // parity:allow)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (lint-results-debug.html written, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Both named panels implemented (GlassPanel1 empty, GlassPanel2 select-session hint).
+  [x] All 11 parity items render from the bound StateFlow state holder.
+  [x] loading / empty / error / success implemented for the data source.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Compose-native only (no webview); SI units honored at the display boundary; dark/dynamic theme via MaterialTheme.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (11).
+
+EXIT=0
+STATUS=DONE

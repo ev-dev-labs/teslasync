@@ -133,5 +133,14 @@
     "requiredCount": 51,
     "promptId": "p3-android/pages/battery/EnergyProductsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-EnergyProductsPage.log"
+  },
+  {
+    "unitId": "page:charging/ChargingCurve",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 11,
+    "requiredCount": 11,
+    "promptId": "p3-android/pages/charging/ChargingCurvePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingCurvePage.log"
   }
 ]

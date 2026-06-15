@@ -1825,6 +1825,7 @@
   <string name="translation_charging_curve_dcSessions">DC Sessions</string>
   <string name="translation_charging_curve_duration">Duration</string>
   <string name="translation_charging_curve_empty">No charging sessions to plot a curve.</string>
+  <string name="translation_charging_curve_emptyHint">Start a charging session and data will appear here.</string>
   <string name="translation_charging_curve_energyAdded">Energy Added</string>
   <string name="translation_charging_curve_fastest">Fastest Session</string>
   <string name="translation_charging_curve_location">Location</string>
@@ -1836,6 +1837,7 @@
   <string name="translation_charging_curve_powerKw">Power (kW)</string>
   <string name="translation_charging_curve_powerVsSoc">Power vs SOC</string>
   <string name="translation_charging_curve_selectSession">Select a session to inspect</string>
+  <string name="translation_charging_curve_selectSessionHint">Select a session above to view its charging curve</string>
   <string name="translation_charging_curve_sessionComparison">Session Comparison</string>
   <string name="translation_charging_curve_sessionCount">Sessions</string>
   <string name="translation_charging_curve_sessionDetails">Session Details</string>
