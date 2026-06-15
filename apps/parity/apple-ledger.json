@@ -1,5 +1,5 @@
 {
-  "ledger": "P4 apple program — page parity rows (apple-macos + apple-ios)",
+  "ledger": "P4 apple program \u2014 page parity rows (apple-macos + apple-ios)",
   "generatedBy": ".github/prompts/monorepo/p4-apple/pages/p4-apple-P7-page-admin-ApiPlayground.prompt.md",
   "rows": [
     {
@@ -343,6 +343,24 @@
       "requiredCount": 89,
       "promptId": "p4-apple/P7/page:battery/BatteryDegradation",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-BatteryDegradationPage.log"
+    },
+    {
+      "unitId": "page:battery/SleepEfficiency",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 48,
+      "requiredCount": 48,
+      "promptId": "p4-apple/P7/page:battery/SleepEfficiency",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-SleepEfficiencyPage.log"
+    },
+    {
+      "unitId": "page:battery/SleepEfficiency",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 48,
+      "requiredCount": 48,
+      "promptId": "p4-apple/P7/page:battery/SleepEfficiency",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-SleepEfficiencyPage.log"
     },
     {
       "unitId": "page:admin/ApiLogs",

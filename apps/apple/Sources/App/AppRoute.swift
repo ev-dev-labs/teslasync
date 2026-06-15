@@ -26,7 +26,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, vehicles, charging, trips, energy, driving, analytics, maps
-    case fleetCompare, batteryCells, batteryDegradation, tco
+    case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users
@@ -44,6 +44,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetCompare: "vehicle-comparison"
         case .batteryCells: "battery-cells"
         case .batteryDegradation: "battery-degradation"
+        case .sleepEfficiency: "sleep-efficiency"
         case .powerUser: "power-user"
         case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
@@ -79,6 +80,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energy: "battery.100"
         case .batteryCells: "square.grid.3x3.fill"
         case .batteryDegradation: "chart.line.downtrend.xyaxis"
+        case .sleepEfficiency: "moon.zzz.fill"
         case .driving: "speedometer"
         case .analytics: "chart.bar.fill"
         case .tco: "dollarsign.circle.fill"
@@ -121,6 +123,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .vehicles, .charging, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
         case .batteryCells, .batteryDegradation: .energy
+        case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .tco: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
