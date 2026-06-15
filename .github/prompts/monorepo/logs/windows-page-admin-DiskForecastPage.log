@@ -1,0 +1,146 @@
+=== p2-windows · W7 · page:admin/DiskForecast (WinUI 3 / Fluent) ===
+Parity unit : page:admin/DiskForecast   kind=page   web route=/admin/disk-forecast
+Web source  : web/src/features/admin/pages/DiskForecastPage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SchemaDriftPage / VehicleCostPage do. The generated prompt's idealized "DiskForecastPage.xaml +
+  DiskForecastPageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the surface
+  registers itself with the W4 ShellPageFactory by route name ("DiskForecast", already in RouteTable.cs →
+  /admin/disk-forecast, group AdminDevTools). DiskForecastPage shares the FeatureViews.Admin namespace with the
+  sibling pages and reuses their internal JsonReadHelpers (no duplicate type).
+- W1 predecessor (ADR-004): the generated C# OpenAPI client (apps/windows/Generated/, namespace
+  TeslaSync.Windows.Generated.Api) is gitignored ("regenerated, not committed"). It was materialized locally via the
+  documented codegen — npx tsx@4.22.4 apps/tools/codegen/gen-clients.ts (10 C# files) — plus the thin
+  Generated/Generated.csproj wrapper the App.Core/App.Tests project references resolve. This is a local build
+  prerequisite only; it is NOT part of the commit (the directory stays gitignored).
+- Data binding (ADR-004): the manifest data source is useDiskForecast (GET /admin/observability/disk-forecast). The
+  view-model reads through an injected IDiskForecastFeed; the default EmptyDiskForecastFeed resolves the empty state
+  (matching the sibling host-injection precedent), and the generated-client-backed DiskForecastClientFeed
+  (DiskForecastPage.Source.cs) binds to the generated OpenAPI contract client operation
+  get_api_v1_admin_observability_disk_forecast (no params), asserted in tests via the FakeApiClient. No HTTP touches
+  the view. A non-success response surfaces as ApiException; the view-model maps StatusCode==503 to the distinct
+  subsystem-unavailable banner (web `subsystemMissing`) and every other failure to the generic InfoBar+Retry.
+- The web page renders all regions INSIDE the PageContainer body (PageContainer is passed only `query=` for the
+  freshness chip, not loading/error/empty), so the native port reproduces the four data states as visible Fluent
+  regions per ADR-006: loading -> TsStatGridSkeleton(4) shimmer; error -> TsQueryError (InfoBar-equivalent) + Retry;
+  503 subsystem-missing -> TsAlertBanner(Warning) notConfigured; empty -> TsGlassPanel + TsEmptyState; success ->
+  the four fleet-totals StatCards + the hypertables table. Never a blank region.
+- SI / display boundary (P1/S5): the on-wire fields are SI byte counts (int64 total/uncompressed/compressed,
+  float64 growth_bytes_per_day), an int chunk_count and a nullable int est_days_to_quota. Bytes format through
+  FormatBytes (the web formatBytes: B verbatim < 1 KiB, then KB/MB/GB at one fixed decimal); the days estimate
+  through NumberFormatting (web fmtNumber at getGlobalPrecision()==2); percentages via toFixed(1). The severity
+  badge maps the wire tier through StatusKind (ok→Success, warn→Warning, critical→Danger, unknown→Neutral) with the
+  web SEVERITY_LABEL text (OK/Warn/Critical/—) — the web's own non-i18n constants, kept verbatim.
+- All 23 i18n keys resolve through the ILocalizer facade with the web key names: 22 new
+  translation.admin.diskForecast.* added to Strings/en/Resources.resw (alphabetically placed before the dlq block) +
+  the pre-existing translation.admin.subsystem.unavailableTitle (shared with SchemaDrift, not duplicated). The
+  ar/he catalogs lag en by design; the app falls back to the English default via ILocalizer until translated.
+- Tests: the three Microsoft.UI-free files (Model/Source/ViewModel) are linked into TeslaSync.App.Tests.csproj
+  alongside the sibling SchemaDriftPage links (the bare WinUI view is excluded — it uses Microsoft.UI); 40
+  DiskForecastPageTests assert the projection, parsers, the four-state matrix (+503), the client request shaping
+  and the diagnostics/registration headlessly.
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+# Panels (5) — every web region reproduced as a Fluent Card/Mica region (each a visible branch)
+[x] panel  - Total-disk      -> fleet Total StatCard: DiskForecastPage.cs#_totalCard (TsStatCard) via ApplyStat;
+             projection DiskForecastProjection.Project -> DiskForecastDisplay.TotalCard (DiskForecastStatDisplay,
+             FormatBytes(sum total_bytes) + tableCount sub); web StatCard fleetTotal; gated by ShowStats; test
+             Stats_total_card_sums_bytes_and_counts_hypertables
+[x] panel  - Uncompressed    -> fleet Uncompressed StatCard: _uncompressedCard; projection UncompressedCard
+             (FormatBytes(sum uncompressed_bytes) + percentSub); web StatCard fleetUncompressed; test
+             Stats_uncompressed_and_compressed_cards_show_percent_of_total + Stats_percent_falls_back_to_em_dash_when_total_is_zero
+[x] panel  - Compressed      -> fleet Compressed StatCard: _compressedCard; projection CompressedCard
+             (FormatBytes(sum compressed_bytes) + percentSub); web StatCard fleetCompressed; test
+             Stats_uncompressed_and_compressed_cards_show_percent_of_total
+[x] panel  - Growth-per-day  -> fleet Growth StatCard: _growthCard; projection GrowthCard
+             (FormatBytes(sum growth_bytes_per_day)+"/d" + growthSub); web StatCard fleetGrowth; test
+             Stats_growth_card_appends_per_day_suffix
+[x] panel  - GlassPanel5     -> hypertables table panel: DiskForecastPage.cs#BuildTablePanel (_tablePanel
+             TsGlassPanel) hosting _tableTitle PanelTitle + BuildTable (header row BuildHeaderRow over per-hypertable
+             BuildRow rows: name+chunkCount, total, uncompressed/compressed split, growth/d, days-to-quota, severity
+             TsBadge) / _emptyState (TsEmptyState); web GlassPanel + DataTable / EmptyState; gated by
+             ShowTablePanel/ShowTable; projection Rows (DiskForecastRowDisplay[]); test Table_headers_use_the_web_column_labels
+             + Table_row_projects_every_cell + Table_severity_maps_label_and_variant + State_empty_when_resolved_with_no_rows
+
+# Data states (4) — loading / empty / error / success, each a visible region (never blank)
+[x] state  - loading         -> DiskForecastState.Loading + DiskForecastDisplay.ShowLoading; rendered
+             DiskForecastPage.cs#_loadingSkeleton (TsStatGridSkeleton(4) shimmer); test State_loading_when_query_in_flight
+[x] state  - empty           -> DiskForecastState.Empty + ShowEmpty; rendered _tablePanel (TsGlassPanel) + _emptyState
+             (TsEmptyState, title+message); test State_empty_when_resolved_with_no_rows + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - error           -> DiskForecastState.Error: (a) 503 subsystem-missing -> ShowSubsystemUnavailable ->
+             _subsystemBanner (TsAlertBanner Warning, InfoBar-equivalent, notConfigured) [test
+             State_error_subsystem_unavailable_is_the_503_banner + ViewModel_http_503_is_the_subsystem_unavailable_branch];
+             (b) generic failure -> ShowError -> _errorState (TsQueryError + Retry via ActionInvoked -> RefreshAsync)
+             [test State_error_generic_failure_shows_retry + ViewModel_feed_failure_is_the_generic_error_state]
+[x] state  - success         -> DiskForecastState.Success + ShowStats/ShowTable; rendered _statGrid (4 TsStatCard) +
+             BuildTable; test State_success_when_rows_present + ViewModel_loads_rows_into_the_success_state
+
+# Strings (23) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - admin.diskForecast.chunkCount        -> DiskForecastProjection.Project GetString("admin.diskForecast.chunkCount", "{0} chunks") -> DiskForecastRowDisplay.ChunkCountText
+[x] string - admin.diskForecast.colDays           -> DiskForecastProjection.Project GetString("admin.diskForecast.colDays", "Days to quota") -> ColDays
+[x] string - admin.diskForecast.colGrowth         -> DiskForecastProjection.Project GetString("admin.diskForecast.colGrowth", "Growth (per day)") -> ColGrowth
+[x] string - admin.diskForecast.colSeverity       -> DiskForecastProjection.Project GetString("admin.diskForecast.colSeverity", "Severity") -> ColSeverity
+[x] string - admin.diskForecast.colSplit          -> DiskForecastProjection.Project GetString("admin.diskForecast.colSplit", "Uncompressed / compressed") -> ColSplit
+[x] string - admin.diskForecast.colTable          -> DiskForecastProjection.Project GetString("admin.diskForecast.colTable", "Hypertable") -> ColTable
+[x] string - admin.diskForecast.colTotal          -> DiskForecastProjection.Project GetString("admin.diskForecast.colTotal", "Total") -> ColTotal
+[x] string - admin.diskForecast.compressedSuffix  -> DiskForecastProjection.Project GetString("admin.diskForecast.compressedSuffix", "compressed") -> DiskForecastRowDisplay.CompressedText
+[x] string - admin.diskForecast.emptyMessage      -> DiskForecastProjection.Project GetString("admin.diskForecast.emptyMessage", "No hypertables found in this database. …") -> EmptyMessage
+[x] string - admin.diskForecast.emptyTable        -> DiskForecastProjection.Project GetString("admin.diskForecast.emptyTable", "No hypertables") -> EmptyTableMessage
+[x] string - admin.diskForecast.emptyTitle        -> DiskForecastProjection.Project GetString("admin.diskForecast.emptyTitle", "No hypertables") -> EmptyTitle
+[x] string - admin.diskForecast.fleetCompressed   -> DiskForecastProjection.Project GetString("admin.diskForecast.fleetCompressed", "Compressed") -> CompressedCard.Label
+[x] string - admin.diskForecast.fleetGrowth       -> DiskForecastProjection.Project GetString("admin.diskForecast.fleetGrowth", "Growth (per day)") -> GrowthCard.Label
+[x] string - admin.diskForecast.fleetTotal        -> DiskForecastProjection.Project GetString("admin.diskForecast.fleetTotal", "Total disk") -> TotalCard.Label
+[x] string - admin.diskForecast.fleetUncompressed -> DiskForecastProjection.Project GetString("admin.diskForecast.fleetUncompressed", "Uncompressed") -> UncompressedCard.Label
+[x] string - admin.diskForecast.growthSub         -> DiskForecastProjection.Project GetString("admin.diskForecast.growthSub", "Sum across all hypertables") -> GrowthCard.Sublabel
+[x] string - admin.diskForecast.notConfigured     -> DiskForecastProjection.Project GetString("admin.diskForecast.notConfigured", "TimescaleDB hypertable metrics are unavailable …") -> SubsystemMessage
+[x] string - admin.diskForecast.pageTitle         -> DiskForecastProjection.Project / DiskForecastRegistration.Title GetString("admin.diskForecast.pageTitle", "Disk Forecast")
+[x] string - admin.diskForecast.percentSub        -> DiskForecastProjection.Project GetString("admin.diskForecast.percentSub", "{0}% of total") -> Uncompressed/CompressedCard.Sublabel
+[x] string - admin.diskForecast.subtitle          -> DiskForecastProjection.Project GetString("admin.diskForecast.subtitle", "Per-hypertable disk usage with compressed/uncompressed split …") -> Subtitle
+[x] string - admin.diskForecast.tableCount        -> DiskForecastProjection.Project GetString("admin.diskForecast.tableCount", "{0} hypertables") -> TotalCard.Sublabel
+[x] string - admin.diskForecast.tableTitle        -> DiskForecastProjection.Project GetString("admin.diskForecast.tableTitle", "Hypertables") -> TableTitle
+[x] string - admin.subsystem.unavailableTitle     -> DiskForecastProjection.Project GetString("admin.subsystem.unavailableTitle", "Subsystem unavailable") -> SubsystemTitle
+
+PARITY_COVERED=32
+# Coverage asserted headlessly: DiskForecastPageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records every key above through a RecordingLocalizer; the four state tests + the
+# subsystem/error branch tests + the stat-card tests (total/uncompressed/compressed/growth + percent fallback) + the
+# table header/row/severity tests assert each region renders from the bound DiskForecastDisplay state holder;
+# ClientFeed_sends_the_observability_operation_with_no_params + ClientFeed_propagates_api_exception_for_the_subsystem_branch
+# assert the generated-client GET request shaping (web useDiskForecast) and the 503 path; the ViewModel_* tests assert
+# the loading/empty/error(503+generic)/success matrix + refresh reload; FormatBytes_matches_web + FormatDays_* +
+# Snapshot_parse_* assert the display-boundary formatting and tolerant parsing.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/DiskForecastPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (pre-existing TeslaSync.App.Core CA warnings only)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> 0 issues (DiskForecastPage Model/Source/ViewModel/view
+#   + DiskForecastPageTests + ShellWindow registration + Tests csproj links + Resources.resw + windows-ledger.json, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30989, Failed: 0, Skipped: 0 (incl. 40 DiskForecastPageTests)
+#   (the WinAppDriver UITests suite — Category=UIAutomation — is the separate W9 gate and is not part of this page gate)
+TEST_EXIT=0
+PARITY_COVERED=32
+PARITY_REQUIRED=32
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/DiskForecastPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/DiskForecastPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-DiskForecastPage.log
+# git commit -m "feat(apps/windows): DiskForecastPage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

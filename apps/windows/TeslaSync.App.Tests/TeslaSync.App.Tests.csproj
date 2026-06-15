@@ -1013,6 +1013,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Model.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Source.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Model.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Source.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.ViewModel.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Model.cs" Link="FeatureViews\SecurityPanel.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.Source.cs" Link="FeatureViews\SecurityPanel.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SecurityPanel.ViewModel.cs" Link="FeatureViews\SecurityPanel.ViewModel.cs" />

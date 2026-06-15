@@ -1248,6 +1248,72 @@
   <data name="translation.admin.audit.searchPlaceholder" xml:space="preserve">
     <value>Search by action, resource, or details…</value>
   </data>
+  <data name="translation.admin.diskForecast.chunkCount" xml:space="preserve">
+    <value>{0} chunks</value>
+  </data>
+  <data name="translation.admin.diskForecast.colDays" xml:space="preserve">
+    <value>Days to quota</value>
+  </data>
+  <data name="translation.admin.diskForecast.colGrowth" xml:space="preserve">
+    <value>Growth (per day)</value>
+  </data>
+  <data name="translation.admin.diskForecast.colSeverity" xml:space="preserve">
+    <value>Severity</value>
+  </data>
+  <data name="translation.admin.diskForecast.colSplit" xml:space="preserve">
+    <value>Uncompressed / compressed</value>
+  </data>
+  <data name="translation.admin.diskForecast.colTable" xml:space="preserve">
+    <value>Hypertable</value>
+  </data>
+  <data name="translation.admin.diskForecast.colTotal" xml:space="preserve">
+    <value>Total</value>
+  </data>
+  <data name="translation.admin.diskForecast.compressedSuffix" xml:space="preserve">
+    <value>compressed</value>
+  </data>
+  <data name="translation.admin.diskForecast.emptyMessage" xml:space="preserve">
+    <value>No hypertables found in this database. The disk forecast surfaces TimescaleDB hypertables only.</value>
+  </data>
+  <data name="translation.admin.diskForecast.emptyTable" xml:space="preserve">
+    <value>No hypertables</value>
+  </data>
+  <data name="translation.admin.diskForecast.emptyTitle" xml:space="preserve">
+    <value>No hypertables</value>
+  </data>
+  <data name="translation.admin.diskForecast.fleetCompressed" xml:space="preserve">
+    <value>Compressed</value>
+  </data>
+  <data name="translation.admin.diskForecast.fleetGrowth" xml:space="preserve">
+    <value>Growth (per day)</value>
+  </data>
+  <data name="translation.admin.diskForecast.fleetTotal" xml:space="preserve">
+    <value>Total disk</value>
+  </data>
+  <data name="translation.admin.diskForecast.fleetUncompressed" xml:space="preserve">
+    <value>Uncompressed</value>
+  </data>
+  <data name="translation.admin.diskForecast.growthSub" xml:space="preserve">
+    <value>Sum across all hypertables</value>
+  </data>
+  <data name="translation.admin.diskForecast.notConfigured" xml:space="preserve">
+    <value>TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.</value>
+  </data>
+  <data name="translation.admin.diskForecast.pageTitle" xml:space="preserve">
+    <value>Disk Forecast</value>
+  </data>
+  <data name="translation.admin.diskForecast.percentSub" xml:space="preserve">
+    <value>{0}% of total</value>
+  </data>
+  <data name="translation.admin.diskForecast.subtitle" xml:space="preserve">
+    <value>Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.</value>
+  </data>
+  <data name="translation.admin.diskForecast.tableCount" xml:space="preserve">
+    <value>{0} hypertables</value>
+  </data>
+  <data name="translation.admin.diskForecast.tableTitle" xml:space="preserve">
+    <value>Hypertables</value>
+  </data>
   <data name="translation.admin.dlq.actions.inspect" xml:space="preserve">
     <value>Inspect</value>
   </data>
