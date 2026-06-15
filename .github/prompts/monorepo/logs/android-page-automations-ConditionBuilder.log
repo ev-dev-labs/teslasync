@@ -1,0 +1,103 @@
+P3-ANDROID A7 — page:automations/ConditionBuilder — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/ConditionBuilder.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (ConditionBuilder.kt screen + ConditionBuilderPageViewModel + ConditionBuilderPageModel)
+Embeds     : the shared ConditionBuilder feature view (apps/android/app/src/main/java/com/teslasync/feature-views/ConditionBuilder/,
+             package io.teslasync.android.featureviews.conditionbuilder) — verbatim, DRY (ADR-006), no re-implementation, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED, controlled sub-component the Automation builder embeds
+(props: `conditions` + `onChange`; one data hook, `useGeofences` -> GET /geofences for the geofence-condition
+dropdown). The presentational + logic surface was already implemented at full 21/21 parity by the predecessor
+prompt p3-android/feature-views ConditionBuilder (com/teslasync/feature-views/ConditionBuilder, committed + green;
+fv unit tests ConditionBuilderModelTest / ConditionBuilderViewModelTest + UI test ConditionBuilderUiTest already in
+the suite). This page prompt targets the separate allowed-files path kotlin/com/teslasync/automations/** with a
+`@Composable screen + ViewModel` contract, so — following the sanctioned AutomationCard precedent — this layer is a
+THIN page wrapper that EMBEDS that one shared surface (every panel/string/data state is the parity-covered feature
+view's `ConditionBuilderContent`) and adds only the page state holder + the stateless screen. Predecessor NOT bypassed.
+
+DATA-SOURCE NOTE (honesty): unlike the sibling AutomationCard (no data source), this surface DOES declare one —
+`useGeofences GET /geofences`. It is bound through the shared S8 LocationsStore.geofences() via the shared
+ConditionBuilderSource seam (conditionBuilderSource(locationsStore)); the page ViewModel only re-shares that
+cache-then-network feed onto UiState through the shared BaseFeedViewModel.asUiState helper (the standard A7 page-VM
+job). No HTTP, no business logic, no re-implementation of the geofence fetch is added by this layer.
+
+NAV NOTE (honesty): web route is "(unrouted)". Destinations.kt is the canonical registry — "every web route recorded
+as metadata … never any fabricated stand-in" (Destinations.kt:40-43), and RouteTableTest round-trips every
+Destinations.all entry through RouteTable.forRoute (forRouteRoundTripsForEveryDestination). An unrouted controlled
+sub-component has no web route, so NO synthetic nav destination is fabricated (doing so would violate the registry's
+anti-fabrication contract and the round-trip test). The page-layer is embedded by the Automation builder exactly as
+the feature view is — the prompt's "(if routed)" clause does not apply, identical to the sibling AutomationCard page.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+   (./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin)
+BUILD SUCCESSFUL in 3m 22s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug)
+BUILD SUCCESSFUL in 12m 13s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug)
+BUILD SUCCESSFUL in 1m 7s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — includes the predecessor fv ConditionBuilderModelTest/ViewModelTest, still green)
+
+=== PARITY ===
+PARITY_REQUIRED=21
+binding evidence (page layer binds the StateFlow; the embedded shared feature view renders every item):
+  page layer  : apps/android/app/src/main/kotlin/com/teslasync/automations/{ConditionBuilder.kt, ConditionBuilderPageViewModel.kt, ConditionBuilderPageModel.kt}
+  shared view : apps/android/app/src/main/java/com/teslasync/feature-views/ConditionBuilder/{ConditionBuilder.kt, ConditionBuilderModel.kt, ConditionBuilderSource.kt, ConditionBuilderViewModel.kt}
+                (fv = io.teslasync.android.featureviews.conditionbuilder)
+
+# panel (1) — Material 3 GlassPanel
+[COVERED] panel  GlassPanel1   -> ConditionBuilder.kt:ConditionBuilderScreen()->ConditionBuilderContent(); fv/ConditionBuilder.kt:ConditionCard() GlassPanel(padding=PanelPadding.Md)
+
+# data states (1 declared: success) — bound to ConditionBuilderPageViewModel.state: StateFlow<UiState<List<Geofence>>>
+[COVERED] state  success       -> ConditionBuilderPageViewModel.kt:state (refreshTrigger.flatMapLatest{source.stream()}.asUiState{ isEmpty=false }) -> UiState(UiPhase.Content); fv/ConditionBuilder.kt:ConditionBuilderContent() content branch -> ConditionsHeader()+ConditionList()/EmptyConditions()
+  (loading + stale/offline + error also reachable through the same StateFlow: fv LoadingChrome() on first load; ConditionsHeader DataFreshness chip + onRefresh = ConditionBuilderPageViewModel.refresh() for stale/offline/error; the builder never blanks — web `geofences ?? []`)
+
+# strings (19) — every visible literal via stringResource(R.string.translation_*); web key names preserved (rendered by the embedded fv)
+[COVERED] string automations.builder.addCondition     -> fv/ConditionBuilder.kt:EmptyConditions() L192 + AddConditionButton() L439   (R.string.translation_automations_builder_addCondition)
+[COVERED] string automations.builder.conditionType    -> fv/ConditionBuilder.kt:ConditionCard() type Select L235                     (R.string.translation_automations_builder_conditionType)
+[COVERED] string automations.builder.days             -> fv/ConditionBuilder.kt:DayToggleRow() Subhead L376                          (R.string.translation_automations_builder_days)
+[COVERED] string automations.builder.endTime          -> fv/ConditionBuilder.kt:TimeWindowFields() end Input L351                    (R.string.translation_automations_builder_endTime)
+[COVERED] string automations.builder.geofence         -> fv/ConditionBuilder.kt:GeofenceFields() geofence Select L400                (R.string.translation_automations_builder_geofence)
+[COVERED] string automations.builder.maxValue         -> fv/ConditionBuilder.kt:SignalValueEditor() Max Input L307                   (R.string.translation_automations_builder_maxValue)
+[COVERED] string automations.builder.minValue         -> fv/ConditionBuilder.kt:SignalValueEditor() Min Input L300                   (R.string.translation_automations_builder_minValue)
+[COVERED] string automations.builder.operator         -> fv/ConditionBuilder.kt:SignalFields() operator Select L280                  (R.string.translation_automations_builder_operator)
+[COVERED] string automations.builder.otherAutomationId-> fv/ConditionBuilder.kt:OtherAutomationFields() id Input L422                (R.string.translation_automations_builder_otherAutomationId)
+[COVERED] string automations.builder.removeCondition  -> fv/ConditionBuilder.kt:ConditionCard() remove IconButton contentDescription L244 (R.string.translation_automations_builder_removeCondition)
+[COVERED] string automations.builder.selectGeofence   -> fv/ConditionBuilder.kt:GeofenceFields() sentinel + emptyLabel L401/L403     (R.string.translation_automations_builder_selectGeofence)
+[COVERED] string automations.builder.signal           -> fv/ConditionBuilder.kt:SignalFields() signal Select L274                    (R.string.translation_automations_builder_signal)
+[COVERED] string automations.builder.startTime        -> fv/ConditionBuilder.kt:TimeWindowFields() start Input L345                  (R.string.translation_automations_builder_startTime)
+[COVERED] string automations.builder.state            -> fv/ConditionBuilder.kt:GeofenceFields() L407 + OtherAutomationFields() L428 state Select (R.string.translation_automations_builder_state)
+[COVERED] string automations.builder.statePlaceholder -> fv/ConditionBuilder.kt:SignalValueEditor() text-field prompt L324          (R.string.translation_automations_builder_statePlaceholder)
+[COVERED] string automations.builder.timezone         -> fv/ConditionBuilder.kt:TimeWindowFields() timezone Select L357              (R.string.translation_automations_builder_timezone)
+[COVERED] string automations.builder.value            -> fv/ConditionBuilder.kt:SignalValueEditor() value Input L316/L326           (R.string.translation_automations_builder_value)
+[COVERED] string common.false                         -> fv/ConditionBuilder.kt:boolValueOptions() L489                              (R.string.translation_common_false)
+[COVERED] string common.true                          -> fv/ConditionBuilder.kt:boolValueOptions() L488                              (R.string.translation_common_true)
+
+PARITY_COVERED=21
+
+=== SUMMARY ===
+data sources : useGeofences (GET /geofences). ConditionBuilderPageViewModel binds the shared S8 LocationsStore.geofences()
+               feed via the shared ConditionBuilderSource seam and re-shares it as StateFlow<UiState<List<Geofence>>>
+               (BaseFeedViewModel.asUiState); the page performs no HTTP. Conditions stay caller-owned (web conditions/onChange).
+nav          : web route "(unrouted)" — no synthetic destination fabricated (Destinations.kt records only real web routes;
+               RouteTableTest round-trips every Destinations.all entry). Surface is embedded by the Automation builder, like the fv.
+panels       : GlassPanel1 — the per-condition Material 3 GlassPanel rendered by the embedded fv ConditionCard().
+charts/maps  : none declared.
+strings      : all 19 already present in res/values/strings.xml (translation_automations_builder_* + translation_common_true/false),
+               rendered by the embedded fv via stringResource; zero hardcoded literals in the page layer; web key names preserved.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), TalkBack contentDescriptions (remove/refresh + selects), MaterialTheme tokens,
+               >=48dp targets, freshness/age formatted at the display boundary — all from the embedded fv (ADR-005/013/014/015).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(21) == PARITY_REQUIRED(21)
+[PASS] all android triad gates green; parity 21/21; android ledger row page:automations/ConditionBuilder status=done.
+EXIT=0
+STATUS=DONE
