@@ -22,6 +22,7 @@ import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.driving.driveslist.DrivesListPageHost
 import io.teslasync.android.driving.regenefficiency.RegenEfficiencyPageHost
 import io.teslasync.android.driving.tripplanner.TripPlannerPageHost
+import io.teslasync.android.maps.geofences.GeofencesPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -97,6 +98,8 @@ class TeslaSyncApplication : Application() {
         RegenEfficiencyPageHost.register()
         // Register the native trip-planner screen for the /trip-planner route (P3/A7). Idempotent.
         TripPlannerPageHost.register()
+        // Register the native geofences map screen for the /geofences route (P3/A7). Idempotent.
+        GeofencesPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

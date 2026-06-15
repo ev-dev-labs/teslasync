@@ -196,5 +196,14 @@
     "requiredCount": 41,
     "promptId": "p3-android/pages/driving/TripPlannerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-TripPlannerPage.log"
+  },
+  {
+    "unitId": "page:maps/Geofences",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "p3-android/pages/maps/GeofencesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-GeofencesPage.log"
   }
 ]
