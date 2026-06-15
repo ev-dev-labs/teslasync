@@ -115,5 +115,14 @@
     "requiredCount": 9,
     "promptId": "p3-android/pages/automations/PresetGallery",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-PresetGallery.log"
+  },
+  {
+    "unitId": "page:battery/BatteryHealth",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 147,
+    "requiredCount": 147,
+    "promptId": "p3-android/pages/battery/BatteryHealthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-BatteryHealthPage.log"
   }
 ]

@@ -1464,8 +1464,10 @@
   <string name="translation_battery_cells_temp_title">Temperature Summary</string>
   <string name="translation_battery_cells_title">Battery Cells</string>
   <string name="translation_battery_chart_acdc">AC / DC Energy Breakdown</string>
+  <string name="translation_battery_chart_acdc_aria">AC versus DC energy share pie chart</string>
   <string name="translation_battery_chart_actual">Actual %</string>
   <string name="translation_battery_chart_capacityTrend">Capacity Trend &amp; Prediction</string>
+  <string name="translation_battery_chart_capacityTrend_aria">Battery capacity trend with dashed projection line over time</string>
   <string name="translation_battery_chart_chargeDist">Charge Level Distribution</string>
   <string name="translation_battery_chart_chargeDistSub">Recent 100 sessions</string>
   <string name="translation_battery_chart_chargeEnded">Charge Ended</string>
@@ -1478,6 +1480,7 @@
   <string name="translation_battery_chart_predicted">Predicted %</string>
   <string name="translation_battery_chart_range">Range</string>
   <string name="translation_battery_chart_rangeTrend">Estimated Range Over Time</string>
+  <string name="translation_battery_chart_rangeTrend_aria">Estimated battery range over time area chart</string>
   <string name="translation_battery_degradation_actualHealth">Actual Health %</string>
   <string name="translation_battery_degradation_avgDoD">Avg Depth of Discharge</string>
   <string name="translation_battery_degradation_chargingImpact">Charging Habits Impact</string>
