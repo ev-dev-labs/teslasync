@@ -1,0 +1,153 @@
+=== p2-windows W7 — page:battery/VampireDrain (WinUI 3 / Fluent) ===
+Parity unit : page:battery/VampireDrain
+Kind        : page
+Web route   : /charging/vampire-drain  (+ alias /vampire-drain)
+Web source  : web/src/features/battery/pages/VampireDrainPage.tsx
+Platform    : windows
+Prompt      : p2-windows/W7/windows-page-battery-VampireDrainPage
+
+--- Path reconciliation (no silent drift) ---
+The generated prompt names the output `apps/windows/TeslaSync/Features/Battery/VampireDrainPage.xaml`
++ `VampireDrainPageViewModel.cs`. That project/folder does NOT exist in this repo. The real,
+gate-passing W7 predecessors (page:battery/EnergyProducts, page:battery/BatteryCells,
+page:driving/RegenEfficiency, …) live in project `TeslaSync.App` under `feature-views/<Page>/` as
+code-only WinUI `UserControl`s (no XAML markup file) split into <Page>.cs (view) + .Model.cs +
+.Source.cs + .ViewModel.cs, with the pure-C# model/source/viewmodel linked into TeslaSync.App.Tests
+and the view registered in the NavigationView via ShellWindow.xaml.cs PageFactory.Register. Honesty
+Covenant #7 (no predecessor bypass): this unit follows that identical, accepted structure rather than
+the templated path.
+
+--- Files created ---
+apps/windows/TeslaSync.App/feature-views/VampireDrainPage/VampireDrainPage.Model.cs      (data + snapshot + feed + state + display + strings + projection + registration + diagnostics)
+apps/windows/TeslaSync.App/feature-views/VampireDrainPage/VampireDrainPage.Source.cs     (generated-client feed)
+apps/windows/TeslaSync.App/feature-views/VampireDrainPage/VampireDrainPage.ViewModel.cs  (INotifyPropertyChanged state holder)
+apps/windows/TeslaSync.App/feature-views/VampireDrainPage/VampireDrainPage.cs            (WinUI 3 view)
+apps/windows/TeslaSync.App.Tests/FeatureViews/VampireDrainPageTests.cs                   (28 tests)
+
+--- Files modified ---
+apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs        (PageFactory.Register("VampireDrain", …))
+apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj (link Model/Source/ViewModel into headless tests)
+apps/parity/windows-ledger.json                             (+ page:battery/VampireDrain row, 45/45)
+
+Route `VampireDrain` (path `vampire-drain`, group BatteryEnergy + hidden alias `charging/vampire-drain`)
+already exists in TeslaSync.App.Core/Navigation/RouteTable.cs; only the page-factory body was added.
+
+--- Data source bound to the generated C# client (P1/S8 ObservableObject ViewModel; ADR-004) ---
+The manifest record classifies this page as "no API data sources — renders from navigation params /
+local state" (no `data` parity items). The web page does perform exactly one read, so the native port
+binds it through the generated contract client and renders the same loading/empty/error/success states:
+  request('/vampire-drain/stats?vehicle_id=…')  GET /vampire-drain/stats  -> VampireDrainClientFeed.FetchAsync (op get_api_v1_vampire_drain_stats)
+The page renders only dimensionless percentages, hours, a 0–100 score and the kWh value the web
+contract already supplies, so there is NO SI quantity to convert; every value is formatted at the
+VampireDrainProjection display boundary (web fmtNumber parity: a missing scalar reads as 0). The shell
+registration mounts the page over EmptyVampireDrainFeed (the no-backend empty surface) until a DI host
+wires the generated-client feed, exactly as the RegenEfficiency / EnergyProducts predecessors do.
+
+Note (R-class honesty): the live GET /vampire-drain/stats handler currently returns a different rollup
+shape (event_count, avg_drain_pct_per_day, …) than the web page's VampireDrainStats contract. The
+native parser tolerates that exactly as the web page does — the object parses, the page-specific fields
+read as zero and the nested arrays are empty, so the surface renders Success with zeroed cards and
+empty charts (covered by test Stats_FromJson_defaults_missing_scalars_to_zero_for_the_backend_shape).
+The web source is the parity contract (ADR-002/ADR-006); the native port mirrors it field-for-field.
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+# panels (9) — every named MetricCard + every anonymous GlassPanel region reproduced as a Fluent Card/Mica region
+[x] panel  - Avg-Drain-Rate     | Model VampireDrainPage.Model.cs:VampireDrainProjection.BuildMetricCards (cards[0], s.AvgDrainRate, FormatNumber %/hr) | view VampireDrainPage.cs:BuildMetricCards (TsStatCard ZapGlyph)
+[x] panel  - Total-Phantom-Loss | Model BuildMetricCards (cards[1], s.TotalPhantomLoss, FormatNumber kWh) | view BuildMetricCards (TsStatCard BatteryWarningGlyph)
+[x] panel  - Worst-Session      | Model BuildMetricCards (cards[2], s.WorstSession, FormatNumber %)   | view BuildMetricCards (TsStatCard ActivityGlyph)
+[x] panel  - Drain-Score        | Model BuildMetricCards (cards[3], s.DrainScore, FormatNumber /100)  | view BuildMetricCards (TsStatCard ShieldGlyph)
+[x] panel  - GlassPanel5        | drain-score gauge panel | view VampireDrainPage.cs:BuildGaugePanel (TsGlassPanel hosting TsRadialGauge) | Model GaugeValue/GaugeLabel/GaugeUnit
+[x] panel  - GlassPanel6        | Drain-Rate-Trend panel  | view BuildTrendPanel (TsChartContainer + TsLineChart) | Model BuildTrendChart (VampireChartDisplay TrendChart)
+[x] panel  - GlassPanel7        | Daily-Drain panel       | view BuildDailyChartPanel (TsChartContainer + TsBarChart) | Model BuildDailyChart (VampireChartDisplay DailyChart)
+[x] panel  - GlassPanel8        | Drain-Sessions table    | view BuildSessionsPanel (TsGlassPanel + SectionTitle + TsBadge count + TsDataTable) | Model BuildTable
+[x] panel  - GlassPanel9        | Tips panel              | view BuildTipsPanel (TsGlassPanel + Lightbulb + Text rows) | Model BuildTips (4 VampireTipDisplay)
+
+# charts (3) — W3 native chart wrappers (no web canvas)
+[x] chart  - RadialGauge        | drain-score gauge | view VampireDrainPage.cs:BuildGaugePanel (Components.Charts.TsRadialGauge, Role=Battery, Max=100, Decimals=0) | Model GaugeValue=Math.Round(DrainScore)
+[x] chart  - LineChart          | Drain-Rate-Trend  | view BuildTrendPanel (Components.Charts.TsLineChart) | Model BuildTrendChart (1× ChartSeriesKind.Line "Drain Rate" from entries)
+[x] chart  - BarChart           | Daily-Drain       | view BuildDailyChartPanel (Components.Charts.TsBarChart, ShowLegend) | Model BuildDailyChart (2× ChartSeriesKind.Bar "Drain %"/"Parked Hours" from daily)
+
+# data states (3 required; empty also implemented) — driven by VampireDrainPageState in the projection
+[x] state  - loading            | VampireDrainPageState.Loading | view VampireDrainPage.cs:_loadingSkeleton (TsSkeleton blocks) | test State_loading_when_query_in_flight
+[x] state  - error              | VampireDrainPageState.Error   | view _errorState (TsQueryError + Retry) | tests State_error_when_query_failed, ViewModel_surfaces_the_error_state_when_the_feed_throws
+[x] state  - success            | VampireDrainPageState.Success | view _contentHost (BuildContent) | tests State_success_when_stats_present, ViewModel_loads_success_from_the_feed
+        (+ empty: VampireDrainPageState.Empty | _emptyState (TsEmptyState) | tests State_empty_when_no_stats_object, ViewModel_renders_empty_with_the_default_feed)
+
+# strings (30) — every visible literal resolves via ILocalizer with the web key name (verbatim); zero hardcoded literals.
+#   Evidence: VampireDrainPage.Model.cs:VampireStrings.Resolve GetString(<key>, <enUS default>);
+#   coverage asserted by test Projection_resolves_every_required_string_key_in_success (RecordingLocalizer).
+[x] string - Vampire Drain                                                        | VampireStrings.Title (page header)
+[x] string - vampire.title                                                        | VampireStrings.DocumentTitle (page AutomationName + VampireDrainRegistration.Title)
+[x] string - Analyze phantom energy loss while your vehicle is parked             | VampireStrings.Subtitle (header)
+[x] string - Avg Drain Rate                                                       | VampireStrings.AvgDrainRate (metric card 1)
+[x] string - Total Phantom Loss                                                   | VampireStrings.TotalPhantomLoss (metric card 2)
+[x] string - Worst Session                                                        | VampireStrings.WorstSession (metric card 3)
+[x] string - Drain Score                                                          | VampireStrings.DrainScore (metric card 4)
+[x] string - Score                                                                | VampireStrings.Score (gauge label)
+[x] string - Drain Rate Trend                                                     | VampireStrings.DrainRateTrend (line chart title)
+[x] string - Drain Rate                                                           | VampireStrings.DrainRate (line series name)
+[x] string - Daily Drain While Parked                                             | VampireStrings.DailyDrain (bar chart title)
+[x] string - Drain %                                                              | VampireStrings.DrainPctSeries (bar series 1)
+[x] string - Parked Hours                                                         | VampireStrings.ParkedHours (bar series 2)
+[x] string - Drain Sessions                                                       | VampireStrings.DrainSessions (table panel title)
+[x] string - sessions                                                             | VampireStrings.Sessions (count badge suffix)
+[x] string - Date                                                                 | VampireStrings.Date (table column)
+[x] string - Duration                                                             | VampireStrings.Duration (table column)
+[x] string - Start %                                                              | VampireStrings.StartPct (table column)
+[x] string - End %                                                                | VampireStrings.EndPct (table column)
+[x] string - Loss %                                                               | VampireStrings.LossPct (table column)
+[x] string - Rate %/hr                                                            | VampireStrings.Rate (table column)
+[x] string - Sentry                                                               | VampireStrings.Sentry (table column)
+[x] string - On                                                                   | VampireStrings.On (sentry cell)
+[x] string - Off                                                                  | VampireStrings.Off (sentry cell)
+[x] string - No drain sessions recorded yet.                                      | VampireStrings.NoSessions (table empty + page empty)
+[x] string - Tips to Reduce Vampire Drain                                         | VampireStrings.TipsTitle (tips panel title)
+[x] string - Disable Sentry Mode when parked at home to save 1–2 % per day.       | VampireStrings.TipSentry (tip 1)
+[x] string - Reduce third-party app polling intervals to let the car sleep faster.| VampireStrings.TipPolling (tip 2)
+[x] string - Avoid opening the app frequently — each wake cycle costs battery.    | VampireStrings.TipOpen (tip 3)
+[x] string - Enable energy-saving mode in vehicle settings for better standby.    | VampireStrings.TipEnergy (tip 4)
+
+PARITY_COVERED=45
+
+a11y: AutomationProperties.SetName on the page (DocumentTitle + Subtitle), every TsStatCard, the radial
+gauge, the sessions table + count badge, the tips rows and the error surface; Fluent components carry
+built-in keyboard/pointer + light/dark via design tokens — no hardcoded colors/typography. The page
+exposes an AutomationControlType.Group peer.
+
+=== GATE ===
+# placeholder scan (ADR-011)
+PLACEHOLDER_EXIT=0       (apps/windows/TeslaSync/Features/Battery — nonexistent templated path → clean)
+PLACEHOLDER_COUNT=0      (apps/windows/TeslaSync.App/feature-views/VampireDrainPage — actual code)
+PLACEHOLDER_COUNT=0      (apps/windows/TeslaSync.App.Tests/FeatureViews/VampireDrainPageTests.cs)
+
+# build  — dotnet build apps/windows/TeslaSync.sln -c Release
+BUILD_EXIT=0            (Build succeeded. 0 Error(s); TeslaSync.App -> bin/x64/Release/net10.0-windows10.0.19041.0/TeslaSync.App.dll)
+
+# lint   — dotnet format apps/windows/TeslaSync.sln --verify-no-changes
+LINT_EXIT=0            (no formatting changes required for the new/changed files; LF line endings normalized)
+
+# test   — dotnet test (TeslaSync.App.Tests, headless)
+TEST_EXIT=0            (Passed! - Failed: 0, Passed: 31091, Skipped: 0, Total: 31091 — incl. 28 VampireDrainPageTests)
+
+# (UITests project TeslaSync.App.UITests is WinAppDriver/packaged-app gated and is not part of the
+#  headless unit gate; the W7 predecessors verify the same way.)
+
+=== Honesty Covenant ===
+1 no red-as-green   : all four gate steps run; raw counts/exit codes pasted above.
+2 no scope narrow   : all 9 panels + 3 charts + 3 states (+ empty) + 30 strings implemented (PARITY_COVERED==PARITY_REQUIRED==45).
+3 no skip-and-assume: every data state (loading/empty/error/success) implemented and unit-tested.
+4 no stubs as final : full implementations; placeholder scan clean. The page mounts on the empty feed by
+                      default and binds the generated-client feed (VampireDrainClientFeed) when DI supplies it —
+                      the established predecessor seam, not a stub.
+5 no parity shortcut: Fluent-native (TsGlassPanel/TsStatCard/TsRadialGauge/TsLineChart/TsBarChart/TsChartContainer/
+                      TsDataTable/TsBadge/TsEmptyState/TsQueryError/skeletons), no web pixel-cloning.
+6 no delegation     : implemented directly; no sub-agents.
+7 no predecessor bypass: followed the feature-views/<Page> code-only-UserControl structure of the done W7 pages.
+8 no commit on red  : staged only after EXIT=0 below.
+9 no silent drift   : path reconciliation + the backend-vs-web shape divergence documented above; auto-generated resw untouched.
+10 EXIT/STATUS terminal lines present.
+
+EXIT=0
+STATUS=DONE

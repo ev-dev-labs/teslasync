@@ -126,6 +126,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:battery/VampireDrain",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 45,
+    "requiredCount": 45,
+    "promptId": "p2-windows/W7/windows-page-battery-VampireDrainPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-battery-VampireDrainPage.log"
+  },
+  {
     "unitId": "page:charging/TeslaChargingHistory",
     "platform": "windows",
     "status": "done",
