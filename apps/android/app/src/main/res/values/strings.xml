@@ -4727,6 +4727,9 @@
   <string name="translation_notifications_alertStudio_templates_use">Use</string>
   <string name="translation_notifications_alertStudio_test_defaultMessage">Test notification from Alert Studio</string>
   <string name="translation_notifications_alertStudio_title">Alert Studio</string>
+  <string name="translation_notifications_archived_backToInbox">Back to inbox</string>
+  <string name="translation_notifications_archived_subtitle">Notifications you previously archived. Restore to bring them back.</string>
+  <string name="translation_notifications_archived_title">Archived notifications</string>
   <string name="translation_notifications_bellPopover_allRead">All caught up</string>
   <string name="translation_notifications_bellPopover_emptyMessage">No unread notifications right now.</string>
   <string name="translation_notifications_bellPopover_emptyTitle">You\'re all caught up</string>
