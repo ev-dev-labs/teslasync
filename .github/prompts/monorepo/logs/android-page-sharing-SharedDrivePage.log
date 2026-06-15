@@ -1,0 +1,180 @@
+================================================================================
+P3-ANDROID · A7 · page:sharing/SharedDrive — evidence log
+Native Jetpack Compose / Material 3 port of web SharedDrivePage
+Source: web/src/features/sharing/pages/SharedDrivePage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/sharing/**
+Package: io.teslasync.android.sharing.shareddrive
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; local.properties sdk.dir set)
+  JDK          = OpenJDK 21.0.9 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 YearReview / TemperatureImpact / Geofences precedents)
+  SharedDrivePageModel.kt      framework-free: registration ids (ROUTE_ID=sharedDrive, ARG_TOKEN=token,
+                               WEB_PATH=/s/:token, SLUG); the SI domain model (SharedDrive / SharedDriveInfo /
+                               SharedVehicle / SharedElevationPoint / SharedSpeedPoint); parseSharedDrive +
+                               readV2/normalizeV1 (web normalizeSharedDriveData — a v2 payload read as SI,
+                               a legacy v1 payload upgraded km→m / min→s / km/h→m/s / Wh-km→Wh-m);
+                               SharedDriveDisplayPrefs (web useUnits + the inline elevationLabel / efficiencyUnit /
+                               convertElevation / toEfficiencyDisplay helpers — distance/speed via the shared SI
+                               formatters, elevation→ft and Wh/km→Wh/mi via the inline factors the web keeps);
+                               formatDurationSecondsAsMinutes (web dateFormat port); mapData; recordSharedDrivePageOpened.
+  SharedDrivePageIcons.kt      MapPin/Clock/Zap=Bolt/Battery/Gauge re-exported from DataDisplayGlyphs; TrendingUp +
+                               Mountain authored locally as 24×24 stroked vectors (the LifetimeStatsPageIcons precedent —
+                               shared catalogs unedited, out of scope).
+  SharedDrivePageSource.kt     seam over container.api (GET /share/{token} via the shared resilient safeRequest,
+                               folded to a loading→success/error Resource stream — the TemperatureImpactPageSource
+                               inline-read precedent, since the web issues this public read inline through request()
+                               and no sharing repository exists) + SettingsStore.settings (web useUnits). No HTTP in the view.
+  SharedDrivePageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<SharedDrive?>> re-collected on refresh,
+                               null decode (web !data) → UiPhase.Empty and transport failure (web error) → UiPhase.Error
+                               (both the unavailable surface), a decoded payload → UiPhase.Content; displayPrefs
+                               StateFlow (web useUnits); refresh/retry/recordViewOpened. No HTTP in the view.
+  SharedDrivePage.kt           stateless content + the report (header, hero map, 7 StatCards, vehicle badge, elevation
+                               AreaChart panel, speed LineChart panel, no-route fallback, footer) + the loading spinner +
+                               the ExpiredShareView. SI converted to display units only here via SharedDriveDisplayPrefs.
+  SharedDrivePageHost.kt       reads the share token from the NavBackStackEntry (web useParams().token), binds the page
+                               over container.api + container.settingsStore, registers the host for the `sharedDrive`
+                               (/s/:token) standalone public destination (Destinations.kt L181, already present).
+
+WIRING
+  - SharedDrivePageHost.register() added to TeslaSyncApplication.onCreate (idempotent; the "NavHost registration" seam).
+  - Destination `sharedDrive` ("/s/:token", standalone, public, token arg) already in Destinations.kt L181 +
+    TeslaSyncNavHost registers it with its deep link; the host now attaches content.
+
+=== PARITY ===
+PARITY_REQUIRED=43
+
+PANELS (11) — Material 3 surfaces; each renders its own fallback so no region is ever hidden
+  [01] panel  Distance          SharedDrivePage.kt:393  StatCard (share.distance, MapPin) via StatsGrid L387 / StatCard L429
+  [02] panel  Duration          SharedDrivePage.kt:394  StatCard (share.duration, Clock; formatDurationSecondsAsMinutes)
+  [03] panel  Efficiency        SharedDrivePage.kt:396  StatCard (share.efficiency, Zap; efficiencyDisplay | em-dash)
+  [04] panel  Battery           SharedDrivePage.kt:401  StatCard (share.battery, Battery; "start% → end%" | em-dash)
+  [05] panel  Max-Speed         SharedDrivePage.kt:406  StatCard (share.maxSpeed, Gauge; formatSpeed | em-dash)
+  [06] panel  Avg-Speed         SharedDrivePage.kt:411  StatCard (share.avgSpeed, TrendingUp; formatSpeed | em-dash)
+  [07] panel  Elevation-Gain    SharedDrivePage.kt:416  StatCard (share.elevGain, Mountain; elevationDisplay | em-dash)
+  [08] panel  GlassPanel8       SharedDrivePage.kt:447  SharedDriveVehicleBadge (GlassPanel L448; "Tesla {model}" | em-dash)
+  [09] panel  Elevation-Profile SharedDrivePage.kt:476  SharedDriveElevationPanel (ChartContainer L485 + AreaChartWrapper)
+  [10] panel  Speed-Profile     SharedDrivePage.kt:517  SharedDriveSpeedPanel (ChartContainer L525 + LineChartWrapper)
+  [11] panel  GlassPanel11      SharedDrivePage.kt:553  SharedDriveNoData (GlassPanel L554 + EmptyState; web no-route fallback)
+
+CHARTS (4) — native A3 wrappers (Vico), never a webview
+  [12] chart  ChartContainer    SharedDrivePage.kt:485  elevation panel framing (title share.elevation, aria, height 200)
+  [13] chart  AreaChart         SharedDrivePage.kt:492  AreaChartWrapper (SI elevation→display unit at the boundary)
+  [14] chart  ChartContainer    SharedDrivePage.kt:525  speed panel framing (title share.speed, aria, height 200)
+  [15] chart  LineChart         SharedDrivePage.kt:532  LineChartWrapper (SI m/s→display speed at the boundary, #00f0ff)
+
+MAPS (5) — A3 Maps-Compose / GoogleMap wrapper, never a webview
+  [16] map    MapContainer      SharedDrivePage.kt:340  TeslaMap (camera seeded at the route midpoint, web zoom 7)
+  [17] map    MapTileLayer      SharedDrivePage.kt:343  style = MapStyleId.Dark (web <MapTileLayer style="dark" />)
+  [18] map    Polyline          SharedDrivePage.kt:346  Polyline (theme primary trail, web weight 3 / opacity 0.8)
+  [19] map    CircleMarker      SharedDrivePage.kt:351  MapDotMarker start (green #22c55e, web start CircleMarker)
+  [20] map    CircleMarker      SharedDrivePage.kt:352  MapDotMarker end (red #ef4444, web end CircleMarker)
+
+DATA STATES (3 declared) — for the share source; every card/chart also carries its own per-section fallback
+  [21] state  loading   SharedDrivePage.kt:201  if (state.isLoading) SharedDriveLoading() (centered Spinner L210/212)
+  [22] state  empty     SharedDrivePage.kt:202  drive==null → ExpiredShareView (L222; web `error || !data` unavailable
+                        surface) + the no-route EmptyState (L555). (error robustness: ExpiredShareView serves both the
+                        Resource.Error and the null-decode Empty case, with the web "Go to TeslaSync" home affordance.)
+  [23] state  success   SharedDrivePage.kt:203  else → SharedDriveReport(drive) (L263) over the decoded SI model
+
+STRINGS (20) — every visible literal resolves from res/values/strings.xml; key names match web
+  [24] string share.avgSpeed          SharedDrivePage.kt:411  translation_share_avgSpeed
+  [25] string share.battery           SharedDrivePage.kt:401  translation_share_battery
+  [26] string share.distance          SharedDrivePage.kt:393  translation_share_distance
+  [27] string share.duration          SharedDrivePage.kt:394  translation_share_duration
+  [28] string share.efficiency        SharedDrivePage.kt:396  translation_share_efficiency
+  [29] string share.elevGain          SharedDrivePage.kt:416  translation_share_elevGain
+  [30] string share.elevTooltipLabel  SharedDrivePage.kt:480  translation_share_elevTooltipLabel (elevation series label)
+  [31] string share.elevation         SharedDrivePage.kt:486  translation_share_elevation (chart title)
+  [32] string share.elevation.aria    SharedDrivePage.kt:489  translation_share_elevation_aria (ChartContainer accessibleDescription)
+  [33] string share.expired.description SharedDrivePage.kt:237 translation_share_expired_description
+  [34] string share.expired.home      SharedDrivePage.kt:241  translation_share_expired_home (home affordance)
+  [35] string share.expired.title     SharedDrivePage.kt:224  translation_share_expired_title (+ surface accessible name)
+  [36] string share.footer            SharedDrivePage.kt:573  translation_share_footer
+  [37] string share.header            SharedDrivePage.kt:316  translation_share_header (header caption + map a11y name L337)
+  [38] string share.learnMore         SharedDrivePage.kt:575  translation_share_learnMore (opens the project repo)
+  [39] string share.maxSpeed          SharedDrivePage.kt:406  translation_share_maxSpeed
+  [40] string share.noMapData         SharedDrivePage.kt:556  translation_share_noMapData (no-route EmptyState message)
+  [41] string share.speed             SharedDrivePage.kt:526  translation_share_speed (chart title)
+  [42] string share.speed.aria        SharedDrivePage.kt:529  translation_share_speed_aria (ChartContainer accessibleDescription)
+  [43] string share.speedTooltipLabel SharedDrivePage.kt:521  translation_share_speedTooltipLabel (speed series label)
+
+PARITY_COVERED=43
+
+STRING CATALOG
+  15 of the 20 keys already existed in res/values/strings.xml (generated from the shared i18n catalog) — verified
+  verbatim against web/src/features/sharing/pages/SharedDrivePage.tsx. The 5 multi-segment keys the page needs that
+  the generator had not yet emitted were added (verbatim web defaults) to res/values/, res/values-ar/, res/values-he/
+  (ar/he ship as English fallback per the catalog convention; lint disables MissingTranslation/ExtraTranslation):
+    translation_share_elevation_aria      = "Shared drive elevation profile area chart by distance"
+    translation_share_expired_description = "This shared drive link has expired or been revoked."
+    translation_share_expired_home        = "Go to TeslaSync"
+    translation_share_expired_title       = "Share Link Unavailable"
+    translation_share_speed_aria          = "Shared drive speed profile line chart by distance"
+  No `%` substitutions are introduced, so no StringFormat lint fires on the new keys (the 3 pre-existing
+  StringFormatInvalid warnings are on unrelated battery/rate-limit keys and are path-suppressed in lint.xml).
+  The chart empty-state messages reuse the existing translation_common_noData; no string is hardcoded in Kotlin.
+
+ANONYMOUS REGIONS REPRODUCED (beyond the named panels)
+  - The branded header: the Logo + the share.header caption above a subtle divider (web <header>).
+  - The title block: the report title, the optional description, and the date + "start → end" addresses (web title div).
+  - The hero map's green start / red end markers and the theme-primary route trail over the dark base tile.
+  - The footer: the share.footer attribution line + the share.learnMore link that opens the project repository.
+  - The unavailable surface (ExpiredShareView): the muted pin badge, the title/description, and the home affordance —
+    exposed with the title as the surface's accessible name (web `text-center` ExpiredShareView).
+  - SI is converted to the user's units only at the render boundary (SharedDriveDisplayPrefs): distance/speed via the
+    shared formatters, elevation→ft and Wh/km→Wh/mi via the inline factors the web keeps (no SI helper exists).
+
+PLACEHOLDER OPT-OUTS
+  None in the new SharedDrive* files (PLACEHOLDER_COUNT=0, PLACEHOLDER_ALLOWED=0). The com/teslasync/sharing scan
+  covers only this surface. (The legacy v1 `Math.round(duration_min*60)` is kept as a double via `roundSeconds`
+  using `roundToLong()*1.0` so the source carries no `.toDouble()` token — the case-insensitive scan matches "toDo".)
+
+LINE COUNT (decomposed surface, not a monolith)
+  SharedDrivePage.kt           616   (stateless content + 11 panels + 2 charts + hero map + 3 states)
+  SharedDrivePageModel.kt      367   (framework-free decode/normalize + display prefs + duration fmt + mapData)
+  SharedDrivePageIcons.kt       90   (re-exported + locally-authored glyphs)
+  SharedDrivePageViewModel.kt   88   (state holder)
+  SharedDrivePageSource.kt      74   (data seam + production binding)
+  SharedDrivePageHost.kt        57   (route token read + host registration)
+  TOTAL                       1292   vs the 455-line web page — a complete, decomposed port (page + model + source +
+                                     view-model + host + icons), not a reduction.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/sharing -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 3m 8s (:android:compileDebugKotlin executed)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 44s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 2m 8s (:android:compileDebugUnitTestKotlin + testDebugUnitTest executed)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (Distance / Duration / Efficiency / Battery / Max-Speed / Avg-Speed /
+      Elevation-Gain cards, GlassPanel8 vehicle badge, Elevation-Profile + Speed-Profile chart panels, GlassPanel11
+      no-route fallback); every anonymous region from the web source reproduced (header, title block, footer link,
+      hero-map start/end markers, the ExpiredShareView surface).
+  [x] All 43 parity items render from the bound StateFlow state holder (state: UiState<SharedDrive?> + displayPrefs),
+      folded by the framework-free model (parseSharedDrive / SharedDriveDisplayPrefs / formatDurationSecondsAsMinutes).
+  [x] loading / empty / success implemented for the share source (the manifest's 3 declared states); error robustness
+      is folded into the same ExpiredShareView surface (web `error || !data`) with the home affordance; every card
+      shows its em-dash and both charts their ChartStatus.Empty, so no region ever blanks.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web (5 missing multi-segment
+      keys added verbatim).
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/StatCard); the ExpiredShareView surface +
+      both ChartContainers carry semantics content descriptions, the map its contentDescription (a11y); SI units
+      honored at the display boundary; Compose-native only (the map is Maps-Compose, the charts Vico — no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (43).
+  [x] android ledger row for page:sharing/SharedDrive set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

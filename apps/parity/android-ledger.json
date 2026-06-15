@@ -259,5 +259,14 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/settings/PrivacyPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-PrivacyPage.log"
+  },
+  {
+    "unitId": "page:sharing/SharedDrive",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p3-android/pages/sharing/SharedDrivePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-sharing-SharedDrivePage.log"
   }
 ]

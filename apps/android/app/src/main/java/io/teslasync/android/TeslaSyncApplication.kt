@@ -30,6 +30,7 @@ import io.teslasync.android.notifications.webhooks.WebhooksPageHost
 import io.teslasync.android.poweruser.sqlplayground.SqlPlaygroundPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.settings.privacy.PrivacyPageHost
+import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
 /**
@@ -118,6 +119,8 @@ class TeslaSyncApplication : Application() {
         PrivacyPageHost.register()
         // Register the native SQL-playground power-user screen for the /power/sql route (P3/A7). Idempotent.
         SqlPlaygroundPageHost.register()
+        // Register the native public shared-drive report screen for the /s/{token} route (P3/A7). Idempotent.
+        SharedDrivePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
