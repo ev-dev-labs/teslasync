@@ -840,6 +840,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" Link="FeatureViews\LegacyNotificationsRedirect\LegacyNotificationsRedirect.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LifetimeStatsPage\LifetimeStatsPage.Model.cs" Link="FeatureViews\LifetimeStatsPage\LifetimeStatsPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LifetimeStatsPage\LifetimeStatsPage.Source.cs" Link="FeatureViews\LifetimeStatsPage\LifetimeStatsPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\LifetimeStatsPage\LifetimeStatsPage.ViewModel.cs" Link="FeatureViews\LifetimeStatsPage\LifetimeStatsPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Model.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.Source.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\LifetimeSummary\LifetimeSummary.ViewModel.cs" Link="FeatureViews\LifetimeSummary\LifetimeSummary.ViewModel.cs" />

@@ -514,6 +514,11 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DrivingDynamics", static () => new FeatureViews.Driving.DrivingDynamicsPage());
         // Analytics / Mileage page (P2/W7) — parity port of web MileagePage at route /mileage.
         _viewModel.PageFactory.Register("Mileage", static () => new FeatureViews.Analytics.MileagePage());
+        // Analytics / Lifetime Stats page (P2/W7) — parity port of web LifetimeStatsPage at route /lifetime-stats.
+        // RouteTable already maps Page("LifetimeStats","lifetime-stats",RouteGroup.Analytics) (+ the /analytics/lifetime
+        // deep-link alias). The default empty-feed ctor renders the loading/empty surfaces until a DI host supplies the
+        // generated-client-backed LifetimeStatsClientFeed.
+        _viewModel.PageFactory.Register("LifetimeStats", static () => new FeatureViews.Analytics.LifetimeStatsPage());
         // Vehicle Systems / Media Player page (P2/W7) — parity port of web MediaPlayerPage at route /media-player.
         _viewModel.PageFactory.Register("MediaPlayer", static () => new FeatureViews.VehicleSystems.MediaPlayerPage());
         // System / Exports page (P2/W7) — parity port of web ExportsPage at route /exports.

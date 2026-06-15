@@ -90,6 +90,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-FleetComparePage.log"
   },
   {
+    "unitId": "page:analytics/LifetimeStats",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 56,
+    "requiredCount": 56,
+    "promptId": "p2-windows/W7/windows-page-analytics-LifetimeStatsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-analytics-LifetimeStatsPage.log"
+  },
+  {
     "unitId": "page:automations/AutomationActivityFeed",
     "platform": "windows",
     "status": "done",
