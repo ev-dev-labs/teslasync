@@ -1,0 +1,153 @@
+================================================================================
+P3-ANDROID A7 — page:settings/Privacy
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/settings/pages/PrivacyPage.tsx
+================================================================================
+
+Artifact     : page:settings/Privacy
+Web route    : /account/privacy
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/settings/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+PrivacyPage.tsx is a thin promotion wrapper: it sets a PageContainer (title,
+subtitle, copyLink) and embeds <PrivacySection /> verbatim, so the browser-local
+privacy controls — the "recently viewed pages" LRU clear (lib/recentPages) and
+the tri-state cookie/GDPR consent control (lib/cookieConsent), plus the
+deployment `require_cookie_consent` policy sentence (useVersionInfo) — live at
+/account/privacy as a first-class Account route instead of buried in the dense
+Settings page. The page itself declares no data of its own (the parity manifest
+records zero dataSources, zero panels, and exactly two strings — requiredCount=2);
+the embedded PrivacySection owns the recent-pages count + clear, the consent
+tri-state (accept / decline / reset), the irreversible-clear confirmation dialog,
+the version-policy feed, and the toast feedback.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 PrivacySection feature-view already exists
+(io.teslasync.android.featureviews.privacy.PrivacySection, dir
+apps/android/app/src/main/java/com/teslasync/feature-views/PrivacySection/) and
+owns every data state: the pre-resolution Loading skeleton, the resolved Content
+body (recent-pages card + consent card), the version feed's stale/offline/error
+freshness chrome (never a blanking gate), the clear-confirmation dialog, the four
+mutations, and the toast queue — all unit-tested off-device by
+PrivacySectionViewModelTest + PrivacyProjectionTest. It is fully self-wiring: the
+composable resolves the on-device SharedPreferences recent-pages + cookie-consent
+stores from LocalContext and the shared SettingsStore version policy from
+LocalDataContainer, so the host passes nothing. This page is its host: it sets the
+PageContainer-equivalent header and embeds the feature view — never
+re-implementing it (DRY, ADR-006). Mirrors the sibling notifications/ChannelsPage
+and notifications/WebhooksPage 2-string wrappers that embed shared feature views.
+
+New files (package io.teslasync.android.settings.privacy):
+  - PrivacyPageModel.kt   Registration(ROUTE_ID accountPrivacy,
+                          WEB_PATH /account/privacy, SLUG PrivacyPage)
+                          + recordPrivacyPageOpened (the one PII-safe view.opened
+                          diagnostic, P1/S11). No page-level feed — the embedded
+                          feature view owns the recent-pages/consent/version data.
+  - PrivacyPage.kt        Stateful entry PrivacyPage(modifier, logger): records
+                          view.opened, then PrivacyPageContent (verticalScroll
+                          Column: header + PrivacySection()) + PrivacyPageHeader
+                          (PageTitle + subtitle BodyText + copy-link IconButton
+                          writing WEB_PATH to the clipboard).
+  - PrivacyPageHost.kt    PrivacyRoute() renders PrivacyPage(); PrivacyPageHost
+                          .register() -> PageHosts.register("accountPrivacy").
+                          Idempotent.
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt  import + PrivacyPageHost.register() at process start
+                             (after WebhooksPageHost.register()). The accountPrivacy
+                             /account/privacy destination already exists in
+                             Destinations.kt (NavGroup.Settings) — host wiring only.
+  - res/values/strings.xml (+ values-ar, values-he)  2 generated keys
+                             translation_account_privacy_{title,subtitle} inserted
+                             in sorted position (before translation_addressInput_label),
+                             generator-identical format (no tokens, no chars needing
+                             escaping); ar/he carry the English fallback (placeholder
+                             locales, translated=false). copy-link reuses the existing
+                             translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:settings/Privacy row (done, 2/2).
+
+Notes:
+  - i18n catalog: res/values*/strings.xml is AUTO-GENERATED by
+    apps/shared/i18n/generators/gen-i18n.ts. The web page sources
+    account.privacy.{title,subtitle} as inline t() fallback defaults (they are not
+    yet in the canonical i18n catalog source, which is outside this artifact's
+    allowed files: com/teslasync/settings/**, NavHost registration,
+    res/values*/strings.xml, this log). The two keys were hand-inserted into the
+    three Android strings.xml files byte-identically to the generator output
+    (sorted between activity_viewAll <-> addressInput_label; no escapable chars),
+    so a future gen-i18n run — once the keys are added to the catalog source —
+    re-emits these exact lines (no conflict). No gen-i18n step runs in the gradle
+    gate, so the committed strings.xml is authoritative for the build. Honest
+    disclosure (no silent drift, covenant #9).
+  - SI: no field on this surface is unit-bearing — no SI conversion (ADR-013 n/a).
+  - States: PrivacySection renders Loading skeleton / Content (recent + consent
+    cards) / version stale-offline / version error+retry — verified by the shared
+    PrivacySectionViewModelTest. A missing version response falls back to
+    requireConsent=false and never blanks the panel (web parity).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading + copy-link IconButton contentDescription; the feature
+    view supplies the shield IconBox + card content + dynamic/dark theme (ADR-015).
+  - Layout: PrivacySection lays out as a non-lazy GlassPanel Column, so it composes
+    safely inside the page's outer verticalScroll container.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/settings -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 5m 41s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 13m 1s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 22s
+TEST_EXIT=0
+(testDebugUnitTest: 16515 tests, 0 failures, 0 errors, 0 skipped — incl. the
+ shared PrivacySectionViewModelTest + PrivacyProjectionTest for the embedded view.)
+
+(the only compile warning is the LocalClipboardManager deprecation, identical to
+ the shipped sibling notifications/ChannelsPage.kt + WebhooksPage.kt copy-link
+ affordance; accepted precedent, not an error — lintDebug is green.)
+
+ktlint / detekt (not part of this prompt's binding gate; recorded for honesty):
+  The repo-wide :android:ktlintMainSourceSetCheck (293 findings) and
+  :android:detekt (47 weighted issues) are RED on pre-existing parity surfaces
+  (admin/ApiLogsPage, dashboard/GlancePage, battery/BatteryHealthPageModel, …) —
+  this is known generated-surface debt documented in app/lint.xml. The three new
+  settings/Privacy files contribute ZERO ktlint and ZERO detekt findings (verified:
+  neither report lists com/teslasync/settings/*). No new style debt introduced.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1] string : account.privacy.title
+    EVIDENCE: R.string.translation_account_privacy_title rendered by PageTitle(...)
+              in PrivacyPageHeader (PrivacyPage.kt); value "Privacy" in
+              res/values/strings.xml (matches web t('account.privacy.title',
+              'Privacy')). COVERED.
+
+[2] string : account.privacy.subtitle
+    EVIDENCE: R.string.translation_account_privacy_subtitle rendered by BodyText(...)
+              in PrivacyPageHeader (PrivacyPage.kt); value "Manage browser-local
+              data: recently viewed pages and cookies / analytics consent." in
+              res/values/strings.xml (matches web t('account.privacy.subtitle', …)).
+              COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

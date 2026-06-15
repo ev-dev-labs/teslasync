@@ -423,6 +423,8 @@
   <string name="translation_activity_myActivity_unauthorized_title">Identity required</string>
   <string name="translation_activity_title">Recent Activity</string>
   <string name="translation_activity_viewAll">View all</string>
+  <string name="translation_account_privacy_subtitle">Manage browser-local data: recently viewed pages and cookies / analytics consent.</string>
+  <string name="translation_account_privacy_title">Privacy</string>
   <string name="translation_addressInput_label">Address</string>
   <string name="translation_admin_audit_filterLabel_search">Search</string>
   <string name="translation_admin_audit_noMatches">No audit entries match your search.</string>
