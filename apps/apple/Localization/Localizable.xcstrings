@@ -1,6 +1,39 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "gas.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatically fetch US average gas prices from EIA"
+          }
+        }
+      }
+    },
+    "gas.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gas Price Auto-Poll"
+          }
+        }
+      }
+    },
+    "route.gasPrice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gas Prices"
+          }
+        }
+      }
+    },
     "lifetime.achievements" : {
       "extractionState" : "manual",
       "localizations" : {
