@@ -29,7 +29,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case fleetCompare, lifetimeStats, mileage, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
-    case gdprExport, rbacMatrix, users, dlqInspector, devTools
+    case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay
     case liveSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
     case backupRestore
     case settings, onboarding, teslaOrders, gasPrice, teslaFeatures, explore, search, sharing, watch
@@ -58,6 +58,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .devTools: "dev-tools"
         case .gdprExport: "gdpr-exports"
         case .dlqInspector: "dlq"
+        case .ingestXRay: "ingest-xray"
         case .rbacMatrix: "rbac-matrix"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
@@ -111,6 +112,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .auditLog: "list.bullet.rectangle.portrait"
         case .featureFlags: "flag.fill"
         case .dlqInspector: "exclamationmark.octagon.fill"
+        case .ingestXRay: "scope"
         case .fleetAPI: "antenna.radiowaves.left.and.right"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .devTools: "hammer.fill"
@@ -148,7 +150,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,
-             .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore: .system
+             .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore, .ingestXRay: .system
         case .settings, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures: .account
         }
     }

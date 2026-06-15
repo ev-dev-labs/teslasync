@@ -29,6 +29,7 @@ public enum AppRouteParser {
         "/admin/api-logs": .apiLogs,
         "/admin/flags": .featureFlags,
         "/admin/dlq": .dlqInspector,
+        "/admin/ingest-xray": .ingestXRay,
         "/admin/rbac": .rbacMatrix,
         "/admin/rbac-matrix": .rbacMatrix,
         "/admin/users": .users,

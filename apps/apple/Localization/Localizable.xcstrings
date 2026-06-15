@@ -1,6 +1,127 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "admin.xray.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingest X-Ray"
+          }
+        }
+      }
+    },
+    "admin.xray.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-vehicle telemetry sample counts \u2014 pick a vehicle to inspect what the ingest pipeline is receiving."
+          }
+        }
+      }
+    },
+    "admin.xray.noVehicle.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a vehicle"
+          }
+        }
+      }
+    },
+    "admin.xray.noVehicle.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pick a vehicle from the dropdown above to load its ingest X-Ray for the selected window."
+          }
+        }
+      }
+    },
+    "admin.xray.panels.fields" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Field statistics"
+          }
+        }
+      }
+    },
+    "admin.xray.chart.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Samples per bucket"
+          }
+        }
+      }
+    },
+    "admin.xray.chart.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time-series of ingested telemetry rows over the selected window."
+          }
+        }
+      }
+    },
+    "admin.xray.chart.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No samples in this window."
+          }
+        }
+      }
+    },
+    "admin.xray.fields.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No samples in this window. Try widening the window or confirm the vehicle is publishing."
+          }
+        }
+      }
+    },
+    "admin.xray.fields.loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading\u2026"
+          }
+        }
+      }
+    },
+    "route.ingestXRay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingest X-Ray"
+          }
+        }
+      }
+    },
     "backup.backupType" : {
       "extractionState" : "manual",
       "localizations" : {

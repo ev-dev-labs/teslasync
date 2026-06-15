@@ -125,6 +125,7 @@ struct TeslaSyncApp: App {
         registry = AuditLogRouteRegistration.registry(base: registry)
         registry = FeatureFlagsRouteRegistration.registry(base: registry)
         registry = DLQInspectorRouteRegistration.registry(base: registry)
+        registry = IngestXRayRouteRegistration.registry(base: registry)
         registry = ApiLogsRouteRegistration.registry(base: registry)
         registry = FleetAPIRouteRegistration.registry(base: registry)
         registry = DevToolsRouteRegistration.registry(base: registry)
