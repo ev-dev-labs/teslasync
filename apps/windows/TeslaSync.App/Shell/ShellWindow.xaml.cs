@@ -971,6 +971,57 @@ public sealed partial class ShellWindow : Window
             new FeatureViews.Battery.EnergyFlowPage(
                 new FeatureViews.Battery.EnergyFlowClientFeed(_data.Api),
                 _data.Localizer));
+
+        // ── Additional live-data registrations: these pages each already ship an API-backed client feed
+        //    but were left on the empty default ctor (so they rendered blank). Wire each to its feed so the
+        //    page renders real data; vehicle-scoped feeds use the warmed primary vehicle id.
+        _viewModel.PageFactory.Register("Geofences", () =>
+            new FeatureViews.Maps.GeofencesPage(
+                new FeatureViews.Maps.GeofencesClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Locations", () =>
+            new FeatureViews.Maps.LocationsPage(
+                new FeatureViews.Maps.LocationsClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("TirePressure", () =>
+            new FeatureViews.VehicleSystems.TirePressurePage(
+                new FeatureViews.VehicleSystems.TirePressureClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("ClimateControl", () =>
+            new FeatureViews.VehicleSystems.ClimateControlPage(
+                new FeatureViews.VehicleSystems.ClimateClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("MediaPlayer", () =>
+            new FeatureViews.VehicleSystems.MediaPlayerPage(
+                new FeatureViews.VehicleSystems.MediaPlayerClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("GuardMode", () =>
+            new FeatureViews.VehicleSystems.GuardModePage(
+                new FeatureViews.VehicleSystems.GuardModeClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SystemStatus", () =>
+            new FeatureViews.SystemOps.SystemStatusPage(
+                new FeatureViews.SystemOps.SystemStatusClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DBHealthDashboard", () =>
+            new FeatureViews.Diagnostics.DBHealthPage(
+                new FeatureViews.Diagnostics.DbHealthClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("BatteryDegradation", () =>
+            new FeatureViews.Battery.BatteryDegradationPage(
+                new FeatureViews.Battery.BatteryDegradationClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("VampireDrain", () =>
+            new FeatureViews.Battery.VampireDrainPage(
+                new FeatureViews.Battery.VampireDrainClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SpeedProfile", () =>
+            new FeatureViews.Driving.SpeedProfilePage(
+                new FeatureViews.Driving.SpeedProfileClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DrivetrainHealth", () =>
+            new FeatureViews.Driving.DrivetrainHealthPage(
+                new FeatureViews.Driving.DrivetrainHealthClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
