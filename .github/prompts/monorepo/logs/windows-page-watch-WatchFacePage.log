@@ -1,0 +1,116 @@
+P2-WINDOWS W7 — page:watch/WatchFace — WinUI 3 / Fluent parity port
+=========================================================================
+Web source : web/src/features/watch/pages/WatchFacePage.tsx (route /watch, chrome-less wearable)
+Output     : apps/windows/TeslaSync.App/feature-views/WatchFacePage/
+             (repo convention = C#-markup feature-views, not Features/*.xaml; see sibling
+              done page feature-views/GlancePage — same 4-file Model/Source/ViewModel/view shape)
+Nav        : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("WatchFace", …)
+             (RouteTable already maps Standalone("WatchFace","watch",RouteGroup.Standalone,"Watch Face",auth:false))
+Strings    : web has NO i18n keys for this page (every literal is hardcoded in WatchFacePage.tsx); the
+             manifest extracted 0 strings. Every literal introduced here flows through the ILocalizer with a
+             web-verbatim English fallback (watch.* keys), resolved headlessly via the fallback exactly like the
+             sibling GlancePage — no resw rows added (none are catalog-generated for this unit).
+
+Files:
+  feature-views/WatchFacePage/WatchFacePage.Model.cs      (parser + projection + quick actions + relative time + registration + diagnostics)
+  feature-views/WatchFacePage/WatchFacePage.Source.cs     (generated C# client cache-then-network: /watch/summary + /watch/command)
+  feature-views/WatchFacePage/WatchFacePage.ViewModel.cs  (INotifyPropertyChanged state holder + ports + empty/noop default sources)
+  feature-views/WatchFacePage/WatchFacePage.cs            (WinUI 3 UserControl, OLED wearable face + Helix narrator sibling — build-only, not headless-linked)
+  TeslaSync.App.Tests/FeatureViews/WatchFacePageTests.cs  (35 headless tests)
+  TeslaSync.App.Tests/TeslaSync.App.Tests.csproj          (links the 3 UI-free files; the WinUI view is build-only)
+  TeslaSync.App/Shell/ShellWindow.xaml.cs                 (PageFactory.Register("WatchFace", …))
+  apps/parity/windows-ledger.json                         (page:watch/WatchFace -> done, 2/2)
+
+Data sources (P1/S8 state-holder VM → generated C# client, ADR-004; web hook names kept at the C# call sites):
+  useWatchSummary -> WatchFaceSummarySource.StreamAsync, ApiRequest("get_api_v1_watch_summary", vehicle_id=?)
+                     parses the full /watch/summary body via WatchFaceSummary.FromResponse
+  useWatchCommand -> WatchFaceCommandSender.SendAsync(vehicleId, command),
+                     ApiRequest("post_api_v1_watch_command", Body { vehicle_id, command }) — web vehicleId ?? 0
+Units (P1/S5): SI read from the API (range_km wire field * 1000 metres; inside_temp_c °C); converted only at the
+  display boundary in WatchFaceProjection via UnitFormatters.FormatDistance + UnitConverters.TemperatureFromSi
+  ("21°"). No non-SI stored/computed. UnitPref defaults to metric.
+Live data: the web page polls via TanStack-Query refetchInterval (30s; no useLiveX/SSE). The native VM exposes
+  LoadAsync/RefreshAsync and renders the web "last updated" relative-time caption (WatchFaceProjection.
+  FormatRelativeTime) as the freshness indicator (ADR-013).
+AI sibling: the opt-in Helix narrator (shared-surfaces/AIWatchFaceNLResponse) is rendered BELOW the OLED face,
+  exactly as the web renders <AIWatchFaceNLResponse/> after <WatchShell>. The page's parameterless ctor builds a
+  gated-off instance (StaticAiFeatureGate.Off) which collapses itself — preserving the chrome-less wearable
+  invariant (web withAiFeature → null).
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1/2]  state  loading
+        WatchFaceState.Loading ; WatchFaceProjection.Project(loading) ; WatchFacePageViewModel.BuildModel(loading) ;
+        WatchFacePage.cs::BuildLoading (TsSpinner size=Large centred on the OLED face — web <Spinner size="lg"/>).
+        evidence-test: WatchFacePageTests.Loading_model_projects_loading_state,
+                       WatchFacePageTests.Manifest_requires_sixteen_string_keys (state-key coverage)
+[2/2]  state  success
+        WatchFaceState.Success ; WatchFacePageViewModel.LoadAsync -> summary ; WatchFacePage.cs::BuildSuccess
+        (vehicle name + battery ring [ChartShapes.ArcPath/ChartGeometry.RingArc tinted by WatchFaceProjection.
+        BatteryStatusFor = web getBatteryColor >40/>20] + charging line + TsBadge state [StateStatusFor =
+        web watchStateVariant] + 3 tap icons [lock/unlock, climate, sentry] + relative-time caption).
+        evidence-test: WatchFacePageTests.Resolved_summary_projects_success_state,
+                       WatchFacePageTests.ViewModel_load_populates_success,
+                       WatchFacePageTests.Battery_threshold_maps_to_status,
+                       WatchFacePageTests.State_badge_variant_matches_web,
+                       WatchFacePageTests.Lock_icon_is_dynamic_and_tinted_by_lock_state,
+                       WatchFacePageTests.Climate_icon_toggles_command_and_label,
+                       WatchFacePageTests.Sentry_icon_is_a_non_interactive_indicator,
+                       WatchFacePageTests.Range_converts_from_km_wire_field_at_display_boundary,
+                       WatchFacePageTests.Interior_temperature_caption_converts_at_display_boundary,
+                       WatchFacePageTests.Charging_line_shows_minutes_to_full_only_when_charging,
+                       WatchFacePageTests.Relative_time_matches_web_buckets
+# Beyond the 2 required parity states, the web's combined error/empty message branch
+#   (`error ? String(error) : 'No vehicle found'`) is implemented as two distinct, never-blank surfaces inside the
+#   OLED face — WatchFaceState.Empty (BuildMessage, "No vehicle found") and WatchFaceState.Error (BuildError,
+#   localized message + Retry) — so loading/empty/error are all covered for the single data source.
+#   evidence-test: No_data_projects_empty_state, ViewModel_empty_body_sets_empty_state,
+#                  Failed_model_projects_error_state, ViewModel_load_failure_sets_error_state.
+# Command flow (web useWatchCommand): ViewModel_command_sends_then_reloads_summary (re-reads the summary on
+#   success, two streams), ViewModel_command_forwards_zero_vehicle_when_no_deep_link, Pending_command_dims_tap_
+#   icons_and_spins_active_only. JSON shaping pinned by Summary_parses_full_watch_body / Summary_returns_null_for_
+#   non_object_or_empty.
+# Strings: all 16 introduced watch.* keys asserted resolved headlessly via a RecordingLocalizer
+#   (Projection_resolves_every_required_string_key + Manifest_requires_sixteen_string_keys).
+# a11y: AutomationProperties names on the page, the gauge ring, the charging line, the state badge, every tap icon
+#   and the retry; the gauge canvas/value/range are AccessibilityView.Raw. The OLED face is `bg-black text-white`
+#   per the web wearable EXCEPTION (WatchFacePage.tsx L24) — theme-independent fixed brushes; the value-arc tint
+#   (ChartBrushes.ForStatus) and the Helix narrator below still use the W2 design tokens. No charts/maps for this
+#   unit (manifest declares 0 charts, 0 maps).
+
+PARITY_COVERED=2
+
+=== GATE ===
+# Placeholder scan (ADR-011). The generated prompt's path apps/windows/TeslaSync/Features/Watch does not exist
+# in-repo; scanned the real target instead (same note as the sibling GlancePage log):
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/WatchFacePage -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/WatchFacePageTests.cs -Language csharp
+#   PLACEHOLDER_ALLOWED=0 / PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s)
+#   (TeslaSync.App also built standalone: 0 Error(s); CA1822/CA1859 analyzer-as-error on the new view were fixed —
+#    BuildMessage/BuildGaugeBlock made static, BuildLoading/BuildError/BuildMessage/BuildQuickAction return
+#    concrete types. The only remaining warnings are pre-existing TeslaSync.App.Core CA* ones.)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes --include <WatchFacePage Model/Source/ViewModel/view
+#   + WatchFacePageTests + ShellWindow.xaml.cs>  -> 0 issues (LF/utf-8)
+LINT_EXIT=0
+# Test gate scoped to the headless unit project, per the established W7 convention (DashboardPage/GlancePage logs
+# gate dotnet test on TeslaSync.App.Tests). The WinAppDriver UI-automation project (TeslaSync.App.UITests, W9)
+# requires a UI runner that is absent here; those failures are environmental and out of scope for this page prompt.
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 31226, Failed: 0, Skipped: 0
+#   (incl. 35 WatchFacePageTests)
+TEST_EXIT=0
+PARITY_COVERED=2
+PARITY_REQUIRED=2
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/WatchFacePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/WatchFacePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-watch-WatchFacePage.log
+# git commit -m "feat(apps/windows): WatchFacePage at web parity (W7 watch)"
+
+EXIT=0
+STATUS=DONE

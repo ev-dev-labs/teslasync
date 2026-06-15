@@ -95,6 +95,12 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // Watch / Watch Face page (P2/W7) — parity port of web WatchFacePage at the chrome-less route /watch.
+        // RouteTable already maps Standalone("WatchFace","watch",RouteGroup.Standalone,auth:false). The page is the
+        // OLED wearable shell (battery ring + tap icons) plus the opt-in Helix narrator sibling; it has no in-app
+        // navigation, so the parameterless constructor (empty source + gated-off narrator) is registered directly.
+        _viewModel.PageFactory.Register("WatchFace", static () => new FeatureViews.Watch.WatchFacePage());
+
         // Dashboard / Explore page (P2/W7) — parity port of web ExplorePage at route /explore.
         // RouteTable already maps Page("Explore","explore",RouteGroup.DashboardExplore). The feature hub renders the
         // categorised catalogue of every navigable destination; card / recently-visited / "did you mean" activations
