@@ -23,7 +23,7 @@ struct DriveScoreGaugeHero: View {
 
     var body: some View {
         VStack(spacing: TSSpacing.md) {
-            DriveScoreGauge(readout: readout, diameter: compact ? 84 : 116)
+            DriveScoreWidgetGauge(readout: readout, diameter: compact ? 84 : 116)
             if !compact {
                 DriveScoreStatRow(readout: readout)
             }
@@ -45,7 +45,7 @@ struct DriveScoreGaugeHero: View {
 /// ring with a rounded value arc trimmed to `score / 100`, tinted by the score band, the
 /// score number centered, and the "Score" label beneath. Decorative — the enclosing hero
 /// owns the spoken summary.
-struct DriveScoreGauge: View {
+struct DriveScoreWidgetGauge: View {
     let readout: DriveScoreReadout
     var diameter: CGFloat = 116
     private let lineWidth: CGFloat = 10
