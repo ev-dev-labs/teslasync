@@ -882,3 +882,4 @@ p3-android/pages/driving/TripPlannerPage.prompt.md
 p3-android/pages/maps/GeofencesPage.prompt.md
 p3-android/pages/maps/TemperatureImpactPage.prompt.md
 p3-android/pages/notifications/ArchivedPage.prompt.md
+p3-android/pages/notifications/ChannelsPage.prompt.md
