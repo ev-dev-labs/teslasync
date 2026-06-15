@@ -89,9 +89,9 @@ import SwiftUI
             InputField(
                 text: $value,
                 label: "Charge limit",
+                placeholder: "80",
                 error: "Enter a value between 50 and 100.",
-                hint: "This hint is hidden while an error is shown.",
-                placeholder: "80"
+                hint: "This hint is hidden while an error is shown."
             )
         }
     }
@@ -102,8 +102,8 @@ import SwiftUI
             InputField(
                 text: $value,
                 label: "Vehicle nickname",
-                hint: "Shown across the app instead of the VIN.",
-                placeholder: "Bluey"
+                placeholder: "Bluey",
+                hint: "Shown across the app instead of the VIN."
             )
         }
     }
