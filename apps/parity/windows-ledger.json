@@ -313,5 +313,14 @@
     "requiredCount": 54,
     "promptId": "p2-windows/W7/windows-page-vehicle-systems-GuardModePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log"
+  },
+  {
+    "unitId": "page:admin/BackupRestore",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 91,
+    "requiredCount": 91,
+    "promptId": "p2-windows/W7/windows-page-admin-BackupRestorePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-BackupRestorePage.log"
   }
 ]
