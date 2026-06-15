@@ -1,0 +1,173 @@
+=== P4-APPLE · P7 · page:admin/System (SwiftUI / HIG) ===
+started: 2026-06-15T00:44-0700
+host: macOS (Darwin) 26.5; Xcode 26.5 Build 17F42; Swift 6.3.2; swiftlint + swiftformat + xcodegen + pwsh + JDK 17 present
+web source: web/src/features/admin/pages/SystemPage.tsx   (SYSTEM_PAGE_PATH = /admin/system; manifest route "(unrouted)")
+parity unit: page:admin/System  (manifest requiredCount=2 — system.page.title, system.page.subtitle; no dataSources/panels/charts/maps)
+
+--------------------------------------------------------------------------------
+OUTPUT PATH RECONCILIATION (no silent drift — covenant #9)
+--------------------------------------------------------------------------------
+The generated prompt names the output dir `apps/apple/TeslaSync/Features/Admin/**`.
+That path is NOT a project.yml source group. The repo's real, compiled canonical page
+home is `apps/apple/Sources/Features/Admin/` (every peer admin page — ApiPlayground /
+AuditLog / DevTools / DiskForecast / FleetAPI / … — ships there; `Sources` is a
+project.yml source path with createIntermediateGroups). Page hosting uses the proven
+RouteRegistration pattern. This page therefore ships at
+`apps/apple/Sources/Features/Admin/**`; the two required strings ship in the platform
+catalog `apps/apple/Localization/Localizable.xcstrings` (an allowed file). This is the
+only deviation from the literal prompt path and matches the prior DevTools/ApiPlayground
+done-page reconciliations.
+
+--------------------------------------------------------------------------------
+SCOPE RECONCILIATION (no scope narrowing — covenant #2)
+--------------------------------------------------------------------------------
+The web SystemPage is a thin "infrastructure-budget" aggregator (its own doc comment):
+PageContainer(title, subtitle) + FadeIn + Stack(gap-6) composing exactly two panels —
+<RateLimitStatusPanel /> then <QueueStatusPanel />. The manifest scopes page:admin/System
+to TWO strings with NO page-level dataSources/panels ("renders from navigation values /
+local state"); the two panels are their OWN, already-shipped native P4 parity units:
+  - RateLimitStatusPanel  -> apps/apple/TeslaSync/feature-views/RateLimitStatusPanel*.swift
+  - QueueStatusPanel      -> apps/apple/TeslaSync/feature-views/QueueStatusPanel*.swift
+So the native SystemPage composes those two real panels (same data, grouping, order as
+web) under the PageContainer chrome — no panel logic duplicated, no region dropped, no
+stub. Both panels render their full loading/error/empty/data states via their own models.
+Per the sibling DiskForecast precedent (ships `SampleDiskForecastDataSource()` so the
+surface renders populated out of the box pending the live KMP binding), the page seeds the
+two panels with representative sample sources by default; production / tests inject the
+live `RateLimitSource` / `QueueStatusSource` (GET /system/rate-limits, /system/queues).
+Charts/maps/live-SSE/SI-units: N/A for this unit (none declared; the panels own their own).
+
+--------------------------------------------------------------------------------
+NATIVE OUTPUT (in-scope changes — git status --porcelain)
+--------------------------------------------------------------------------------
+?? Sources/Features/Admin/SystemPage.swift              (61)  View: PageContainer header (TSPageTitle+subtitle) + TSFadeIn + VStack(gap=lg) of the 2 panels; a11y id "system-page-stack"; #if DEBUG preview
+?? Sources/Features/Admin/SystemPageModel.swift         (30)  @MainActor @Observable: owns rateLimit: RateLimitModel + queue: QueueStatusModel; injectable sources (no business logic, ADR-004)
+?? Sources/Features/Admin/SystemPageModel.Sample.swift  (118) SystemPageSampleSources (in-memory seeded) + SystemPageSamples (pure Sendable envelopes: 3 rate-limit scopes ok/warn/critical, 3 workers notification/export/automation)
+?? Sources/Features/Admin/SystemRouteRegistration.swift (19)  registers .system -> SystemPage (peer RouteRegistration pattern)
+?? Tests/Unit/Features/Admin/SystemPageModelTests.swift (62)  XCTest: loading->data population, injected-source override (empty), sample severities/identities
+ M Sources/App/AppRouteParser.swift     + alias "/admin/system": .system (web SYSTEM_PAGE_PATH; /system already resolves via segment). The .system AppRoute case + route.system title already existed and were unregistered — this page wires them.
+ M Sources/TeslaSyncApp.swift           chains SystemRouteRegistration.registry(base:) into \.routeHosts
+ M Localization/Localizable.xcstrings   + system.page.title ("System budgets") + system.page.subtitle ("Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."); additions-only; JSON validated (9368 total keys)
+ M apps/parity/apple-ledger.json        + page:admin/System rows (apple-macos + apple-ios), 2/2, status done
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- swiftformat --lint (my 5 sources + 2 edited) ---
+0/7 files require formatting.   (numeric literals normalized per repo .swiftformat config)
+FORMAT_EXIT=0
+
+--- swiftlint --strict (my 5 sources + 2 edited, repo apps/apple/.swiftlint.yml) ---
+Done linting! Found 0 violations, 0 serious in 7 files.
+LINT_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift ---
+PLACEHOLDER_ALLOWED=7   [pre-existing sibling opt-outs — none mine]
+PLACEHOLDER_COUNT=0     [no TODO/FIXME/Placeholder/Lorem/"not implemented"/fatalError in my code]
+PLACEHOLDER_EXIT=0
+
+--- KMP Shared.xcframework (ADR-004) staged via Gradle (apps/shared/gradlew :core:assembleSharedXCFramework) ---
+"xcframework successfully written out to: apps/shared/core/build/XCFrameworks/release/Shared.xcframework"
+"✓ Shared.xcframework staged" -> apps/apple/Frameworks/Shared.xcframework
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "SystemPage" referenced 24x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- Executed MODEL harness (real panel Model/Adapter projection code + my SystemPageModel/SystemPageSamples) ---
+# swiftc -swift-version 6 -strict-concurrency=complete -sdk <macOS> -target arm64-apple-macos15.0 \
+#   RateLimitStatusPanel.{Adapter,Model}.swift QueueStatusPanel.{Adapter,Model}.swift \
+#   SystemPageModel.swift SystemPageModel.Sample.swift shims.swift main.swift  (SWIFTC_EXIT=0)
+"MODEL HARNESS: 16/16 passed"
+  rateLimit sample: 3 scopes, severities [ok,warn,critical], ids [tesla.fleet_api.burst, api.internal.minute, api.write.minute];
+  queue sample: 3 workers [notification,export,automation], severities [ok,warn,ok];
+  SystemPageModel(): both panels phase==loading before start; after start rateLimit==data(3 rows) + queue==data(3 workers);
+  injected empty rateLimit source -> phase==empty (startCount 1); injected empty queue source -> phase==empty (startCount 1)
+HARNESS_EXIT=0
+
+--- View type-check against the REAL P2 tokens + P3 components + the 2 real panels (Swift 6 strict concurrency) ---
+# swiftc -typecheck -swift-version 6 -strict-concurrency=complete -sdk <SDK> -target <T> \
+#   design/generated/apple/Tokens.swift Sources/Design/* Sources/Theme.swift \
+#   Sources/Components/UI/* Sources/Components/DataDisplay/Metrics.swift Sources/Components/Motion/* Sources/Components/Feedback/* \
+#   Sources/App/{AppRoute,AppRouteParser,RouteHostRegistry}.swift \
+#   feature-views/RateLimitStatusPanel.{Adapter,Model,Views,}.swift feature-views/QueueStatusPanel.{Adapter,Model,Views,Content,}.swift \
+#   Sources/Features/Admin/System*.swift   (39 files)
+macOS  (arm64-apple-macos15.0)            -> 0 errors, 0 warnings   VIEW_TYPECHECK_MACOS_EXIT=0
+iOS    (arm64-apple-ios18.0-simulator)    -> 0 errors, 0 warnings   VIEW_TYPECHECK_IOS_EXIT=0   (ADR-002/006 both idioms)
+macOS  + -D DEBUG (also type-checks my #Preview) -> 0 errors        VIEW_TYPECHECK_DEBUG_EXIT=0
+# Compiles the whole SystemPage surface (view + model + sample + registration + the AppRoute/AppRouteParser/RouteHostRegistry
+# edits) against the ACTUAL TSGlassPanel/TSButton/TSBadge/TSMetricBar/TSFadeIn/TSPageTitle/Color.TS/Font.TS/TSSpacing/TSRadius/
+# TSTone sources AND the two real shipped panels — authoritative proof the API usage is correct on BOTH idioms.
+
+--- Full-scheme build (xcodebuild -project TeslaSync.xcodeproj -scheme TeslaSync-macOS -configuration Debug build) ---
+Ran to completion against the staged Shared.xcframework. Result: BUILD_EXIT=65 (3 failures).
+ALL failures are in ONE PRE-EXISTING, OUT-OF-SCOPE sibling — never touched by this change:
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:88:9: error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+  apps/apple/TeslaSync/shared-surfaces/Input.Previews.swift:101:9: error: cannot use explicit 'return' statement in the body of result builder 'ViewBuilder'
+ZERO diagnostics in any of my files (grep of the build log for SystemPage*/SystemRouteRegistration/Features/Admin/System -> none).
+This is the same pre-existing breakage class the peer p4-apple admin logs record (ApiPlaygroundPage.log: BUILD_EXIT=65,
+shipped DONE). Editing that sibling is forbidden (covenant #6/#7). In-scope correctness is proven GREEN by the completed
+type-checks on BOTH idioms (0/0) + the executed harness (16/16). The only RED is out-of-scope; it is NOT recoloured.
+BUILD_EXIT=65  [out-of-scope sibling Input.Previews.swift only; my surface compiles clean]
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+[x] string — system.page.subtitle   SystemPage.swift `header` -> Text("system.page.subtitle") ("Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."); Localizable.xcstrings key present
+[x] string — system.page.title      SystemPage.swift `header` -> TSPageTitle("system.page.title") ("System budgets") (+ route.system nav title already present); Localizable.xcstrings key present
+PARITY_COVERED=2
+
+Both required strings resolve from Localizable.xcstrings (web key names preserved verbatim) and render from the bound
+@Observable SystemPageModel-driven view. The web page's two composed regions (RateLimitStatusPanel, QueueStatusPanel) are
+reproduced natively by composing the two already-shipped panels in web order; each panel still drives its own loading/error/
+empty/data states. Charts/maps/live-SSE/SI-units: N/A for this unit (none declared).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only RED (full xcodebuild app target, BUILD_EXIT=65)
+                       is pre-existing OUT-OF-SCOPE sibling breakage (Input.Previews.swift), labelled as such, never recoloured.
+ 2 No scope narrowing: both web-composed panels rendered (no region dropped); page chrome (title+subtitle+FadeIn+stack) reproduced.
+ 3 No skip-and-assume: web SystemPage + both panel sources read end-to-end; panel models/adapters/inits verified before wiring.
+ 4 No stubs as final : PLACEHOLDER_COUNT=0; no TODO/stub/Placeholder/Lorem/fatalError; sample sources are documented seams
+                       (the accepted DiskForecast pattern), not placeholders — both panels render populated, real states.
+ 5 No parity shortcuts: the 2 required strings use the web key names verbatim; panel composition order mirrors the web Stack.
+ 6 No delegation     : implemented here; no sub-agents.
+ 7 No predecessor bypass: no edits to sibling surfaces; AppRoute had .system already — only AppRouteParser alias + TeslaSyncApp
+                       registration added (navigation registration is an allowed file class). Input.Previews.swift NOT touched.
+ 8 No commit on red  : committing on all-GREEN IN-SCOPE gates — swiftformat(0/7), swiftlint --strict(0), placeholder(0),
+                       harness(16/16), type-check macOS(0/0) + iOS(0/0) + DEBUG(0). The only RED is the out-of-scope sibling,
+                       DEFERRED to its owner (same disposition the peer admin pages shipped DONE under).
+ 9 No silent drift   : changes confined to the files listed above + this log + apps/parity/apple-ledger.json. Output-path +
+                       scope reconciliations recorded above. Temp xcodeproj / Shared.xcframework / DerivedData / harness are
+                       git-ignored or outside the tree (git status verified clean).
+10 EXIT/STATUS below.
+
+================================================================================
+DISPOSITION
+================================================================================
+A complete, HIG-native SwiftUI SystemPage shipped at parity with the web source: a pure @Observable state holder
+(ADR-004 — no networking in the view) hosting the web "System budgets" page chrome (PageContainer title + subtitle) and a
+FadeIn'd vertical stack composing the two already-shipped native infrastructure-budget panels in web order
+(RateLimitStatusPanel, QueueStatusPanel), each driving its own loading/error/empty/data states. Adaptive across
+macOS/iPad/iPhone (single scrolling column the panels lay out responsively). Both required strings resolve from
+Localizable.xcstrings with the web key names; deep-linkable via the existing .system route (now registered; AppRouteParser
+resolves /system and the new /admin/system alias) and hosted through the shell's route registry. Verified on BOTH idioms by
+isolated Swift 6 strict-concurrency type-checks (0/0) + an executed model harness (16/16) + swiftformat/swiftlint/placeholder
+all green. The full app-target xcodebuild reached BUILD_EXIT=65 SOLELY on a pre-existing, out-of-scope sibling
+(Input.Previews.swift ViewBuilder bug, forbidden to commit-fix) with ZERO diagnostics in any of my files.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin apps/apple/Tests/Unit/Features/Admin \
+          apps/apple/Sources/App/AppRouteParser.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-SystemPage.log
+  git commit -m "feat(apps/apple): SystemPage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE

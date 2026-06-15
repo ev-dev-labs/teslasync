@@ -199676,6 +199676,28 @@
         }
       }
     },
+    "system.page.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."
+          }
+        }
+      }
+    },
+    "system.page.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System budgets"
+          }
+        }
+      }
+    },
     "devtools.searchTools" : {
       "extractionState" : "manual",
       "localizations" : {
