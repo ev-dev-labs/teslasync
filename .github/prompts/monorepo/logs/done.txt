@@ -869,3 +869,4 @@ p3-android/pages/analytics/StatisticsPage.prompt.md
 p3-android/pages/analytics/YearReviewPage.prompt.md
 p3-android/pages/automations/AutomationCard.prompt.md
 p3-android/pages/automations/ConditionBuilder.prompt.md
+p3-android/pages/automations/PresetGallery.prompt.md
