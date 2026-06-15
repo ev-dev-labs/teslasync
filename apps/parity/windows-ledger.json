@@ -322,5 +322,14 @@
     "requiredCount": 54,
     "promptId": "p2-windows/W7/windows-page-vehicle-systems-GuardModePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaRegion",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p2-windows/W7/windows-page-admin-TeslaRegionPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-TeslaRegionPage.log"
   }
 ]

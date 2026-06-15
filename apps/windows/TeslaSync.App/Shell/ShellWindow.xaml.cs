@@ -158,6 +158,11 @@ public sealed partial class ShellWindow : Window
         // wrapper: a PageContainer header (orders.title / orders.subtitle) over the shared ActiveOrdersSection.
         _viewModel.PageFactory.Register("TeslaOrders", static () => new FeatureViews.Admin.TeslaOrdersPage());
 
+        // Admin / Tesla Region page (P2/W7) — parity port of web TeslaRegionPage at route /tesla-region.
+        // RouteTable already maps Page("TeslaRegion","tesla-region",RouteGroup.AdminDevTools). The page is a thin
+        // wrapper: a PageContainer header (region.title / region.subtitle) over the shared RegionSettings component.
+        _viewModel.PageFactory.Register("TeslaRegion", static () => new FeatureViews.Admin.TeslaRegionPage());
+
         // Telemetry / Signals workspace page (P2/W7) — parity port of web SignalsWorkspacePage at route /signals.
         _viewModel.PageFactory.Register("SignalsWorkspace", static () => new FeatureViews.Telemetry.SignalsWorkspacePage());
 
