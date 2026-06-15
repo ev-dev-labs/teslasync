@@ -757,6 +757,24 @@
       "requiredCount": 12,
       "promptId": "p4-apple/P7/page:admin/IngestXRay",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-IngestXRayPage.log"
+    },
+    {
+      "unitId": "page:admin/FeedbackQueue",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 43,
+      "requiredCount": 43,
+      "promptId": "p4-apple/P7/page:admin/FeedbackQueue",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeedbackQueuePage.log"
+    },
+    {
+      "unitId": "page:admin/FeedbackQueue",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 43,
+      "requiredCount": 43,
+      "promptId": "p4-apple/P7/page:admin/FeedbackQueue",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeedbackQueuePage.log"
     }
   ]
 }
