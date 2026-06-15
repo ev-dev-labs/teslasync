@@ -724,6 +724,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\FleetSummary.Model.cs" Link="FeatureViews\FleetSummary.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetSummary.Source.cs" Link="FeatureViews\FleetSummary.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetSummary.ViewModel.cs" Link="FeatureViews\FleetSummary.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.Model.cs" Link="FeatureViews\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.Source.cs" Link="FeatureViews\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.ViewModel.cs" Link="FeatureViews\FleetTelemetryCoveragePage\FleetTelemetryCoveragePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Model.cs" Link="FeatureViews\FleetTelemetryHealth.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.Source.cs" Link="FeatureViews\FleetTelemetryHealth.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\FleetTelemetryHealth.ViewModel.cs" Link="FeatureViews\FleetTelemetryHealth.ViewModel.cs" />

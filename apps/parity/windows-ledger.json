@@ -313,5 +313,14 @@
     "requiredCount": 54,
     "promptId": "p2-windows/W7/windows-page-vehicle-systems-GuardModePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-vehicle-systems-GuardModePage.log"
+  },
+  {
+    "unitId": "page:admin/FleetTelemetryCoverage",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p2-windows/W7/windows-page-admin-FleetTelemetryCoveragePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-admin-FleetTelemetryCoveragePage.log"
   }
 ]

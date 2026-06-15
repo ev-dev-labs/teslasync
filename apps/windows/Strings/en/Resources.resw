@@ -7608,6 +7608,117 @@
   <data name="translation.costAnalysis.tou.title" xml:space="preserve">
     <value>Electricity Rate Analysis (Time-of-Use)</value>
   </data>
+  <data name="translation.coverage.category.empty" xml:space="preserve">
+    <value>This category has no routed fields.</value>
+  </data>
+  <data name="translation.coverage.category.noMatch" xml:space="preserve">
+    <value>No fields match the current filter.</value>
+  </data>
+  <data name="translation.coverage.category.totalFields" xml:space="preserve">
+    <value>{{count}} routed fields</value>
+  </data>
+  <data name="translation.coverage.col.column" xml:space="preserve">
+    <value>Column</value>
+  </data>
+  <data name="translation.coverage.col.destination" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="translation.coverage.col.dualWrite" xml:space="preserve">
+    <value>Dual write</value>
+  </data>
+  <data name="translation.coverage.col.field" xml:space="preserve">
+    <value>Field</value>
+  </data>
+  <data name="translation.coverage.col.subscribed" xml:space="preserve">
+    <value>Subscribed</value>
+  </data>
+  <data name="translation.coverage.destinations.empty" xml:space="preserve">
+    <value>No destinations reported.</value>
+  </data>
+  <data name="translation.coverage.destinations.help" xml:space="preserve">
+    <value>Counts how many routed fields land in each storage destination. Fields routed with also_signal_log:true are counted under both their primary destination and signal_log, matching the runtime fan-out — totals may exceed the unique routed-fields count.</value>
+  </data>
+  <data name="translation.coverage.destinations.title" xml:space="preserve">
+    <value>Destination breakdown</value>
+  </data>
+  <data name="translation.coverage.dualWrite.yes" xml:space="preserve">
+    <value>signal_log</value>
+  </data>
+  <data name="translation.coverage.empty" xml:space="preserve">
+    <value>No categories returned. The embedded routing.yaml may be empty or the loader failed silently.</value>
+  </data>
+  <data name="translation.coverage.error" xml:space="preserve">
+    <value>Could not load Fleet Telemetry coverage. Check API logs and try again.</value>
+  </data>
+  <data name="translation.coverage.filter.placeholder" xml:space="preserve">
+    <value>Filter by field name, destination, or column…</value>
+  </data>
+  <data name="translation.coverage.filterEmpty" xml:space="preserve">
+    <value>No categories match the current filter.</value>
+  </data>
+  <data name="translation.coverage.legend.columnHelp" xml:space="preserve">
+    <value>— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.</value>
+  </data>
+  <data name="translation.coverage.legend.columnLabel" xml:space="preserve">
+    <value>Column</value>
+  </data>
+  <data name="translation.coverage.legend.dualWriteHelp" xml:space="preserve">
+    <value>— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.</value>
+  </data>
+  <data name="translation.coverage.legend.dualWriteLabel" xml:space="preserve">
+    <value>Dual write</value>
+  </data>
+  <data name="translation.coverage.legend.intro" xml:space="preserve">
+    <value>Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean "not applicable" for that field — they are expected, not missing data.</value>
+  </data>
+  <data name="translation.coverage.legend.subscribedHelp" xml:space="preserve">
+    <value>— whether Tesla Fleet Telemetry is currently pushing this field to us. "No" means the writer is wired but the subscription request omits the field.</value>
+  </data>
+  <data name="translation.coverage.legend.subscribedLabel" xml:space="preserve">
+    <value>Subscribed</value>
+  </data>
+  <data name="translation.coverage.legend.title" xml:space="preserve">
+    <value>Reading this page</value>
+  </data>
+  <data name="translation.coverage.loading" xml:space="preserve">
+    <value>Loading routing snapshot…</value>
+  </data>
+  <data name="translation.coverage.orphans.help" xml:space="preserve">
+    <value>These routing.yaml entries reference Field names not present in protomodel.SignalsByName and not a strict prefix-extension of a compound parent. This is a deployment drift between the vendored Tesla proto and routing.yaml — investigate before relying on the affected destinations.</value>
+  </data>
+  <data name="translation.coverage.orphans.title" xml:space="preserve">
+    <value>Orphan fields detected</value>
+  </data>
+  <data name="translation.coverage.pageTitle" xml:space="preserve">
+    <value>Fleet Telemetry Coverage</value>
+  </data>
+  <data name="translation.coverage.refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="translation.coverage.stat.categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="translation.coverage.stat.orphans" xml:space="preserve">
+    <value>Orphan fields</value>
+  </data>
+  <data name="translation.coverage.stat.routedFields" xml:space="preserve">
+    <value>Routed fields</value>
+  </data>
+  <data name="translation.coverage.stat.routedNotSubscribed" xml:space="preserve">
+    <value>Routed, not subscribed</value>
+  </data>
+  <data name="translation.coverage.stat.subscribed" xml:space="preserve">
+    <value>Subscribed</value>
+  </data>
+  <data name="translation.coverage.subscribed.no" xml:space="preserve">
+    <value>no</value>
+  </data>
+  <data name="translation.coverage.subscribed.yes" xml:space="preserve">
+    <value>yes</value>
+  </data>
+  <data name="translation.coverage.subtitle" xml:space="preserve">
+    <value>Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.</value>
+  </data>
   <data name="translation.critical" xml:space="preserve">
     <value>critical</value>
   </data>
