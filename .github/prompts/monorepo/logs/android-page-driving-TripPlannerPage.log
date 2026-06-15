@@ -1,0 +1,178 @@
+================================================================================
+P3-ANDROID · A7 · page:driving/TripPlanner — evidence log
+Native Jetpack Compose / Material 3 port of web TripPlannerPage
+Source: web/src/features/driving/pages/TripPlannerPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/driving/**
+Package: io.teslasync.android.driving.tripplanner
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = Android Studio JBR (JAVA_HOME set)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / RegenEfficiency precedents — 5-file surface)
+  TripPlannerPageModel.kt        framework-free: registration ids + SOC slider bounds + the four
+                                 SpeedFactors (web speedOptions); TripPlannerFormState (web useState
+                                 block) + buildPlanRequest (web handlePlan req body: charge_limit_soc
+                                 90, preferences{speed_factor, include_weather, prefer_superchargers});
+                                 parseTripPlan (decodes POST /trip-planner/plan → route/legs/charge_
+                                 stops/weather/soc_curve, EMPTY guard = web `{route && …}`); statTiles
+                                 + formatDuration (the six StatCard value expressions); the pure
+                                 mappers onto the child snapshots (mapToMapSnapshot/mapToSocPoints/
+                                 mapToSocChargeStops/mapToRouteBreakdown); TripPlannerDisplayPrefs
+                                 (web useUnits/useFormatting) — convertDistanceFromSI + formatEnergy +
+                                 currency at the boundary; recordTripPlannerPageOpened (view.opened).
+  TripPlannerPageSource.kt       seam over DrivingRepository.planTrip (web usePlanTrip, POST
+                                 /trip-planner/plan) + DrivingRepository.geocodeSearch (web
+                                 useGeocodeSearch) + VehiclesStore.vehicles (web useVehicles) +
+                                 VehiclesStore.vehicleState (web useVehicleState, battery chip) +
+                                 SettingsStore.settings (web useUnits) + SelectedVehicleStore (web
+                                 useSelectedVehicle) + ApiHttpClient (Send-to-Car navigation_request).
+  TripPlannerPageViewModel.kt    BaseFeedViewModel; form: StateFlow<TripPlannerFormState>; planState:
+                                 StateFlow<UiState<TripPlanResult>> — mutation-driven, rests Empty
+                                 then Loading→Content (success) / Loading→Error (failure), prior plan
+                                 survives a failure (web mutation keeps `plan`); vehicleOptions /
+                                 displayPrefs / vehicleBattery / canPlan StateFlows; planTrip /
+                                 sendToCar / selectVehicle / setters / recordViewOpened. No HTTP in
+                                 the view (errorKindOf/httpStatusOf classify the mutation failure).
+  TripPlannerPage.kt             stateless TripPlannerPageContent + the eight Material 3 panels + the
+                                 estimate disclaimer, route map, feasibility banner, SOC chart, and
+                                 leg list; three local lucide glyphs (Send/DollarSign/Thermometer)
+                                 authored as 24×24 stroked ImageVectors (no material-icons-extended).
+  TripPlannerPageHost.kt         registers TripPlannerRoute for the `tripPlanner` destination
+                                 (Destinations.kt L77, /trip-planner); wired in
+                                 TeslaSyncApplication.onCreate() (NavHost registration).
+
+REUSED CHILD SURFACES (already-ported A3 feature-views / shared-surfaces; composed by this page)
+  TripPlannerMap   (featureviews.tripplannermap)  — route polyline + origin/destination/charge markers
+  SOCRouteChart    (featureviews.socroutechart)   — "Battery Along Route" Vico area chart + stop rail
+  TripLegList      (featureviews.tripleglist)     — "Route Breakdown" leg + charge-stop list
+  AddressInput     (featureviews.addressinput)    — origin/destination geocode autocomplete (x2)
+  Each is threaded the decoded plan via the model mappers; each renders its own loading/empty/error.
+
+AI TRIP-PLANNER AGENT (intentionally not wired — honest disclosure)
+  The web page also mounts the opt-in <AITripPlannerLLMAgent/> shared surface, which "renders only
+  when ai_mode is local|cloud and the trip-planner-llm-agent feature toggle is on" and "stays absent
+  and emits zero DOM in off mode … The baseline form below is the canonical, deterministic view"
+  (TripPlannerPage.tsx L121-135). It is (a) NOT one of the 41 manifest parity items, (b) a separate
+  parity unit with its own prompt + ledger row, and (c) dependent on the AI-streaming gate +
+  /ai/trips/plan/draft SSE adapter, which the Android DataContainer does not expose as a ready seam
+  (AITripPlannerLLMAgentSource requires aiEnabled() + draftPlan()). This page reproduces the canonical
+  deterministic baseline the web source itself designates; the agent is out of this unit's scope.
+
+SI BOUNDARY (P1/S5)
+  The plan stays SI on the wire (meters, seconds, watt-hours). Display conversion happens only at the
+  render boundary via TripPlannerDisplayPrefs.distanceDisplay (convertDistanceFromSI) / energy (shared
+  formatEnergy) / currency — never stored converted (Phase-48 SI-canonical; ADR-013 keeps cache SI).
+
+LIVE DATA / STALENESS (ADR-013)
+  No SSE live source on this page; planTrip is a one-shot mutation and the vehicle/settings reads are
+  cache-then-network Resource streams, so no >2 min live-staleness badge applies (none is a live feed).
+
+DATA STATES (the manifest's declared 3: loading → error → success, for the usePlanTrip source)
+  The plan rests at UiPhase.Empty (form only, web `{route && …}` guards) until planTrip runs.
+
+=== PARITY ===
+PARITY_REQUIRED=41
+
+PANELS (8) — every manifest panel as a Material 3 Card/Surface
+  [01] panel  GlassPanel1   TripPlannerPage.kt:297  TripPlannerForm (GlassPanel "Plan Your Trip" form, title L317)
+  [02] panel  Distance      TripPlannerPage.kt:469  TripStatGrid StatCard stats.distance (value=statTiles.distance + unit)
+  [03] panel  Total-Time    TripPlannerPage.kt:476  TripStatGrid StatCard stats.totalTime (formatDuration totalDurationS)
+  [04] panel  Driving       TripPlannerPage.kt:482  TripStatGrid StatCard stats.drivingTime (formatDuration drivingDurationS)
+  [05] panel  Charging      TripPlannerPage.kt:493  TripStatGrid StatCard stats.chargingTime (em dash when 0, web `> 0 ? … : '—'`)
+  [06] panel  Energy        TripPlannerPage.kt:499  TripStatGrid StatCard stats.energy (formatEnergy totalEnergyWh, precision 1)
+  [07] panel  Est-Cost      TripPlannerPage.kt:505  TripStatGrid StatCard stats.cost (currency or common.free fallback)
+  [08] panel  GlassPanel8   TripPlannerPage.kt:515  TripWeatherPanel (GlassPanel Weather Impact, gated weather.hasImpact)
+
+DATA STATES (3) — the usePlanTrip mutation surface (planState: StateFlow<UiState<TripPlanResult>>)
+  [09] state  loading   TripPlannerPage.kt:418  if (planState.isLoading) Plan button → planning label (L419) + loading=true (L425)
+  [10] state  error     TripPlannerPage.kt:369  if (planState.isError) AlertBanner Tone.Danger (form.error, L371); prior plan kept
+  [11] state  success   TripPlannerPage.kt:234  if (route != null) TripStatGrid + disclaimer (L221) + feasibility (L242) + weather
+
+STRINGS (30) — every visible literal resolves from res/values/strings.xml; key names match web
+  [12] string common.free                  TripPlannerPage.kt:237  translation_common_free
+  [13] string tripPlanner.disclaimer        TripPlannerPage.kt:224  translation_tripPlanner_disclaimer
+  [14] string tripPlanner.form.currentSOC   TripPlannerPage.kt:344  translation_tripPlanner_form_currentSOC
+  [15] string tripPlanner.form.destination  TripPlannerPage.kt:338  translation_tripPlanner_form_destination
+  [16] string tripPlanner.form.drivingSpeed TripPlannerPage.kt:396  translation_tripPlanner_form_drivingSpeed
+  [17] string tripPlanner.form.error        TripPlannerPage.kt:371  translation_tripPlanner_form_error
+  [18] string tripPlanner.form.from         TripPlannerPage.kt:329  translation_tripPlanner_form_from
+  [19] string tripPlanner.form.minArrival   TripPlannerPage.kt:352  translation_tripPlanner_form_minArrival
+  [20] string tripPlanner.form.origin       TripPlannerPage.kt:330  translation_tripPlanner_form_origin
+  [21] string tripPlanner.form.planTrip     TripPlannerPage.kt:421  translation_tripPlanner_form_planTrip
+  [22] string tripPlanner.form.planning     TripPlannerPage.kt:419  translation_tripPlanner_form_planning
+  [23] string tripPlanner.form.sendToCar    TripPlannerPage.kt:430  translation_tripPlanner_form_sendToCar
+  [24] string tripPlanner.form.title        TripPlannerPage.kt:317  translation_tripPlanner_form_title
+  [25] string tripPlanner.form.to           TripPlannerPage.kt:337  translation_tripPlanner_form_to
+  [26] string tripPlanner.form.vehicleBattery TripPlannerPage.kt:447 translation_tripPlanner_form_vehicleBattery (%1$s percent)
+  [27] string tripPlanner.notFeasible       TripPlannerPage.kt:245  translation_tripPlanner_notFeasible
+  [28] string tripPlanner.speed.brisk       TripPlannerPage.kt:389  translation_tripPlanner_speed_brisk
+  [29] string tripPlanner.speed.fast        TripPlannerPage.kt:390  translation_tripPlanner_speed_fast
+  [30] string tripPlanner.speed.normal      TripPlannerPage.kt:388  translation_tripPlanner_speed_normal
+  [31] string tripPlanner.speed.relaxed     TripPlannerPage.kt:387  translation_tripPlanner_speed_relaxed
+  [32] string tripPlanner.stats.chargingTime TripPlannerPage.kt:493 translation_tripPlanner_stats_chargingTime
+  [33] string tripPlanner.stats.cost        TripPlannerPage.kt:505  translation_tripPlanner_stats_cost
+  [34] string tripPlanner.stats.distance    TripPlannerPage.kt:469  translation_tripPlanner_stats_distance
+  [35] string tripPlanner.stats.drivingTime TripPlannerPage.kt:482  translation_tripPlanner_stats_drivingTime
+  [36] string tripPlanner.stats.energy      TripPlannerPage.kt:499  translation_tripPlanner_stats_energy
+  [37] string tripPlanner.stats.totalTime   TripPlannerPage.kt:476  translation_tripPlanner_stats_totalTime
+  [38] string tripPlanner.subtitle          TripPlannerPage.kt:282  translation_tripPlanner_subtitle
+  [39] string tripPlanner.title             TripPlannerPage.kt:280  translation_tripPlanner_title
+  [40] string tripPlanner.weather.factor    TripPlannerPage.kt:533  translation_tripPlanner_weather_factor (%1$s× factor)
+  [41] string tripPlanner.weather.title     TripPlannerPage.kt:528  translation_tripPlanner_weather_title
+
+PARITY_COVERED=41
+
+STRING CATALOG
+  28 of the 30 keys already existed in res/values/strings.xml (generated from the shared i18n
+  catalog). The 2 missing keys — tripPlanner.disclaimer and tripPlanner.notFeasible — were added to
+  res/values/strings.xml (+ values-he/values-ar for catalog parity) with the verbatim web inline
+  defaults from TripPlannerPage.tsx L233-235 / L294-296. `res/values*/strings.xml` is an allowed file.
+  MissingTranslation/ExtraTranslation are disabled (app/build.gradle.kts L114), so the adds raise no
+  lint error. tripPlanner.form.vehicleBattery uses %1$s and tripPlanner.weather.factor uses %1$s× —
+  both positional, so no StringFormatInvalid is raised.
+
+PLACEHOLDER OPT-OUTS (the gate's case-insensitive "todo" substring rule; neither is a stub)
+  TripPlannerPage.kt:260  `.toDouble()` widening of the Int min-arrival SOC for the SOC chart ("toDo" substr)
+  TripPlannerPage.kt:395  `.toDoubleOrNull()` parse of the picked speed-factor option value ("toDo" substr)
+  Both carry `// parity:allow … not a TODO stub`, mirroring the DrivesListPage / RegenEfficiencyPage
+  precedent. (PLACEHOLDER_ALLOWED=6 is the dir-wide total: these 2 + the 4 pre-existing DrivesList +
+  RegenEfficiency opt-outs, since the scan covers com/teslasync/driving.)
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin
+    PLACEHOLDER_ALLOWED=6
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 1s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 9m 26s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 47s (full unit-test suite; surface model
+                                          verified during development, then test removed to stay within
+                                          the prompt's Allowed-files list — matches the A7 driving precedent)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (form GlassPanel1, the six summary StatCards Distance/Total-Time/
+      Driving/Charging/Energy/Est-Cost, weather GlassPanel8); every anonymous region from the web
+      source reproduced (the vehicle picker action, the two AddressInputs, the estimate disclaimer,
+      the route map, the feasibility banner, the SOC chart, the leg list, Send-to-Car, the battery chip).
+  [x] All 41 parity items render from the bound StateFlow state holders (form + planState + prefs +
+      vehicleOptions + vehicleBattery + canPlan), folded by the framework-free model.
+  [x] loading / error / success implemented for the usePlanTrip mutation source; the reused child
+      surfaces (map / SOC chart / leg list) each render their own loading/empty/error before a plan.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/Slider/Select); the form
+      title + child surfaces carry semantics content descriptions (a11y); SI units honored at the
+      display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (41).
+  [x] android ledger row for page:driving/TripPlanner set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
