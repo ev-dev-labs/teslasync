@@ -886,6 +886,24 @@ public sealed partial class ShellWindow : Window
             FeatureViews.Charging.ChargingListPage.Create(
                 _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer));
 
+        // Charge Detail — web /charging/:id, backed by the live ChargingDetailPageClientFeed.
+        _viewModel.PageFactory.Register("ChargeDetail", () =>
+        {
+            var page = new FeatureViews.Charging.ChargingDetailPage(
+                new FeatureViews.Charging.ChargingDetailPageClientFeed(_data.Api),
+                _data.Localizer,
+                ParseSessionId(_viewModel.Current.Param("id")));
+            page.BackRequested += (_, _) => NavigateTo("charging");
+            return page;
+        });
+
+        // Trip Detail — web /trips/:id, backed by the live TripDetailPageClientFeed.
+        _viewModel.PageFactory.Register("TripDetail", () =>
+            new FeatureViews.Trips.TripDetailPage(
+                new FeatureViews.Trips.TripDetailPageClientFeed(_data.Api),
+                _data.Localizer,
+                ParseSessionId(_viewModel.Current.Param("id"))));
+
         // Trips — web /trips, backed by the live TripListSource (vehicle-scoped).
         _viewModel.PageFactory.Register("Trips", () =>
             FeatureViews.Trips.TripListPage.Create(
