@@ -548,6 +548,9 @@ public sealed partial class DrivesListPage : UserControl, IDisposable
         }
     }
 
+    /// <summary>Raised when the user taps a drive row, asking the shell to open the drive-detail page (web row link to <c>/drives/:id</c>).</summary>
+    public event EventHandler<long>? DriveOpenRequested;
+
     private Border BuildRowCard(DriveRowModel row)
     {
         var grid = new Grid { ColumnSpacing = 12 };
@@ -590,6 +593,10 @@ public sealed partial class DrivesListPage : UserControl, IDisposable
         });
         body.Children.Add(BuildMetricsRow(row));
         Grid.SetColumn(body, 2);
+
+        // Tapping the row body opens the drive-detail page (web row is a link to /drives/:id). The checkbox in
+        // column 0 keeps its own handlers, so selection toggling never triggers navigation.
+        body.Tapped += (_, _) => DriveOpenRequested?.Invoke(this, id);
 
         grid.Children.Add(check);
         grid.Children.Add(scorePill);

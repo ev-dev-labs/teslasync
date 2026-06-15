@@ -858,11 +858,28 @@ public sealed partial class ShellWindow : Window
         });
 
         // Drives — web /drives, backed by the live DrivesListSource (vehicle-scoped via the
-        // shared vehicle source warmed at startup).
+        // shared vehicle source warmed at startup). Tapping a row opens the drive-detail page.
         _viewModel.PageFactory.Register(
             FeatureViews.Driving.DrivesListRegistration.RouteName,
-            () => FeatureViews.Driving.DrivesListPage.Create(
-                _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer));
+            () =>
+            {
+                var page = FeatureViews.Driving.DrivesListPage.Create(
+                    _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer);
+                page.DriveOpenRequested += (_, driveId) => NavigateTo($"drives/{driveId}");
+                return page;
+            });
+
+        // Drive Detail — web /drives/:id, backed by the live DriveDetailPageClientFeed
+        // (GET /drives/{id} + GET /vehicles/{id}); overrides the empty-feed registration so the page renders data.
+        _viewModel.PageFactory.Register("DriveDetail", () =>
+        {
+            var page = new FeatureViews.Driving.DriveDetailPage(
+                new FeatureViews.Driving.DriveDetailPageClientFeed(_data.Api),
+                _data.Localizer,
+                ParseSessionId(_viewModel.Current.Param("id")));
+            page.BackRequested += (_, _) => NavigateTo("drives");
+            return page;
+        });
 
         // Charging — web /charging, backed by the live ChargingListSource (vehicle-scoped).
         _viewModel.PageFactory.Register("Charging", () =>
