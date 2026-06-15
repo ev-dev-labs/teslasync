@@ -39,6 +39,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-AuditLogPage.log"
     },
     {
+      "unitId": "page:admin/DevTools",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/DevTools",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-DevToolsPage.log"
+    },
+    {
+      "unitId": "page:admin/DevTools",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/DevTools",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-DevToolsPage.log"
+    },
+    {
       "unitId": "page:admin/DiskForecast",
       "platform": "apple-macos",
       "status": "done",
