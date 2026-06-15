@@ -27,6 +27,7 @@ public enum AppRouteParser {
         "/admin/vehicle-cost": .vehicleCost,
         "/admin/audit-log": .auditLog,
         "/admin/api-logs": .apiLogs,
+        "/admin/live-logs": .liveLogs,
         "/admin/flags": .featureFlags,
         "/admin/dlq": .dlqInspector,
         "/admin/ingest-xray": .ingestXRay,

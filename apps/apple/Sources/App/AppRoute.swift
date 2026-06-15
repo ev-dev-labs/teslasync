@@ -28,7 +28,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
     case fleetCompare, lifetimeStats, mileage, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
-    case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
+    case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay
     case liveSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
     case backupRestore
@@ -51,6 +51,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
         case .apiLogs: "api-logs"
+        case .liveLogs: "live-logs"
         case .auditLog: "audit-log"
         case .featureFlags: "feature-flags"
         case .fleetAPI: "fleet-api"
@@ -109,6 +110,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiKeys: "key.fill"
         case .apiPlayground: "curlybraces"
         case .apiLogs: "doc.text.magnifyingglass"
+        case .liveLogs: "scroll"
         case .auditLog: "list.bullet.rectangle.portrait"
         case .featureFlags: "flag.fill"
         case .dlqInspector: "exclamationmark.octagon.fill"
@@ -148,7 +150,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
+        case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,
              .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore, .ingestXRay: .system
         case .settings, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures: .account

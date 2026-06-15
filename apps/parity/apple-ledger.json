@@ -471,6 +471,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-ApiLogsPage.log"
     },
     {
+      "unitId": "page:admin/LiveLogs",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:admin/LiveLogs",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-LiveLogsPage.log"
+    },
+    {
+      "unitId": "page:admin/LiveLogs",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 37,
+      "requiredCount": 37,
+      "promptId": "p4-apple/P7/page:admin/LiveLogs",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-LiveLogsPage.log"
+    },
+    {
       "unitId": "page:admin/FleetAPI",
       "platform": "apple-macos",
       "status": "done",
