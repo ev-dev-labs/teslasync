@@ -237,6 +237,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log"
     },
     {
+      "unitId": "page:analytics/Mileage",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 29,
+      "requiredCount": 29,
+      "promptId": "p4-apple/P7/page:analytics/Mileage",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-MileagePage.log"
+    },
+    {
+      "unitId": "page:analytics/Mileage",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 29,
+      "requiredCount": 29,
+      "promptId": "p4-apple/P7/page:analytics/Mileage",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-MileagePage.log"
+    },
+    {
       "unitId": "page:analytics/LifetimeStats",
       "platform": "apple-macos",
       "status": "done",
