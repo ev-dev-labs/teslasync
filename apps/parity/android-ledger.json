@@ -232,5 +232,14 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/notifications/ChannelsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-ChannelsPage.log"
+  },
+  {
+    "unitId": "page:notifications/Webhooks",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/notifications/WebhooksPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-WebhooksPage.log"
   }
 ]

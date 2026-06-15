@@ -4776,6 +4776,8 @@
   <string name="translation_notifications_view_flat">Flat</string>
   <string name="translation_notifications_view_grouped">Grouped</string>
   <string name="translation_notifications_view_label">View</string>
+  <string name="translation_notifications_webhooks_subtitle">Custom HTTPS endpoints that receive HMAC-signed event payloads.</string>
+  <string name="translation_notifications_webhooks_title">Webhooks</string>
   <string name="translation_onboarding_charging">Charge Analytics</string>
   <string name="translation_onboarding_checkAgain">Check again</string>
   <string name="translation_onboarding_connect">Connect Tesla Account</string>

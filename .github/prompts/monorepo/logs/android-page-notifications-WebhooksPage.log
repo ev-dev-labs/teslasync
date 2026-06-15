@@ -1,0 +1,164 @@
+================================================================================
+P3-ANDROID A7 — page:notifications/Webhooks
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/notifications/pages/WebhooksPage.tsx
+================================================================================
+
+Artifact     : page:notifications/Webhooks
+Web route    : /notifications/webhooks
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/notifications/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+WebhooksPage.tsx is a thin promotion wrapper: it sets a PageContainer (title,
+subtitle, copyLink) and embeds <WebhookChannelsSection /> verbatim, so the
+custom outgoing-webhook channels surface — HMAC-signed payloads, the four
+persisted fields (name, URL, HTTP method, signing secret), the live
+X-TeslaSync-Signature preview, per-row Test/Edit/Delete, and the recent delivery
+audit — lives at /notifications/webhooks with a real page title/breadcrumb
+instead of being a sub-section inside Settings. The page itself declares no data
+of its own (the parity manifest records zero dataSources, zero panels, and
+exactly two strings — requiredCount=2); the embedded WebhookChannelsSection owns
+the kind=webhook feed (useWebhookChannels) plus the mutations (useSaveChannel /
+useDeleteChannel / useToggleChannel / useTestWebhookChannel /
+useWebhookSignaturePreview).
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 WebhookChannelsSection feature-view already exists
+(io.teslasync.android.featureviews.webhookchannelssection.WebhookChannelsSection)
+and owns every data state for its cache-then-network webhook feed: the row
+skeleton chrome, the friendly no-webhooks empty state, the hard-error + retry
+surface, the populated rows with their status pill + method chip + per-row
+toggle/test/edit/delete, the stale/offline "last known" freshness chip with
+auto-refresh, the add affordance, the create/edit modal (name, URL, method,
+signing secret) with the live HMAC signature preview, the delete confirmation,
+the inline structured test result, and the payload-variables doc box. This page
+is its host: it sets the PageContainer-equivalent header and embeds the feature
+view — never re-implementing it (DRY, ADR-006). This mirrors the sibling
+notifications/ChannelsPage (also a 2-string wrapper that embeds the shared
+NotificationChannelsView feature view) and notifications/ArchivedPage.
+
+New files (package io.teslasync.android.notifications.webhooks):
+  - WebhooksPageModel.kt   Registration(ROUTE_ID notificationsWebhooks,
+                           WEB_PATH /notifications/webhooks, SLUG WebhooksPage)
+                           + recordWebhooksPageOpened (the one PII-safe
+                           view.opened diagnostic, P1/S11). No page-level feed —
+                           the embedded feature view owns the webhook data.
+  - WebhooksPage.kt        Stateful entry WebhooksPage(source, logger): records
+                           view.opened, builds the feature view's
+                           WebhookChannelsSectionViewModel via
+                           viewModel(key=SLUG, factory=WebhookChannelsSectionView
+                           Model.factory(source, logger)); stateless
+                           WebhooksPageContent (verticalScroll Column: header +
+                           WebhookChannelsSection) + WebhooksPageHeader (PageTitle
+                           + subtitle BodyText + copy-link IconButton writing
+                           WEB_PATH to the clipboard).
+  - WebhooksPageHost.kt    WebhooksRoute() resolves LocalDataContainer, builds
+                           the feature view source over
+                           HttpNotificationChannelsRepository (filtered webhook
+                           read + HMAC test + signature preview) +
+                           HttpNotificationsRepository (channel CRUD), both on the
+                           shared resilient client + offline cache, via
+                           webhookChannelsSectionSource(channelsRepository=…,
+                           notificationsRepository=…); WebhooksPageHost.register()
+                           -> PageHosts.register("notificationsWebhooks").
+                           Idempotent.
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt  import + WebhooksPageHost.register() at process start
+                             (after ChannelsPageHost.register()).
+  - web/src/i18n/en.json     notifications.webhooks.{title,subtitle} added to the
+                             canonical key set (ADR-014) — the web page previously
+                             only had them as inline t() fallback defaults.
+  - res/values/strings.xml (+ values-ar, values-he)  2 generated keys
+                             translation_notifications_webhooks_{title,subtitle}
+                             inserted in sorted position (between
+                             translation_notifications_view_label and
+                             translation_onboarding_charging), generator-identical
+                             format (no tokens, no chars needing escaping); ar/he
+                             carry the English fallback (placeholder locales,
+                             translated=false). copy-link reuses the existing
+                             translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:notifications/Webhooks row (done, 2/2).
+
+Notes:
+  - i18n catalog generator: res/values*/strings.xml is AUTO-GENERATED by
+    apps/shared/i18n/generators/gen-i18n.ts. The committed catalog is ALREADY
+    drifted from en.json before this change (gen --check: 11 files, pre-existing,
+    unrelated to this artifact — incl. apple/windows resources). To avoid
+    sweeping that unrelated drift into this page artifact, the two new keys were
+    added at the en.json source AND hand-inserted into the three Android
+    strings.xml files byte-identically to what emitAndroidStrings()/androidName()/
+    renderValue() produce (verified: androidName('translation.notifications.
+    webhooks.title')=translation_notifications_webhooks_title; values "Webhooks"
+    and "Custom HTTPS endpoints that receive HMAC-signed event payloads." carry no
+    escapable chars; sorted between view_label↔onboarding_charging). A future full
+    gen-i18n.ts run re-emits these exact lines (no conflict). aapt2 resource
+    compilation accepted the three files (assembleDebug green; the only merge
+    warnings are pre-existing battery_*/rateLimitStatus_* non-positional-format
+    strings, not these keys). Honest disclosure (no silent drift).
+  - SI: no webhook field on this surface is unit-bearing — no SI conversion.
+  - States: WebhookChannelsSection renders loading / empty(no webhooks) /
+    error+retry / content / stale-offline for its bound feed (verified by the
+    shared WebhookChannelsSectionViewModelTest / WebhookChannelsSectionProjection
+    Test + WebhookChannelsSectionUiTest, all green under testDebugUnitTest).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading + copy-link IconButton contentDescription; the feature
+    view supplies row/modal/test content descriptions + dynamic/dark theme
+    (ADR-015).
+  - Layout: the feature view lays out as a non-lazy Column, so it composes safely
+    inside the page's outer verticalScroll container.
+  - Nav: /notifications/webhooks -> notificationsWebhooks already in Destinations.kt
+    and asserted by RouteTableTest; this artifact supplies its PageHosts host.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 3m 30s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 10m 27s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 32s
+TEST_EXIT=0
+
+(the only compile warning is the LocalClipboardManager deprecation in
+ WebhooksPage.kt:107, identical to the shipped sibling notifications/ChannelsPage.kt
+ and ArchivedPage.kt copy-link affordance; accepted precedent, not an error —
+ lintDebug is green.)
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1] string : notifications.webhooks.title
+    EVIDENCE: R.string.translation_notifications_webhooks_title rendered by
+              PageTitle(...) in WebhooksPageHeader (WebhooksPage.kt); value
+              "Webhooks" in res/values/strings.xml (+ en.json
+              notifications.webhooks.title). COVERED.
+
+[2] string : notifications.webhooks.subtitle
+    EVIDENCE: R.string.translation_notifications_webhooks_subtitle rendered by
+              BodyText(...) in WebhooksPageHeader (WebhooksPage.kt); value
+              "Custom HTTPS endpoints that receive HMAC-signed event payloads."
+              in res/values/strings.xml (+ en.json
+              notifications.webhooks.subtitle). COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
