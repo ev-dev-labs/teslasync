@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0026 · AuditPanel (Apple)
 //
 //  Domain value types ported from the web source's data contracts
-//  (web/src/types/admin-diagnostics.ts `DLQReplayAuditRecord` / `DLQReplayResult`)
+//  (web/src/types/admin-diagnostics.ts `AuditPanelDLQReplayRecord` / `AuditPanelDLQReplayResult`)
 //  plus the snake-case decode adapter the production source uses to project the
 //  cached DTOs. Pure Foundation — no SwiftUI, no Shared xcframework — so the file
 //  host-compiles and the cached→projection adapter is unit-testable in isolation.
@@ -22,12 +22,12 @@ public enum AuditResultTone: String, Equatable, Sendable {
     case danger
 }
 
-// MARK: - DLQReplayResult (web `DLQReplayResult` union)
+// MARK: - AuditPanelDLQReplayResult (web `AuditPanelDLQReplayResult` union)
 
-/// Stable result code of one replay attempt (web `DLQReplayResult`), with an
+/// Stable result code of one replay attempt (web `AuditPanelDLQReplayResult`), with an
 /// `unknown` fallback so an unexpected server value never crashes the table.
 /// Mirrors the constants block in `internal/database/dlq_replay_audit_repo.go`.
-public enum DLQReplayResult: String, Sendable, CaseIterable {
+public enum AuditPanelDLQReplayResult: String, Sendable, CaseIterable {
     case ok
     case publishFailed
     case rateLimited
@@ -88,18 +88,18 @@ public enum DLQReplayResult: String, Sendable, CaseIterable {
     }
 }
 
-// MARK: - DLQReplayAuditRecord (web `DLQReplayAuditRecord`)
+// MARK: - AuditPanelDLQReplayRecord (web `AuditPanelDLQReplayRecord`)
 
-/// One replay-audit row (web `DLQReplayAuditRecord`). Only the fields the panel
+/// One replay-audit row (web `AuditPanelDLQReplayRecord`). Only the fields the panel
 /// reads are modeled; `replayedAt` is optional because a malformed timestamp must
 /// degrade to an em-dash rather than drop the row.
-public struct DLQReplayAuditRecord: Identifiable, Equatable, Sendable {
+public struct AuditPanelDLQReplayRecord: Identifiable, Equatable, Sendable {
     public let id: Int
     public var replayedAt: Date?
     public var actor: String
     public var dlqId: Int
     public var dstTopic: String
-    public var result: DLQReplayResult
+    public var result: AuditPanelDLQReplayResult
     public var error: String
     public var traceId: String
 
@@ -109,7 +109,7 @@ public struct DLQReplayAuditRecord: Identifiable, Equatable, Sendable {
         actor: String = "",
         dlqId: Int = 0,
         dstTopic: String = "",
-        result: DLQReplayResult = .unknown,
+        result: AuditPanelDLQReplayResult = .unknown,
         error: String = "",
         traceId: String = ""
     ) {
@@ -126,7 +126,7 @@ public struct DLQReplayAuditRecord: Identifiable, Equatable, Sendable {
 
 // MARK: - Decode adapter (snake-case DTO → value types)
 
-public extension DLQReplayAuditRecord {
+public extension AuditPanelDLQReplayRecord {
     private struct DTO: Decodable {
         let id: Int
         let replayedAt: String?
@@ -139,14 +139,14 @@ public extension DLQReplayAuditRecord {
     }
 
     /// Decodes one `/system/dlq/audit` row object (snake-case JSON).
-    static func decode(fromJSONString json: String) -> DLQReplayAuditRecord? {
+    static func decode(fromJSONString json: String) -> AuditPanelDLQReplayRecord? {
         guard let data = json.data(using: .utf8) else { return nil }
         guard let dto = try? makeDecoder().decode(DTO.self, from: data) else { return nil }
         return record(from: dto)
     }
 
     /// Decodes the `/system/dlq/audit` snake-case JSON array (`DLQAuditResponse.rows`).
-    static func decodeList(fromJSONString json: String) -> [DLQReplayAuditRecord] {
+    static func decodeList(fromJSONString json: String) -> [AuditPanelDLQReplayRecord] {
         guard let data = json.data(using: .utf8) else { return [] }
         guard let dtos = try? makeDecoder().decode([DTO].self, from: data) else { return [] }
         return dtos.map(record(from:))
@@ -158,14 +158,14 @@ public extension DLQReplayAuditRecord {
         return decoder
     }
 
-    private static func record(from dto: DTO) -> DLQReplayAuditRecord {
-        DLQReplayAuditRecord(
+    private static func record(from dto: DTO) -> AuditPanelDLQReplayRecord {
+        AuditPanelDLQReplayRecord(
             id: dto.id,
             replayedAt: DLQAuditTime.parse(dto.replayedAt),
             actor: dto.actor ?? "",
             dlqId: dto.dlqId ?? 0,
             dstTopic: dto.dstTopic ?? "",
-            result: DLQReplayResult(rawTag: dto.result),
+            result: AuditPanelDLQReplayResult(rawTag: dto.result),
             error: dto.error ?? "",
             traceId: dto.traceId ?? ""
         )

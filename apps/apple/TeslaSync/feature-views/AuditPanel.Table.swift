@@ -3,7 +3,7 @@
 //  TeslaSync — P4 feature view · 0026 · AuditPanel (Apple)
 //
 //  The replay-audit data table — the Apple-idiomatic parity of the web source's
-//  `DataTable<DLQReplayAuditRecord>`. A real columnar grid on macOS / regular
+//  `DataTable<AuditPanelDLQReplayRecord>`. A real columnar grid on macOS / regular
 //  width and a card list on compact iPhone width, reproducing the seven web
 //  columns (replayed_at / actor / dlq_id / result / dst_topic / error / trace_id),
 //  the monospaced cells (web `font-mono`), and the result chip. The table is

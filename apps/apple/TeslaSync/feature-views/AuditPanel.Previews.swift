@@ -12,10 +12,10 @@ import SwiftUI
 
 #if DEBUG
     private enum AuditPanelPreviewData {
-        static func records() -> [DLQReplayAuditRecord] {
+        static func records() -> [AuditPanelDLQReplayRecord] {
             let now = Date()
             return [
-                DLQReplayAuditRecord(
+                AuditPanelDLQReplayRecord(
                     id: 1,
                     replayedAt: now.addingTimeInterval(-45),
                     actor: "ada@fleet.io",
@@ -25,7 +25,7 @@ import SwiftUI
                     error: "",
                     traceId: "b1f0a9c2"
                 ),
-                DLQReplayAuditRecord(
+                AuditPanelDLQReplayRecord(
                     id: 2,
                     replayedAt: now.addingTimeInterval(-360),
                     actor: "grace@fleet.io",
@@ -35,7 +35,7 @@ import SwiftUI
                     error: "mqtt: connection refused",
                     traceId: "9d2c7e41"
                 ),
-                DLQReplayAuditRecord(
+                AuditPanelDLQReplayRecord(
                     id: 3,
                     replayedAt: now.addingTimeInterval(-5400),
                     actor: "linus@fleet.io",
@@ -45,7 +45,7 @@ import SwiftUI
                     error: "missing source topic",
                     traceId: ""
                 ),
-                DLQReplayAuditRecord(
+                AuditPanelDLQReplayRecord(
                     id: 4,
                     replayedAt: now.addingTimeInterval(-86400),
                     actor: "",
@@ -61,7 +61,7 @@ import SwiftUI
 
     @MainActor
     private func previewModel(
-        _ state: AuditPanelLoadState<[DLQReplayAuditRecord]>,
+        _ state: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>,
         scopedDlqId: Int? = nil
     ) -> AuditPanelModel {
         AuditPanelModel(previewState: state, scopedDlqId: scopedDlqId)

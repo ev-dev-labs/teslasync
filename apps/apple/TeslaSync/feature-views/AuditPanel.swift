@@ -42,7 +42,7 @@ public struct AuditPanel: View {
     /// the call site matches the web `<AuditPanel rows loading scopedDlqId />`.
     @MainActor
     public init(
-        rows: [DLQReplayAuditRecord],
+        rows: [AuditPanelDLQReplayRecord],
         loading: Bool,
         scopedDlqId: Int? = nil,
         telemetry: (any DashboardWidgetTelemetrySink)? = nil

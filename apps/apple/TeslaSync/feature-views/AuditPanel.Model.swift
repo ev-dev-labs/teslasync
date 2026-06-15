@@ -57,7 +57,7 @@ extension AuditPanelLoadState: Equatable where Value: Equatable {}
 @MainActor
 public protocol AuditReplayAuditSource: AnyObject {
     /// Set by the model; invoked on the main actor for every coalesced snapshot.
-    var onUpdate: (@MainActor (AuditPanelLoadState<[DLQReplayAuditRecord]>) -> Void)? { get set }
+    var onUpdate: (@MainActor (AuditPanelLoadState<[AuditPanelDLQReplayRecord]>) -> Void)? { get set }
     func start()
     func stop()
     func refresh()
@@ -66,14 +66,14 @@ public protocol AuditReplayAuditSource: AnyObject {
 /// In-memory source for previews + unit tests. Drive it with `push(_:)`.
 @MainActor
 public final class InMemoryAuditReplayAuditSource: AuditReplayAuditSource {
-    public var onUpdate: (@MainActor (AuditPanelLoadState<[DLQReplayAuditRecord]>) -> Void)?
+    public var onUpdate: (@MainActor (AuditPanelLoadState<[AuditPanelDLQReplayRecord]>) -> Void)?
     public private(set) var startCount = 0
     public private(set) var stopCount = 0
     public private(set) var refreshCount = 0
 
-    private let initial: AuditPanelLoadState<[DLQReplayAuditRecord]>?
+    private let initial: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>?
 
-    public init(initial: AuditPanelLoadState<[DLQReplayAuditRecord]>? = nil) {
+    public init(initial: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>? = nil) {
         self.initial = initial
     }
 
@@ -91,7 +91,7 @@ public final class InMemoryAuditReplayAuditSource: AuditReplayAuditSource {
     }
 
     /// Pushes a snapshot to the bound model (test/preview affordance).
-    public func push(_ state: AuditPanelLoadState<[DLQReplayAuditRecord]>) {
+    public func push(_ state: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>) {
         onUpdate?(state)
     }
 }
@@ -106,7 +106,7 @@ public final class InMemoryAuditReplayAuditSource: AuditReplayAuditSource {
 @Observable
 public final class AuditPanelModel {
     /// The current cache-then-network state for the replay-audit feed.
-    public private(set) var state: AuditPanelLoadState<[DLQReplayAuditRecord]> = .idle
+    public private(set) var state: AuditPanelLoadState<[AuditPanelDLQReplayRecord]> = .idle
 
     /// The DLQ entry the panel is scoped to, or `nil` when global (web `scopedDlqId`).
     public let scopedDlqId: Int?
@@ -122,7 +122,7 @@ public final class AuditPanelModel {
     }
 
     /// Preview / test binding: render a fixed state without the shared core.
-    public init(previewState: AuditPanelLoadState<[DLQReplayAuditRecord]>, scopedDlqId: Int? = nil) {
+    public init(previewState: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>, scopedDlqId: Int? = nil) {
         let inMemory = InMemoryAuditReplayAuditSource(initial: previewState)
         source = inMemory
         self.scopedDlqId = scopedDlqId
@@ -133,7 +133,7 @@ public final class AuditPanelModel {
     /// Web-prop binding: the source component receives `rows` + `loading`. Maps the
     /// two web props onto the cache-then-network load state so the native surface
     /// renders the identical loading / empty / content branches.
-    public convenience init(rows: [DLQReplayAuditRecord], loading: Bool, scopedDlqId: Int? = nil) {
+    public convenience init(rows: [AuditPanelDLQReplayRecord], loading: Bool, scopedDlqId: Int? = nil) {
         self.init(previewState: AuditPanelModel.loadState(rows: rows, loading: loading), scopedDlqId: scopedDlqId)
     }
 
@@ -142,9 +142,9 @@ public final class AuditPanelModel {
     /// otherwise empty rows become the `EmptyState` and present rows the table.
     /// `nonisolated` because it touches no actor state — callable off the main actor.
     public nonisolated static func loadState(
-        rows: [DLQReplayAuditRecord],
+        rows: [AuditPanelDLQReplayRecord],
         loading: Bool
-    ) -> AuditPanelLoadState<[DLQReplayAuditRecord]> {
+    ) -> AuditPanelLoadState<[AuditPanelDLQReplayRecord]> {
         if loading { return .loading(cached: rows.isEmpty ? nil : rows, stale: false) }
         return rows.isEmpty ? .empty(stale: false) : .loaded(rows, stale: false)
     }

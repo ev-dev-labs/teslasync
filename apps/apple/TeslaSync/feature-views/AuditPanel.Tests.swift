@@ -32,7 +32,7 @@ import XCTest
          "dlq_id":8841,"src_topic":"dlq/raw","dst_topic":"telemetry/5YJ/v/Soc","payload":"{}",
          "reason":"manual","result":"publish_failed","error":"mqtt down","trace_id":"abc123"}
         """#
-        let row = DLQReplayAuditRecord.decode(fromJSONString: json)
+        let row = AuditPanelDLQReplayRecord.decode(fromJSONString: json)
         XCTAssertEqual(row?.id, 7)
         XCTAssertEqual(row?.actor, "ada@fleet.io")
         XCTAssertEqual(row?.dlqId, 8841)
@@ -52,13 +52,13 @@ import XCTest
            "result":"weird","error":"e","trace_id":"y"}
         ]
         """
-        let rows = DLQReplayAuditRecord.decodeList(fromJSONString: json)
+        let rows = AuditPanelDLQReplayRecord.decodeList(fromJSONString: json)
         XCTAssertEqual(rows.count, 2)
         XCTAssertEqual(rows[0].result, .ok)
         XCTAssertEqual(rows[1].result, .unknown)
         XCTAssertNotNil(rows[1].replayedAt)
-        XCTAssertEqual(DLQReplayAuditRecord.decodeList(fromJSONString: "not json"), [])
-        XCTAssertNil(DLQReplayAuditRecord.decode(fromJSONString: "not json"))
+        XCTAssertEqual(AuditPanelDLQReplayRecord.decodeList(fromJSONString: "not json"), [])
+        XCTAssertNil(AuditPanelDLQReplayRecord.decode(fromJSONString: "not json"))
     }
 
     func testTimestampParsing() {
@@ -72,22 +72,22 @@ import XCTest
     // MARK: Result mapping (web `RESULT_VARIANT`)
 
     func testResultMappingAndTone() {
-        XCTAssertEqual(DLQReplayResult(rawTag: "ok"), .ok)
-        XCTAssertEqual(DLQReplayResult(rawTag: "PUBLISH_FAILED"), .publishFailed)
-        XCTAssertEqual(DLQReplayResult(rawTag: "rate_limited"), .rateLimited)
-        XCTAssertEqual(DLQReplayResult(rawTag: "disabled"), .disabled)
-        XCTAssertEqual(DLQReplayResult(rawTag: "not_found"), .notFound)
-        XCTAssertEqual(DLQReplayResult(rawTag: "unparseable"), .unparseable)
-        XCTAssertEqual(DLQReplayResult(rawTag: nil), .unknown)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "ok"), .ok)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "PUBLISH_FAILED"), .publishFailed)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "rate_limited"), .rateLimited)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "disabled"), .disabled)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "not_found"), .notFound)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: "unparseable"), .unparseable)
+        XCTAssertEqual(AuditPanelDLQReplayResult(rawTag: nil), .unknown)
 
-        XCTAssertEqual(DLQReplayResult.ok.tone, .success)
-        XCTAssertEqual(DLQReplayResult.publishFailed.tone, .danger)
-        XCTAssertEqual(DLQReplayResult.unparseable.tone, .danger)
-        XCTAssertEqual(DLQReplayResult.rateLimited.tone, .warning)
-        XCTAssertEqual(DLQReplayResult.disabled.tone, .warning)
-        XCTAssertEqual(DLQReplayResult.notFound.tone, .neutral)
-        XCTAssertEqual(DLQReplayResult.unknown.tone, .neutral)
-        XCTAssertEqual(DLQReplayResult.publishFailed.rawTag, "publish_failed")
+        XCTAssertEqual(AuditPanelDLQReplayResult.ok.tone, .success)
+        XCTAssertEqual(AuditPanelDLQReplayResult.publishFailed.tone, .danger)
+        XCTAssertEqual(AuditPanelDLQReplayResult.unparseable.tone, .danger)
+        XCTAssertEqual(AuditPanelDLQReplayResult.rateLimited.tone, .warning)
+        XCTAssertEqual(AuditPanelDLQReplayResult.disabled.tone, .warning)
+        XCTAssertEqual(AuditPanelDLQReplayResult.notFound.tone, .neutral)
+        XCTAssertEqual(AuditPanelDLQReplayResult.unknown.tone, .neutral)
+        XCTAssertEqual(AuditPanelDLQReplayResult.publishFailed.rawTag, "publish_failed")
     }
 
     // MARK: Projection (cached → projection)
@@ -112,11 +112,11 @@ import XCTest
     }
 
     func testProjectionResultLabelAndMissingTimestamp() {
-        let records = [DLQReplayAuditRecord(id: 5, replayedAt: nil, result: .ok)]
+        let records = [AuditPanelDLQReplayRecord(id: 5, replayedAt: nil, result: .ok)]
         let row = AuditPanelProjection.make(from: records, locale: locale, timeZone: timeZone).rows[0]
         XCTAssertEqual(row.replayedAtText, "—")
         XCTAssertEqual(row.resultTone, .success)
-        XCTAssertEqual(row.resultLabel, DLQReplayResult.ok.rawTag)
+        XCTAssertEqual(row.resultLabel, AuditPanelDLQReplayResult.ok.rawTag)
     }
 
     // MARK: Accessibility
@@ -132,8 +132,8 @@ import XCTest
 
     // MARK: Fixtures
 
-    private func record(id: Int, offset: TimeInterval, actor: String, dstTopic: String) -> DLQReplayAuditRecord {
-        DLQReplayAuditRecord(
+    private func record(id: Int, offset: TimeInterval, actor: String, dstTopic: String) -> AuditPanelDLQReplayRecord {
+        AuditPanelDLQReplayRecord(
             id: id,
             replayedAt: now.addingTimeInterval(offset),
             actor: actor,
@@ -153,12 +153,12 @@ import XCTest
     private let timeZone = TimeZone(identifier: "UTC")!
     private let now = Date(timeIntervalSince1970: 1_700_000_000)
 
-    private func sample() -> [DLQReplayAuditRecord] {
-        [DLQReplayAuditRecord(id: 1, replayedAt: now, actor: "a", dlqId: 10, result: .ok)]
+    private func sample() -> [AuditPanelDLQReplayRecord] {
+        [AuditPanelDLQReplayRecord(id: 1, replayedAt: now, actor: "a", dlqId: 10, result: .ok)]
     }
 
     private func resolve(
-        _ state: AuditPanelLoadState<[DLQReplayAuditRecord]>,
+        _ state: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>,
         scopedDlqId: Int? = nil
     ) -> AuditPanelPresentation {
         AuditPanelPresentation.resolve(
@@ -166,7 +166,7 @@ import XCTest
         )
     }
 
-    private func expected(_ records: [DLQReplayAuditRecord]) -> AuditPanelProjection {
+    private func expected(_ records: [AuditPanelDLQReplayRecord]) -> AuditPanelProjection {
         AuditPanelProjection.make(from: records, now: now, locale: locale, timeZone: timeZone)
     }
 
@@ -255,7 +255,7 @@ import XCTest
 
     @MainActor
     func testPreviewModelExposesInjectedState() {
-        let rows = [DLQReplayAuditRecord(id: 1, replayedAt: Date(), result: .ok)]
+        let rows = [AuditPanelDLQReplayRecord(id: 1, replayedAt: Date(), result: .ok)]
         let model = AuditPanelModel(previewState: .loaded(rows, stale: false), scopedDlqId: 9)
         XCTAssertEqual(model.state, .loaded(rows, stale: false))
         XCTAssertEqual(model.scopedDlqId, 9)
@@ -263,7 +263,7 @@ import XCTest
 
     @MainActor
     func testWebPropConvenienceInit() {
-        let rows = [DLQReplayAuditRecord(id: 1, replayedAt: Date(), result: .ok)]
+        let rows = [AuditPanelDLQReplayRecord(id: 1, replayedAt: Date(), result: .ok)]
         let model = AuditPanelModel(rows: rows, loading: false, scopedDlqId: 3)
         XCTAssertEqual(model.state, .loaded(rows, stale: false))
         XCTAssertEqual(model.scopedDlqId, 3)
@@ -273,7 +273,7 @@ import XCTest
 
     @MainActor
     func testSourceBackedModelStartsOnceRefreshesAndPushes() {
-        let rows = [DLQReplayAuditRecord(id: 1, replayedAt: Date(), result: .ok)]
+        let rows = [AuditPanelDLQReplayRecord(id: 1, replayedAt: Date(), result: .ok)]
         let source = InMemoryAuditReplayAuditSource(initial: .loaded(rows, stale: false))
         let model = AuditPanelModel(source: source, scopedDlqId: nil)
         model.start()

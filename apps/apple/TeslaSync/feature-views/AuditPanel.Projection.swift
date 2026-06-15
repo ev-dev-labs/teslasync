@@ -14,13 +14,13 @@ import Foundation
 // MARK: - Projection output value types
 
 /// One audit row, fully formatted + localized for the table (web `DataTable` row
-/// over `DLQReplayAuditRecord`). Pure value type so row formatting is unit-tested.
+/// over `AuditPanelDLQReplayRecord`). Pure value type so row formatting is unit-tested.
 public struct AuditRowItem: Identifiable, Equatable, Sendable {
     public let id: Int
     public let replayedAtText: String
     public let actorText: String
     public let dlqIdText: String
-    public let result: DLQReplayResult
+    public let result: AuditPanelDLQReplayResult
     public let resultLabel: String
     public let resultTone: AuditResultTone
     public let dstTopicText: String
@@ -42,7 +42,7 @@ public extension AuditPanelProjection {
     /// are ordered most-recent-first — the natural audit order, matching the repo
     /// (`dlq_replay_audit_repo.go` returns `ORDER BY replayed_at DESC`).
     static func make(
-        from records: [DLQReplayAuditRecord],
+        from records: [AuditPanelDLQReplayRecord],
         now _: Date = Date(),
         locale: Locale = .current,
         timeZone: TimeZone = .current
@@ -54,7 +54,7 @@ public extension AuditPanelProjection {
     }
 
     private static func row(
-        from record: DLQReplayAuditRecord,
+        from record: AuditPanelDLQReplayRecord,
         locale: Locale,
         timeZone: TimeZone
     ) -> AuditRowItem {
@@ -99,7 +99,7 @@ public extension AuditPanelProjection {
     }
 
     /// The localized result token shown in the chip (web Badge body `{row.result}`).
-    static func resultLabel(_ result: DLQReplayResult) -> String {
+    static func resultLabel(_ result: AuditPanelDLQReplayResult) -> String {
         AuditPanelStrings.string(result.localizationKey, result.rawTag)
     }
 }
@@ -131,7 +131,7 @@ public extension AuditPanelPresentation {
     /// refresh/error; an empty resolved set becomes the web `EmptyState`
     /// (scoped/global message keyed on `scopedDlqId`).
     static func resolve(
-        state: AuditPanelLoadState<[DLQReplayAuditRecord]>,
+        state: AuditPanelLoadState<[AuditPanelDLQReplayRecord]>,
         scopedDlqId: Int?,
         now: Date = Date(),
         locale: Locale = .current,
@@ -139,7 +139,7 @@ public extension AuditPanelPresentation {
     ) -> AuditPanelPresentation {
         let scoped = scopedDlqId != nil
 
-        func project(_ records: [DLQReplayAuditRecord]) -> AuditPanelProjection {
+        func project(_ records: [AuditPanelDLQReplayRecord]) -> AuditPanelProjection {
             AuditPanelProjection.make(from: records, now: now, locale: locale, timeZone: timeZone)
         }
 
@@ -162,10 +162,10 @@ public extension AuditPanelPresentation {
 
     private static func resolveFailure(
         _ error: AuditPanelError,
-        cached: [DLQReplayAuditRecord]?,
+        cached: [AuditPanelDLQReplayRecord]?,
         stale: Bool,
         scoped _: Bool,
-        project: ([DLQReplayAuditRecord]) -> AuditPanelProjection
+        project: ([AuditPanelDLQReplayRecord]) -> AuditPanelProjection
     ) -> AuditPanelPresentation {
         if error == .offline {
             guard let cached, !cached.isEmpty else { return .offlineNoData }
