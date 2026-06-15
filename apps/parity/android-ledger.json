@@ -295,5 +295,14 @@
     "requiredCount": 32,
     "promptId": "p3-android/pages/system/SearchPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-SearchPage.log"
+  },
+  {
+    "unitId": "page:system/TeslaAccount",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "p3-android/pages/system/TeslaAccountPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-TeslaAccountPage.log"
   }
 ]
