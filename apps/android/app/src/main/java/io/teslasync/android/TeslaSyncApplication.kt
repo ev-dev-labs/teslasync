@@ -20,6 +20,7 @@ import io.teslasync.android.charging.powershare.PowersharePageHost
 import io.teslasync.android.dashboard.glance.GlancePageHost
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.driving.driveslist.DrivesListPageHost
+import io.teslasync.android.driving.regenefficiency.RegenEfficiencyPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -91,6 +92,8 @@ class TeslaSyncApplication : Application() {
         GlancePageHost.register()
         // Register the native drive-history screen for the /drives route (P3/A7). Idempotent.
         DrivesListPageHost.register()
+        // Register the native regen-efficiency screen for the /regen-efficiency route (P3/A7). Idempotent.
+        RegenEfficiencyPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
