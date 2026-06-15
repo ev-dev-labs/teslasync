@@ -1,0 +1,162 @@
+================================================================================
+P3-ANDROID · A7 · page:driving/RegenEfficiency — evidence log
+Native Jetpack Compose / Material 3 port of web RegenEfficiencyPage
+Source: web/src/features/driving/pages/RegenEfficiencyPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/driving/**
+Package: io.teslasync.android.driving.regenefficiency
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21.0.9 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / Statistics precedents)
+  RegenEfficiencyPageModel.kt      framework-free: registration ids; parseRegenAnalytics
+                                   (decodes GET /analytics/regen → RegenEfficiencyAnalytics,
+                                   present-guard = web `data ?`); the verbatim ports of the web
+                                   useMemo chain over the windowed drives — regenRatioOf
+                                   (web getRegenRatio), filterDrivesToRange (web allDrives.filter),
+                                   monthlyTrend (web monthlyTrend), recentRegenDrives (web
+                                   regenDrives); RegenRange (web useRangeState, preset 'all');
+                                   RegenDisplayPrefs (web useUnits) — formatEnergy/formatPower +
+                                   convertDistanceFromSI/convertEnergyFromSI at the boundary;
+                                   recordRegenEfficiencyPageOpened (view.opened); mapData.
+  RegenEfficiencyPageSource.kt     seam over DrivingRepository.regenEfficiency (web
+                                   useRegenEfficiency, GET /analytics/regen [start,end]) +
+                                   DrivingRepository.drives (web useDrives) + SettingsStore.settings
+                                   (web useUnits) + SelectedVehicleStore (web useSelectedVehicle).
+  RegenEfficiencyPageViewModel.kt  BaseFeedViewModel; regenState: StateFlow<UiState<
+                                   RegenEfficiencyAnalytics>> re-collected on vehicle/range/refresh,
+                                   gated on the active vehicle, empty when !present (web `data ?`);
+                                   drivesState: StateFlow<UiState<List<Drive>>>; range: StateFlow<
+                                   RegenRange>; displayPrefs StateFlow; setRange/refresh/retry/
+                                   recordViewOpened. No HTTP in the view.
+  RegenEfficiencyPage.kt           stateless RegenEfficiencyPageContent + the ten Material 3
+                                   panels; the backend analytics drive the gauge/cards/bars, the
+                                   useDrives feed is windowed by the model into the trend + table.
+  RegenEfficiencyPageHost.kt       registers RegenEfficiencyRoute for the `regenEfficiency`
+                                   destination (Destinations.kt L75, /regen-efficiency); wired in
+                                   TeslaSyncApplication.onCreate() (NavHost registration).
+
+SI BOUNDARY (P1/S5)
+  The analytics envelope + drives stay SI on the wire (Wh, watts, meters). Display conversion
+  happens only at the render boundary via RegenDisplayPrefs.energy/power (shared formatEnergy/
+  formatPower), toDistanceDisplay (convertDistanceFromSI) and energyKwhBare/kwhWithUnit
+  (convertEnergyFromSI) — never stored converted (Phase-48 SI-canonical; ADR-013 keeps cache SI).
+
+LIVE DATA / STALENESS (ADR-013)
+  Neither source is an SSE live feed; both are cache-then-network Resource streams projected to
+  UiState, so the header DataFreshness chip surfaces fetchedAt / refreshing / stale / error rather
+  than a >2 min live-staleness badge (no live source on this page).
+
+=== PARITY ===
+PARITY_REQUIRED=47
+
+PANELS (10) — every web GlassPanel + the named Monthly-Regen-Trend, as Material 3 Surfaces
+  [01] panel  GlassPanel1          RegenEfficiencyPage.kt:358  RegenHeroPanel (GlassPanel + RadialGauge + recoveredInfo)
+  [02] panel  GlassPanel2          RegenEfficiencyPage.kt:398  RegenStatCard Total Regen (label L402)
+  [03] panel  GlassPanel3          RegenEfficiencyPage.kt:404  RegenStatCard Recovery Rate (label L408)
+  [04] panel  GlassPanel4          RegenEfficiencyPage.kt:410  RegenStatCard Monthly Avg (label L414)
+  [05] panel  GlassPanel5          RegenEfficiencyPage.kt:421  RegenStatCard Free Charges (label L425, AnimatedNumber)
+  [06] panel  GlassPanel6          RegenEfficiencyPage.kt:427  RegenStatCard Lifetime Regen (label L431, '—')
+  [07] panel  GlassPanel7          RegenEfficiencyPage.kt:433  RegenStatCard Lifetime Drive (label L437, '—')
+  [08] panel  Monthly-Regen-Trend  RegenEfficiencyPage.kt:466  RegenMonthlyTrendPanel (ChartContainer + ComboChart)
+  [09] panel  GlassPanel9          RegenEfficiencyPage.kt:509  RegenMetricsPanel (HelpTooltip title + 4× MetricBar)
+  [10] panel  GlassPanel10         RegenEfficiencyPage.kt:573  RegenRecentDrivesPanel (table | inline EmptyState)
+
+CHARTS (3) — native A3 wrappers (RadialGauge canvas + ChartContainer + Vico ComboChart), never a webview
+  [11] chart  RadialGauge          RegenEfficiencyPage.kt:368  RadialGauge(value=round(regenRatio), color=regenColor)
+  [12] chart  ChartContainer       RegenEfficiencyPage.kt:469  ChartContainer(title=monthlyTrend, status, accessibleDescription)
+  [13] chart  ComposedChart        RegenEfficiencyPage.kt:483  ComboChart(series=[drives Bar, regenKwh Line], xLabels=months)
+
+DATA STATES (4) — for the useRegenEfficiency source (drives source renders its own per-section states)
+  [14] state  loading   RegenEfficiencyPage.kt:216  if (regenState.isLoading) RegenLoading() (skeleton L248)
+  [15] state  empty     RegenEfficiencyPage.kt:234  RegenEmpty (regen.noData) + ChartStatus.Empty L471 + table EmptyState L582
+  [16] state  error     RegenEfficiencyPage.kt:233  if (regenState.isError) RegenError(onRetry) (L306)
+  [17] state  success   RegenEfficiencyPage.kt:235  RegenLoaded(analytics, drives=drivesState.data.orEmpty())
+
+STRINGS (30) — every visible literal resolves from res/values/strings.xml; key names match web
+  [18] string common.noData                  RegenEfficiencyPage.kt:474  translation_common_noData
+  [19] string help.regenEfficiency.iconLabel RegenEfficiencyPage.kt:520  translation_help_regenEfficiency_iconLabel
+  [20] string regen.col.drives               RegenEfficiencyPage.kt:479  translation_regen_col_drives
+  [21] string regen.col.month                RegenEfficiencyPage.kt:477  translation_regen_col_month
+  [22] string regen.col.regenKwh             RegenEfficiencyPage.kt:478  translation_regen_col_regenKwh
+  [23] string regen.date                      RegenEfficiencyPage.kt:599  translation_regen_date
+  [24] string regen.distanceCol               RegenEfficiencyPage.kt:600  translation_regen_distanceCol
+  [25] string regen.drives                    RegenEfficiencyPage.kt:488  translation_regen_drives
+  [26] string regen.freeCharges               RegenEfficiencyPage.kt:425  translation_regen_freeCharges
+  [27] string regen.freeChargesBar            RegenEfficiencyPage.kt:562  translation_regen_freeChargesBar
+  [28] string regen.lifetimeDrive             RegenEfficiencyPage.kt:437  translation_regen_lifetimeDrive
+  [29] string regen.lifetimeRegen             RegenEfficiencyPage.kt:431  translation_regen_lifetimeRegen
+  [30] string regen.maxRegenCol               RegenEfficiencyPage.kt:601  translation_regen_maxRegenCol
+  [31] string regen.metrics                   RegenEfficiencyPage.kt:518  translation_regen_metrics
+  [32] string regen.monthlyAvg                RegenEfficiencyPage.kt:414  translation_regen_monthlyAvg
+  [33] string regen.monthlyAvgBar             RegenEfficiencyPage.kt:554  translation_regen_monthlyAvgBar
+  [34] string regen.monthlyTrend              RegenEfficiencyPage.kt:470  translation_regen_monthlyTrend
+  [35] string regen.monthlyTrend.aria         RegenEfficiencyPage.kt:473  translation_regen_monthlyTrend_aria
+  [36] string regen.noData                    RegenEfficiencyPage.kt:325  translation_regen_noData
+  [37] string regen.ratioCol                  RegenEfficiencyPage.kt:603  translation_regen_ratioCol
+  [38] string regen.ratioLabel                RegenEfficiencyPage.kt:408  translation_regen_ratioLabel
+  [39] string regen.recentDrives              RegenEfficiencyPage.kt:578  translation_regen_recentDrives
+  [40] string regen.recoveredInfo             RegenEfficiencyPage.kt:378  translation_regen_recoveredInfo
+  [41] string regen.regenKwh                  RegenEfficiencyPage.kt:495  translation_regen_regenKwh
+  [42] string regen.regenRatio                RegenEfficiencyPage.kt:371  translation_regen_regenRatio
+  [43] string regen.regenRatioBar             RegenEfficiencyPage.kt:541  translation_regen_regenRatioBar
+  [44] string regen.subtitle                  RegenEfficiencyPage.kt:279  translation_regen_subtitle
+  [45] string regen.title                     RegenEfficiencyPage.kt:277  translation_regen_title
+  [46] string regen.totalRegen                RegenEfficiencyPage.kt:402  translation_regen_totalRegen
+  [47] string regen.totalRegenLabel           RegenEfficiencyPage.kt:533  translation_regen_totalRegenLabel
+
+PARITY_COVERED=47
+
+STRING CATALOG
+  29 of the 30 keys already existed in res/values/strings.xml (generated from the shared i18n
+  catalog). The 1 missing key — regen.monthlyTrend.aria — was added to res/values/strings.xml with
+  the verbatim web inline-default value ("Monthly regen energy and drive count composed chart";
+  RegenEfficiencyPage.tsx L235) — `res/values*/strings.xml` is an allowed file. MissingTranslation/
+  ExtraTranslation are disabled for the catalog (app/build.gradle.kts L114), so the default-locale
+  add raises no lint error. regen.recoveredInfo uses positional %1$s (bare kWh number)/%2$s (free
+  charges), matching the catalog template "…recovered %1$s kWh — …~%2$s free charges." — no
+  StringFormatInvalid is raised.
+
+PLACEHOLDER OPT-OUTS (the gate's case-insensitive "todo" substring rule; neither is a stub)
+  RegenEfficiencyPage.kt:369  `.toDouble()` numeric widening of the rounded regen ratio ("toDo" substr)
+  RegenEfficiencyPage.kt:489  `.toDouble()` numeric widening of the drive count for the chart series
+  Both carry `// parity:allow numeric widening, not a TODO stub`, mirroring the DrivesListPage
+  precedent. (PLACEHOLDER_ALLOWED=4 is the dir-wide total: these 2 + the 2 pre-existing DrivesList
+  opt-outs, since the scan covers com/teslasync/driving.)
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin
+    PLACEHOLDER_ALLOWED=4
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 52s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 28s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 26s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (hero gauge GlassPanel1, six overview stat cards GlassPanel2-7,
+      Monthly-Regen-Trend, regen-metrics GlassPanel9, recent-drives GlassPanel10); every anonymous
+      region from the web source reproduced (the recovered-energy caption, the help-annotated metrics
+      title, the date-range filter in the header).
+  [x] All 47 parity items render from the bound StateFlow state holders (regenState + drivesState +
+      range + displayPrefs), folded by the framework-free model (monthlyTrend / recentRegenDrives).
+  [x] loading / empty / error / success implemented for the useRegenEfficiency source; the useDrives
+      feed powers the trend chart + table, each with its own empty surface (ChartStatus.Empty / EmptyState).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/DateRangeFilter); RadialGauge
+      + ChartContainer carry semantics content descriptions (a11y); SI units honored at the display
+      boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (47).
+  [x] android ledger row for page:driving/RegenEfficiency set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

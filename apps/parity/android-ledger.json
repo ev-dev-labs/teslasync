@@ -178,5 +178,14 @@
     "requiredCount": 77,
     "promptId": "p3-android/pages/driving/DrivesListPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DrivesListPage.log"
+  },
+  {
+    "unitId": "page:driving/RegenEfficiency",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 47,
+    "requiredCount": 47,
+    "promptId": "p3-android/pages/driving/RegenEfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-RegenEfficiencyPage.log"
   }
 ]

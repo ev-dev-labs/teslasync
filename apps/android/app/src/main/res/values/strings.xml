@@ -5376,6 +5376,7 @@
   <string name="translation_regen_monthlyAvg">Monthly Avg kW</string>
   <string name="translation_regen_monthlyAvgBar">Monthly Avg</string>
   <string name="translation_regen_monthlyTrend">Monthly Regen Trend</string>
+  <string name="translation_regen_monthlyTrend_aria">Monthly regen energy and drive count composed chart</string>
   <string name="translation_regen_noData">No regen efficiency data available yet</string>
   <string name="translation_regen_ratioCol">Ratio</string>
   <string name="translation_regen_ratioLabel">Recovery Rate</string>
