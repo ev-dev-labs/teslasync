@@ -106,5 +106,14 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/automations/ConditionBuilder",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-ConditionBuilder.log"
+  },
+  {
+    "unitId": "page:automations/PresetGallery",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p3-android/pages/automations/PresetGallery",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-PresetGallery.log"
   }
 ]

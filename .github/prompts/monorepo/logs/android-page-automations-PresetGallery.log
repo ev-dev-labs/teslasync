@@ -1,0 +1,113 @@
+P3-ANDROID A7 — page:automations/PresetGallery — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/PresetGallery.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (PresetGallery.kt screen + PresetGalleryPageViewModel + PresetGalleryPageModel)
+Embeds     : the shared PresetGallery feature view (apps/android/app/src/main/java/com/teslasync/feature-views/PresetGallery/,
+             package io.teslasync.android.featureviews.presetgallery) — verbatim, DRY (ADR-006), no re-implementation, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED card grid the Automations builder embeds; its one data
+hook is useAutomationPresets(category) -> GET /automations/presets[?category=]. The presentational + projection
+surface was already implemented at full parity by the predecessor prompt p3-android/feature-views A-0085-PresetGallery
+(log p3-android-feature-views-0085-PresetGallery.log; com/teslasync/feature-views/PresetGallery, committed + green;
+fv unit test PresetGalleryProjectionTest + UI test PresetGalleryUiTest already in the suite). This page prompt targets
+the separate allowed-files path kotlin/com/teslasync/automations/** with a `@Composable screen + ViewModel` contract,
+so — following the sanctioned ConditionBuilder / AutomationCard precedent — this layer is a THIN page wrapper that
+EMBEDS that one shared surface (every panel/string/data state is the parity-covered feature view's PresetGalleryContent)
+and adds only the page state holder + the stateless screen. Predecessor NOT bypassed.
+
+DATA-SOURCE NOTE (honesty): the surface declares one data source — useAutomationPresets (GET /automations/presets
+[?category=]). It is bound through the shared S8 AutomationsStore.automationPresets(category) via the page-layer
+PresetGallerySource seam (presetGallerySource(store, category)); the page ViewModel only re-shares that
+cache-then-network feed onto UiState through the shared BaseFeedViewModel.asUiState helper (the standard A7 page-VM
+job). The shared-core AutomationPreset rows are projected to the feature view's vendor-neutral AutomationPresetData at
+that boundary (PresetGalleryPageModel.toPresetData/wireKind) because the page module cannot widen the feature-view
+directory (outside this prompt's allowed files); this is exactly the host-side adaptation the fv model documents. No
+HTTP, no business logic, no re-implementation of the preset fetch is added by this layer.
+
+NAV NOTE (honesty): web route is "(unrouted)". Destinations.kt is the canonical registry — "every web route recorded
+as metadata … never any fabricated stand-in", and DestinationsTest.registryCoversTheWholeWebTaxonomy() locks
+Destinations.all to the web taxonomy while RouteTableTest round-trips every Destinations.all entry. An unrouted card
+grid has no web route, so NO synthetic nav destination is fabricated (doing so would break the locked tests and the
+registry's anti-fabrication contract). The page-layer is embedded by the Automations builder exactly as the feature
+view is — the prompt's "(if routed)" clause does not apply, identical to the sibling AutomationCard / ConditionBuilder
+pages.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+DETEKT NOTE (honesty — no red-as-green): the prompt's android-triad gate is placeholders + assembleDebug + lintDebug +
+testDebugUnitTest (all green below). A separate `:android:detekt` task exists and is PRE-EXISTING RED on already-
+committed "done" files (12 weighted issues in admin/ApiLogsPage, admin/FeedbackQueuePage, automations/
+AutomationCardPageModel, automations/ConditionBuilderPageModel, analytics/{LifetimeStats,Statistics,YearReview}* —
+MatchingDeclarationName/ReturnCount/MaxLineLength/UnusedParameter). It is NOT part of this prompt's gate (no sibling
+P3/A7 page log runs it; the sibling page-model files are themselves among those 12). Verified that the THREE new
+PresetGallery page files contribute ZERO detekt findings (detekt.xml: 0 occurrences of "PresetGallery"; new files
+carry the same file-level @Suppress("InvalidPackageDeclaration"[, "MatchingDeclarationName"]) the siblings use, and
+PresetGalleryPageModel.kt avoids MatchingDeclarationName by exposing two top-level type declarations — the object +
+the `fun interface PresetGallerySource`). This task introduces no new static-analysis debt.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+   (./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin)
+BUILD SUCCESSFUL in 7m 58s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug — compileDebugKotlin clean; only a pre-existing unrelated ApiLogsPage deprecation warning)
+BUILD SUCCESSFUL in 13m 45s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug)
+BUILD SUCCESSFUL in 2m 18s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — includes the predecessor fv PresetGalleryProjectionTest, still green)
+DETEKT (out-of-gate, pre-existing red): DETEKT_EXIT=1 — 12 weighted issues, ALL in already-committed files; 0 in any PresetGallery file.
+
+=== PARITY ===
+PARITY_REQUIRED=9
+binding evidence (page layer binds the StateFlow; the embedded shared feature view renders every item):
+  page layer  : apps/android/app/src/main/kotlin/com/teslasync/automations/{PresetGallery.kt, PresetGalleryPageViewModel.kt, PresetGalleryPageModel.kt}
+  shared view : apps/android/app/src/main/java/com/teslasync/feature-views/PresetGallery/{PresetGallery.kt, PresetGalleryModel.kt}
+                (fv = io.teslasync.android.featureviews.presetgallery)
+
+# panels (2) — Material 3 GlassPanel (web PresetGallery.tsx has exactly two GlassPanel usages: PresetCard + PresetCardSkeleton)
+[COVERED] panel  GlassPanel1   -> PresetGallery.kt:PresetGalleryScreen()->PresetGalleryContent(); fv/PresetGallery.kt:PresetCard() L251 GlassPanel(padding=PanelPadding.Lg, accent=PanelAccent.Info) — icon tile + name(Heading L260) + trigger label(Caption L261) + action-count Badge(L263) + description(BodyText L265) + Install Button(L270)
+[COVERED] panel  GlassPanel2   -> fv/PresetGallery.kt:PresetCardSkeleton() L315 GlassPanel(padding=PanelPadding.Lg) — the web `PresetCardSkeleton` loading card, rendered x4 by PresetGalleryLoading() L302 (web `Array.from({length:4})`)
+
+# data states (3 declared: loading / empty / success) — bound to PresetGalleryPageViewModel.state: StateFlow<UiState<List<AutomationPresetData>>>
+[COVERED] state  loading       -> PresetGalleryPageViewModel.kt:state (refreshTrigger.flatMapLatest{source.stream()}.asUiState{isEmpty={it.isEmpty()}}) first frame UiState.loading()/UiPhase.Loading; fv/PresetGallery.kt:PresetGalleryContent() L199 state.isLoading -> PresetGalleryLoading() L302 (4 skeleton GlassPanels)
+[COVERED] state  empty         -> PresetGalleryPageViewModel.kt:state UiPhase.Empty (asUiState isEmpty={it.isEmpty()}, web `presetList.length === 0`); fv/PresetGallery.kt:PresetGalleryContent() L205 result.isEmpty -> PresetGalleryEmpty(message=strings.empty) L347 (Clock glyph + message)
+[COVERED] state  success       -> PresetGalleryPageViewModel.kt:state UiPhase.Content; fv/PresetGallery.kt:PresetGalleryContent() L208 -> PresetGalleryGrid() L221 (FadeIn+StaggerContainer) -> PresetCard() L246 per preset
+  (loading additionally reachable as the cached-refresh/stale chrome via PresetGalleryFreshnessRow() L357 + onRetry=PresetGalleryPageViewModel.refresh(); hard error -> PresetGalleryError(onRetry) L332 — the surface never blanks)
+
+# strings (4) — every visible literal via stringResource(R.string.translation_*); web key names preserved (rendered by the embedded fv via rememberPresetGalleryStrings() L409)
+[COVERED] string automations.builder.noTrigger   -> fv/PresetGallery.kt:PresetCard() Caption(triggerLabel(card.triggerKind, strings)) L261 — PresetTriggerKind.None -> strings.noTrigger  (R.string.translation_automations_builder_noTrigger)
+[COVERED] string automations.presets.actionCount -> fv/PresetGallery.kt:PresetCard() Badge(strings.actionCountLabel(card.actionCount)) L263 — interpolates {{count}}  (R.string.translation_automations_presets_actionCount)
+[COVERED] string automations.presets.empty       -> fv/PresetGallery.kt:PresetGalleryEmpty(message=strings.empty) L347/L348  (R.string.translation_automations_presets_empty)
+[COVERED] string automations.presets.install     -> fv/PresetGallery.kt:PresetCard() Button(label=strings.install, onClick={onInstall(card.id)}) L270/L271  (R.string.translation_automations_presets_install)
+
+PARITY_COVERED=9
+
+=== SUMMARY ===
+data sources : useAutomationPresets (GET /automations/presets[?category=]). PresetGalleryPageViewModel binds the shared
+               S8 AutomationsStore.automationPresets(category) feed via the page-layer PresetGallerySource seam
+               (presetGallerySource) and re-shares it as StateFlow<UiState<List<AutomationPresetData>>>
+               (BaseFeedViewModel.asUiState, isEmpty={it.isEmpty()}); the page performs no HTTP. AutomationPreset ->
+               AutomationPresetData projection (id/name/description/icon/triggerKinds/actionCount) done at that boundary.
+nav          : web route "(unrouted)" — no synthetic destination fabricated (Destinations.kt records only real web
+               routes; DestinationsTest/RouteTableTest lock the registry). Surface is embedded by the Automations builder,
+               like the fv; install navigation stays caller-owned (web navigate('/automations/new?preset='+id) -> onInstall).
+panels       : GlassPanel1 = the per-preset card (fv PresetCard); GlassPanel2 = the loading skeleton card (fv PresetCardSkeleton).
+charts/maps  : none declared.
+strings      : all 4 already present in res/values/strings.xml (translation_automations_builder_noTrigger,
+               translation_automations_presets_{actionCount,empty,install}), rendered by the embedded fv via stringResource;
+               zero hardcoded literals in the page layer; web key names preserved.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), TalkBack contentDescriptions (icon tile/empty/loading), MaterialTheme
+               tokens (cyan accent = TeslaTokens.status.info, never raw hex), >=48dp Install target, action-count grouped
+               + freshness/age formatted at the display boundary — all from the embedded fv (ADR-005/013/014/015).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+detekt       : out-of-gate, pre-existing red (12 issues, all in already-committed files); 0 PresetGallery findings — no new debt.
+parity       : PARITY_COVERED(9) == PARITY_REQUIRED(9)
+[PASS] all android triad gates green; parity 9/9; android ledger row page:automations/PresetGallery status=done.
+EXIT=0
+STATUS=DONE
