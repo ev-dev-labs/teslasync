@@ -30,7 +30,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools
-    case liveSignals, schemaDrift, slowQueries, secretRotation, powerUser, system
+    case liveSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
     public var id: String {
@@ -61,6 +61,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .schemaDrift: "schema-drift"
         case .slowQueries: "slow-queries"
         case .secretRotation: "secret-rotation"
+        case .vehicleCost: "vehicle-cost"
         case .teslaOrders: "tesla-orders"
         default: rawValue
         }
@@ -113,6 +114,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .schemaDrift: "tablecells.badge.ellipsis"
         case .slowQueries: "timer"
         case .secretRotation: "lock.rotation"
+        case .vehicleCost: "creditcard.fill"
         case .teslaOrders: "cart.fill"
         case .powerUser: "terminal.fill"
         case .system: "server.rack"
@@ -136,7 +138,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,
-             .slowQueries, .secretRotation, .powerUser, .system: .system
+             .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
         }
     }
