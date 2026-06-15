@@ -106,6 +106,16 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
+        // System / Search page (P2/W7) — parity port of web SearchPage at route /search. RouteTable already
+        // maps Hidden("Search","search",SystemOps,"Search"); result rows and facets navigate via the shell router
+        // (web navigate(hit.url)). Registered over the empty feed default like the sibling feature-view pages.
+        _viewModel.PageFactory.Register("Search", () =>
+        {
+            var page = new FeatureViews.SystemOps.SearchPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
         // Battery / Energy page (P2/W7) — parity port of web EnergyPage at route /energy.
         _viewModel.PageFactory.Register("Energy", static () => new FeatureViews.Battery.EnergyPage());
 
