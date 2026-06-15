@@ -7320,6 +7320,8 @@
       "activeChannels": "Active Channels"
     },
     "channels": {
+      "title": "Notification channels",
+      "subtitle": "Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.",
       "add": "Add Channel",
       "addTitle": "Add Channel",
       "editTitle": "Edit Channel",
