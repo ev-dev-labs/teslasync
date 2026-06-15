@@ -130,6 +130,9 @@ public sealed partial class ShellWindow : Window
         // Admin / API Logs page (P2/W7) — parity port of web ApiLogsPage at route /api-logs.
         _viewModel.PageFactory.Register("ApiLogs", static () => new FeatureViews.Admin.ApiLogsPage());
 
+        // Admin / Live Logs page (P2/W7) — parity port of web LiveLogsPage (admin SSE log tail) at route /live-logs.
+        _viewModel.PageFactory.Register("LiveLogs", static () => new FeatureViews.Admin.LiveLogsPage());
+
         // Admin / Audit Log page (P2/W7) — parity port of web AuditLogPage at route /admin/audit-log.
         // RouteTable already maps Page("AuditLog","admin/audit-log",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("AuditLog", static () => new FeatureViews.Admin.AuditLogPage());
