@@ -298,6 +298,16 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("PowerFlowDashboard", static () => new FeatureViews.Battery.PowerFlowDashboardPage());
         // Battery / Energy products page (P2/W7) — parity port of web EnergyProductsPage at route /energy-products.
         _viewModel.PageFactory.Register("EnergyProducts", static () => new FeatureViews.Battery.EnergyProductsPage());
+        // Analytics / Fleet Analytics page (P2/W7) — parity port of web AnalyticsPage at route /analytics
+        // (RouteTable Page("Analytics","analytics",Analytics)). The HeroGauges strip plus the Overview /
+        // Driving / Charging / Battery tab bodies are each their own parity surface; the page composes them
+        // from its single useFleetAnalytics read. Overview Quick Links navigate via NavigationRequested.
+        _viewModel.PageFactory.Register("Analytics", () =>
+        {
+            var page = new FeatureViews.Analytics.AnalyticsPage();
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
         // Analytics / Timeline page (P2/W7) — parity port of web TimelinePage at route /timeline.
         _viewModel.PageFactory.Register("Timeline", static () => new FeatureViews.Analytics.TimelinePage());
         // Analytics / True Cost of Ownership page (P2/W7) — parity port of web TrueCostPage at route /analytics/tco.
