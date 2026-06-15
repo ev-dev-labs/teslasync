@@ -34,12 +34,13 @@
                 <ColumnDefinition x:Name="RightInsetColumn" Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <FontIcon
+            <Image
                 Grid.Column="0"
+                Width="22"
+                Height="22"
                 Margin="16,0,8,0"
                 VerticalAlignment="Center"
-                FontSize="16"
-                Glyph="&#xE804;" />
+                Source="ms-appx:///Assets/TitleBarLogo.png" />
 
             <TextBlock
                 x:Name="AppTitleText"

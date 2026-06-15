@@ -97,6 +97,7 @@
   -->
   <ItemGroup>
     <None Remove="Platform\Widgets\Public\VehicleStatusTemplate.json" />
+    <Content Include="Assets\TitleBarLogo.png" />
     <Content Include="Platform\Widgets\Public\VehicleStatusTemplate.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
