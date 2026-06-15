@@ -30,7 +30,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
-    case liveSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
+    case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
     case backupRestore
     case settings, onboarding, teslaOrders, gasPrice, teslaFeatures, explore, search, sharing, watch
 
@@ -63,6 +63,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .feedbackQueue: "feedback"
         case .rbacMatrix: "rbac-matrix"
         case .liveSignals: "live-signals"
+        case .redisSignals: "redis-signals"
         case .schemaDrift: "schema-drift"
         case .slowQueries: "slow-queries"
         case .secretRotation: "secret-rotation"
@@ -124,6 +125,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .rbacMatrix: "lock.shield.fill"
         case .users: "person.2.fill"
         case .liveSignals: "waveform.path.ecg"
+        case .redisSignals: "cylinder.split.1x2.fill"
         case .schemaDrift: "tablecells.badge.ellipsis"
         case .slowQueries: "timer"
         case .secretRotation: "lock.rotation"
@@ -153,9 +155,9 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
-             .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,
-             .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore, .ingestXRay,
-             .feedbackQueue: .system
+             .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
+             .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore,
+             .ingestXRay, .feedbackQueue: .system
         case .settings, .onboarding, .teslaOrders, .gasPrice, .teslaFeatures: .account
         }
     }

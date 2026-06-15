@@ -775,6 +775,24 @@
       "requiredCount": 43,
       "promptId": "p4-apple/P7/page:admin/FeedbackQueue",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeedbackQueuePage.log"
+    },
+    {
+      "unitId": "page:admin/RedisSignalViewer",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 51,
+      "requiredCount": 51,
+      "promptId": "p4-apple/P7/page:admin/RedisSignalViewer",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-RedisSignalViewerPage.log"
+    },
+    {
+      "unitId": "page:admin/RedisSignalViewer",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 51,
+      "requiredCount": 51,
+      "promptId": "p4-apple/P7/page:admin/RedisSignalViewer",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-RedisSignalViewerPage.log"
     }
   ]
 }
