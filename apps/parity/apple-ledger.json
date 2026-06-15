@@ -667,6 +667,24 @@
       "requiredCount": 2,
       "promptId": "p4-apple/P7/page:admin/GasPriceAutoPoll",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-GasPriceAutoPollPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaFeatureFlags",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaFeatureFlags",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaFeatureFlagsPage.log"
+    },
+    {
+      "unitId": "page:admin/TeslaFeatureFlags",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/TeslaFeatureFlags",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-TeslaFeatureFlagsPage.log"
     }
   ]
 }
