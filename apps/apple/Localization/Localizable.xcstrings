@@ -9593,6 +9593,226 @@
         }
       }
     },
+    "admin.secretRotation.colAge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Age (days)"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.colExpiry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expires"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.colKind" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kind"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.colRotated" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last rotated"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.colSeverity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Severity"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.colThresholds" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warn / critical"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.criticalLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Critical"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.criticalMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius."
+          }
+        }
+      }
+    },
+    "admin.secretRotation.criticalTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overdue rotations"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.daysToExpiry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lldd remaining"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.emptyMessage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rotation events have been recorded yet. The tracker captures observations on every credential rotation."
+          }
+        }
+      }
+    },
+    "admin.secretRotation.emptyTable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No tracked secrets"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.emptyTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No tracked secrets"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.notConfigured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page."
+          }
+        }
+      }
+    },
+    "admin.secretRotation.okLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secret Rotation"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible."
+          }
+        }
+      }
+    },
+    "admin.secretRotation.tableTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotation status"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.totalLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tracked secrets"
+          }
+        }
+      }
+    },
+    "admin.secretRotation.warnLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warn"
+          }
+        }
+      }
+    },
     "admin.subsystem.unavailableTitle" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -197494,6 +197714,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tables"
+          }
+        }
+      }
+    },
+    "route.secretRotation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Secret Rotation"
           }
         }
       }
