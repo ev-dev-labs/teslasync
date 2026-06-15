@@ -5898,8 +5898,12 @@
   <string name="translation_share_elevGain">Elevation Gain</string>
   <string name="translation_share_elevTooltipLabel">Elevation</string>
   <string name="translation_share_elevation">Elevation Profile</string>
+  <string name="translation_share_elevation_aria">Shared drive elevation profile area chart by distance</string>
   <string name="translation_share_existing">Active Share Links</string>
   <string name="translation_share_expired">Expired</string>
+  <string name="translation_share_expired_description">This shared drive link has expired or been revoked.</string>
+  <string name="translation_share_expired_home">Go to TeslaSync</string>
+  <string name="translation_share_expired_title">Share Link Unavailable</string>
   <string name="translation_share_expiresOn">Expires %1$s</string>
   <string name="translation_share_expiry">Link expires after</string>
   <string name="translation_share_expiry30d">30 days</string>
@@ -5917,6 +5921,7 @@
   <string name="translation_share_noMapData">Route data is not available for this shared drive.</string>
   <string name="translation_share_revoke">Revoke</string>
   <string name="translation_share_speed">Speed Profile</string>
+  <string name="translation_share_speed_aria">Shared drive speed profile line chart by distance</string>
   <string name="translation_share_speedTooltipLabel">Speed</string>
   <string name="translation_share_title">Share Drive</string>
   <string name="translation_share_titlePlaceholder">Optional title (e.g., \"SF to LA Road Trip\")</string>
