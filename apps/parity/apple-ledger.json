@@ -75,6 +75,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-FeatureFlagsPage.log"
     },
     {
+      "unitId": "page:admin/DLQInspector",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 15,
+      "requiredCount": 15,
+      "promptId": "p4-apple/P7/page:admin/DLQInspector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log"
+    },
+    {
+      "unitId": "page:admin/DLQInspector",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 15,
+      "requiredCount": 15,
+      "promptId": "p4-apple/P7/page:admin/DLQInspector",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-DLQInspectorPage.log"
+    },
+    {
       "unitId": "page:admin/RbacMatrix",
       "platform": "apple-macos",
       "status": "done",
