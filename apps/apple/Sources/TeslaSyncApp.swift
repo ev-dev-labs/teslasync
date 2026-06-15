@@ -135,6 +135,7 @@ struct TeslaSyncApp: App {
         registry = SystemRouteRegistration.registry(base: registry)
         registry = GasPriceAutoPollRouteRegistration.registry(base: registry)
         registry = TeslaFeatureFlagsRouteRegistration.registry(base: registry)
+        registry = BackupRestoreRouteRegistration.registry(base: registry)
         return registry
     }
 
