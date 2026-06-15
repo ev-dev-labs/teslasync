@@ -1203,6 +1203,59 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DigitalTwin", () =>
             new FeatureViews.Vehicles.DigitalTwinPage(
                 new FeatureViews.Vehicles.DigitalTwinPageClientFeed(_data.Api), _data.Localizer));
+
+        // ── Batch 5: nav-visible pages, preserving each page's existing event/param wiring. ─────────────
+        _viewModel.PageFactory.Register("Search", () =>
+        {
+            var page = new FeatureViews.SystemOps.SearchPage(
+                new FeatureViews.SystemOps.SearchClientFeed(_data.Api), _data.Localizer);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
+        _viewModel.PageFactory.Register("LiveMap", () =>
+        {
+            var page = new FeatureViews.Maps.MapOverviewPage(
+                new FeatureViews.Maps.MapOverviewClientFeed(_data.Api), _data.Localizer);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
+        _viewModel.PageFactory.Register("Automations", () =>
+        {
+            var page = new FeatureViews.Automations.AutomationsListPage(
+                new FeatureViews.Automations.AutomationsListClientFeed(_data.Api), _data.Localizer);
+            page.NavigationRequested += (_, e) => NavigateTo(e.Path);
+            return page;
+        });
+
+        _viewModel.PageFactory.Register("AutomationList", () =>
+        {
+            var page = new FeatureViews.Automations.AutomationListPage(
+                new FeatureViews.Automations.AutomationListClientFeed(_data.Api), _data.Localizer);
+            page.NavigationRequested += (_, e) => NavigateTo(e.Route);
+            return page;
+        });
+
+        _viewModel.PageFactory.Register("YearReview", () =>
+        {
+            var page = new FeatureViews.Review.YearReviewPage(
+                new FeatureViews.Review.YearReviewPageClientFeed(_data.Api),
+                _data.Localizer,
+                ParseYearParam(_viewModel.Current.Param("year")));
+            page.CloseRequested += (_, _) => GoBack();
+            return page;
+        });
+
+        _viewModel.PageFactory.Register("SignalDiff", () =>
+            new FeatureViews.Telemetry.SignalDiffPage(
+                new FeatureViews.Telemetry.SignalDiffPageClientFeed(_data.Api), _data.Localizer, _data.PrimaryVehicleId));
+
+        _viewModel.PageFactory.Register("VehicleDetail", () =>
+            new FeatureViews.Vehicles.VehicleDetailPage(
+                new FeatureViews.Vehicles.VehicleDetailPageClientFeed(_data.Api),
+                _data.Localizer,
+                ParseSessionId(_viewModel.Current.Param("id"))));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
