@@ -70,7 +70,7 @@ private func minutesBefore(_ minutes: Int) -> Date {
     }
 
     func testCachedHistoryShowsContentEvenWhileFailing() {
-        let runs = [BackupRun(id: "1", status: .completed, fileSize: 1024, completedAt: minutesBefore(5))]
+        let runs = [BackupMonitorRun(id: "1", status: .completed, fileSize: 1024, completedAt: minutesBefore(5))]
         let (model, _) = makeModel(BackupMonitorUpdate(status: .failed("net"), runs: runs))
         model.start()
         XCTAssertEqual(model.phase, .content)
@@ -112,14 +112,14 @@ private func minutesBefore(_ minutes: Int) -> Date {
                 status: .loaded,
                 connection: .offline,
                 runs: [
-                    BackupRun(
+                    BackupMonitorRun(
                         id: "1",
                         status: .completed,
                         backupType: "full",
                         fileSize: 1_288_490_188,
                         completedAt: minutesBefore(2)
                     ),
-                    BackupRun(
+                    BackupMonitorRun(
                         id: "2",
                         status: .failed,
                         backupType: "full",
@@ -139,7 +139,7 @@ private func minutesBefore(_ minutes: Int) -> Date {
 
     func testRecentRowsLimitedToMaxRecentRows() {
         let runs = (1 ... 9).map {
-            BackupRun(id: "\($0)", status: .completed, fileSize: 1024, createdAt: minutesBefore($0))
+            BackupMonitorRun(id: "\($0)", status: .completed, fileSize: 1024, createdAt: minutesBefore($0))
         }
         let (model, _) = makeModel(BackupMonitorUpdate(status: .loaded, runs: runs))
         model.start()

@@ -26,24 +26,24 @@ import SwiftUI
         Date().addingTimeInterval(TimeInterval(-days * 86400))
     }
 
-    private let sampleRuns: [BackupRun] = [
-        BackupRun(
+    private let sampleRuns: [BackupMonitorRun] = [
+        BackupMonitorRun(
             id: "1", status: .completed, backupType: "full", fileSize: 1_288_490_188,
             durationMs: 4200, createdAt: minutesAgo(45), completedAt: minutesAgo(42)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "2", status: .completed, backupType: "incremental", fileSize: 471_859_200,
             durationMs: 1100, createdAt: minutesAgo(200), completedAt: minutesAgo(199)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "3", status: .failed, backupType: "full", fileSize: 0,
             durationMs: 380, createdAt: daysAgo(1), completedAt: daysAgo(1)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "4", status: .running, backupType: "full", fileSize: 838_860_800,
             durationMs: nil, createdAt: daysAgo(2), completedAt: nil
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "5", status: .completed, backupType: "incremental", fileSize: 9_437_184,
             durationMs: 240, createdAt: daysAgo(3), completedAt: daysAgo(3)
         )

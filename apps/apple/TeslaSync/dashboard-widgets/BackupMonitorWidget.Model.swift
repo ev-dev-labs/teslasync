@@ -62,13 +62,13 @@ public enum BackupMonitorConnection: Sendable, Equatable {
 public struct BackupMonitorUpdate: Sendable, Equatable {
     public var status: BackupMonitorLoadStatus
     public var connection: BackupMonitorConnection
-    public var runs: [BackupRun]
+    public var runs: [BackupMonitorRun]
     public var updatedAt: Date?
 
     public init(
         status: BackupMonitorLoadStatus = .loading,
         connection: BackupMonitorConnection = .live,
-        runs: [BackupRun] = [],
+        runs: [BackupMonitorRun] = [],
         updatedAt: Date? = nil
     ) {
         self.status = status
@@ -251,7 +251,7 @@ public enum BackupMonitorStrings {
 
     /// The localized status label for a run status (`Success` / `Running` /
     /// `Queued` / `Failed`), the native localization of the web `statusLabel`.
-    public static func label(for status: BackupRunStatus) -> String {
+    public static func label(for status: BackupMonitorRunStatus) -> String {
         string(status.labelKey, status.labelFallback)
     }
 }

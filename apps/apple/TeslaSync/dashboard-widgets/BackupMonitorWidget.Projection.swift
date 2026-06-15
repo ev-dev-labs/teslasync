@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0009 · BackupMonitorWidget (Apple)
 //
 //  The pure, SwiftUI-free adapter layer: the cached DTO the state holder pushes
-//  (`BackupRun`) and the projection that turns the database-backup history into
+//  (`BackupMonitorRun`) and the projection that turns the database-backup history into
 //  the view's render model — the compact "last backup" badge, the 2×2 stat grid,
 //  and the wide "Recent Runs" rows. This is a 1:1 port of the web source's
 //  `statusVariant` / `statusLabel` / `statusDotColor` maps, the `sortedRuns` +
@@ -22,7 +22,7 @@ import Foundation
 /// for forward-compatibility (the runtime value is a free `string`). The `tone`
 /// mirrors the web `statusVariant`/`statusDotColor` (success/warning/danger) and
 /// the label resolves through the i18n facade exactly like `statusLabel`.
-public enum BackupRunStatus: Sendable, Equatable {
+public enum BackupMonitorRunStatus: Sendable, Equatable {
     case completed
     case failed
     case running
@@ -101,15 +101,15 @@ public enum BackupTone: Sendable, Equatable {
     case danger
 }
 
-// MARK: - Cached DTO input (port of the web `BackupRun`)
+// MARK: - Cached DTO input (port of the web `BackupMonitorRun`)
 
 /// One database-backup record — the native projection of a single web
-/// `BackupRun` row (`@/types/admin`). `completedAt`/`createdAt` are optional
+/// `BackupMonitorRun` row (`@/types/admin`). `completedAt`/`createdAt` are optional
 /// `Date`s; the projection resolves the display timestamp with the same
 /// `completedAt ?? createdAt` precedence the web source uses.
-public struct BackupRun: Sendable, Equatable, Identifiable {
+public struct BackupMonitorRun: Sendable, Equatable, Identifiable {
     public let id: String
-    public var status: BackupRunStatus
+    public var status: BackupMonitorRunStatus
     public var backupType: String?
     public var fileSize: Int
     public var durationMs: Int?
@@ -118,7 +118,7 @@ public struct BackupRun: Sendable, Equatable, Identifiable {
 
     public init(
         id: String,
-        status: BackupRunStatus = .failed,
+        status: BackupMonitorRunStatus = .failed,
         backupType: String? = nil,
         fileSize: Int = 0,
         durationMs: Int? = nil,
@@ -191,7 +191,7 @@ public struct BackupRunRow: Sendable, Equatable, Identifiable {
 
 // MARK: - Projection (cached DTOs → render model)
 
-/// Pure transforms from the cached `BackupRun` history to the render model. The
+/// Pure transforms from the cached `BackupMonitorRun` history to the render model. The
 /// state holder calls these; the view never recomputes them.
 public enum BackupMonitorProjection {
     /// The em-dash sentinel the web shows for a missing value (`?? '—'`).
@@ -203,26 +203,26 @@ public enum BackupMonitorProjection {
     /// Resolves the row timestamp used for SORTING, with the web precedence
     /// `completedAt ?? createdAt ?? epoch(0)` (the source feeds the coalesced
     /// value to `new Date(...)`, which yields the epoch for a missing date).
-    static func sortTimestamp(for run: BackupRun) -> Date {
+    static func sortTimestamp(for run: BackupMonitorRun) -> Date {
         run.completedAt ?? run.createdAt ?? Date(timeIntervalSince1970: 0)
     }
 
     /// Resolves the timestamp used for DISPLAY, with the web precedence
     /// `completedAt ?? createdAt` and NO epoch fallback — a missing date renders
     /// as the dash sentinel (web `?? null → '—'`).
-    static func displayTimestamp(for run: BackupRun) -> Date? {
+    static func displayTimestamp(for run: BackupMonitorRun) -> Date? {
         run.completedAt ?? run.createdAt
     }
 
     /// Orders the runs newest-first by resolved timestamp (web `sortedRuns`).
-    public static func ordered(_ runs: [BackupRun]) -> [BackupRun] {
+    public static func ordered(_ runs: [BackupMonitorRun]) -> [BackupMonitorRun] {
         runs.sorted { sortTimestamp(for: $0) > sortTimestamp(for: $1) }
     }
 
     /// The compact / grid summary for the latest backup (web `sortedRuns[0]`), or
     /// `nil` when the history is empty.
     public static func latest(
-        from runs: [BackupRun],
+        from runs: [BackupMonitorRun],
         now: Date = Date()
     ) -> BackupLatest? {
         guard let first = ordered(runs).first else { return nil }
@@ -239,7 +239,7 @@ public enum BackupMonitorProjection {
     /// The wide-layout "Recent Runs" rows: the newest `maxRecentRows` backups,
     /// each projected to a row (web `sortedRuns.slice(0, 5).map(...)`).
     public static func recentRows(
-        from runs: [BackupRun],
+        from runs: [BackupMonitorRun],
         limit: Int = maxRecentRows,
         locale: Locale = .autoupdatingCurrent
     ) -> [BackupRunRow] {
@@ -256,14 +256,14 @@ public enum BackupMonitorProjection {
 
     /// The row's absolute timestamp (web `fmtShortTime(completedAt ?? createdAt)`),
     /// or the dash sentinel when the run carries no date.
-    static func timeText(for run: BackupRun, locale: Locale) -> String {
+    static func timeText(for run: BackupMonitorRun, locale: Locale) -> String {
         guard let date = displayTimestamp(for: run) else { return dash }
         return BackupAbsoluteFormatter.string(for: date, locale: locale)
     }
 
     /// The row's "size · {duration}ms" detail line — the web subtitle
     /// (`fmtBytes(fileSize) + (durationMs != null ? ` · ${durationMs}ms` : '')`).
-    static func detailText(for run: BackupRun) -> String {
+    static func detailText(for run: BackupMonitorRun) -> String {
         let size = BackupByteFormatter.string(run.fileSize)
         guard let durationMs = run.durationMs else { return size }
         return "\(size) · \(durationMs)ms"

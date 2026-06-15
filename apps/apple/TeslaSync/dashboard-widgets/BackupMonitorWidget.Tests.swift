@@ -3,7 +3,7 @@
 //  TeslaSync — P4 dashboard widget · 0009 · BackupMonitorWidget (Apple)
 //
 //  Adapter (cached → projection) coverage for the BackupMonitorWidget surface:
-//    • Status mapping — `BackupRunStatus` raw parsing, the web
+//    • Status mapping — `BackupMonitorRunStatus` raw parsing, the web
 //      `statusVariant`/`statusLabel` tone+label, and the `=== 'failed'` tile flag.
 //    • Byte formatter — verbatim parity with the web `fmtBytes`.
 //    • Relative-time formatter — parity with the web `fmtRelativeTime`.
@@ -34,20 +34,20 @@ private func daysBefore(_ days: Int) -> Date {
 
 @MainActor final class BackupRunStatusTests: XCTestCase {
     func testRawParsingRoundTrips() {
-        XCTAssertEqual(BackupRunStatus(raw: "completed"), .completed)
-        XCTAssertEqual(BackupRunStatus(raw: "failed"), .failed)
-        XCTAssertEqual(BackupRunStatus(raw: "running"), .running)
-        XCTAssertEqual(BackupRunStatus(raw: "queued"), .queued)
-        XCTAssertEqual(BackupRunStatus(raw: "weird"), .other("weird"))
-        XCTAssertEqual(BackupRunStatus(raw: "weird").rawValue, "weird")
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "completed"), .completed)
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "failed"), .failed)
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "running"), .running)
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "queued"), .queued)
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "weird"), .other("weird"))
+        XCTAssertEqual(BackupMonitorRunStatus(raw: "weird").rawValue, "weird")
     }
 
     func testToneMatchesWebStatusVariant() {
-        XCTAssertEqual(BackupRunStatus.completed.tone, .success)
-        XCTAssertEqual(BackupRunStatus.running.tone, .warning)
-        XCTAssertEqual(BackupRunStatus.queued.tone, .warning)
-        XCTAssertEqual(BackupRunStatus.failed.tone, .danger)
-        XCTAssertEqual(BackupRunStatus.other("x").tone, .danger)
+        XCTAssertEqual(BackupMonitorRunStatus.completed.tone, .success)
+        XCTAssertEqual(BackupMonitorRunStatus.running.tone, .warning)
+        XCTAssertEqual(BackupMonitorRunStatus.queued.tone, .warning)
+        XCTAssertEqual(BackupMonitorRunStatus.failed.tone, .danger)
+        XCTAssertEqual(BackupMonitorRunStatus.other("x").tone, .danger)
     }
 
     func testLabelMatchesWebStatusLabel() {
@@ -60,9 +60,9 @@ private func daysBefore(_ days: Int) -> Date {
     }
 
     func testIsFailedOnlyForExactFailed() {
-        XCTAssertTrue(BackupRunStatus.failed.isFailed)
-        XCTAssertFalse(BackupRunStatus.completed.isFailed)
-        XCTAssertFalse(BackupRunStatus.other("failed-ish").isFailed)
+        XCTAssertTrue(BackupMonitorRunStatus.failed.isFailed)
+        XCTAssertFalse(BackupMonitorRunStatus.completed.isFailed)
+        XCTAssertFalse(BackupMonitorRunStatus.other("failed-ish").isFailed)
     }
 }
 
@@ -129,20 +129,20 @@ private func daysBefore(_ days: Int) -> Date {
 // MARK: - Projection (parity with sortedRuns / latestRun / slice(0,5))
 
 @MainActor final class BackupMonitorProjectionTests: XCTestCase {
-    private let runs: [BackupRun] = [
-        BackupRun(
+    private let runs: [BackupMonitorRun] = [
+        BackupMonitorRun(
             id: "recent", status: .completed, backupType: "full", fileSize: 1_288_490_188,
             durationMs: 4200, createdAt: minutesBefore(45), completedAt: minutesBefore(42)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "mid", status: .completed, backupType: "incremental", fileSize: 471_859_200,
             durationMs: 1100, createdAt: minutesBefore(199), completedAt: minutesBefore(199)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "failed", status: .failed, backupType: "full", fileSize: 0,
             durationMs: 380, createdAt: daysBefore(1), completedAt: daysBefore(1)
         ),
-        BackupRun(
+        BackupMonitorRun(
             id: "running", status: .running, backupType: "full", fileSize: 838_860_800,
             durationMs: nil, createdAt: daysBefore(2), completedAt: nil
         )
@@ -165,7 +165,7 @@ private func daysBefore(_ days: Int) -> Date {
 
     func testLatestFlagsFailedBackgroundAndDangerTone() {
         let failedFirst = [
-            BackupRun(id: "f", status: .failed, backupType: "full", fileSize: 0, completedAt: minutesBefore(1))
+            BackupMonitorRun(id: "f", status: .failed, backupType: "full", fileSize: 0, completedAt: minutesBefore(1))
         ]
         let latest = BackupMonitorProjection.latest(from: failedFirst, now: fixedNow)
         XCTAssertEqual(latest?.statusLabel, "Failed")
@@ -174,7 +174,7 @@ private func daysBefore(_ days: Int) -> Date {
     }
 
     func testLatestMissingTypeAndDateUseDashes() {
-        let bare = [BackupRun(id: "bare", status: .queued, backupType: nil, fileSize: 0)]
+        let bare = [BackupMonitorRun(id: "bare", status: .queued, backupType: nil, fileSize: 0)]
         let latest = BackupMonitorProjection.latest(from: bare, now: fixedNow)
         XCTAssertEqual(latest?.typeText, "—")
         XCTAssertEqual(latest?.lastBackupRelative, "—")
@@ -189,7 +189,7 @@ private func daysBefore(_ days: Int) -> Date {
 
     func testRecentRowsSliceToFiveNewestFirst() {
         let many = (1 ... 8).map {
-            BackupRun(id: "\($0)", status: .completed, fileSize: 1024, createdAt: minutesBefore($0))
+            BackupMonitorRun(id: "\($0)", status: .completed, fileSize: 1024, createdAt: minutesBefore($0))
         }
         let rows = BackupMonitorProjection.recentRows(from: many, locale: enUS)
         XCTAssertEqual(rows.count, BackupMonitorProjection.maxRecentRows)
@@ -213,7 +213,7 @@ private func daysBefore(_ days: Int) -> Date {
     }
 
     func testRecentRowTimeTextDashesWhenNoDate() {
-        let dateless = [BackupRun(id: "x", status: .completed, fileSize: 1024)]
+        let dateless = [BackupMonitorRun(id: "x", status: .completed, fileSize: 1024)]
         let rows = BackupMonitorProjection.recentRows(from: dateless, locale: enUS)
         XCTAssertEqual(rows.first?.timeText, "—")
     }
