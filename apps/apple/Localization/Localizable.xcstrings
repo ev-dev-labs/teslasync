@@ -1,6 +1,171 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "powershare.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powershare"
+          }
+        }
+      }
+    },
+    "powershare.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions."
+          }
+        }
+      }
+    },
+    "powershare.statusSection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powershare Status"
+          }
+        }
+      }
+    },
+    "powershare.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "powershare.typeSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powershare destination"
+          }
+        }
+      }
+    },
+    "powershare.outputPower" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Output Power"
+          }
+        }
+      }
+    },
+    "powershare.outputPowerSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instantaneous power draw"
+          }
+        }
+      }
+    },
+    "powershare.hoursLeft" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hours Remaining"
+          }
+        }
+      }
+    },
+    "powershare.hoursLeftSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated runtime at current output"
+          }
+        }
+      }
+    },
+    "powershare.noData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Powershare data received yet. Values appear once your vehicle reports Powershare telemetry."
+          }
+        }
+      }
+    },
+    "powershare.stopReasonSection" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop Reason"
+          }
+        }
+      }
+    },
+    "powershare.stopReasonHelp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last recorded reason Powershare was halted."
+          }
+        }
+      }
+    },
+    "powershare.noStopReason" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported."
+          }
+        }
+      }
+    },
+    "powershare.selectVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select vehicle"
+          }
+        }
+      }
+    },
+    "route.powershare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powershare"
+          }
+        }
+      }
+    },
     "action.refresh" : {
       "extractionState" : "manual",
       "localizations" : {

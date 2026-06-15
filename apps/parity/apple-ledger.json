@@ -363,6 +363,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-SleepEfficiencyPage.log"
     },
     {
+      "unitId": "page:charging/Powershare",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:charging/Powershare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-PowersharePage.log"
+    },
+    {
+      "unitId": "page:charging/Powershare",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 21,
+      "requiredCount": 21,
+      "promptId": "p4-apple/P7/page:charging/Powershare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-PowersharePage.log"
+    },
+    {
       "unitId": "page:admin/ApiLogs",
       "platform": "apple-macos",
       "status": "done",
