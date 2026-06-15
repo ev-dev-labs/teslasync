@@ -27,6 +27,7 @@ import io.teslasync.android.maps.temperatureimpact.TemperatureImpactPageHost
 import io.teslasync.android.notifications.archived.ArchivedPageHost
 import io.teslasync.android.notifications.channels.ChannelsPageHost
 import io.teslasync.android.notifications.webhooks.WebhooksPageHost
+import io.teslasync.android.poweruser.sqlplayground.SqlPlaygroundPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -112,6 +113,8 @@ class TeslaSyncApplication : Application() {
         ChannelsPageHost.register()
         // Register the native custom-webhooks screen for the /notifications/webhooks route (P3/A7). Idempotent.
         WebhooksPageHost.register()
+        // Register the native SQL-playground power-user screen for the /power/sql route (P3/A7). Idempotent.
+        SqlPlaygroundPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

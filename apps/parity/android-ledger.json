@@ -241,5 +241,14 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/notifications/WebhooksPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-WebhooksPage.log"
+  },
+  {
+    "unitId": "page:power-user/SqlPlayground",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 14,
+    "requiredCount": 14,
+    "promptId": "p3-android/pages/power-user/SqlPlaygroundPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-power-user-SqlPlaygroundPage.log"
   }
 ]
