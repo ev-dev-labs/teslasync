@@ -225,6 +225,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-IncidentTimelinePage.log"
   },
   {
+    "unitId": "page:system/Search",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p2-windows/W7/windows-page-system-SearchPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-system-SearchPage.log"
+  },
+  {
     "unitId": "page:system/StatusApiDocs",
     "platform": "windows",
     "status": "done",

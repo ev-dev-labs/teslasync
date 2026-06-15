@@ -1,0 +1,202 @@
+p2-windows — W7 — page:system/Search — native WinUI 3 / Fluent parity port — artifact log
+
+Artifact unit : page:system/Search  (web /search, nav name "Search")
+Web source    : web/src/features/system/pages/SearchPage.tsx
+Output        : apps/windows/TeslaSync.App/feature-views/SearchPage/  (repo-canonical feature-views layout +
+                pure-C# code-behind view, matching every sibling W7 page e.g. LocationsPage / ExplorePage; the
+                prompt's idealized "TeslaSync/Features/System/SearchPage.xaml + SearchPageViewModel.cs" maps to this
+                established pure-C# page convention so the page compiles into TeslaSync.sln alongside the other pages).
+  SearchPage.Model.cs      — SearchHitType (9 web ALL_TYPES, in display order) + SearchTypes (wire ids + Segoe glyphs),
+                             SearchHit, SearchSnapshot (+ ParseResponse for the {hits, query} envelope, unknown types
+                             dropped), ISearchFeed + EmptySearchFeed, SearchState (6 branches), SearchFacetDisplay /
+                             SearchRowDisplay / SearchGroupDisplay / SearchDisplay, SearchModel, SearchStrings (the 22
+                             keys' eager Resolve + Section map), SearchProjection (the render projection — state matrix,
+                             canonical-order grouping, relative-time formatting), SearchRegistration, SearchDiagnostics,
+                             SearchJson tolerant readers.
+  SearchPage.Source.cs     — SearchClientFeed (generated client get_api_v1_search; q + limit + optional joined types,
+                             snake_case; generated OpenAPI contract client / ADR-004; versions the path exactly once).
+  SearchPage.ViewModel.cs  — SearchPageViewModel : INotifyPropertyChanged + IDisposable (P1/S8 state holder):
+                             LoadAsync gated on trimmed.length >= 2 (web `enabled`), SetQueryAsync / ToggleTypeAsync /
+                             ClearFiltersAsync (each supersedes the in-flight search), projects via SearchProjection,
+                             surfaces IsFetching / IsError / UpdatedAt for the freshness chip.
+  SearchPage.cs            — WinUI 3 UserControl view: header (title + data-freshness chip), GlassPanel1 (search field +
+                             facet ToggleButton rail + clear), GlassPanel2-6 (the five mutually-exclusive state surfaces),
+                             GlassPanel7 (repeated grouped-result panels of activatable rows). Row / facet activations
+                             raise NavigationRequested → shell router.
+Registration  : apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs — PageFactory.Register("Search", …) wired to
+                NavigateTo(route); RouteTable already maps Hidden("Search","search",RouteGroup.SystemOps,"Search").
+Tests         : apps/windows/TeslaSync.App.Tests/FeatureViews/SearchPageTests.cs (24 headless tests) + the three
+                UI-free sources (Model / Source / ViewModel) linked into TeslaSync.App.Tests.csproj.
+ADR refs      : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015.
+
+Notes
+  - The 22 required i18n keys already exist (verbatim, web-matching values) in apps/windows/Strings/en/Resources.resw
+    (translation.search.*); the page resolves each through the ShellLocalizer → Localization.Get → Resources.resw
+    bridge using the web key names. No catalog change was required for this page.
+  - The seven web <GlassPanel> JSX occurrences map 1:1 onto the seven native panels (search/filter, the five
+    mutually-exclusive state surfaces, the repeated result-group panel) — see the === PARITY === binding evidence.
+  - Web <AINLSearch /> (rendered above the search panel) is a SEPARATE shared-component parity unit that returns null
+    on the default install (ai_mode 'off' / nl-search feature toggle off); it is not one of this page's 32 parity
+    items (the manifest scopes this page to the 7 GlassPanels) and is out of scope here.
+  - Search is a request/response source, not a live SSE stream, so ADR-013's ">2 min staleness" indicator is N/A; the
+    additive TsDataFreshness chip surfaces last-search freshness / in-flight / error state for header consistency.
+  - SI units (P1/S5): the search wire shape carries no unit-bearing scalars (type/id/title/subtitle/url/score/when);
+    the only display-boundary formatting is the per-row relative timestamp via DateTimeFormatting.Format(Relative).
+
+=== GATE ===
+
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/SearchPage -Language csharp
+  PLACEHOLDER_ALLOWED=1   (the web i18n key literal "search.placeholder" — ported verbatim, // parity:allow)
+  PLACEHOLDER_COUNT=0
+$ ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App.Tests/FeatureViews/SearchPageTests.cs -Language csharp
+  PLACEHOLDER_ALLOWED=1   (the web i18n key literal "search.placeholder" in the required-keys array — // parity:allow)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ dotnet build apps/windows/TeslaSync.sln -c Release
+  Generated -> TeslaSync.Windows.Generated.dll
+  TeslaSync.App.Core -> TeslaSync.App.Core.dll        (17 pre-existing CA warnings in Core only; Core has no TreatWarningsAsErrors)
+  TeslaSync.App.Platform -> TeslaSync.App.Platform.dll
+  TeslaSync.App.UITests -> TeslaSync.App.UITests.dll
+  TeslaSync.App.Tests -> TeslaSync.App.Tests.dll
+  TeslaSync.App -> TeslaSync.App.dll                  (TreatWarningsAsErrors=true — clean)
+  Build succeeded.  17 Warning(s) [all pre-existing TeslaSync.App.Core CA17xx/CA10xx]  0 Error(s)
+BUILD_EXIT=0
+
+  Root-cause fix recorded for honesty: the first solution build failed with 2 errors — CA1859 in SearchPage.Model.cs
+  (TeslaSync.App's TreatWarningsAsErrors promoted the analyzer hint), because the private BuildFacets/BuildGroups
+  helpers declared IReadOnlyList<T> returns. Fixed by declaring the concrete List<T> return type (they already
+  build and return a List); the SearchDisplay record still exposes them as IReadOnlyList<T>. Re-verified: 0 errors.
+
+$ dotnet format apps/windows/TeslaSync.sln --verify-no-changes   (new + edited files; LF-normalized per apps/.editorconfig)
+  (clean)
+LINT_EXIT=0
+
+  Root-cause fix recorded for honesty: the first format verify failed with ENDOFLINE across the new files — the create
+  step wrote CRLF, but apps/.editorconfig mandates LF. Fixed by stripping the CR bytes (encoding preserved). The two
+  edited files (ShellWindow.xaml.cs, TeslaSync.App.Tests.csproj) were already LF (0 CR). Re-verified: clean.
+
+$ dotnet test apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj -c Release
+  Passed!  - Failed: 0, Passed: 31152, Skipped: 0, Total: 31152
+  (includes the 24 SearchPageTests: 22-key i18n coverage x2 states, the six-branch state matrix, canonical-order
+   grouping, relative-time row formatting, the facet rail active/clear states, the tolerant {hits,query} parser
+   incl. unknown-type drop, the generated-client feed request shaping (q/limit/joined-types + omit-when-empty +
+   ApiException propagation), and the view-model gating (no-fetch < min length, fetch at min length, facet-toggle
+   refetch, clear-filters refetch) + the PII-safe view.opened diagnostics.)
+TEST_EXIT=0
+
+# NOTE: apps/windows/TeslaSync.App.UITests is the WinAppDriver/Appium E2E suite; it is environment-gated
+# (no WinAppDriver listening on 127.0.0.1:4723). This repo-wide E2E-runner gap is pre-existing and NOT introduced by
+# this change; the per-page completion gate is the headless TeslaSync.App.Tests suite above, exactly as every sibling
+# W7 page recorded. The native WinUI view compiles in the Release solution build (BUILD_EXIT=0); its per-state branch
+# selection is driven entirely by the asserted SearchDisplay projection.
+
+=== PARITY ===
+
+PARITY_REQUIRED=32
+
+[x] panel  - GlassPanel1
+      SearchPage.cs → BuildSearchPanel() → _searchPanel (TsGlassPanel) hosting _searchInput (TsInput) + the facet
+      ToggleButton rail (_facetRail, RebuildFacets) + _clearButton. Web sticky <GlassPanel> search + facet filter.
+[x] panel  - GlassPanel2
+      SearchPage.cs → _tooShortPanel (TsGlassPanel) hosting _tooShortState (TsEmptyState). Web tooShort <GlassPanel>
+      EmptyState ("Type at least 2 characters"); shown when SearchDisplay.ShowTooShort.
+[x] panel  - GlassPanel3
+      SearchPage.cs → _emptyPanel (TsGlassPanel) hosting _emptyState (TsEmptyState). Web empty <GlassPanel> EmptyState
+      ("Start typing to search"); shown when SearchDisplay.ShowEmpty.
+[x] panel  - GlassPanel4
+      SearchPage.cs → _errorPanel (TsGlassPanel) hosting _errorState (TsEmptyState). Web error <GlassPanel> EmptyState
+      ("Search failed"); shown when SearchDisplay.ShowError.
+[x] panel  - GlassPanel5
+      SearchPage.cs → _loadingPanel (TsGlassPanel) → BuildLoadingBody() (TsSkeleton blocks). Web loading <GlassPanel>
+      Skeleton; shown when SearchDisplay.ShowLoading.
+[x] panel  - GlassPanel6
+      SearchPage.cs → _noResultsPanel (TsGlassPanel) hosting _noResultsState (TsEmptyState). Web noResults <GlassPanel>
+      EmptyState; shown when SearchDisplay.ShowNoResults (message interpolates the query).
+[x] panel  - GlassPanel7
+      SearchPage.cs → _groupsHost → RebuildGroups → BuildGroupPanel() (one TsGlassPanel per result group, repeated).
+      Web grouped <GlassPanel> result sections (icon + section label + count chip + activatable rows).
+[x] state  - loading data state
+      SearchPage.Model.cs → SearchState.Loading; SearchProjection.ResolveState returns Loading when fetching with no
+      prior groups (web `isFetching && groupedHits.length===0`); SearchDisplay.ShowLoading; view → _loadingPanel.
+[x] state  - empty data state
+      SearchPage.Model.cs → SearchState.Empty; SearchProjection.ResolveState returns Empty when the trimmed query is
+      empty (web `trimmed.length===0`); SearchDisplay.ShowEmpty; view → _emptyPanel. (The TooShort / NoResults / Error
+      branches render the same EmptyState surface for their conditions.)
+[x] state  - success data state
+      SearchPage.Model.cs → SearchState.Results; SearchProjection groups the hits (known types, display order, empty
+      groups dropped — web `groupedHits`); SearchDisplay.ShowResults + Groups; view → _groupsHost group panels.
+[x] string - search.empty.message
+      SearchStrings.Resolve → EmptyMessage = localizer.GetString("search.empty.message", …) → Display.EmptyMessage → _emptyState.Message.
+[x] string - search.empty.title
+      SearchStrings.Resolve → EmptyTitle = localizer.GetString("search.empty.title", "Start typing to search") → Display.EmptyTitle → _emptyState.Title.
+[x] string - search.error.message
+      SearchStrings.Resolve → ErrorMessage = localizer.GetString("search.error.message", …) → Display.ErrorMessage → _errorState.Message.
+[x] string - search.error.title
+      SearchStrings.Resolve → ErrorTitle = localizer.GetString("search.error.title", "Search failed") → Display.ErrorTitle → _errorState.Title.
+[x] string - search.filters.clear
+      SearchStrings.Resolve → FiltersClear = localizer.GetString("search.filters.clear", "Clear filters") → Display.ClearFiltersLabel → _clearButton.Text.
+[x] string - search.input.label
+      SearchStrings.Resolve → InputLabel = localizer.GetString("search.input.label", "Search query") → Display.SearchLabel → _searchInput AutomationProperties name.
+[x] string - search.noResults.message
+      SearchStrings.Resolve → NoResultsMessage = localizer.GetString("search.noResults.message", …{0}…); projected with the query interpolated → Display.NoResultsMessage → _noResultsState.Message.
+[x] string - search.noResults.title
+      SearchStrings.Resolve → NoResultsTitle = localizer.GetString("search.noResults.title", "No results") → Display.NoResultsTitle → _noResultsState.Title.
+[x] string - search.placeholder
+      SearchStrings.Resolve → Prompt = localizer.GetString("search.placeholder", "Search vehicles, drives, charging…") → Display.SearchHint → _searchInput.Hint (key line carries // parity:allow).
+[x] string - search.section.alert
+      SearchStrings.Resolve → SectionAlert = localizer.GetString("search.section.alert", "Alerts"); SearchStrings.Section(Alert) → facet + group label for the alert type.
+[x] string - search.section.automation
+      SearchStrings.Resolve → SectionAutomation = localizer.GetString("search.section.automation", "Automations"); Section(Automation) → facet + group label.
+[x] string - search.section.charging
+      SearchStrings.Resolve → SectionCharging = localizer.GetString("search.section.charging", "Charging"); Section(Charging) → facet + group label.
+[x] string - search.section.drive
+      SearchStrings.Resolve → SectionDrive = localizer.GetString("search.section.drive", "Drives"); Section(Drive) → facet + group label.
+[x] string - search.section.geofence
+      SearchStrings.Resolve → SectionGeofence = localizer.GetString("search.section.geofence", "Geofences"); Section(Geofence) → facet + group label.
+[x] string - search.section.location
+      SearchStrings.Resolve → SectionLocation = localizer.GetString("search.section.location", "Locations"); Section(Location) → facet + group label.
+[x] string - search.section.notification
+      SearchStrings.Resolve → SectionNotification = localizer.GetString("search.section.notification", "Notifications"); Section(Notification) → facet + group label.
+[x] string - search.section.results
+      SearchStrings.Resolve → SectionResults = localizer.GetString("search.section.results", "Results"); the SearchStrings.Section default (web searchSectionLabel default).
+[x] string - search.section.trip
+      SearchStrings.Resolve → SectionTrip = localizer.GetString("search.section.trip", "Trips"); Section(Trip) → facet + group label.
+[x] string - search.section.vehicle
+      SearchStrings.Resolve → SectionVehicle = localizer.GetString("search.section.vehicle", "Vehicles"); Section(Vehicle) → facet + group label.
+[x] string - search.title
+      SearchStrings.Resolve → Title = localizer.GetString("search.title", "Search") → Display.Title/AutomationName → _title (also SearchRegistration.Title).
+[x] string - search.tooShort.message
+      SearchStrings.Resolve → TooShortMessage = localizer.GetString("search.tooShort.message", …) → Display.TooShortMessage → _tooShortState.Message.
+[x] string - search.tooShort.title
+      SearchStrings.Resolve → TooShortTitle = localizer.GetString("search.tooShort.title", "Type at least 2 characters") → Display.TooShortTitle → _tooShortState.Title.
+
+  Verification: SearchPageTests.Projection_resolves_every_required_string_key and
+  Projection_resolves_required_keys_even_in_the_empty_state assert all 22 keys flow through a RecordingLocalizer in a
+  single SearchProjection.Project pass (results + empty). The panel/state visibility flags are asserted by the
+  six-branch state-matrix tests and the canonical-order grouping test. All 24 green in the 31152-test run.
+
+PARITY_COVERED=32
+
+=== Acceptance Criteria ===
+
+[x] Every named panel implemented (GlassPanel1 search+facets, GlassPanel2 tooShort, GlassPanel3 empty-prompt,
+    GlassPanel4 error, GlassPanel5 loading-skeleton, GlassPanel6 no-results, GlassPanel7 grouped-results); every
+    anonymous web region reproduced (header, facet ToggleButton rail with clear affordance, per-group count chip,
+    per-row icon/title/subtitle/relative-time/chevron activatable rows, autofocus search field).
+[x] All 32 parity items render from the bound C# state holder (SearchPageViewModel → SearchDisplay).
+[x] loading + empty + success implemented for the single data source (useGlobalSearch → GET /search), plus the web's
+    additional tooShort / error / no-results surfaces; the search is gated exactly like the web query (no request below
+    the 2-character minimum), failures surface the friendly retriable error surface.
+[x] All visible strings sourced through the ILocalizer seam (Strings/*.resw bridge via ShellLocalizer); zero hardcoded
+    literals on the render path; web key names matched verbatim (22/22).
+[x] Dark mode + accessibility (AutomationProperties names on the page/input/facets/rows, ToggleButton toggle pattern for
+    facet pressed-state, decorative icons marked Raw, keyboard + pointer) honored; design tokens only (DisplayTokens —
+    no ad-hoc colors); Fluent-native (Mica/glass panels, ToggleButton chips — no web pixel-clone).
+[x] SI units honored at the display boundary (no unit-bearing scalars on the search wire; the per-row relative
+    timestamp is the only formatted value, via the shared DateTimeFormatting.Format(Relative)).
+[x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (32).
+[x] windows ledger row for page:system/Search set covered (32/32, status=done).
+
+EXIT=0
+STATUS=DONE

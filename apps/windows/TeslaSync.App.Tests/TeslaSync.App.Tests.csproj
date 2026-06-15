@@ -1025,6 +1025,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Model.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.Source.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" Link="FeatureViews\SchemaDriftPage\SchemaDriftPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SearchPage\SearchPage.Model.cs" Link="FeatureViews\SearchPage\SearchPage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SearchPage\SearchPage.Source.cs" Link="FeatureViews\SearchPage\SearchPage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\SearchPage\SearchPage.ViewModel.cs" Link="FeatureViews\SearchPage\SearchPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Model.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.Source.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DiskForecastPage\DiskForecastPage.ViewModel.cs" Link="FeatureViews\DiskForecastPage\DiskForecastPage.ViewModel.cs" />
