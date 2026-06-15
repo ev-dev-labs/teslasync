@@ -1,0 +1,45 @@
+/*
+  AiConfirmDialog.strings
+  TeslaSync — P4 modal / dialog · 0001 · ConfirmDialog (Apple)
+
+  The P1/S10 i18n catalog contribution for this surface. Every key the native `AiConfirmDialog`
+  resolves (table "AiConfirmDialog") lives here with its web `t(key, default)` English value. These
+  entries fold into the app `Localizable.xcstrings` master catalog at integration time; they are kept
+  in a per-surface table so each parallel surface prompt owns its own strings without editing the
+  shared catalog.
+
+  The first group is the copy the web source (web/src/components/ai/ConfirmDialog.tsx) resolves through
+  `t()`: the dialog title, the mutating / read-only intro paragraphs, the Tool / Arguments section
+  labels, and the Approve / Cancel button labels. The remainder backs the native chrome (header close,
+  the loading / empty / error envelopes, the P4 freshness / cached-data copy) and the VoiceOver-only
+  strings so the Swift sources hold no English literals. These keys are namespaced `ai.confirm.*`,
+  distinct from sibling 0012's `confirm.*` keys for the generic destructive-action dialog.
+*/
+
+/* --- Copy from the web source (parity) --- */
+"ai.confirm.title" = "Approve Helix action";
+"ai.confirm.intro.mutates" = "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.";
+"ai.confirm.intro.read" = "The assistant wants to run a tool. Review the inputs, then approve or cancel.";
+"ai.confirm.toolLabel" = "Tool";
+"ai.confirm.argsLabel" = "Arguments";
+"ai.confirm.run" = "Approve";
+"ai.confirm.cancel" = "Cancel";
+
+/* --- Native chrome: header close (accessibility) --- */
+"ai.confirm.close" = "Close";
+
+/* --- Native chrome: loading / empty / error + retry --- */
+"ai.confirm.loading" = "Preparing…";
+"ai.confirm.empty" = "Nothing to approve";
+"ai.confirm.emptyMessage" = "The assistant has no action awaiting your approval.";
+"ai.confirm.errorTitle" = "Couldn't load this action";
+"ai.confirm.retry" = "Retry";
+
+/* --- Native chrome: freshness chip (Live / Stale / Offline) --- */
+"ai.confirm.live" = "Live";
+"ai.confirm.stale" = "Stale";
+"ai.confirm.offline" = "Offline";
+
+/* --- Native chrome: connectivity banner (stale / offline) --- */
+"ai.confirm.staleBanner" = "Reconnecting — this request may be out of date";
+"ai.confirm.offlineBanner" = "Offline — this request is from your last sync";
