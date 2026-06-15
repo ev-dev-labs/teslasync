@@ -187,5 +187,14 @@
     "requiredCount": 47,
     "promptId": "p3-android/pages/driving/RegenEfficiencyPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-RegenEfficiencyPage.log"
+  },
+  {
+    "unitId": "page:driving/TripPlanner",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 41,
+    "requiredCount": 41,
+    "promptId": "p3-android/pages/driving/TripPlannerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-TripPlannerPage.log"
   }
 ]
