@@ -37,7 +37,7 @@ func convertLifetimeDistanceFromSI(_ value: Double, to unit: LifetimeDistanceUni
 
 /// Locale-aware number + currency formatting that mirrors the web `fmtNumber` / `fmtInt`
 /// (`Intl.NumberFormat`) and `useFormatting().formatCurrency` (`symbol + fmtNumber`).
-public enum LifetimeStatsFormat {
+public enum LifetimeStatsWidgetFormat {
     /// `safeNumber` from numberFormat.ts: non-finite inputs collapse to 0.
     static func safeNumber(_ value: Double) -> Double {
         value.isFinite ? value : 0
@@ -148,7 +148,7 @@ public enum LifetimeStatsProjector {
         let displayDistance = convertLifetimeDistanceFromSI(distanceMi, to: units.distance)
         let distanceSymbol = units.distance.symbol
 
-        let distanceValue = LifetimeStatsFormat.number(displayDistance, decimals: 0, localeIdentifier: locale)
+        let distanceValue = LifetimeStatsWidgetFormat.number(displayDistance, decimals: 0, localeIdentifier: locale)
 
         let coreStats = makeCoreStats(
             stats: stats,
@@ -167,7 +167,7 @@ public enum LifetimeStatsProjector {
                 id: "total-cost",
                 labelKey: "widget.lifetimeStats.totalCost",
                 labelFallback: "Total Cost",
-                value: LifetimeStatsFormat.currency(
+                value: LifetimeStatsWidgetFormat.currency(
                     stats.totalChargingCost,
                     symbol: units.currencySymbol,
                     precision: units.precision,
@@ -180,7 +180,7 @@ public enum LifetimeStatsProjector {
                 id: "ownership-days",
                 labelKey: "widget.lifetimeStats.ownershipDays",
                 labelFallback: "Ownership Days",
-                value: LifetimeStatsFormat.integer(stats.ownershipDays, localeIdentifier: locale),
+                value: LifetimeStatsWidgetFormat.integer(stats.ownershipDays, localeIdentifier: locale),
                 unit: nil,
                 systemImage: "calendar"
             ),
@@ -188,7 +188,7 @@ public enum LifetimeStatsProjector {
                 id: "avg-daily-distance",
                 labelKey: "widget.lifetimeStats.avgDailyDistance",
                 labelFallback: "Avg Daily Distance",
-                value: LifetimeStatsFormat.number(avgDailyDisplay, decimals: 1, localeIdentifier: locale),
+                value: LifetimeStatsWidgetFormat.number(avgDailyDisplay, decimals: 1, localeIdentifier: locale),
                 unit: distanceSymbol,
                 systemImage: "road.lanes"
             )
@@ -221,7 +221,7 @@ public enum LifetimeStatsProjector {
                 id: "total-drives",
                 labelKey: "widget.lifetimeStats.totalDrives",
                 labelFallback: "Total Drives",
-                value: LifetimeStatsFormat.integer(stats.totalDrives, localeIdentifier: locale),
+                value: LifetimeStatsWidgetFormat.integer(stats.totalDrives, localeIdentifier: locale),
                 unit: nil,
                 systemImage: "car.fill"
             ),
@@ -229,7 +229,7 @@ public enum LifetimeStatsProjector {
                 id: "total-energy",
                 labelKey: "widget.lifetimeStats.totalEnergy",
                 labelFallback: "Total Energy",
-                value: LifetimeStatsFormat.number(stats.totalEnergyKwh, decimals: 1, localeIdentifier: locale),
+                value: LifetimeStatsWidgetFormat.number(stats.totalEnergyKwh, decimals: 1, localeIdentifier: locale),
                 unit: "kWh",
                 systemImage: "bolt.fill"
             ),
@@ -237,7 +237,7 @@ public enum LifetimeStatsProjector {
                 id: "co2-saved",
                 labelKey: "widget.lifetimeStats.co2Saved",
                 labelFallback: "CO₂ Saved",
-                value: LifetimeStatsFormat.number(stats.co2OffsetKg, decimals: 0, localeIdentifier: locale),
+                value: LifetimeStatsWidgetFormat.number(stats.co2OffsetKg, decimals: 0, localeIdentifier: locale),
                 unit: "kg",
                 systemImage: "leaf.fill"
             )

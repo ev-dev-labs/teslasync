@@ -86,16 +86,16 @@ import XCTest
     }
 
     func testNumberFormattingRoundsHalfAwayFromZero() {
-        XCTAssertEqual(LifetimeStatsFormat.number(1000, decimals: 0), "1,000")
-        XCTAssertEqual(LifetimeStatsFormat.number(1234.5, decimals: 0), "1,235")
-        XCTAssertEqual(LifetimeStatsFormat.number(1234.4, decimals: 0), "1,234")
-        XCTAssertEqual(LifetimeStatsFormat.number(-5, decimals: 0), "-5")
-        XCTAssertEqual(LifetimeStatsFormat.integer(42), "42")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.number(1000, decimals: 0), "1,000")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.number(1234.5, decimals: 0), "1,235")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.number(1234.4, decimals: 0), "1,234")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.number(-5, decimals: 0), "-5")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.integer(42), "42")
     }
 
     func testNonFiniteInputsCollapseToZero() {
         XCTAssertEqual(convertLifetimeDistanceFromSI(.nan, to: .kilometers), 0)
-        XCTAssertEqual(LifetimeStatsFormat.number(.infinity, decimals: 1), "0.0")
+        XCTAssertEqual(LifetimeStatsWidgetFormat.number(.infinity, decimals: 1), "0.0")
     }
 
     func testDistanceConversionFactors() {
