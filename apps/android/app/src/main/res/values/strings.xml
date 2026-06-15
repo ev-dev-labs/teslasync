@@ -5083,11 +5083,16 @@
   <string name="translation_powerGrafana_aiDrafter_tablesLabel">Referenced tables</string>
   <string name="translation_powerGrafana_aiDrafter_title">Helix natural-language Grafana panel drafter</string>
   <string name="translation_powershare_hoursLeft">Hours Remaining</string>
+  <string name="translation_powershare_hoursLeftSub">Estimated runtime at current output</string>
+  <string name="translation_powershare_noData">No Powershare data received yet. Values appear once your vehicle reports Powershare telemetry.</string>
+  <string name="translation_powershare_noStopReason">No stop reason recorded. Powershare has not been halted, or the signal has not yet been reported.</string>
   <string name="translation_powershare_outputPower">Output Power</string>
   <string name="translation_powershare_outputPowerSub">Instantaneous power draw</string>
   <string name="translation_powershare_selectVehicle">Select vehicle</string>
   <string name="translation_powershare_statusSection">Powershare Status</string>
+  <string name="translation_powershare_stopReasonHelp">Last recorded reason Powershare was halted.</string>
   <string name="translation_powershare_stopReasonSection">Stop Reason</string>
+  <string name="translation_powershare_subtitle">Monitor your vehicle’s bidirectional power sharing — status, output, remaining runtime, and stop conditions.</string>
   <string name="translation_powershare_title">Powershare</string>
   <string name="translation_powershare_type">Type</string>
   <string name="translation_powershare_typeSub">Powershare destination</string>
