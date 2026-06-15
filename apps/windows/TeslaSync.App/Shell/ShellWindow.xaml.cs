@@ -1083,6 +1083,79 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("Chatbot", () =>
             new FeatureViews.SystemOps.ChatbotPage(
                 new FeatureViews.SystemOps.ChatbotClientFeed(_data.Api), _data.Localizer));
+
+        // ── Batch 3: telemetry/signals, admin, charging, exports. ───────────────────────────────────────
+        _viewModel.PageFactory.Register("CommandHistory", () =>
+            new FeatureViews.SystemOps.CommandHistoryPage(
+                new FeatureViews.SystemOps.CommandHistoryClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DataExport", () =>
+            new FeatureViews.SystemOps.DataExportPage(
+                new FeatureViews.SystemOps.DataExportClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Exports", () =>
+            new FeatureViews.Exports.ExportsPage(
+                new FeatureViews.Exports.ExportsClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("FeedbackQueue", () =>
+            new FeatureViews.Admin.FeedbackQueuePage(
+                new FeatureViews.Admin.FeedbackQueueClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("FleetAPI", () =>
+            new FeatureViews.Admin.FleetAPIPage(
+                new FeatureViews.Admin.FleetApiClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("FleetTelemetryCoverage", () =>
+            new FeatureViews.Admin.FleetTelemetryCoveragePage(
+                new FeatureViews.Admin.FleetTelemetryCoverageClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("GDPRExport", () =>
+            new FeatureViews.Admin.GDPRExportPage(
+                new FeatureViews.Admin.GDPRExportClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("IngestXRay", () =>
+            new FeatureViews.Admin.IngestXRayPage(
+                new FeatureViews.Admin.IngestXRayPageClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("RedisSignalViewer", () =>
+            new FeatureViews.Admin.RedisSignalViewerPage(
+                new FeatureViews.Admin.RedisSignalViewerClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SignalExplorer", () =>
+            new FeatureViews.Telemetry.SignalExplorerPage(
+                new FeatureViews.Telemetry.SignalExplorerClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SignalLogViewer", () =>
+            new FeatureViews.Telemetry.SignalLogViewerPage(
+                new FeatureViews.Telemetry.SignalLogViewerClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SignalsWorkspace", () =>
+            new FeatureViews.Telemetry.SignalsWorkspacePage(
+                new FeatureViews.Telemetry.SignalsWorkspaceClientFeed(_data.Api), _data.Localizer, _data.PrimaryVehicleId));
+
+        _viewModel.PageFactory.Register("StateMachineDebugger", () =>
+            new FeatureViews.Telemetry.StateMachineDebuggerPage(
+                new FeatureViews.Telemetry.StateMachineDebuggerClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SignalGapDetector", () =>
+            new FeatureViews.Telemetry.SignalGapDetectorPage(
+                new FeatureViews.Telemetry.SignalGapDetectorClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("MQTTInspector", () =>
+            new FeatureViews.Telemetry.MQTTInspectorPage(
+                new FeatureViews.Telemetry.MqttStatusClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("NavigationRoute", () =>
+            new FeatureViews.Maps.NavigationRoutePage(
+                new FeatureViews.Maps.NavigationRouteClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("TeslaChargingHistory", () =>
+            new FeatureViews.Charging.TeslaChargingHistoryPage(
+                new FeatureViews.Charging.TeslaChargingHistoryClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("TeslaChargingSessions", () =>
+            new FeatureViews.Charging.TeslaChargingSessionsPage(
+                new FeatureViews.Charging.TeslaChargingSessionsClientFeed(_data.Api), _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
