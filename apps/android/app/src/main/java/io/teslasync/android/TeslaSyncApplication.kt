@@ -9,6 +9,7 @@ import io.teslasync.android.admin.ingestxray.IngestXRayPageHost
 import io.teslasync.android.admin.region.TeslaRegionPageHost
 import io.teslasync.android.admin.schemadrift.SchemaDriftPageHost
 import io.teslasync.android.admin.slowqueries.SlowQueriesPageHost
+import io.teslasync.android.analytics.lifetimestats.LifetimeStatsPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -64,6 +65,8 @@ class TeslaSyncApplication : Application() {
         SlowQueriesPageHost.register()
         // Register the native Tesla Region & API admin screen for the /tesla-region route (P3/A7). Idempotent.
         TeslaRegionPageHost.register()
+        // Register the native lifetime-stats analytics screen for the /lifetime-stats route (P3/A7). Idempotent.
+        LifetimeStatsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
