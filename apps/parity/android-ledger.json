@@ -97,5 +97,14 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/automations/AutomationCard",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationCard.log"
+  },
+  {
+    "unitId": "page:automations/ConditionBuilder",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p3-android/pages/automations/ConditionBuilder",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-ConditionBuilder.log"
   }
 ]
