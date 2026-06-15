@@ -876,3 +876,4 @@ p3-android/pages/charging/ChargingCurvePage.prompt.md
 p3-android/pages/charging/PowersharePage.prompt.md
 p3-android/pages/charging/TeslaChargingSessionsMap.prompt.md
 p3-android/pages/dashboard/GlancePage.prompt.md
+p3-android/pages/driving/DrivesListPage.prompt.md
