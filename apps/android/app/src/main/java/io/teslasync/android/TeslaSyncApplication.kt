@@ -23,6 +23,7 @@ import io.teslasync.android.driving.driveslist.DrivesListPageHost
 import io.teslasync.android.driving.regenefficiency.RegenEfficiencyPageHost
 import io.teslasync.android.driving.tripplanner.TripPlannerPageHost
 import io.teslasync.android.maps.geofences.GeofencesPageHost
+import io.teslasync.android.maps.temperatureimpact.TemperatureImpactPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -100,6 +101,8 @@ class TeslaSyncApplication : Application() {
         TripPlannerPageHost.register()
         // Register the native geofences map screen for the /geofences route (P3/A7). Idempotent.
         GeofencesPageHost.register()
+        // Register the native temperature-impact map screen for the /temperature-impact route (P3/A7). Idempotent.
+        TemperatureImpactPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
