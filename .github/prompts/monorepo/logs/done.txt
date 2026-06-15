@@ -888,3 +888,4 @@ p3-android/pages/power-user/SqlPlaygroundPage.prompt.md
 p3-android/pages/settings/PrivacyPage.prompt.md
 p3-android/pages/sharing/SharedDrivePage.prompt.md
 p3-android/pages/system/CommandsPage.prompt.md
+p3-android/pages/system/DiagnosticPage.prompt.md
