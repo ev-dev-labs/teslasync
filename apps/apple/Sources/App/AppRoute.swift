@@ -29,7 +29,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
-    case gdprExport, rbacMatrix, users
+    case gdprExport, rbacMatrix, users, dlqInspector
     case liveSignals, schemaDrift, slowQueries, powerUser, system
     case settings, onboarding, teslaOrders, explore, search, sharing, watch
 
@@ -54,6 +54,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .fleetAPI: "fleet-api"
         case .fleetTelemetryCoverage: "fleet-telemetry-coverage"
         case .gdprExport: "gdpr-exports"
+        case .dlqInspector: "dlq"
         case .rbacMatrix: "rbac-matrix"
         case .liveSignals: "live-signals"
         case .schemaDrift: "schema-drift"
@@ -99,6 +100,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .apiLogs: "doc.text.magnifyingglass"
         case .auditLog: "list.bullet.rectangle.portrait"
         case .featureFlags: "flag.fill"
+        case .dlqInspector: "exclamationmark.octagon.fill"
         case .fleetAPI: "antenna.radiowaves.left.and.right"
         case .fleetTelemetryCoverage: "dot.radiowaves.up.forward"
         case .gdprExport: "tray.and.arrow.down.fill"
@@ -128,7 +130,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .tco: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
-        case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .fleetAPI,
+        case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .liveSignals, .schemaDrift, .slowQueries,
              .powerUser, .system: .system
         case .settings, .onboarding, .teslaOrders: .account
