@@ -26,7 +26,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
-    case fleetCompare, batteryCells, batteryDegradation, sleepEfficiency, tco
+    case fleetCompare, lifetimeStats, batteryCells, batteryDegradation, sleepEfficiency, tco
     case vehicleSystems, automations, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools
@@ -42,6 +42,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .vehicleSystems: "vehicle-systems"
         case .fleetCompare: "vehicle-comparison"
+        case .lifetimeStats: "lifetime-stats"
         case .batteryCells: "battery-cells"
         case .batteryDegradation: "battery-degradation"
         case .sleepEfficiency: "sleep-efficiency"
@@ -91,6 +92,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics: "chart.bar.fill"
         case .tco: "dollarsign.circle.fill"
         case .fleetCompare: "arrow.left.arrow.right.circle.fill"
+        case .lifetimeStats: "trophy.fill"
         case .maps: "mappin.and.ellipse"
         case .vehicleSystems: "gearshape.2.fill"
         case .automations: "wand.and.stars"
@@ -134,7 +136,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energy: .energy
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
-        case .analytics, .telemetry, .fleetCompare, .tco: .insights
+        case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats: .insights
         case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .schemaDrift,

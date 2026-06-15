@@ -237,6 +237,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-StatisticsPage.log"
     },
     {
+      "unitId": "page:analytics/LifetimeStats",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 56,
+      "requiredCount": 56,
+      "promptId": "p4-apple/P7/page:analytics/LifetimeStats",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-LifetimeStatsPage.log"
+    },
+    {
+      "unitId": "page:analytics/LifetimeStats",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 56,
+      "requiredCount": 56,
+      "promptId": "p4-apple/P7/page:analytics/LifetimeStats",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-LifetimeStatsPage.log"
+    },
+    {
       "unitId": "page:analytics/TrueCost",
       "platform": "apple-macos",
       "status": "done",

@@ -1,6 +1,468 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "lifetime.achievements" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Achievements"
+          }
+        }
+      }
+    },
+    "lifetime.activitySummary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activity Summary"
+          }
+        }
+      }
+    },
+    "lifetime.avgEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Efficiency"
+          }
+        }
+      }
+    },
+    "lifetime.avoided" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "avoided"
+          }
+        }
+      }
+    },
+    "lifetime.biggestCharge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biggest Charge"
+          }
+        }
+      }
+    },
+    "lifetime.co2Offset" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CO\u2082 offset"
+          }
+        }
+      }
+    },
+    "lifetime.coffeesEquiv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cups of coffee saved"
+          }
+        }
+      }
+    },
+    "lifetime.days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "days"
+          }
+        }
+      }
+    },
+    "lifetime.daysOnRoad" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Days on Road"
+          }
+        }
+      }
+    },
+    "lifetime.earthCompare" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "That's %1$@x around the Earth!"
+          }
+        }
+      }
+    },
+    "lifetime.earthProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "around the Earth"
+          }
+        }
+      }
+    },
+    "lifetime.electricCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Electric Cost"
+          }
+        }
+      }
+    },
+    "lifetime.environmentalImpact" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Environmental Impact"
+          }
+        }
+      }
+    },
+    "lifetime.funFacts" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fun Facts"
+          }
+        }
+      }
+    },
+    "lifetime.gasCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gasoline Equivalent"
+          }
+        }
+      }
+    },
+    "lifetime.heroSubtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "driven across %1$@ drives"
+          }
+        }
+      }
+    },
+    "lifetime.highestSpeed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Highest Speed"
+          }
+        }
+      }
+    },
+    "lifetime.homesPowered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "of home energy used"
+          }
+        }
+      }
+    },
+    "lifetime.hours" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "hrs"
+          }
+        }
+      }
+    },
+    "lifetime.longestDrive" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Longest Drive"
+          }
+        }
+      }
+    },
+    "lifetime.moonProgress" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "to the Moon"
+          }
+        }
+      }
+    },
+    "lifetime.mostActiveDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most Active Day"
+          }
+        }
+      }
+    },
+    "lifetime.mostActiveHour" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peak Hour"
+          }
+        }
+      }
+    },
+    "lifetime.noAchievements" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start driving to unlock achievements"
+          }
+        }
+      }
+    },
+    "lifetime.noData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No driving data yet"
+          }
+        }
+      }
+    },
+    "lifetime.noSavingsData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Complete some drives to see savings"
+          }
+        }
+      }
+    },
+    "lifetime.personalRecords" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personal Records"
+          }
+        }
+      }
+    },
+    "lifetime.savingsComparison" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Savings vs Gasoline"
+          }
+        }
+      }
+    },
+    "lifetime.sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sessions"
+          }
+        }
+      }
+    },
+    "lifetime.since" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tracking since %1$@ (%2$@ days)"
+          }
+        }
+      }
+    },
+    "lifetime.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your all-time driving achievements and milestones"
+          }
+        }
+      }
+    },
+    "lifetime.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime Stats"
+          }
+        }
+      }
+    },
+    "lifetime.totalDistance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Distance"
+          }
+        }
+      }
+    },
+    "lifetime.totalDrives" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Drives"
+          }
+        }
+      }
+    },
+    "lifetime.totalEnergy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Energy"
+          }
+        }
+      }
+    },
+    "lifetime.totalSavings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Savings"
+          }
+        }
+      }
+    },
+    "lifetime.treesEquiv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "trees equivalent"
+          }
+        }
+      }
+    },
+    "lifetime.treesPlanted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "trees equivalent planted"
+          }
+        }
+      }
+    },
+    "lifetime.unlocked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\u2713 Unlocked"
+          }
+        }
+      }
+    },
+    "lifetime.vsGas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "vs gasoline"
+          }
+        }
+      }
+    },
+    "lifetime.youSaved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You saved"
+          }
+        }
+      }
+    },
+    "route.lifetimeStats" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime Stats"
+          }
+        }
+      }
+    },
     "admin.dlq.actions.inspect" : {
       "extractionState" : "manual",
       "localizations" : {
