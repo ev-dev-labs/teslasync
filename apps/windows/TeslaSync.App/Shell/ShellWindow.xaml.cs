@@ -1022,6 +1022,67 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("DrivetrainHealth", () =>
             new FeatureViews.Driving.DrivetrainHealthPage(
                 new FeatureViews.Driving.DrivetrainHealthClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        // ── Batch 2: more live-data wiring (admin, charging, vehicle-systems, analytics). ───────────────
+        _viewModel.PageFactory.Register("PeriodCompare", () =>
+            new FeatureViews.Analytics.PeriodComparePage(
+                new FeatureViews.Analytics.PeriodCompareClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("ChargingCurve", () =>
+            new FeatureViews.Charging.ChargingCurvePage(
+                new FeatureViews.Charging.ChargingCurveClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("ChargingHeatmap", () =>
+            new FeatureViews.Charging.ChargingHeatmapPage(
+                new FeatureViews.Charging.ChargingHeatmapClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Powershare", () =>
+            new FeatureViews.Charging.PowersharePage(
+                new FeatureViews.Charging.PowershareClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("AuditLog", () =>
+            new FeatureViews.Admin.AuditLogPage(
+                new FeatureViews.Admin.AuditLogClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SecretRotation", () =>
+            new FeatureViews.Admin.SecretRotationPage(
+                new FeatureViews.Admin.SecretRotationClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SlowQueries", () =>
+            new FeatureViews.Admin.SlowQueriesPage(
+                new FeatureViews.Admin.SlowQueriesClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SchemaDrift", () =>
+            new FeatureViews.Admin.SchemaDriftPage(
+                new FeatureViews.Admin.SchemaDriftClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DiskForecast", () =>
+            new FeatureViews.Admin.DiskForecastPage(
+                new FeatureViews.Admin.DiskForecastClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("VehicleCost", () =>
+            new FeatureViews.Admin.VehicleCostPage(
+                new FeatureViews.Admin.VehicleCostClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SecurityAccess", () =>
+            new FeatureViews.Admin.SecurityAccessPage(
+                new FeatureViews.Admin.SecurityAccessClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("SafetySettings", () =>
+            new FeatureViews.VehicleSystems.SafetySettingsPage(
+                new FeatureViews.VehicleSystems.SafetySettingsClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Maintenance", () =>
+            new FeatureViews.VehicleSystems.MaintenancePage(
+                new FeatureViews.VehicleSystems.MaintenanceClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("DataRepair", () =>
+            new FeatureViews.SystemOps.DataRepairPage(
+                new FeatureViews.SystemOps.DataRepairClientFeed(_data.Api), _data.Localizer));
+
+        _viewModel.PageFactory.Register("Chatbot", () =>
+            new FeatureViews.SystemOps.ChatbotPage(
+                new FeatureViews.SystemOps.ChatbotClientFeed(_data.Api), _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>
