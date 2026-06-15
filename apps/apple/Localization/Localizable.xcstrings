@@ -12013,6 +12013,28 @@
         }
       }
     },
+    "route.liveLogs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Logs"
+          }
+        }
+      }
+    },
+    "spotlight.route.liveLogs.description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stream the API server's structured log events in real time"
+          }
+        }
+      }
+    },
     "widget.drivetrainHealth.accessibility.refresh": {
       "extractionState": "manual",
       "localizations": {
@@ -105182,6 +105204,52 @@
           "stringUnit": {
             "state": "needs_review",
             "value": "Buffered: %1$@"
+          }
+        }
+      }
+    },
+    "translation.liveLogs.stats.bufferedMax": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Buffered: %1$@ / max %2$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buffered: %1$@ / max %2$@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Buffered: %1$@ / max %2$@"
+          }
+        }
+      }
+    },
+    "translation.liveLogs.status.stale": {
+      "extractionState": "manual",
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Stale — no events for 2 min"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stale — no events for 2 min"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Stale — no events for 2 min"
           }
         }
       }
