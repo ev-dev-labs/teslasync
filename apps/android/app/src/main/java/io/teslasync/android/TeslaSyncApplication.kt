@@ -29,6 +29,7 @@ import io.teslasync.android.notifications.channels.ChannelsPageHost
 import io.teslasync.android.notifications.webhooks.WebhooksPageHost
 import io.teslasync.android.poweruser.sqlplayground.SqlPlaygroundPageHost
 import io.teslasync.android.settings.SettingsPageHost
+import io.teslasync.android.settings.privacy.PrivacyPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
 /**
@@ -113,6 +114,8 @@ class TeslaSyncApplication : Application() {
         ChannelsPageHost.register()
         // Register the native custom-webhooks screen for the /notifications/webhooks route (P3/A7). Idempotent.
         WebhooksPageHost.register()
+        // Register the native account-privacy settings screen for the /account/privacy route (P3/A7). Idempotent.
+        PrivacyPageHost.register()
         // Register the native SQL-playground power-user screen for the /power/sql route (P3/A7). Idempotent.
         SqlPlaygroundPageHost.register()
         ShortcutPublisher(this).publish()

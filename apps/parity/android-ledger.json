@@ -250,5 +250,14 @@
     "requiredCount": 14,
     "promptId": "p3-android/pages/power-user/SqlPlaygroundPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-power-user-SqlPlaygroundPage.log"
+  },
+  {
+    "unitId": "page:settings/Privacy",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/settings/PrivacyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-PrivacyPage.log"
   }
 ]
