@@ -1,0 +1,134 @@
+=== p2-windows · W7 · page:system/Roadmap (WinUI 3 / Fluent) ===
+Parity unit : page:system/Roadmap   kind=page   web route=/roadmap
+Web source  : web/src/features/system/pages/RoadmapPage.tsx
+Output      : apps/windows/TeslaSync.App/feature-views/RoadmapPage/{RoadmapPage.Model.cs, RoadmapPage.ViewModel.cs, RoadmapPage.cs}
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), an optional <Name>.Source.cs (the generated-client feed) and <Name>.ViewModel.cs
+  (INotifyPropertyChanged state holder), plus <Name>.cs (the Fluent view), exactly as the sibling W7 HelpPage /
+  ChatbotPage / StatusApiDocsPage do. The generated prompt's idealized
+  "TeslaSync/Features/System/RoadmapPage.xaml + RoadmapPageViewModel.cs" is mapped onto these real conventions.
+  The namespace is TeslaSync.App.FeatureViews.SystemOps (NOT ...System — a `.System` sub-namespace shadows the
+  global System namespace and breaks unqualified System.* references; SystemOps also aligns with
+  RouteGroup.SystemOps, the manifest's system/ group).
+- Data binding (ADR-004): the manifest declares NO API data sources — the web page renders from local state only
+  (it binds just useTranslation + usePageTitle and maps the static roadmapItems catalog). So there is no
+  generated-client feed and no <Name>.Source.cs; RoadmapPageViewModel projects the static RoadmapCatalog through
+  RoadmapProjection with zero HTTP. LoadAsync/RefreshAsync honour the page lifecycle (OnLoaded → LoadAsync) by
+  re-projecting synchronously (no fabricated network call).
+- Two data states (manifest: empty · success): the web page has no fetch/loading/error branch, so the honest
+  native union is RoadmapState.Success (the catalog yielded entries → progress bar + the per-phase card sections)
+  plus a defensive RoadmapState.Empty branch (a null/empty catalog → the progress bar with all-zero counts + a
+  friendly TsEmptyState, never a blank region, ADR-011). The phase progress bar is always visible.
+- Panels (ADR-005): GlassPanel1 = the always-visible phase progress bar (web <GlassPanel className="p-4">) — a
+  TsGlassPanel hosting the four phase chips (a coloured dot + the localized phase label + a TsBadge count),
+  separated by hairline rules, in a horizontally-scrollable row (web overflow-x-auto). GlassPanel2 = the roadmap
+  card — one TsGlassPanel per roadmapItems entry (web <GlassPanel className="p-5">), grouped under its release
+  phase and laid out in a responsive 1/2-column grid (web grid-cols-1 lg:grid-cols-2; single-card phases stay
+  one column; breakpoint 1024) that recomputes on SizeChanged. Each card carries an accent icon tile, the
+  SemiBold title + muted one-line description, a phase chip (TsBadge keyed by the web phaseConfig.variant) and the
+  capability bullet list whose leading glyph is keyed by phase (done → CheckCircle, current → Zap, otherwise
+  Clock). No hardcoded colours/typography — DisplayTokens (TsColor*/TsChart*/TsRadius*) drive
+  light/dark/high-contrast from W1. The web per-phase colours (#10B981 / #00F0FF / #A855F7 / #F59E0B) resolve to
+  the themed tokens TsChartBatteryBrush / TsColorInfoBrush / TsChartPowerBrush / TsChartEnergyBrush — exact-hue
+  matches, never an ad-hoc hex.
+- Navigation entry: the web /roadmap route is already mapped by the shell — RouteTable.cs L195
+  Page("Roadmap","roadmap",RouteGroup.SystemOps,"Roadmap","\uE8A7") (a visible nav destination, matching the web's
+  routed status). This change only registers the page factory in ShellWindow.xaml.cs
+  (RoadmapRegistration.RouteName → new FeatureViews.SystemOps.RoadmapPage()); the page renders only its static
+  catalog and navigates nowhere, so no NavigationRequested wiring is needed and no new RouteTable row is added
+  (NavigationTests stays green — no route-table change).
+- SI units N/A (this surface has no unit-bearing fields — only static roadmap copy); no charts, no maps; no
+  SSE/live source and therefore no >2-min staleness pill (ADR-013 N/A).
+- i18n (ADR-014): every visible chrome literal resolves through the ILocalizer facade with the web key names +
+  English defaults. roadmap.title + roadmap.subtitle are already present verbatim (web key names) in
+  Strings/{en,ar,he}/Resources.resw as translation.roadmap.* with the web English values; no catalog edit was
+  needed. The phase labels mirror the web exactly — the web calls t('roadmap.phase.${phase}', fallback) where the
+  roadmap.phase.* keys are NOT defined in the web i18n catalog (web en.json roadmap = { title, subtitle } only),
+  so the web renders the English fallbacks; the native port routes them through
+  localizer.GetString("roadmap.phase.*", "Completed"/"In Progress"/"Up Next"/"Future") which returns the same
+  fallbacks — no resw edit, no divergence. The roadmap card titles/descriptions/features are static content data
+  (the web hardcodes them in roadmapItems, NOT via i18n), ported verbatim. The defensive empty message routes
+  through localizer.GetString("roadmap.empty", …) (fallback only). RecordingLocalizer asserts every key flows
+  through the facade.
+- a11y (ADR-015): GlassPanel1 carries AutomationProperties.Name; each phase chip exposes a composed Narrator name
+  ("<label>: <count>"); the card region is named; each phase section heading carries HeadingLevel=Level2; each
+  card's TsGlassPanel carries its composed Narrator name (title + description); decorative icon tiles / dots /
+  bullets / chips are AccessibilityView.Raw; the page exposes a Group automation peer; reduce-motion is honoured
+  via TsFadeIn; DisplayTokens drive light/dark + high-contrast.
+
+=== PARITY ===
+PARITY_REQUIRED=6
+
+# Panels (2) — the web GlassPanels reproduced as Fluent Mica/glass surfaces from W1 tokens
+[x] panel  - GlassPanel1   -> RoadmapPage.cs#BuildProgressRow / BuildPhaseChip (the always-visible _progressPanel
+             TsGlassPanel hosting the four phase chips; web RoadmapPage.tsx phase legend <GlassPanel p-4>);
+             RoadmapDisplay.PhaseSummaries; tests Progress_bar_summaries_cover_every_phase_in_order_with_counts +
+             Empty_catalog_still_exposes_all_four_zeroed_phase_summaries
+[x] panel  - GlassPanel2   -> RoadmapPage.cs#BuildCard (one TsGlassPanel per RoadmapItem wrapping the icon tile +
+             title/description + phase chip + feature list; laid out by BuildSection/LayoutPhaseGrid in the
+             responsive 1/2-col grid); web RoadmapCard <GlassPanel p-5>; tests
+             First_done_card_carries_the_web_content_and_accent + Group_item_counts_match_the_catalog +
+             Every_feature_row_is_projected_with_the_phase_bullet_glyph
+
+# Data states (2 declared: empty · success) — a visible region, never blank
+[x] state  - empty         -> RoadmapState.Empty (RoadmapProjection.Project: entries.Count == 0);
+             RoadmapPageViewModel.State; rendered RoadmapPage.cs#Render (progress bar + TsEmptyState); tests
+             Empty_catalog_projects_the_defensive_empty_state + ViewModel_empty_catalog_degrades_to_empty_with_message
+[x] state  - success       -> RoadmapState.Success (RoadmapProjection.Project: entries.Count > 0);
+             RoadmapPageViewModel.State; rendered RoadmapPage.cs#Render (progress bar + per-phase card sections);
+             tests Default_catalog_projects_success_state + ViewModel_default_catalog_is_success_with_all_phase_groups
+
+# Strings (2) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - roadmap.subtitle -> RoadmapProjection.Subtitle localizer.GetString("roadmap.subtitle", "What's been
+             built, what's in progress, and what's coming next") -> RoadmapDisplay.Subtitle -> RoadmapPage.cs
+             _header.Subtitle; resw translation.roadmap.subtitle present (en/ar/he); tests
+             Projection_resolves_roadmap_title_and_subtitle + Title_and_subtitle_resolve_the_web_defaults
+[x] string - roadmap.title    -> RoadmapProjection.Title localizer.GetString("roadmap.title", "Roadmap") ->
+             RoadmapDisplay.Title (header) + DocumentTitle (web usePageTitle); resw translation.roadmap.title
+             present (en/ar/he); tests Projection_resolves_roadmap_title_and_subtitle +
+             Title_and_subtitle_resolve_the_web_defaults + Registration_exposes_route_name_slug_and_keys
+
+PARITY_COVERED=6
+# Coverage asserted headlessly (TeslaSync.App.Tests/FeatureViews/RoadmapPageTests.cs, 51 tests, all passing):
+# Manifest_requires_two_strings pins the required-string count at 2 distinct (roadmap.subtitle, roadmap.title);
+# Projection_resolves_roadmap_title_and_subtitle records both through a RecordingLocalizer and
+# Projection_resolves_every_phase_label_key records the four roadmap.phase.* fallback keys; the two-panel evidence
+# is asserted by the progress-bar summary tests (all four phases, web counts 5/1/2/9, web order) and the card
+# tests (Catalog_is_the_seventeen_web_entries, Each_phase_has_the_web_entry_count, Groups_render_each_non_empty_
+# phase_in_order, First_done_card_carries_the_web_content_and_accent, Every_feature_row_is_projected_with_the_
+# phase_bullet_glyph asserting all 125 features); the success + defensive-empty states, the phase→accent-token /
+# badge-status / phase-label / bullet-glyph / icon-glyph mappings, the ViewModel load/refresh/reload flow and the
+# PII-safe Diagnostics (view.opened slug=RoadmapPage) complete it.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/RoadmapPage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/System path does not exist in-repo)
+#   + RoadmapPageTests.cs verified free of forbidden patterns: both PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Error(s) (17 pre-existing CA* warnings
+#   in TeslaSync.App.Core, none from the RoadmapPage / ShellWindow registration / test-csproj changes)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes (RoadmapPage Model/ViewModel/view + RoadmapPageTests
+#   + ShellWindow registration + test csproj Compile links + windows-ledger.json, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 31151, Failed: 0, Skipped: 0
+#   (incl. 51 RoadmapPageTests; NavigationTests unaffected — no RouteTable change)
+TEST_EXIT=0
+PARITY_COVERED=6
+PARITY_REQUIRED=6
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/RoadmapPage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/RoadmapPageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-system-RoadmapPage.log
+# git commit -m "feat(apps/windows): RoadmapPage at web parity (W7 system)"
+
+EXIT=0
+STATUS=DONE
