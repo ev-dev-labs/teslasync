@@ -6124,6 +6124,7 @@
   <string name="translation_statistics_noStates">No state distribution data</string>
   <string name="translation_statistics_singleVehicle">Add more vehicles to compare</string>
   <string name="translation_statistics_stateDistribution">State Distribution</string>
+  <string name="translation_statistics_stateDistribution_aria">Vehicle state distribution pie chart</string>
   <string name="translation_statistics_subtitle">Lifetime vehicle statistics and records</string>
   <string name="translation_statistics_title">Statistics</string>
   <string name="translation_statistics_totalCost">Total Cost</string>
@@ -6132,6 +6133,7 @@
   <string name="translation_statistics_totalEnergy">Total Energy</string>
   <string name="translation_statistics_totalMileage">Total Distance</string>
   <string name="translation_statistics_vehicleComparison">Vehicle Comparison</string>
+  <string name="translation_statistics_vehicleComparison_aria">Distance and energy bar chart comparing all vehicles in the fleet</string>
   <string name="translation_statistics_yearlyProjection">Yearly Projection</string>
   <string name="translation_statusBar_aria">Application status</string>
   <string name="translation_statusBar_background_aria">Background tasks</string>

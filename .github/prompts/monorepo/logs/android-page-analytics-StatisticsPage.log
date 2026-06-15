@@ -1,0 +1,148 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/Statistics  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/StatisticsPage.tsx
+promptId: p3-android/pages/analytics/StatisticsPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (on PATH)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPage.kt           (@Composable screen: StatisticsPage + StatisticsPageContent + 20 panels + the pie/bar/gauge charts)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<…>> x5 + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPageSource.kt     (S8 data seam over EnergyStore + AnalyticsStore + SettingsStore + SelectedVehicleStore; page-local StatisticsExtrasRepository for /analytics/period-stats)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPageModel.kt      (framework-free: parse* decoders, StatisticsDisplayPrefs SI/currency formatters, stateShares, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPageIcons.kt      (3 authored lucide glyphs + 8 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/StatisticsPageHost.kt       (PageHosts.register(statistics){ StatisticsRoute() })
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt            (NavHost wiring: + energyRepository + energyStore; api/cacheStore exposed for the page-local period-stats repo — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt          (NavHost wiring: + StatisticsPageHost.register())
+apps/android/app/src/main/res/values/strings.xml (+ values-ar / values-he)          (added the 2 missing aria keys; the other 30 page keys already present as translation_statistics_*)
+apps/parity/android-ledger.json                                                      (ledger row page:analytics/Statistics, 61/61)
+.github/prompts/monorepo/logs/android-page-analytics-StatisticsPage.log              (this log)
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useBatteryHealthAnalytics  GET /analytics/battery-health [vehicle_id]  -> EnergyStore.batteryHealthAnalytics(id)   (wired into DataContainer; battery panel)
+useFleetAnalytics          GET /analytics/fleet?days=30                -> AnalyticsStore.fleetAnalytics(days=30)    (vehicle_comparison bar)
+useMileageStats            GET /mileage/stats [vehicle_id]             -> AnalyticsStore.mileageStats(id)           (mileage panel)
+useStateSummary            GET /vehicle-states/summary [vehicle_id]    -> AnalyticsStore.stateSummary(id)           (state-distribution pie)
+period-stats (web bare useQuery, no named hook; no shared store method) GET /analytics/period-stats [vehicle_id]
+                           -> page-local StatisticsExtrasRepository.periodStats(id) over the SAME shared ApiHttpClient + CacheStore +
+                              CachingRepository cache-then-network operator (ADR-013). PRIMARY feed: drives the page loading/empty/error/success.
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits/useFormatting). No HTTP in the view.
+decode         : JsonElement -> typed models in StatisticsPageModel.parse* ; the view only resolves i18n + draws.
+nav            : Destinations 'statistics' -> /statistics pre-existing (Destinations.kt L89, count unchanged); host wired via PageHosts.register;
+                 deep link auto-registered by TeslaSyncNavHost.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=61   (20 panels + 5 charts + 4 states + 32 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  Total-Distance        -> StatisticsPage.kt:307 PeriodStatsGrid StatMetric (fmtInt fromKm total_distance, translation_statistics_totalDistance)
+[COVERED] panel  Total-Drives          -> StatisticsPage.kt:314 PeriodStatsGrid StatMetric (fmtInt total_drives, translation_statistics_totalDrives)
+[COVERED] panel  Total-Energy          -> StatisticsPage.kt:323 PeriodStatsGrid StatMetric (fmtNumber energy_used + kWh, translation_statistics_totalEnergy)
+[COVERED] panel  Total-Cost            -> StatisticsPage.kt:330 PeriodStatsGrid StatMetric (currency total_cost,0, translation_statistics_totalCost)
+[COVERED] panel  CO-Saved              -> StatisticsPage.kt:339 PeriodStatsGrid StatMetric (fmtNumber co2_saved + kg, translation_statistics_co2Saved)
+[COVERED] panel  Avg-Drive-Distance    -> StatisticsPage.kt:361 AveragesGrid StatMetric (fromKm total_distance/total_drives, translation_statistics_avgDriveDistance)
+[COVERED] panel  Avg-Efficiency        -> StatisticsPage.kt:368 AveragesGrid StatMetric (whPerKmToDisplay avg_efficiency + Wh/km|Wh/mi, translation_statistics_avgEfficiency)
+[COVERED] panel  Cost-per-km           -> StatisticsPage.kt:377 AveragesGrid StatMetric (currency total_cost/total_distance,3 else em-dash, translation_statistics_costPerKm)
+[COVERED] panel  GlassPanel9           -> StatisticsPage.kt:391 BatteryPanel GlassPanel (PanelTitle translation_statistics_batteryHealth L396)
+[COVERED] panel  Capacity              -> StatisticsPage.kt:414 BatteryPanel StatMetric (fmtNumber estimated_capacity,1 + kWh, translation_statistics_capacity)
+[COVERED] panel  Degradation           -> StatisticsPage.kt:421 BatteryPanel StatMetric (fmtNumber degradation_rate_yr,2 + %/yr, translation_statistics_degradation)
+[COVERED] panel  Cycles                -> StatisticsPage.kt:430 BatteryPanel StatMetric (fmtInt total_cycles, translation_statistics_cycles)
+[COVERED] panel  Age                   -> StatisticsPage.kt:437 BatteryPanel StatMetric (battery_age_months + mo, translation_statistics_age)
+[COVERED] panel  State-Distribution    -> StatisticsPage.kt:457 StateDistributionPanel ChartContainer (translation_statistics_stateDistribution L462)
+[COVERED] panel  GlassPanel15          -> StatisticsPage.kt:526 MileagePanel GlassPanel (PanelTitle translation_statistics_mileage L531)
+[COVERED] panel  Total-Distance-2      -> StatisticsPage.kt:539 MileagePanel StatMetric (fmtInt fromKm lifetime_km, translation_statistics_totalMileage)
+[COVERED] panel  Daily-Average-30d     -> StatisticsPage.kt:546 MileagePanel StatMetric (fmtNumber fromKm last_30d_km/30, translation_statistics_dailyAvg)
+[COVERED] panel  Total-Drives-2        -> StatisticsPage.kt:555 MileagePanel StatMetric (fmtInt drive_count_lifetime, translation_statistics_totalDrives)
+[COVERED] panel  Yearly-Projection     -> StatisticsPage.kt:562 MileagePanel StatMetric (fmtInt fromKm (last_30d_km/30)*365, translation_statistics_yearlyProjection)
+[COVERED] panel  Vehicle-Comparison    -> StatisticsPage.kt:582 VehicleComparisonPanel ChartContainer (translation_statistics_vehicleComparison L592)
+[COVERED] chart  RadialGauge           -> StatisticsPage.kt:402 BatteryPanel RadialGauge(value=current_soh,max=100,unit=%) (A3 components.charts.RadialGauge)
+[COVERED] chart  ChartContainer (1/2)  -> StatisticsPage.kt:460 StateDistributionPanel ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  PieChart              -> StatisticsPage.kt:473 StateDistributionChart Compose Canvas donut + legend (L478 Canvas; A3 lacks a pie wrapper — Compose-native, no webview)
+[COVERED] chart  ChartContainer (2/2)  -> StatisticsPage.kt:590 VehicleComparisonPanel ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  BarChart              -> StatisticsPage.kt:627 VehicleComparisonPanel BarChartWrapper(distance+energy series, xLabels) (A3 components.charts.BarChartWrapper, Vico)
+[COVERED] state  loading               -> StatisticsPage.kt:198 StatisticsPageContent state.isLoading -> StatisticsLoading()=PageLoader (L247-248)
+[COVERED] state  empty                 -> StatisticsPage.kt:200 state.isEmpty -> StatisticsNoData()=EmptyState (L267-270); per-source empties noBattery/noStates/noMileage/singleVehicle
+[COVERED] state  error                 -> StatisticsPage.kt:199 state.isError -> StatisticsError()=ErrorDisplay+Retry (L256-257)
+[COVERED] state  success               -> StatisticsPage.kt:201 else -> StatisticsBody(...) (L277) draws the 20 panels from the bound StateFlows
+[COVERED] string statistics.age                     -> StatisticsPage.kt:437 (translation_statistics_age)
+[COVERED] string statistics.avgDriveDistance        -> StatisticsPage.kt:361 (translation_statistics_avgDriveDistance)
+[COVERED] string statistics.avgEfficiency           -> StatisticsPage.kt:368 (translation_statistics_avgEfficiency)
+[COVERED] string statistics.batteryHealth           -> StatisticsPage.kt:396 (translation_statistics_batteryHealth)
+[COVERED] string statistics.capacity                -> StatisticsPage.kt:414 (translation_statistics_capacity)
+[COVERED] string statistics.co2Saved                -> StatisticsPage.kt:339 (translation_statistics_co2Saved)
+[COVERED] string statistics.costPerKm               -> StatisticsPage.kt:377 (translation_statistics_costPerKm)
+[COVERED] string statistics.cycles                  -> StatisticsPage.kt:430 (translation_statistics_cycles)
+[COVERED] string statistics.dailyAvg                -> StatisticsPage.kt:546 (translation_statistics_dailyAvg)
+[COVERED] string statistics.degradation             -> StatisticsPage.kt:421 (translation_statistics_degradation)
+[COVERED] string statistics.distance                -> StatisticsPage.kt:588 VehicleComparisonPanel distance series label (translation_statistics_distance)
+[COVERED] string statistics.energy                  -> StatisticsPage.kt:589 VehicleComparisonPanel energy series label (translation_statistics_energy)
+[COVERED] string statistics.health                  -> StatisticsPage.kt:405 BatteryPanel RadialGauge label (translation_statistics_health)
+[COVERED] string statistics.mileage                 -> StatisticsPage.kt:531 (translation_statistics_mileage)
+[COVERED] string statistics.noBattery               -> StatisticsPage.kt:446 (translation_statistics_noBattery)
+[COVERED] string statistics.noData                  -> StatisticsPage.kt:270 (translation_statistics_noData)
+[COVERED] string statistics.noDataMsg               -> StatisticsPage.kt:269 (translation_statistics_noDataMsg)
+[COVERED] string statistics.noMileage               -> StatisticsPage.kt:571 (translation_statistics_noMileage)
+[COVERED] string statistics.noStates                -> StatisticsPage.kt:465 (translation_statistics_noStates)
+[COVERED] string statistics.singleVehicle           -> StatisticsPage.kt:595 (translation_statistics_singleVehicle)
+[COVERED] string statistics.stateDistribution       -> StatisticsPage.kt:462 (translation_statistics_stateDistribution)
+[COVERED] string statistics.stateDistribution.aria  -> StatisticsPage.kt:463 ChartContainer accessibleDescription (translation_statistics_stateDistribution_aria; NEW key added to values{,-ar,-he})
+[COVERED] string statistics.subtitle                -> StatisticsPage.kt:226 (translation_statistics_subtitle)
+[COVERED] string statistics.title                   -> StatisticsPage.kt:224 (translation_statistics_title)
+[COVERED] string statistics.totalCost               -> StatisticsPage.kt:330 (translation_statistics_totalCost)
+[COVERED] string statistics.totalDistance           -> StatisticsPage.kt:307 (translation_statistics_totalDistance)
+[COVERED] string statistics.totalDrives             -> StatisticsPage.kt:314 + :555 (translation_statistics_totalDrives)
+[COVERED] string statistics.totalEnergy             -> StatisticsPage.kt:323 (translation_statistics_totalEnergy)
+[COVERED] string statistics.totalMileage            -> StatisticsPage.kt:539 (translation_statistics_totalMileage)
+[COVERED] string statistics.vehicleComparison       -> StatisticsPage.kt:592 (translation_statistics_vehicleComparison)
+[COVERED] string statistics.vehicleComparison.aria  -> StatisticsPage.kt:593 ChartContainer accessibleDescription (translation_statistics_vehicleComparison_aria; NEW key added to values{,-ar,-he})
+[COVERED] string statistics.yearlyProjection        -> StatisticsPage.kt:562 (translation_statistics_yearlyProjection)
+
+PARITY_COVERED=61
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 5 reads bound as StateFlow via StatisticsPageViewModel -> statisticsPageSourceOf(): EnergyStore.batteryHealthAnalytics
+               (web useBatteryHealthAnalytics), AnalyticsStore.fleetAnalytics(30)/mileageStats/stateSummary (web useFleetAnalytics/useMileageStats/useStateSummary),
+               and the page-local StatisticsExtrasRepository.periodStats over the shared ApiHttpClient + CacheStore (web bare useQuery /analytics/period-stats).
+               Scope = SelectedVehicleStore (web useSelectedVehicle); units/currency = SettingsStore.settings() (web useUnits/useFormatting). No HTTP in the view.
+charts       : RadialGauge + 2x ChartContainer + BarChartWrapper from the A3 components.charts library; the pie is a Compose-Canvas donut+legend authored in the
+               page (A3 ships no pie wrapper) — Compose-native, never a webview.
+si/units     : SI read off the wire; distance via convertDistanceFromSI(km*1000) at the display boundary (prefs.fromKm), efficiency Wh/km->Wh/mi via prefs.whPerKmToDisplay,
+               currency via the user's settings symbol/precision/locale. No miles/mph/kWh stored or computed; energy kWh + CO2 kg rendered verbatim (web parity).
+states       : period-stats is the PRIMARY gate (loading/empty/error/success). Each secondary feed renders its own content-or-empty surface, so no section is ever hidden
+               (web per-section truthiness). Documented divergence (Honesty #9): an all-zero / no-vehicle payload routes to the friendly empty surface via the model hasData gate.
+a11y/theme   : charts carry accessibleDescription (the web aria-labels); the bar exposes the screen-reader data table; the pie legend is TalkBack-readable; gauge has a merged
+               contentDescription; icons decorative (contentDescription=null); all color via MaterialTheme.colorScheme + chart ChartPalette + TeslaTokens.status (A2 tokens) —
+               dynamic color + dark theme; typography via the role components (PageTitle/PanelTitle/BodyText/Caption/MetricValue). Compose-native (no webview).
+nav          : Destinations 'statistics' -> /statistics pre-existing (Destinations.kt L89, count unchanged); host wired via PageHosts.register("statistics"); deep link
+               auto-registered by TeslaSyncNavHost. DataContainer widened with EnergyStore + the api/cacheStore accessors the page-local period-stats repo needs (A7 DI seam).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin   -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 3m 56s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 10m 37s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 24s
+parity       : PARITY_COVERED(61) == PARITY_REQUIRED(61)
+[PASS] all android triad gates green; parity 61/61; android ledger row page:analytics/Statistics status=done.
+EXIT=0
+STATUS=DONE

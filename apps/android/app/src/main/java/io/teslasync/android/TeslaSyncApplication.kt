@@ -10,6 +10,7 @@ import io.teslasync.android.admin.region.TeslaRegionPageHost
 import io.teslasync.android.admin.schemadrift.SchemaDriftPageHost
 import io.teslasync.android.admin.slowqueries.SlowQueriesPageHost
 import io.teslasync.android.analytics.lifetimestats.LifetimeStatsPageHost
+import io.teslasync.android.analytics.statistics.StatisticsPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
@@ -67,6 +68,8 @@ class TeslaSyncApplication : Application() {
         TeslaRegionPageHost.register()
         // Register the native lifetime-stats analytics screen for the /lifetime-stats route (P3/A7). Idempotent.
         LifetimeStatsPageHost.register()
+        // Register the native statistics analytics screen for the /statistics route (P3/A7). Idempotent.
+        StatisticsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

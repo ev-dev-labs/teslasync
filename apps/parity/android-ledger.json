@@ -70,5 +70,14 @@
     "requiredCount": 56,
     "promptId": "p3-android/pages/analytics/LifetimeStatsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-LifetimeStatsPage.log"
+  },
+  {
+    "unitId": "page:analytics/Statistics",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 61,
+    "requiredCount": 61,
+    "promptId": "p3-android/pages/analytics/StatisticsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-StatisticsPage.log"
   }
 ]
