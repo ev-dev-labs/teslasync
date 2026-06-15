@@ -871,3 +871,4 @@ p3-android/pages/automations/AutomationCard.prompt.md
 p3-android/pages/automations/ConditionBuilder.prompt.md
 p3-android/pages/automations/PresetGallery.prompt.md
 p3-android/pages/battery/BatteryHealthPage.prompt.md
+p3-android/pages/battery/EnergyProductsPage.prompt.md
