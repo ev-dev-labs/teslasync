@@ -13,6 +13,7 @@ import io.teslasync.android.analytics.lifetimestats.LifetimeStatsPageHost
 import io.teslasync.android.analytics.statistics.StatisticsPageHost
 import io.teslasync.android.analytics.yearreview.YearReviewPageHost
 import io.teslasync.android.auth.AuthContainer
+import io.teslasync.android.battery.batteryhealth.BatteryHealthPageHost
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
@@ -73,6 +74,8 @@ class TeslaSyncApplication : Application() {
         StatisticsPageHost.register()
         // Register the native year-in-review story screen for the /year-review/:year route (P3/A7). Idempotent.
         YearReviewPageHost.register()
+        // Register the native battery-health screen for the /battery route (P3/A7). Idempotent.
+        BatteryHealthPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

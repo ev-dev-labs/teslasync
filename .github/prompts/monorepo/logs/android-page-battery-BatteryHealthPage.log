@@ -1,0 +1,245 @@
+================================================================================
+P3-ANDROID A7 — page:battery/BatteryHealth  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/BatteryHealthPage.tsx
+promptId: p3-android/pages/battery/BatteryHealthPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (on PATH via Android Studio JBR)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPage.kt          (@Composable screen: BatteryHealthPage + BatteryHealthPageContent + 27 panels + 4 gauges/3 ChartContainers/ComboChart/AreaChart/BarChart/Canvas-pie)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<…>> x4 + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPageSource.kt    (S8 data seam over EnergyStore + SettingsStore + SelectedVehicleStore; page-local BatteryExtrasRepository for /charging + /charging-telemetry/latest)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPageModel.kt     (framework-free: parse* decoders, build*/chart derivations, BatteryDisplayPrefs SI converters, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPageIcons.kt     (9 authored lucide glyphs + 9 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryHealthPageHost.kt      (PageHosts.register(batteryHealth){ BatteryHealthRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt           (NavHost wiring: + BatteryHealthPageHost.register())
+apps/android/app/src/main/res/values/strings.xml (+ values-ar / values-he)           (added the 3 missing aria keys; the other 102 page keys already present as translation_battery_* / translation_common_*)
+apps/parity/android-ledger.json                                                      (ledger row page:battery/BatteryHealth, 147/147)
+.github/prompts/monorepo/logs/android-page-battery-BatteryHealthPage.log              (this log)
+
+Nav: destination `batteryHealth` -> `/battery` pre-existing (Destinations.kt L79, count unchanged); host wired via
+     PageHosts.register("batteryHealth"); deep link auto-registered by TeslaSyncNavHost. DataContainer untouched —
+     api/cacheStore/energyStore/settingsStore/selectedVehicleStore are already exposed (the StatisticsPage A7 DI seam).
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useBatteryHealthAnalytics    GET /analytics/battery-health [vehicle_id]      -> EnergyStore.batteryHealthAnalytics(id)   (shared S8; PRIMARY gate)
+useBatteryDegradation        GET /analytics/battery-degradation [vehicle_id] -> EnergyStore.batteryDegradation(id)       (shared S8; prediction overlay)
+useChargingSessionsPaginated GET /charging [vehicle_id, limit=100, offset=0] -> BatteryExtrasRepository.chargingSessions(id,100)
+useChargingTelemetryLatest   GET /charging-telemetry/latest [vehicle_id]     -> BatteryExtrasRepository.chargingTelemetryLatest(id)
+  The two charging feeds have no ChargingStore wired into the Android DataContainer, so they are served by the page-local
+  [BatteryExtrasRepository]: a CachingRepository<JsonElement> over the SAME shared ApiHttpClient + CacheStore +
+  cache-then-network operator the shared repositories use (CacheDomain.Charging; ADR-013 freshness + SI-verbatim caching).
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits). No HTTP in the view.
+decode         : JsonElement -> typed models in BatteryHealthPageModel.parse*/build* ; the view only resolves i18n + draws.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=147   (27 panels + 11 charts + 4 states + 105 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1               -> BatteryHealthPage.kt:367 HealthHeroPanel GlassPanel (4 gauges + years-to-80)
+[COVERED] panel  GlassPanel2               -> BatteryHealthPage.kt:442 MetricBarsPanel GlassPanel (3 MetricBars)
+[COVERED] panel  State-of-Health           -> BatteryHealthPage.kt:509 SummaryCardsGrid MetricCard (fmtPercent current_soh, translation_battery_metric_soh)
+[COVERED] panel  Current-Capacity          -> BatteryHealthPage.kt:516 SummaryCardsGrid MetricCard (estimated_capacity kWh, translation_battery_metric_currentCap)
+[COVERED] panel  Original-Capacity         -> BatteryHealthPage.kt:525 SummaryCardsGrid MetricCard (original_capacity kWh, translation_battery_metric_originalCap)
+[COVERED] panel  Degradation-Rate          -> BatteryHealthPage.kt:532 SummaryCardsGrid MetricCard (degradation_rate_yr %/yr, translation_battery_metric_degradation)
+[COVERED] panel  Total-Cycles              -> BatteryHealthPage.kt:542 SummaryCardsGrid MetricCard (total_cycles, translation_battery_metric_cycles)
+[COVERED] panel  Battery-Age               -> BatteryHealthPage.kt:549 SummaryCardsGrid MetricCard (battery_age_months mo, translation_battery_metric_age)
+[COVERED] panel  Full-Charge-Complete      -> BatteryHealthPage.kt:558 SummaryCardsGrid MetricCard (bms_fullcharge_complete yes/no, translation_battery_metric_fullChargeComplete)
+[COVERED] panel  GlassPanel10              -> BatteryHealthPage.kt:573 ThermalPanel GlassPanel (SectionHeader translation_battery_thermal_title L599)
+[COVERED] panel  Module-Temp-Max           -> BatteryHealthPage.kt:604 ThermalPanel MetricCard (convertTempFromSI module_temp_max, translation_battery_thermal_moduleTempMax)
+[COVERED] panel  Module-Temp-Min           -> BatteryHealthPage.kt:614 ThermalPanel MetricCard (convertTempFromSI module_temp_min, translation_battery_thermal_moduleTempMin)
+[COVERED] panel  Battery-Heater            -> BatteryHealthPage.kt:626 ThermalPanel MetricCard (battery_heater_on on/off, translation_battery_thermal_heater)
+[COVERED] panel  Temperature-Spread        -> BatteryHealthPage.kt:633 ThermalPanel MetricCard (max-min spread, translation_battery_thermal_tempSpread)
+[COVERED] panel  GlassPanel15              -> BatteryHealthPage.kt:648 InsightsSection (SectionHeader translation_battery_insights_title L655)
+[COVERED] panel  Capacity-Trend-Prediction -> BatteryHealthPage.kt:695 CapacityTrendPanel ChartContainer (translation_battery_chart_capacityTrend L706)
+[COVERED] panel  Estimated-Range-Over-Time -> BatteryHealthPage.kt:740 RangeTrendPanel ChartContainer (translation_battery_chart_rangeTrend L749)
+[COVERED] panel  GlassPanel18              -> BatteryHealthPage.kt:775 ChargeLevelPanel GlassPanel (translation_battery_chart_chargeDist L785 + habit stats)
+[COVERED] panel  GlassPanel19              -> BatteryHealthPage.kt:853 NewVsNowPanel GlassPanel (SectionHeader translation_battery_newVsNow_title L861)
+[COVERED] panel  GlassPanel20              -> BatteryHealthPage.kt:866 NewVsNowPanel NewVsNowCard capNew (original_capacity, translation_battery_newVsNow_capNew)
+[COVERED] panel  GlassPanel21              -> BatteryHealthPage.kt:873 NewVsNowPanel NewVsNowCard capNow (estimated_capacity + delta, translation_battery_newVsNow_capNow)
+[COVERED] panel  GlassPanel22              -> BatteryHealthPage.kt:883 NewVsNowPanel NewVsNowCard rangeNew (fromKm history[0], translation_battery_newVsNow_rangeNew)
+[COVERED] panel  GlassPanel23              -> BatteryHealthPage.kt:890 NewVsNowPanel NewVsNowCard rangeNow (fromKm history[last] + lost, translation_battery_newVsNow_rangeNow)
+[COVERED] panel  AC-DC-Energy-Breakdown    -> BatteryHealthPage.kt:912 AcDcSection ChartContainer (translation_battery_chart_acdc L922)
+[COVERED] panel  GlassPanel25              -> BatteryHealthPage.kt:935 ChargingStatsPanel GlassPanel (translation_battery_stats_title L941)
+[COVERED] panel  GlassPanel26              -> BatteryHealthPage.kt:1013 QuickLinksPanel GlassPanel (6 outline Buttons -> DeepLinkRouter)
+[COVERED] panel  GlassPanel27              -> BatteryHealthPage.kt:1035 RecommendationsPanel GlassPanel (translation_battery_recommendations_title L1039)
+[COVERED] chart  RadialGauge (1/4)         -> BatteryHealthPage.kt:381 HealthHeroPanel RadialGauge(value=current_soh,max=100,unit=/100) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (2/4)         -> BatteryHealthPage.kt:392 HealthHeroPanel RadialGauge(value=capacityPercent,max=100,unit=%) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (3/4)         -> BatteryHealthPage.kt:405 HealthHeroPanel RadialGauge(value=degradation_rate_yr,max=10,unit=%/yr) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (4/4)         -> BatteryHealthPage.kt:415 HealthHeroPanel RadialGauge(value=total_cycles,max=1500) (A3 components.charts.RadialGauge)
+[COVERED] chart  ChartContainer (1/3)      -> BatteryHealthPage.kt:704 CapacityTrendPanel ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  ComposedChart             -> BatteryHealthPage.kt:712 CapacityTrendPanel ComboChart(actual Area + predicted Line series) (A3 components.charts.ComboChart, Vico; web ComposedChart)
+[COVERED] chart  ChartContainer (2/3)      -> BatteryHealthPage.kt:747 RangeTrendPanel ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  AreaChart                 -> BatteryHealthPage.kt:754 RangeTrendPanel AreaChartWrapper(range series, xLabels) (A3 components.charts.AreaChartWrapper, Vico)
+[COVERED] chart  BarChart                  -> BatteryHealthPage.kt:790 ChargeLevelPanel BarChartWrapper(chargeStarted+chargeEnded series) (A3 components.charts.BarChartWrapper, Vico)
+[COVERED] chart  ChartContainer (3/3)      -> BatteryHealthPage.kt:920 AcDcSection ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  PieChart                  -> BatteryHealthPage.kt:981 AcDcPie Compose Canvas donut + legend (A3 lacks a pie wrapper — Compose-native, no webview)
+[COVERED] state  loading                   -> BatteryHealthPage.kt:222 health.isLoading -> BatteryLoading()=PageLoader (L270)
+[COVERED] state  empty                     -> BatteryHealthPage.kt:224 health.isEmpty -> BatteryNoData()=EmptyState translation_battery_empty (L290); per-source empties noTrend/noRange/noSessions/noBreakdown/stats.empty/insights.empty
+[COVERED] state  error                     -> BatteryHealthPage.kt:223 health.isError -> BatteryError()=ErrorDisplay+Retry (L279)
+[COVERED] state  success                   -> BatteryHealthPage.kt:225 else -> BatteryBody(...) (L299) draws the 27 panels from the bound StateFlows
+[COVERED] string battery.bar.capacity                  -> BatteryHealthPage.kt:452 (translation_battery_bar_capacity)
+[COVERED] string battery.bar.cycles                    -> BatteryHealthPage.kt:476 (translation_battery_bar_cycles)
+[COVERED] string battery.bar.degradation               -> BatteryHealthPage.kt:464 (translation_battery_bar_degradation)
+[COVERED] string battery.chart.acdc                    -> BatteryHealthPage.kt:922 (translation_battery_chart_acdc)
+[COVERED] string battery.chart.acdc.aria               -> BatteryHealthPage.kt:923 ChartContainer accessibleDescription (translation_battery_chart_acdc_aria; NEW key added to values{,-ar,-he})
+[COVERED] string battery.chart.actual                  -> BatteryHealthPage.kt:702 ComboChart actual series label (translation_battery_chart_actual)
+[COVERED] string battery.chart.capacityTrend           -> BatteryHealthPage.kt:706 (translation_battery_chart_capacityTrend)
+[COVERED] string battery.chart.capacityTrend.aria      -> BatteryHealthPage.kt:708 ChartContainer accessibleDescription (translation_battery_chart_capacityTrend_aria; NEW key added to values{,-ar,-he})
+[COVERED] string battery.chart.chargeDist              -> BatteryHealthPage.kt:785 (translation_battery_chart_chargeDist)
+[COVERED] string battery.chart.chargeDistSub           -> BatteryHealthPage.kt:786 (translation_battery_chart_chargeDistSub)
+[COVERED] string battery.chart.chargeEnded             -> BatteryHealthPage.kt:802 BarChart endCount series label (translation_battery_chart_chargeEnded)
+[COVERED] string battery.chart.chargeStarted           -> BatteryHealthPage.kt:795 BarChart startCount series label (translation_battery_chart_chargeStarted)
+[COVERED] string battery.chart.dashedProjected         -> BatteryHealthPage.kt:707 ChartContainer subtitle (translation_battery_chart_dashedProjected)
+[COVERED] string battery.chart.noBreakdown             -> BatteryHealthPage.kt:925 (translation_battery_chart_noBreakdown)
+[COVERED] string battery.chart.noRange                 -> BatteryHealthPage.kt:752 (translation_battery_chart_noRange)
+[COVERED] string battery.chart.noSessions              -> BatteryHealthPage.kt:842 (translation_battery_chart_noSessions)
+[COVERED] string battery.chart.noTrend                 -> BatteryHealthPage.kt:710 (translation_battery_chart_noTrend)
+[COVERED] string battery.chart.predicted               -> BatteryHealthPage.kt:703 ComboChart predicted series label (translation_battery_chart_predicted)
+[COVERED] string battery.chart.range                   -> BatteryHealthPage.kt:746 AreaChart range series label (translation_battery_chart_range)
+[COVERED] string battery.chart.rangeTrend              -> BatteryHealthPage.kt:749 (translation_battery_chart_rangeTrend)
+[COVERED] string battery.chart.rangeTrend.aria         -> BatteryHealthPage.kt:750 ChartContainer accessibleDescription (translation_battery_chart_rangeTrend_aria; NEW key added to values{,-ar,-he})
+[COVERED] string battery.empty                         -> BatteryHealthPage.kt:292 (translation_battery_empty)
+[COVERED] string battery.gauge.capacity                -> BatteryHealthPage.kt:395 RadialGauge label (translation_battery_gauge_capacity)
+[COVERED] string battery.gauge.cycles                  -> BatteryHealthPage.kt:418 RadialGauge label (translation_battery_gauge_cycles)
+[COVERED] string battery.gauge.degradation             -> BatteryHealthPage.kt:408 RadialGauge label (translation_battery_gauge_degradation)
+[COVERED] string battery.gauge.health                  -> BatteryHealthPage.kt:384 RadialGauge label (translation_battery_gauge_health)
+[COVERED] string battery.habit.avgEnd                  -> BatteryHealthPage.kt:823 (translation_battery_habit_avgEnd)
+[COVERED] string battery.habit.avgStart                -> BatteryHealthPage.kt:817 (translation_battery_habit_avgStart)
+[COVERED] string battery.habit.home                    -> BatteryHealthPage.kt:835 (translation_battery_habit_home)
+[COVERED] string battery.habit.supercharger            -> BatteryHealthPage.kt:829 (translation_battery_habit_supercharger)
+[COVERED] string battery.health.degraded               -> BatteryHealthPage.kt:1245 healthLabel (translation_battery_health_degraded)
+[COVERED] string battery.health.excellent              -> BatteryHealthPage.kt:1243 healthLabel (translation_battery_health_excellent)
+[COVERED] string battery.health.good                   -> BatteryHealthPage.kt:1244 healthLabel (translation_battery_health_good)
+[COVERED] string battery.insight.concernDesc           -> BatteryHealthPage.kt:1304 insightDescription (translation_battery_insight_concernDesc, %1$s soh)
+[COVERED] string battery.insight.concernTitle          -> BatteryHealthPage.kt:1284 insightTitle (translation_battery_insight_concernTitle)
+[COVERED] string battery.insight.deepDischargeDesc     -> BatteryHealthPage.kt:1310 insightDescription (translation_battery_insight_deepDischargeDesc, %1$s count)
+[COVERED] string battery.insight.deepDischargeTitle    -> BatteryHealthPage.kt:1287 insightTitle (translation_battery_insight_deepDischargeTitle)
+[COVERED] string battery.insight.excellentDesc         -> BatteryHealthPage.kt:1300 insightDescription (translation_battery_insight_excellentDesc, %1$s soh)
+[COVERED] string battery.insight.excellentTitle        -> BatteryHealthPage.kt:1282 insightTitle (translation_battery_insight_excellentTitle)
+[COVERED] string battery.insight.goodDesc              -> BatteryHealthPage.kt:1302 insightDescription (translation_battery_insight_goodDesc, %1$s soh)
+[COVERED] string battery.insight.goodHabitsDesc        -> BatteryHealthPage.kt:1308 insightDescription (translation_battery_insight_goodHabitsDesc)
+[COVERED] string battery.insight.goodHabitsTitle       -> BatteryHealthPage.kt:1286 insightTitle (translation_battery_insight_goodHabitsTitle)
+[COVERED] string battery.insight.goodTitle             -> BatteryHealthPage.kt:1283 insightTitle (translation_battery_insight_goodTitle)
+[COVERED] string battery.insight.highFastChargeDesc    -> BatteryHealthPage.kt:1306 insightDescription (translation_battery_insight_highFastChargeDesc, %1$s pct)
+[COVERED] string battery.insight.highFastChargeTitle   -> BatteryHealthPage.kt:1285 insightTitle (translation_battery_insight_highFastChargeTitle)
+[COVERED] string battery.insight.highSuperchargerDesc  -> BatteryHealthPage.kt:1312 insightDescription (translation_battery_insight_highSuperchargerDesc, %1$s count)
+[COVERED] string battery.insight.highSuperchargerTitle -> BatteryHealthPage.kt:1288 insightTitle (translation_battery_insight_highSuperchargerTitle)
+[COVERED] string battery.insight.lowDegDesc            -> BatteryHealthPage.kt:1314 insightDescription (translation_battery_insight_lowDegDesc, %1$s rate)
+[COVERED] string battery.insight.lowDegTitle           -> BatteryHealthPage.kt:1289 insightTitle (translation_battery_insight_lowDegTitle)
+[COVERED] string battery.insights.empty                -> BatteryHealthPage.kt:662 (translation_battery_insights_empty)
+[COVERED] string battery.insights.title                -> BatteryHealthPage.kt:655 (translation_battery_insights_title)
+[COVERED] string battery.metric.age                    -> BatteryHealthPage.kt:550 (translation_battery_metric_age)
+[COVERED] string battery.metric.currentCap             -> BatteryHealthPage.kt:517 (translation_battery_metric_currentCap)
+[COVERED] string battery.metric.cycles                 -> BatteryHealthPage.kt:543 (translation_battery_metric_cycles)
+[COVERED] string battery.metric.degradation            -> BatteryHealthPage.kt:533 (translation_battery_metric_degradation)
+[COVERED] string battery.metric.fullChargeComplete     -> BatteryHealthPage.kt:559 (translation_battery_metric_fullChargeComplete)
+[COVERED] string battery.metric.originalCap            -> BatteryHealthPage.kt:526 (translation_battery_metric_originalCap)
+[COVERED] string battery.metric.soh                    -> BatteryHealthPage.kt:510 (translation_battery_metric_soh)
+[COVERED] string battery.months                        -> BatteryHealthPage.kt:502 (translation_battery_months)
+[COVERED] string battery.newVsNow.capNew               -> BatteryHealthPage.kt:867 (translation_battery_newVsNow_capNew)
+[COVERED] string battery.newVsNow.capNow               -> BatteryHealthPage.kt:874 (translation_battery_newVsNow_capNow)
+[COVERED] string battery.newVsNow.lost                 -> BatteryHealthPage.kt:898 (translation_battery_newVsNow_lost)
+[COVERED] string battery.newVsNow.rangeNew             -> BatteryHealthPage.kt:884 (translation_battery_newVsNow_rangeNew)
+[COVERED] string battery.newVsNow.rangeNow             -> BatteryHealthPage.kt:891 (translation_battery_newVsNow_rangeNow)
+[COVERED] string battery.newVsNow.title                -> BatteryHealthPage.kt:861 (translation_battery_newVsNow_title)
+[COVERED] string battery.perYear                       -> BatteryHealthPage.kt:469 (translation_battery_perYear)
+[COVERED] string battery.recommendations.title         -> BatteryHealthPage.kt:1039 (translation_battery_recommendations_title)
+[COVERED] string battery.section.acdcFailed            -> BatteryHealthPage.kt:346 SectionBoundary fallbackTitle (translation_battery_section_acdcFailed)
+[COVERED] string battery.section.capacityRangeFailed   -> BatteryHealthPage.kt:341 SectionBoundary fallbackTitle (translation_battery_section_capacityRangeFailed)
+[COVERED] string battery.section.chargeDistFailed      -> BatteryHealthPage.kt:336 SectionBoundary fallbackTitle (translation_battery_section_chargeDistFailed)
+[COVERED] string battery.section.heroFailed            -> BatteryHealthPage.kt:309 SectionBoundary fallbackTitle (translation_battery_section_heroFailed)
+[COVERED] string battery.section.insightsFailed        -> BatteryHealthPage.kt:329 SectionBoundary fallbackTitle (translation_battery_section_insightsFailed)
+[COVERED] string battery.section.metricBarsFailed      -> BatteryHealthPage.kt:314 SectionBoundary fallbackTitle (translation_battery_section_metricBarsFailed)
+[COVERED] string battery.section.quickLinksFailed      -> BatteryHealthPage.kt:351 SectionBoundary fallbackTitle (translation_battery_section_quickLinksFailed)
+[COVERED] string battery.section.recommendationsFailed -> BatteryHealthPage.kt:356 SectionBoundary fallbackTitle (translation_battery_section_recommendationsFailed)
+[COVERED] string battery.section.summaryCardsFailed    -> BatteryHealthPage.kt:319 SectionBoundary fallbackTitle (translation_battery_section_summaryCardsFailed)
+[COVERED] string battery.section.thermalFailed         -> BatteryHealthPage.kt:324 SectionBoundary fallbackTitle (translation_battery_section_thermalFailed)
+[COVERED] string battery.stats.acSessions              -> BatteryHealthPage.kt:946 (translation_battery_stats_acSessions)
+[COVERED] string battery.stats.cycles                  -> BatteryHealthPage.kt:952 (translation_battery_stats_cycles)
+[COVERED] string battery.stats.dcSessions              -> BatteryHealthPage.kt:947 (translation_battery_stats_dcSessions)
+[COVERED] string battery.stats.empty                   -> BatteryHealthPage.kt:956 (translation_battery_stats_empty)
+[COVERED] string battery.stats.title                   -> BatteryHealthPage.kt:941 (translation_battery_stats_title)
+[COVERED] string battery.stats.totalEnergy             -> BatteryHealthPage.kt:949 (translation_battery_stats_totalEnergy)
+[COVERED] string battery.stats.totalSessions           -> BatteryHealthPage.kt:945 (translation_battery_stats_totalSessions)
+[COVERED] string battery.subtitle                      -> BatteryHealthPage.kt:249 (translation_battery_subtitle)
+[COVERED] string battery.thermal.heater                -> BatteryHealthPage.kt:627 (translation_battery_thermal_heater)
+[COVERED] string battery.thermal.moduleNumber          -> BatteryHealthPage.kt:608 MetricCard subtitle (translation_battery_thermal_moduleNumber, %1$s module #)
+[COVERED] string battery.thermal.moduleTempMax         -> BatteryHealthPage.kt:605 (translation_battery_thermal_moduleTempMax)
+[COVERED] string battery.thermal.moduleTempMin         -> BatteryHealthPage.kt:615 (translation_battery_thermal_moduleTempMin)
+[COVERED] string battery.thermal.tempSpread            -> BatteryHealthPage.kt:634 (translation_battery_thermal_tempSpread)
+[COVERED] string battery.thermal.title                 -> BatteryHealthPage.kt:599 (translation_battery_thermal_title)
+[COVERED] string battery.tip.aboveAvg                  -> BatteryHealthPage.kt:1324 recommendationText (translation_battery_tip_aboveAvg)
+[COVERED] string battery.tip.avoid100                  -> BatteryHealthPage.kt:1322 recommendationText (translation_battery_tip_avoid100)
+[COVERED] string battery.tip.avoidDeep                 -> BatteryHealthPage.kt:1323 recommendationText (translation_battery_tip_avoidDeep)
+[COVERED] string battery.tip.great                     -> BatteryHealthPage.kt:1325 recommendationText (translation_battery_tip_great)
+[COVERED] string battery.tip.reduceFast                -> BatteryHealthPage.kt:1321 recommendationText (translation_battery_tip_reduceFast)
+[COVERED] string battery.title                         -> BatteryHealthPage.kt:247 PageTitle (translation_battery_title)
+[COVERED] string battery.warrantyLimit                 -> BatteryHealthPage.kt:479 (translation_battery_warrantyLimit)
+[COVERED] string battery.warrantyNote                  -> BatteryHealthPage.kt:433 (translation_battery_warrantyNote)
+[COVERED] string battery.yearsTo80                     -> BatteryHealthPage.kt:432 (translation_battery_yearsTo80)
+[COVERED] string battery.yr                            -> BatteryHealthPage.kt:535 (translation_battery_yr)
+[COVERED] string common.no                             -> BatteryHealthPage.kt:498 (translation_common_no)
+[COVERED] string common.off                            -> BatteryHealthPage.kt:596 (translation_common_off)
+[COVERED] string common.on                             -> BatteryHealthPage.kt:595 (translation_common_on)
+[COVERED] string common.yes                            -> BatteryHealthPage.kt:497 (translation_common_yes)
+
+PARITY_COVERED=147
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 4 reads bound as StateFlow via BatteryHealthPageViewModel -> batteryHealthPageSourceOf():
+               EnergyStore.batteryHealthAnalytics (web useBatteryHealthAnalytics, PRIMARY gate) + EnergyStore.batteryDegradation
+               (web useBatteryDegradation), and the page-local BatteryExtrasRepository.chargingSessions/chargingTelemetryLatest
+               over the shared ApiHttpClient + CacheStore (web useChargingSessionsPaginated / useChargingTelemetryLatest).
+               Scope = SelectedVehicleStore (web useSelectedVehicle); units = SettingsStore.settings() (web useUnits). No HTTP in the view.
+charts       : 4x RadialGauge + 3x ChartContainer + ComboChart (web ComposedChart) + AreaChartWrapper + BarChartWrapper from the
+               A3 components.charts (Vico) library; the AC/DC pie is a Compose-Canvas donut + legend authored in the page (A3 ships
+               no pie wrapper) — Compose-native, never a webview.
+si/units     : SI read off the wire; range history km->display via convertDistanceFromSI(km*1000) (prefs.fromKm), module temps
+               C->display via convertTempFromSI (prefs.temperature), session energy Wh->kWh via convertEnergyFromSI. Battery
+               capacity is kWh on the wire and rendered verbatim (web parity). No miles/°F/psi stored or computed.
+states       : battery-health is the PRIMARY gate (loading/empty/error/success). Each secondary feed renders its own
+               content-or-empty surface (insights.empty, chart noTrend/noRange/noSessions/noBreakdown, stats.empty, thermal/full-charge
+               em dashes), so no section is ever hidden (web per-section truthiness). Documented divergence (Honesty #9): an
+               all-zero / no-vehicle battery payload routes to the friendly empty surface via the model hasData gate; and the 10
+               section.*Failed titles back a SectionBoundary (web SectionErrorBoundary port) whose failure card surfaces on a
+               secondary-feed hard-error (telemetry/sessions, no cache) and is otherwise the always-resolved fallback title — a
+               reasonable adaptation of web's render-crash-only boundary since Compose has no composition error boundary here.
+a11y/theme   : charts carry accessibleDescription (the web aria-labels); the pie carries a merged contentDescription + a TalkBack
+               legend; gauges expose a merged contentDescription; icons decorative (contentDescription=null); all color via
+               MaterialTheme.colorScheme + ChartPalette (TeslaTokens.chart) + TeslaTokens.status (A2 tokens) — dynamic color + dark
+               theme; typography via the role components (PageTitle/SectionTitle/PanelTitle/BodyText/Caption/MetricValue/MetricLabel/HelperText).
+               Compose-native (no webview); quick links navigate via the app DeepLinkRouter (teslasync://app{webPath}).
+nav          : Destinations 'batteryHealth' -> /battery pre-existing (Destinations.kt L79, count unchanged); host wired via
+               PageHosts.register("batteryHealth"); deep link auto-registered by TeslaSyncNavHost. DataContainer untouched.
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 6m 32s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 11m 54s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 44s
+parity       : PARITY_COVERED(147) == PARITY_REQUIRED(147)
+[PASS] all android triad gates green; parity 147/147; android ledger row page:battery/BatteryHealth status=done.
+EXIT=0
+STATUS=DONE
