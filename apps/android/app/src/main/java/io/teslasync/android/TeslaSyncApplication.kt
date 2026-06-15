@@ -34,6 +34,7 @@ import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 import io.teslasync.android.system.commands.CommandsPageHost
 import io.teslasync.android.system.diagnostic.DiagnosticPageHost
+import io.teslasync.android.system.search.SearchPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -127,6 +128,8 @@ class TeslaSyncApplication : Application() {
         CommandsPageHost.register()
         // Register the native system diagnostic self-test screen for the unrouted DiagnosticPage route (P3/A7).
         DiagnosticPageHost.register()
+        // Register the native app-wide unified-search screen for the /search route (P3/A7). Idempotent.
+        SearchPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
