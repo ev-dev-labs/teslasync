@@ -1,0 +1,393 @@
+================================================================================
+p4-apple · P7 · page:admin/BackupRestore — SwiftUI / HIG parity
+  web source : web/src/features/admin/pages/BackupRestorePage.tsx  (route /backup)
+  output     : apps/apple/Sources/Features/Admin/BackupRestore*.swift
+               (the live Xcode project — like the sibling FeatureFlagsPage / AuditLogPage —
+                hosts admin pages under Sources/Features/Admin/; the prompt's nominal
+                TeslaSync/Features/Admin/** is the allowed-files alias, reconciled here.
+                project.yml compiles Sources/** for both the iOS + macOS app targets; the
+                co-located tests live in Tests/Unit/Features/Admin/**.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI BackupRestorePage at web parity: a pure @Observable state
+holder (ADR-004 — no networking in the view) over an injectable BackupRestoreDataSource
+seam whose value types mirror the web BackupConfig / BackupRun / RestorePreview 1:1
+(production binds the shared core's /backup/* endpoints through the seam). The page
+reproduces the web chrome (PageContainer title/subtitle + the Quick Backup / New Config
+header actions), the four web MetricCard stat tiles, and BOTH web GlassPanels:
+
+  Stat tiles    — Total Configs / Total Backups / Last Backup / Total Size (TSStatCard),
+                  with a four-up TSStatSkeleton loading row.
+  GlassPanel5   — Backup Configurations: an adaptive table (columnar Grid on macOS/iPad,
+                  per-row cards on iPhone) with the web columns (name + Disabled badge,
+                  type, provider, frequency, schedule, options) and per-row Trigger / Edit
+                  / Delete actions.
+  GlassPanel6   — Backup History: a horizontally-scrollable adaptive table (time, run type,
+                  status, provider, file, size, records, duration) with Download / Verify /
+                  Preview actions on completed runs, followed by the Recent Errors list.
+
+The create/edit Modal, the delete ConfirmDialog, and the restore-preview Modal are
+presented as HIG-native sheets sharing a BackupSheetScaffold. The editor reproduces the
+web form (name, enabled, type, provider, frequency, retention, the dynamic per-provider
+credential fields, compress/encrypt) with the web Save guard; the delete sheet confirms a
+permanent removal; the preview sheet shows the checksum status, metadata, and restorable
+tables (with a loading state). The web toast results are surfaced as a dismissible
+TSAlertBanner (BackupOutcome). SI is honored: bytes/ms/ISO are stored raw and formatted only
+at the display boundary by BackupRestoreFormat (ports of the web formatBytes / fmtInt /
+formatDurationMsCompact / formatRelative).
+
+Files (all new unless noted):
+  Sources/Features/Admin/BackupRestoreModels.swift            (config/run/preview/meta value types)
+  Sources/Features/Admin/BackupRestoreProvider.swift          (provider + credential-field catalog)
+  Sources/Features/Admin/BackupRestoreState.swift             (form/states/outcome/datasource seam)
+  Sources/Features/Admin/BackupRestoreFormat.swift            (bytes/int/duration/relative/dateTime)
+  Sources/Features/Admin/BackupRestorePageModel.swift         (@Observable model: feeds + stats + load)
+  Sources/Features/Admin/BackupRestorePageModel.Actions.swift (CRUD/trigger/quick/verify/preview)
+  Sources/Features/Admin/BackupRestorePageModel.Sample.swift  (actor seed source)
+  Sources/Features/Admin/BackupRestorePageModel.Sample.Data.swift (seed rows)
+  Sources/Features/Admin/BackupRestorePage.swift              (view: header + banners + stats + 2 panels + sheets)
+  Sources/Features/Admin/BackupRestorePage.Stats.swift        (4 stat tiles)
+  Sources/Features/Admin/BackupRestorePage.Configs.swift      (configurations table)
+  Sources/Features/Admin/BackupRestorePage.History.swift      (history section + Recent Errors)
+  Sources/Features/Admin/BackupRestorePage.Runs.swift         (run-history table)
+  Sources/Features/Admin/BackupRestorePage.Editor.swift       (create/edit sheet + provider fields)
+  Sources/Features/Admin/BackupRestorePage.Delete.swift       (delete confirm sheet)
+  Sources/Features/Admin/BackupRestorePage.Preview.swift      (restore preview sheet)
+  Sources/Features/Admin/BackupRestorePage.Sheet.swift        (shared sheet scaffold)
+  Sources/Features/Admin/BackupRestorePage.Badges.swift       (provider/status/run-type chips)
+  Sources/Features/Admin/BackupRestorePage.OutcomeBanner.swift(toast-result banner)
+  Sources/Features/Admin/BackupRestoreRouteRegistration.swift (.backupRestore route)
+  Tests/Unit/Features/Admin/BackupRestorePageModelTests.swift (state-machine + interaction tests)
+  Tests/Unit/Features/Admin/BackupRestoreFormatTests.swift    (formatter + value-type + sample tests)
+  Sources/App/AppRoute.swift            (MOD: +.backupRestore case / pathSegment "backup" / icon / .system group)
+  Sources/TeslaSyncApp.swift            (MOD: wire BackupRestoreRouteRegistration into routeHosts)
+  Localization/Localizable.xcstrings    (MOD: +79 keys = 78 backup.* + route.backupRestore; common.cancel/close + error.loadFailed pre-existed)
+  apps/parity/apple-ledger.json         (MOD: +2 rows page:admin/BackupRestore 91/91)
+
+Navigation reconciliation: web /backup resolves to a dedicated .backupRestore route
+(pathSegment "backup", System sidebar group) via AppRouteParser's canonical-segment match —
+reachable + deep-linkable without displacing other admin pages. MenuCommandCatalog's
+navigateCommands() enumerates AppRoute.allCases, so the new route gets a navigate command
+automatically (MenuCommandCatalogTests stays green). The generated TeslaSync.xcodeproj is
+git-ignored (rebuilt with xcodegen generate).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=91
+--------------------------------------------------------------------------------
+[x] panel  — Total-Configs
+       BackupRestorePage.Stats.swift > BackupStatsRow.tiles (TSStatCard "backup.totalConfigs")
+[x] panel  — Total-Backups
+       BackupRestorePage.Stats.swift > BackupStatsRow.tiles (TSStatCard "backup.totalBackups")
+[x] panel  — Last-Backup
+       BackupRestorePage.Stats.swift > BackupStatsRow.tiles (TSStatCard "backup.lastBackup")
+[x] panel  — Total-Size
+       BackupRestorePage.Stats.swift > BackupStatsRow.tiles (TSStatCard "backup.totalSize")
+[x] panel  — GlassPanel5 (Backup Configurations)
+       BackupRestorePage.swift > configsPanel (TSGlassPanel "backup.configurations")
+       + BackupRestorePage.Configs.swift > BackupConfigsSection / BackupConfigsTable
+[x] panel  — GlassPanel6 (Backup History)
+       BackupRestorePage.swift > historyPanel (TSGlassPanel "backup.history")
+       + BackupRestorePage.History.swift (BackupHistorySection + Recent Errors)
+       + BackupRestorePage.Runs.swift > BackupRunsTable
+[x] state  — loading
+       Stats: BackupStatsRow.isLoading -> TSStatSkeleton ×4;
+       Configs/History: BackupConfigsSection/.loading + BackupHistorySection/.loading -> TSTableSkeleton
+[x] state  — empty
+       BackupConfigsSection/.empty (backup.noConfigs/.noConfigsMessage + New Config action),
+       BackupHistorySection/.empty (backup.noRuns/.noRunsMessage) -> TSEmptyState
+[x] state  — error
+       BackupConfigsSection/.error + BackupHistorySection/.error -> TSErrorDisplay + Retry;
+       BackupRestorePage.swift > banners -> TSAlertBanner "error.loadFailed" when hasLoadError
+[x] state  — success
+       BackupConfigsSection/.loaded -> BackupConfigsTable; BackupHistorySection/.loaded -> BackupRunsTable
+[x] string — backup.backupType
+       BackupRestorePage.Editor.swift
+[x] string — backup.checksumFailed
+       BackupRestorePage.Preview.swift
+[x] string — backup.checksumMismatch
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.checksumVerified
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.compress
+       BackupRestorePage.Configs.swift
+[x] string — backup.configCreateFailed
+       BackupRestorePage.Editor.swift
+[x] string — backup.configCreated
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.configDeleteFailed
+       BackupRestorePage.Delete.swift
+[x] string — backup.configDeleted
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.configName
+       BackupRestorePage.Editor.swift
+[x] string — backup.configNamePlaceholder
+       BackupRestorePage.Editor.swift
+[x] string — backup.configUpdateFailed
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.configUpdated
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.configurations
+       BackupRestorePage.Configs.swift
+[x] string — backup.create
+       BackupRestorePage.Editor.swift
+[x] string — backup.daily
+       BackupRestorePage.Configs.swift
+[x] string — backup.delete
+       BackupRestorePage.Configs.swift
+[x] string — backup.deleteConfig
+       BackupRestorePage.Delete.swift
+[x] string — backup.deleteConfigMessage
+       BackupRestorePage.Delete.swift
+[x] string — backup.disabled
+       BackupRestorePage.Configs.swift
+[x] string — backup.download
+       BackupRestorePage.Runs.swift
+[x] string — backup.duration
+       BackupRestorePage.Runs.swift
+[x] string — backup.edit
+       BackupRestorePage.Configs.swift
+[x] string — backup.editConfig
+       BackupRestorePage.Editor.swift
+[x] string — backup.enabled
+       BackupRestorePage.Editor.swift
+[x] string — backup.encrypt
+       BackupRestorePage.Configs.swift
+[x] string — backup.everyNDays
+       BackupRestorePage.Configs.swift
+[x] string — backup.file
+       BackupRestorePage.Runs.swift
+[x] string — backup.frequency
+       BackupRestorePage.Configs.swift
+[x] string — backup.frequencyDays
+       BackupRestorePage.Editor.swift
+[x] string — backup.full
+       BackupRestorePage.Configs.swift
+[x] string — backup.history
+       BackupRestorePage.History.swift
+[x] string — backup.incremental
+       BackupRestorePage.Configs.swift
+[x] string — backup.lastBackup
+       BackupRestorePage.Stats.swift
+[x] string — backup.lastRun
+       BackupRestorePage.Configs.swift
+[x] string — backup.loadingPreview
+       BackupRestorePage.Preview.swift
+[x] string — backup.maxRetention
+       BackupRestorePage.Editor.swift
+[x] string — backup.metadata
+       BackupRestorePage.Preview.swift
+[x] string — backup.name
+       BackupRestorePage.Configs.swift
+[x] string — backup.newConfig
+       BackupRestorePage.Configs.swift
+[x] string — backup.nextRun
+       BackupRestorePage.Configs.swift
+[x] string — backup.noConfigs
+       BackupRestorePage.Configs.swift
+[x] string — backup.noConfigsMessage
+       BackupRestorePage.Configs.swift
+[x] string — backup.noRuns
+       BackupRestorePage.History.swift
+[x] string — backup.noRunsMessage
+       BackupRestorePage.History.swift
+[x] string — backup.noTables
+       BackupRestorePage.Preview.swift
+[x] string — backup.options
+       BackupRestorePage.Configs.swift
+[x] string — backup.preview
+       BackupRestorePage.Runs.swift
+[x] string — backup.previewFailed
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.provider
+       BackupRestorePage.Configs.swift
+[x] string — backup.providerSettings
+       BackupRestorePage.Editor.swift
+[x] string — backup.quickBackup
+       BackupRestorePage.swift
+[x] string — backup.quickFailed
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.quickStarted
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.recentErrors
+       BackupRestorePage.History.swift
+[x] string — backup.records
+       BackupRestorePage.Runs.swift
+[x] string — backup.refresh
+       BackupRestorePage.swift
+[x] string — backup.restorePreview
+       BackupRestorePage.Preview.swift
+[x] string — backup.rows
+       BackupRestorePage.Preview.swift
+[x] string — backup.runType
+       BackupRestorePage.Runs.swift
+[x] string — backup.saveChanges
+       BackupRestorePage.Editor.swift
+[x] string — backup.schedule
+       BackupRestorePage.Configs.swift
+[x] string — backup.size
+       BackupRestorePage.Runs.swift
+[x] string — backup.status
+       BackupRestorePage.Runs.swift
+[x] string — backup.subtitle
+       BackupRestorePage.swift
+[x] string — backup.table
+       BackupRestorePage.Preview.swift
+[x] string — backup.tables
+       BackupRestorePage.Preview.swift
+[x] string — backup.time
+       BackupRestorePage.Runs.swift
+[x] string — backup.title
+       BackupRestorePage.swift
+[x] string — backup.totalBackups
+       BackupRestorePage.Stats.swift
+[x] string — backup.totalConfigs
+       BackupRestorePage.Stats.swift
+[x] string — backup.totalSize
+       BackupRestorePage.Stats.swift
+[x] string — backup.triggerFailed
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.triggerNow
+       BackupRestorePage.Configs.swift
+[x] string — backup.triggered
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — backup.type
+       BackupRestorePage.Configs.swift
+[x] string — backup.verify
+       BackupRestorePage.Runs.swift
+[x] string — backup.verifyFailed
+       BackupRestorePage.OutcomeBanner.swift
+[x] string — common.cancel
+       BackupRestorePage.Delete.swift
+[x] string — common.close
+       BackupRestorePage.Preview.swift
+[x] string — error.loadFailed
+       BackupRestorePage.swift
+--------------------------------------------------------------------------------
+PARITY_COVERED=91
+(All 91 items render from the bound @Observable BackupRestorePageModel. Every visible
+ literal resolves from Localizable.xcstrings with the web key name; zero hardcoded
+ user-facing strings — verified by an 81/81 key-coverage grep over the source + a presence
+ check of every key in Localizable.xcstrings. Beyond the gate minimum, the full web surface
+ was ported: the configurations CRUD (create/edit with dynamic per-provider credential
+ fields + compress/encrypt), per-config Trigger, Quick Backup, the run-history table with
+ Download/Verify/Preview, the Recent Errors list, and the restore-preview sheet — so the
+ page is at full panel/interaction parity, not just the 91-item minimum. Provider display
+ names + credential-field labels render verbatim, exactly as the web does (they are not
+ i18n keys in the web either).)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6.3.2 / swiftlint 0.x / swiftformat 0.61.1 /
+                    xcodegen / pwsh 7 / java 17 (KMP). Xcode runner IS available.
+
+[GREEN] PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Admin -Language swift
+        -> PLACEHOLDER_ALLOWED=8  PLACEHOLDER_COUNT=0  EXIT=0
+        (the page's only opt-out is the REQUIRED backup.configNamePlaceholder i18n key-name
+         reference, marked `// parity:allow i18n key name, not a stub` — the other 7 allowed
+         are pre-existing sibling-page markers in the same scanned directory. No stubs.)
+        NOTE: the prompt's nominal scan path apps/apple/TeslaSync/Features/Admin does not
+        exist in this repo; scanned the REAL home apps/apple/Sources/Features/Admin (where
+        the file actually compiles), exactly as the sibling logs reconcile it.
+
+[GREEN] SWIFTFORMAT  swiftformat --lint (20 new Admin files + 2 tests + 2 edited App files)
+        -> 0/24 files require formatting (config apps/apple/.swiftformat, --maxwidth 120).
+
+[GREEN] SWIFTLINT --strict  (config apps/apple/.swiftlint.yml; 24 new+edited files)
+        -> Found 0 violations, 0 serious in 24 files.
+
+[GREEN] XCODEGEN     xcodegen generate -> TeslaSync.xcodeproj created; the new files are
+        picked up via the Sources/** + Tests/Unit globs (132 BackupRestore references in
+        the generated pbxproj; BackupRestorePage.swift / *PageModel.swift /
+        *RouteRegistration.swift / *Tests.swift all present).
+
+[GREEN] TYPE-CHECK (isolated, macOS)  swiftc -typecheck -sdk macosx -target arm64-apple-macos15.0
+        -swift-version 6  (the 20 Admin files + the REAL Sources/Components + Sources/Design
+        + generated Tokens.swift + App routing AppRoute/AppRouteParser/RouteHostRegistry +
+        Theme.swift)  -> EXIT=0, zero diagnostics.
+        (UnitFormatters.swift is the ONE component excluded — it transitively needs the
+         KMP-backed UnitPreferences and is NOT referenced by this page.)
+
+[GREEN] TYPE-CHECK (isolated, iOS)    swiftc -typecheck -sdk iphoneos -target arm64-apple-ios18.0
+        -swift-version 6  (same set; exercises the #if os(iOS) compact-size-class branches)
+        -> EXIT=0, zero diagnostics.
+
+[GREEN] TYPE-CHECK (tests)  the two XCTest files compiled against the core with an XCTest
+        assertion shim (standalone swiftc cannot import the XCTest C macros) -> EXIT=0,
+        zero diagnostics: the test code uses the model's public API correctly.
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, strict concurrency) + EXECUTED the model logic
+        (Models + Provider + State + Format + PageModel + .Actions + .Sample[.Data]) against
+        the sample source: load + derived stats (totalConfigs/Backups/Size/lastBackup/
+        failedRuns), the byte/int/duration/relative formatters, create→configCreated,
+        edit→configUpdated, delete→configDeleted, trigger→triggered, quick→quickStarted,
+        verify→checksumVerified, preview present + loaded, and the download URL.
+        -> "ALL PASSED" (run exit 0). The XCTest peers are BackupRestorePageModelTests
+           (state-machine + interaction) + BackupRestoreFormatTests (formatter + value +
+           sample), runnable under the TeslaSync(-macOS)Tests bundles.
+
+[GREEN] KMP TOOLCHAIN  ./Scripts/build-shared-xcframework.sh (Gradle / Kotlin-Native) built
+        the shared core and assembled Shared.xcframework (debug slice) successfully here —
+        proving the KMP toolchain is available in this environment and is NOT the blocker.
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild build + test (full TeslaSync scheme)
+        The app target compiles the entire generated mega-surface codebase
+        (TeslaSync/feature-views ~2.6k files + shared-surfaces ~2.1k files, both EXCLUDED
+        from this prompt's scope and owned elsewhere) which carries a PRE-EXISTING
+        swift-frontend crash documented by the immediately-preceding sibling tasks
+        (apple-page-admin-FeatureFlagsPage.log / -AuditLogPage.log, same branch lineage) —
+        ZERO of my files are involved. The KMP Shared.xcframework was staged successfully
+        here (toolchain proven), but the ~5k-file app compile (with the inherited
+        shared-surfaces crash) cannot reach green in this environment and is NOT caused by
+        this change. My code is fully verified by the isolated macOS+iOS type-checks (real
+        components) + the test type-check + the executed model harness above, with ZERO
+        diagnostics in any of my files. NOT claimed green (Covenant #1).
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full xcodebuild is
+                         explicitly reported OUT-OF-SCOPE / not-greenable (pre-existing
+                         shared-surfaces crash) and NOT dressed up as passing.
+ 2 No scope narrowing  : 4 stat tiles + both web GlassPanels + the create/edit, delete, and
+                         restore-preview sheets are all implemented; the full configurations
+                         CRUD + run-history table + Recent Errors were ported (not just the
+                         91-item minimum).
+ 3 No skip-and-assume  : the 947-line web page + its hooks/types/handlers read end-to-end;
+                         PageContainer semantics verified (each panel owns its own state, so
+                         the body never gates on a single feed).
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0; the one opt-out is the REQUIRED
+                         configNamePlaceholder i18n key-name reference. Complete code.
+ 5 No parity shortcuts : 4 list/run states render distinctly; provider/status/run-type chips;
+                         SI bytes/ms/ISO formatted only at the boundary; every visible string
+                         is a web key verbatim; create vs edit, name-gated Save, required-
+                         delete-confirm, per-provider credential fields all reproduced.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit any sibling surface / shared component / other owners'
+                         files; only added the .backupRestore nav registration + 79 strings +
+                         2 ledger rows.
+ 8 No commit on red    : committing on all-GREEN IN-SCOPE gates (placeholder / swiftformat /
+                         swiftlint / xcodegen / macOS+iOS type-check / test type-check / model
+                         harness / KMP-toolchain). The only RED is the out-of-scope inherited
+                         mega-surface crash in the full scheme — DEFERRED to its owner.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         xcstrings + ledger diffs are purely additive (no existing entry
+                         reformatted).
+10 EXIT/STATUS below.
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Admin/BackupRestore*.swift \
+          apps/apple/Tests/Unit/Features/Admin/BackupRestore*.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-admin-BackupRestorePage.log
+  git commit -m "feat(apps/apple): BackupRestorePage at web parity (P7 admin)"
+
+EXIT=0
+STATUS=DONE
