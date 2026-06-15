@@ -524,7 +524,25 @@ worker_main() { # $1 = manifest line number (1-based)
             verdict="MERGED"; reason=""
         else
             pp_integration_recover
-            verdict="CONFLICT"; reason="merge conflict into integration branch"
+            # Deterministic salvage before giving up to an expensive regenerate.
+            # A generated page's new files never conflict (unique paths); only the
+            # shared registry files do, and their edits are purely additive (route
+            # enum cases, registration lines, namespaced string-catalog keys, ledger
+            # rows). salvage_merge.py re-integrates the slot by 3-way-merging those
+            # registries and union-ing the route id-lists, preserving the expensive
+            # generation. It bails (non-zero) on anything unexpected, leaving the
+            # worktree clean for the normal CONFLICT fallback below. Disable with
+            # PP_SALVAGE=0.
+            if [ "${PP_SALVAGE:-1}" = "1" ] && pp_integration_is_clean \
+               && python3 "$(dirname "$SELF")/salvage_merge.py" \
+                    --worktree "$PP_INT_WT" --theirs "auto/$PP_RUN_ID/$n" \
+                    --message "merge(parallel salvage): $relpath" >>"$logfile" 2>&1; then
+                grep -Fxq "$relpath" "$DONE_FILE" 2>/dev/null || printf '%s\n' "$relpath" >> "$DONE_FILE"
+                verdict="MERGED"; reason="salvaged"
+            else
+                pp_integration_recover
+                verdict="CONFLICT"; reason="merge conflict into integration branch"
+            fi
         fi
         pp_unlock
     fi
