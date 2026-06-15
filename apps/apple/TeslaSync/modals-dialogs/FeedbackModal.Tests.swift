@@ -3,7 +3,7 @@
 //  TeslaSync — P4 modal/dialog · 0004 · FeedbackModal (Apple)
 //
 //  Adapter + projection + accessibility coverage for the FeedbackModal surface:
-//    • `FeedbackCategory` — the three categories in web `categoryOptions` order with their i18n keys
+//    • `FeedbackModalCategory` — the three categories in web `categoryOptions` order with their i18n keys
 //      + glyphs.
 //    • `FeedbackLimits` — the web `FEEDBACK_*` constants.
 //    • `FeedbackValidation` — the zod min/max on the RAW value (title 5–120, body 20–4000).
@@ -25,11 +25,11 @@ private let passthroughLocalize: @Sendable (String, String) -> String = { _, fal
 
 final class FeedbackCategoryTests: XCTestCase {
     func testOrderMatchesWebCategoryOptions() {
-        XCTAssertEqual(FeedbackCategory.order.map(\.rawValue), ["bug", "feature", "other"])
+        XCTAssertEqual(FeedbackModalCategory.order.map(\.rawValue), ["bug", "feature", "other"])
     }
 
     func testEveryOptionCarriesKeyGlyphAndLabel() {
-        for category in FeedbackCategory.order {
+        for category in FeedbackModalCategory.order {
             let option = category.option
             XCTAssertEqual(option.labelKey, "feedback.category.\(category.rawValue)")
             XCTAssertFalse(option.labelFallback.isEmpty)
@@ -38,9 +38,9 @@ final class FeedbackCategoryTests: XCTestCase {
     }
 
     func testOptionFallbacksMatchWeb() {
-        XCTAssertEqual(FeedbackCategory.bug.option.labelFallback, "Bug report")
-        XCTAssertEqual(FeedbackCategory.feature.option.labelFallback, "Feature request")
-        XCTAssertEqual(FeedbackCategory.other.option.labelFallback, "Other / question")
+        XCTAssertEqual(FeedbackModalCategory.bug.option.labelFallback, "Bug report")
+        XCTAssertEqual(FeedbackModalCategory.feature.option.labelFallback, "Feature request")
+        XCTAssertEqual(FeedbackModalCategory.other.option.labelFallback, "Other / question")
     }
 }
 

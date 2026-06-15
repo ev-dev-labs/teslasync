@@ -30,7 +30,7 @@ public final class FeedbackModel {
     public private(set) var updatedAt: Date?
 
     // Form fields (web `useState`)
-    public var category: FeedbackCategory = .bug
+    public var category: FeedbackModalCategory = .bug
     public var title = ""
     public var details = ""
     public var includeRecentErrors = true
@@ -70,7 +70,7 @@ public final class FeedbackModel {
 
     /// The category option descriptors in web `categoryOptions` order.
     public var categoryOptions: [FeedbackCategoryOption] {
-        FeedbackCategory.order.map(\.option)
+        FeedbackModalCategory.order.map(\.option)
     }
 
     /// The title field error to show (web `touched.title ? errors.title : undefined`).

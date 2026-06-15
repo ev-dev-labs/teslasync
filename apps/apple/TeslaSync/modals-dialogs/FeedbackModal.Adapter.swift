@@ -17,7 +17,7 @@
 //  submission assembly — can be unit-tested without a network, a bundle, or a rendered view.
 //
 //  Web parity notes:
-//    • `FeedbackCategory` union + `categoryOptions`     → `FeedbackCategory` + `.option`.
+//    • `FeedbackModalCategory` union + `categoryOptions`     → `FeedbackModalCategory` + `.option`.
 //    • `FEEDBACK_TITLE_MIN/MAX`, `FEEDBACK_BODY_MIN/MAX` → `FeedbackLimits`.
 //    • zod `safeParse` (raw length min/max)              → `FeedbackValidation` (raw `count`).
 //    • `getConsoleTail()` last-`CONSOLE_TAIL_MAX` slice  → `FeedbackProjection.truncatedTail`.
@@ -50,11 +50,11 @@ public enum FeedbackLimits {
     public static let consoleTailMax = 4000
 }
 
-// MARK: - Category (web `FeedbackCategory` + `categoryOptions`)
+// MARK: - Category (web `FeedbackModalCategory` + `categoryOptions`)
 
-/// One feedback category — the native parity of the web `FeedbackCategory` union. Order matches the
+/// One feedback category — the native parity of the web `FeedbackModalCategory` union. Order matches the
 /// web `categoryOptions` array so the selector renders identically.
-public enum FeedbackCategory: String, Sendable, Equatable, CaseIterable, Identifiable {
+public enum FeedbackModalCategory: String, Sendable, Equatable, CaseIterable, Identifiable {
     case bug
     case feature
     case other
@@ -64,13 +64,13 @@ public enum FeedbackCategory: String, Sendable, Equatable, CaseIterable, Identif
     }
 
     /// The display order (web `categoryOptions`).
-    public static let order: [FeedbackCategory] = [.bug, .feature, .other]
+    public static let order: [FeedbackModalCategory] = [.bug, .feature, .other]
 }
 
 /// A display-ready category descriptor: the i18n key + web English fallback for the option label and
 /// the SF Symbol that stands in for the category in the native selector.
 public struct FeedbackCategoryOption: Sendable, Equatable, Identifiable {
-    public let category: FeedbackCategory
+    public let category: FeedbackModalCategory
     public let labelKey: String
     public let labelFallback: String
     public let systemImage: String
@@ -79,7 +79,7 @@ public struct FeedbackCategoryOption: Sendable, Equatable, Identifiable {
         category.rawValue
     }
 
-    public init(category: FeedbackCategory, labelKey: String, labelFallback: String, systemImage: String) {
+    public init(category: FeedbackModalCategory, labelKey: String, labelFallback: String, systemImage: String) {
         self.category = category
         self.labelKey = labelKey
         self.labelFallback = labelFallback
@@ -87,7 +87,7 @@ public struct FeedbackCategoryOption: Sendable, Equatable, Identifiable {
     }
 }
 
-public extension FeedbackCategory {
+public extension FeedbackModalCategory {
     /// This category's display descriptor. Labels mirror `t('feedback.category.<id>', '<Label>')`; the
     /// glyph maps the category to its closest SF Symbol.
     var option: FeedbackCategoryOption {
@@ -208,7 +208,7 @@ public struct FeedbackContext: Sendable, Equatable {
 /// The validated payload handed to the submit controller — the native parity of the web
 /// `FeedbackSubmitInput` POSTed to `/feedback` (snake_case JSON shape preserved by field name).
 public struct FeedbackSubmission: Sendable, Equatable {
-    public let category: FeedbackCategory
+    public let category: FeedbackModalCategory
     public let title: String
     public let body: String
     public let pageRoute: String
@@ -218,7 +218,7 @@ public struct FeedbackSubmission: Sendable, Equatable {
     public let consoleTail: String?
 
     public init(
-        category: FeedbackCategory,
+        category: FeedbackModalCategory,
         title: String,
         body: String,
         pageRoute: String,
@@ -337,7 +337,7 @@ public enum FeedbackProjection {
     /// (only when the toggle is on AND there is at least one report) and `console_tail` (only when
     /// the toggle is on AND the truncated tail is non-empty).
     public static func submission(
-        category: FeedbackCategory,
+        category: FeedbackModalCategory,
         title: String,
         body: String,
         context: FeedbackContext,
