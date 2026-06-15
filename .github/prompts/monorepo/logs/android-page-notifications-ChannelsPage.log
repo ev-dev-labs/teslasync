@@ -1,0 +1,142 @@
+================================================================================
+P3-ANDROID A7 — page:notifications/Channels
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/notifications/pages/ChannelsPage.tsx
+================================================================================
+
+Artifact     : page:notifications/Channels
+Web route    : /notifications/channels
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/notifications/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+ChannelsPage.tsx is a thin promotion wrapper: it sets a PageContainer (title,
+subtitle, copyLink) and embeds <NotificationChannelsView /> verbatim, so the
+notification-delivery-channels CRUD (Discord, Slack, Telegram, email, generic
+webhook, ntfy, Pushover) lives at /notifications/channels with a real page
+title/breadcrumb instead of being a tab inside another page. The page itself
+declares no data of its own (the parity manifest records zero dataSources, zero
+panels, and exactly two strings — requiredCount=2); the embedded
+NotificationChannelsView owns the channel list + delivery-stats feeds
+(useNotificationChannels / useNotificationStats) and the four mutations
+(useSaveChannel / useDeleteChannel / useToggleChannel / useTestChannel).
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 NotificationChannelsView feature-view already exists
+(io.teslasync.android.featureviews.notificationchannelsview.NotificationChannelsView,
+P3 prompt 0188) and owns every channel data state for its two cache-then-network
+feeds: the stats-tile skeletons vs tiles, the channel loading skeleton, the
+hard-error + retry surface, the no-channels empty state, the populated cards with
+their freshness chip + stale auto-refresh, the add affordance, the create/edit
+modal with the type selector, the per-card test spinner, and the toast queue.
+This page is its host: it sets the PageContainer-equivalent header and embeds the
+feature view — never re-implementing it (DRY, ADR-006). This mirrors the sibling
+admin/TeslaRegionPage (also a 2-string wrapper that embeds the shared
+RegionSettings feature view) and notifications/ArchivedPage (embeds InboxBody).
+
+New files (package io.teslasync.android.notifications.channels):
+  - ChannelsPageModel.kt   Registration(ROUTE_ID notificationsChannels,
+                           WEB_PATH /notifications/channels, SLUG ChannelsPage)
+                           + recordChannelsPageOpened (the one PII-safe
+                           view.opened diagnostic, P1/S11). No page-level feed —
+                           the embedded feature view owns the channel/stats data.
+  - ChannelsPage.kt        Stateful entry ChannelsPage(source, logger): records
+                           view.opened, builds the feature view's
+                           NotificationChannelsViewModel via
+                           viewModel(key=SLUG, factory=NotificationChannelsViewModel
+                           .factory(source, logger)); stateless ChannelsPageContent
+                           (verticalScroll Column: header + NotificationChannelsView)
+                           + ChannelsPageHeader (PageTitle + subtitle BodyText +
+                           copy-link IconButton writing WEB_PATH to the clipboard).
+  - ChannelsPageHost.kt    ChannelsRoute() resolves LocalDataContainer, builds the
+                           feature view source over HttpNotificationsRepository
+                           (shared resilient client + offline cache) via
+                           notificationChannelsViewSource(repository=…);
+                           ChannelsPageHost.register() ->
+                           PageHosts.register("notificationsChannels"). Idempotent.
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt  import + ChannelsPageHost.register() at process start
+                             (after ArchivedPageHost.register()).
+  - web/src/i18n/en.json     notifications.channels.{title,subtitle} added to the
+                             canonical key set (ADR-014) — the web page previously
+                             only had them as inline t() fallback defaults.
+  - res/values/strings.xml (+ values-ar, values-he)  2 generated keys
+                             translation_notifications_channels_{title,subtitle}
+                             inserted in sorted position, generator-identical format
+                             (no tokens, no chars needing escaping); ar/he carry the
+                             English fallback (placeholder locales, translated=false).
+                             copy-link reuses the existing
+                             translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:notifications/Channels row (done, 2/2).
+
+Notes:
+  - i18n catalog generator: res/values*/strings.xml is AUTO-GENERATED by
+    apps/shared/i18n/generators/gen-i18n.ts. The committed catalog is ALREADY
+    drifted from en.json before this change (gen --check: 11 files / ~10k lines,
+    pre-existing, unrelated to this artifact). To avoid sweeping that unrelated
+    drift (incl. apple/windows resources) into this page artifact, the two new
+    keys were added at the en.json source AND hand-inserted into the three Android
+    strings.xml files byte-identically to what emitAndroidStrings()/androidName()/
+    renderValue() produce (verified: sorted between nameRequired↔test and
+    testing↔toggleFailed; no escapable chars). A future full `gen-i18n.ts` run
+    re-emits these exact lines (no conflict). Honest disclosure (no silent drift).
+  - SI: no channel field on this surface is unit-bearing — no SI conversion.
+  - States: NotificationChannelsView renders loading / empty(no channels) /
+    error+retry / content / stale-offline for its bound feeds (verified by the
+    shared NotificationChannelsViewModelTest + NotificationChannelsViewUiTest).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading + copy-link IconButton contentDescription; the feature
+    view supplies card/stat/modal/type-chip content descriptions + dynamic/dark
+    theme (ADR-015).
+  - Layout: the feature view lays out as a non-lazy Column, so it composes safely
+    inside the page's outer verticalScroll container.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 4m 11s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 12m 21s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 32s
+TEST_EXIT=0
+
+(the only compile warning is the LocalClipboardManager deprecation, identical to
+ the shipped sibling notifications/ArchivedPage.kt copy-link affordance; accepted
+ precedent, not an error — lintDebug is green.)
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1] string : notifications.channels.title
+    EVIDENCE: R.string.translation_notifications_channels_title rendered by
+              PageTitle(...) in ChannelsPageHeader (ChannelsPage.kt); value
+              "Notification channels" in res/values/strings.xml. COVERED.
+
+[2] string : notifications.channels.subtitle
+    EVIDENCE: R.string.translation_notifications_channels_subtitle rendered by
+              BodyText(...) in ChannelsPageHeader (ChannelsPage.kt); value
+              "Where to send notifications: Discord, Slack, Telegram, email, ntfy,
+              Pushover, or a custom webhook." in res/values/strings.xml. COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

@@ -25,6 +25,7 @@ import io.teslasync.android.driving.tripplanner.TripPlannerPageHost
 import io.teslasync.android.maps.geofences.GeofencesPageHost
 import io.teslasync.android.maps.temperatureimpact.TemperatureImpactPageHost
 import io.teslasync.android.notifications.archived.ArchivedPageHost
+import io.teslasync.android.notifications.channels.ChannelsPageHost
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 
@@ -106,6 +107,8 @@ class TeslaSyncApplication : Application() {
         TemperatureImpactPageHost.register()
         // Register the native archived-notifications screen for the /notifications/archived route (P3/A7). Idempotent.
         ArchivedPageHost.register()
+        // Register the native notification-channels screen for the /notifications/channels route (P3/A7). Idempotent.
+        ChannelsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
