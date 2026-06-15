@@ -39,6 +39,7 @@ public sealed partial class ShellWindow : Window
     private readonly Dictionary<string, NavigationViewItem> _navItems = new(StringComparer.Ordinal);
     private readonly TsTeslaReauthBanner _authBanner = new();
     private readonly TsAlertBanner _pushBanner = new() { IsOpen = false, Dismissible = true };
+    private readonly ShellDataContext? _data;
 
     private ElementTheme _theme = ElementTheme.Default;
     private AccessibilitySettings? _accessibility;
@@ -46,8 +47,9 @@ public sealed partial class ShellWindow : Window
     private string? _pendingProtectedPath;
     private bool _startupRouteApplied;
 
-    public ShellWindow()
+    public ShellWindow(ShellDataContext? data = null)
     {
+        _data = data;
         InitializeComponent();
 
         SystemBackdrop = new MicaBackdrop();
@@ -810,6 +812,10 @@ public sealed partial class ShellWindow : Window
 
         RootGrid.Loaded += OnRootLoaded;
 
+        // P2 data-wiring: re-register high-value routes against the live REST data layer
+        // (last registration wins) before the first navigation resolves a page.
+        RegisterDataBackedPages();
+
         // Land on the index (Dashboard) route on launch.
         NavigateTo(string.Empty);
 
@@ -817,6 +823,128 @@ public sealed partial class ShellWindow : Window
         // Theme/density/startup-route are applied by OnSettingsChanged once the async settings load
         // raises Changed; first paint keeps the fast-cached theme restored in ConfigureWindow (no flash).
         AppLifecycle.MarkLaunched();
+    }
+
+    /// <summary>
+    /// Re-registers the high-value routes whose pages bind the live REST data layer (P2
+    /// data-wiring). Runs last in the constructor so these factories win over the
+    /// empty-source defaults registered above (last registration wins). No-op when the shell
+    /// is created without a data context (design-time / tests).
+    /// </summary>
+    private void RegisterDataBackedPages()
+    {
+        if (_data is null)
+        {
+            return;
+        }
+
+        // Vehicles — web /vehicles, backed by the live VehicleListSource (generated client +
+        // cache-then-network engine), with the shell owning navigation as before.
+        _viewModel.PageFactory.Register("Vehicles", () =>
+        {
+            var page = FeatureViews.Vehicles.VehicleListPage.Create(
+                _data.Api, _data.Engine, _data.Options, _data.Localizer, _data.Pins);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
+
+        // Drives — web /drives, backed by the live DrivesListSource (vehicle-scoped via the
+        // shared vehicle source warmed at startup).
+        _viewModel.PageFactory.Register(
+            FeatureViews.Driving.DrivesListRegistration.RouteName,
+            () => FeatureViews.Driving.DrivesListPage.Create(
+                _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer));
+
+        // Charging — web /charging, backed by the live ChargingListSource (vehicle-scoped).
+        _viewModel.PageFactory.Register("Charging", () =>
+            FeatureViews.Charging.ChargingListPage.Create(
+                _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer));
+
+        // Trips — web /trips, backed by the live TripListSource (vehicle-scoped).
+        _viewModel.PageFactory.Register("Trips", () =>
+            FeatureViews.Trips.TripListPage.Create(
+                _data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer));
+
+        // My Activity — web /me/activity, backed by the live MyActivitySource.
+        _viewModel.PageFactory.Register("MyActivity", () =>
+            FeatureViews.SystemOps.MyActivityPage.Create(_data.Api, _data.Localizer));
+
+        // Battery Health — web /battery, backed by the live BatteryHealthClientFeed for the
+        // primary vehicle (resolved by the startup warm-up).
+        _viewModel.PageFactory.Register("BatteryHealth", () =>
+            new FeatureViews.Battery.BatteryHealthPage(
+                new FeatureViews.Battery.BatteryHealthClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Efficiency — web /efficiency, drives-derived feed for the primary vehicle.
+        _viewModel.PageFactory.Register("Efficiency", () =>
+            new FeatureViews.Driving.EfficiencyPage(
+                new FeatureViews.Driving.EfficiencyClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Drive Score — web /drive-score, drives-derived feed for the primary vehicle.
+        _viewModel.PageFactory.Register("DriveScore", () =>
+            new FeatureViews.Driving.DriveScorePage(
+                new FeatureViews.Driving.DriveScoreClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Driving Dynamics — web /driving-dynamics, live feed for the primary vehicle.
+        _viewModel.PageFactory.Register("DrivingDynamics", () =>
+            FeatureViews.Driving.DrivingDynamicsPage.Create(_data.Api, _data.PrimaryVehicleId, _data.Localizer));
+
+        // Mileage — web /mileage, drives-derived feed for the primary vehicle.
+        _viewModel.PageFactory.Register("Mileage", () =>
+            new FeatureViews.Analytics.MileagePage(
+                new FeatureViews.Analytics.MileageClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Timeline — web /timeline, live activity timeline (vehicle-agnostic).
+        _viewModel.PageFactory.Register("Timeline", () =>
+            new FeatureViews.Analytics.TimelinePage(
+                new FeatureViews.Analytics.TimelineClientFeed(_data.Api),
+                _data.Localizer));
+
+        // Statistics — web /statistics, live aggregate stats source.
+        _viewModel.PageFactory.Register("Statistics", () =>
+            new FeatureViews.Analytics.StatisticsPage(
+                new FeatureViews.Analytics.StatisticsSource(_data.Api, _data.Engine, _data.Options),
+                _data.Localizer));
+
+        // Regen Efficiency — web /regen-efficiency, drives-derived feed for the primary vehicle.
+        _viewModel.PageFactory.Register("RegenEfficiency", () =>
+            new FeatureViews.Driving.RegenEfficiencyPage(
+                new FeatureViews.Driving.RegenEfficiencyClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Route Efficiency — web /route-efficiency, drives-derived feed for the primary vehicle.
+        _viewModel.PageFactory.Register("RouteEfficiency", () =>
+            new FeatureViews.Driving.RouteEfficiencyPage(
+                new FeatureViews.Driving.RouteEfficiencyClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Battery Cells — web /battery-cells, per-cell feed for the primary vehicle.
+        _viewModel.PageFactory.Register("BatteryCells", () =>
+            new FeatureViews.Battery.BatteryCellsPage(
+                new FeatureViews.Battery.BatteryCellsClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Sleep Efficiency — web /sleep-efficiency, idle-drain feed for the primary vehicle.
+        _viewModel.PageFactory.Register("SleepEfficiency", () =>
+            new FeatureViews.Battery.SleepEfficiencyPage(
+                new FeatureViews.Battery.SleepEfficiencyClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Temperature Impact — web /temperature-impact, climate-vs-range feed for the primary vehicle.
+        _viewModel.PageFactory.Register("TemperatureImpact", () =>
+            new FeatureViews.Maps.TemperatureImpactPage(
+                new FeatureViews.Maps.TemperatureImpactClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer));
+
+        // Energy Flow — web /energy-flow, live energy-flow feed.
+        _viewModel.PageFactory.Register("EnergyFlow", () =>
+            new FeatureViews.Battery.EnergyFlowPage(
+                new FeatureViews.Battery.EnergyFlowClientFeed(_data.Api),
+                _data.Localizer));
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>

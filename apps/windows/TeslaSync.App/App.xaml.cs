@@ -29,9 +29,16 @@ public partial class App : Application
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        _window = new ShellWindow();
+        // P2 data-wiring: compose the REST data layer once and hand it to the shell so it can
+        // register data-backed page factories (live pages replace the empty-source defaults).
+        var data = ShellDataContext.Create();
+        _window = new ShellWindow(data);
         MainWindow = _window;
         _window.Activate();
+
+        // Pre-populate the vehicle-scope cache so vehicle-scoped pages resolve without first
+        // visiting Vehicles (non-blocking).
+        _ = data.WarmAsync();
 
         // Rehydrate any persisted session from the Credential Locker (non-blocking).
         _ = AppAuth.InitializeAsync();
