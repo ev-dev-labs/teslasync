@@ -42,6 +42,9 @@ public sealed partial class ShellWindow : Window
     private readonly ShellDataContext? _data;
 
     private ElementTheme _theme = ElementTheme.Default;
+    private string? _appliedAccent;
+    private string? _appliedMode;
+    private bool _firstThemeApply = true;
     private AccessibilitySettings? _accessibility;
     private bool _navigating;
     private string? _pendingProtectedPath;
@@ -972,7 +975,14 @@ public sealed partial class ShellWindow : Window
     {
         var appWindow = AppWindow;
         _theme = _windowState.Restore(appWindow);
-        ApplyTheme(_theme);
+
+        // Publish the persisted accent theme + colour mode app-wide (the native applyThemeCSS analogue)
+        // and let it drive the effective light/dark ElementTheme. Geometry is still restored above.
+        var startup = AppSettingsHost.Current;
+        _theme = TeslaSync.App.Theme.ThemeApplier.Apply(
+            startup.AccentThemeId, startup.ColorModeId, SystemPrefersDark(), Content as FrameworkElement);
+        _appliedAccent = startup.AccentThemeId;
+        _appliedMode = startup.ColorModeId;
 
         appWindow.Changed += OnAppWindowChanged;
         appWindow.Closing += OnAppWindowClosing;
@@ -1298,18 +1308,13 @@ public sealed partial class ShellWindow : Window
 
     private void OnToggleTheme(object sender, RoutedEventArgs e)
     {
-        // Cycle System -> Light -> Dark -> System through the settings service, which persists the
-        // choice and raises Changed; OnSettingsChanged then applies it to the live window.
-        var next = NextTheme(AppSettingsHost.Current.Theme);
-        _ = AppSettingsHost.Service.UpdateAsync(s => s with { Theme = next });
-    }
-
-    private void ApplyTheme(ElementTheme theme)
-    {
-        if (Content is FrameworkElement root)
-        {
-            root.RequestedTheme = theme;
-        }
+        // Toggle the colour mode between light and dark through the settings service, which persists the
+        // choice and raises Changed; OnSettingsChanged then republishes the palette to the live window.
+        var current = AppSettingsHost.Current.ColorModeId;
+        var next = string.Equals(current, "light", StringComparison.OrdinalIgnoreCase)
+            ? AppSettings.DefaultColorModeId
+            : "light";
+        _ = AppSettingsHost.Service.UpdateAsync(s => s with { ColorModeId = next });
     }
 
     private void OnSettingsChanged(object? sender, AppSettings settings)
@@ -1326,11 +1331,47 @@ public sealed partial class ShellWindow : Window
 
     private void ApplySettings(AppSettings settings)
     {
-        _theme = ToElementTheme(settings.Theme);
-        ApplyTheme(_theme);
+        // Under OS high contrast the app must defer entirely to the system palette — never override with a
+        // custom accent/mode. Otherwise republish the accent + mode palette (the native applyThemeCSS
+        // analogue) and derive the effective light/dark ElementTheme from the mode. When the user actually
+        // changed theme/mode at runtime, rebuild the visible page so already-constructed token brushes
+        // (resolved at construction via DisplayTokens.Brush) pick up the new palette.
+        bool highContrast = ThemeResolver.Resolve(settings.Theme, SystemHighContrast()) == ThemeVariant.HighContrast;
+
+        bool themeChanged = !_firstThemeApply && !highContrast
+            && (!string.Equals(_appliedAccent, settings.AccentThemeId, StringComparison.Ordinal)
+                || !string.Equals(_appliedMode, settings.ColorModeId, StringComparison.Ordinal));
+
+        if (highContrast)
+        {
+            if (Content is FrameworkElement hcRoot)
+            {
+                hcRoot.RequestedTheme = ElementTheme.Default;
+            }
+
+            _theme = ElementTheme.Default;
+        }
+        else
+        {
+            _theme = TeslaSync.App.Theme.ThemeApplier.Apply(
+                settings.AccentThemeId, settings.ColorModeId, SystemPrefersDark(), Content as FrameworkElement);
+        }
+
+        _appliedAccent = settings.AccentThemeId;
+        _appliedMode = settings.ColorModeId;
+        _firstThemeApply = false;
+
         ApplyDensity(settings.Density);
         MaybeApplyStartupRoute(settings);
+
+        if (themeChanged && !string.IsNullOrEmpty(_viewModel.CurrentPath))
+        {
+            NavigateTo(_viewModel.CurrentPath, pushHistory: false, record: false);
+        }
     }
+
+    private static bool SystemPrefersDark() =>
+        Application.Current.RequestedTheme == ApplicationTheme.Dark;
 
     private void ApplyDensity(InterfaceDensity density) =>
         RootNavigation.OpenPaneLength = density == InterfaceDensity.Compact ? 220 : 280;
@@ -1356,14 +1397,6 @@ public sealed partial class ShellWindow : Window
         }
     }
 
-    private ElementTheme ToElementTheme(AppThemePreference preference) =>
-        ThemeResolver.Resolve(preference, SystemHighContrast()) switch
-        {
-            ThemeVariant.Light => ElementTheme.Light,
-            ThemeVariant.Dark => ElementTheme.Dark,
-            _ => ElementTheme.Default,
-        };
-
     /// <summary>
     /// Reads the OS high-contrast flag defensively. The packaged host always exposes it, but a
     /// non-packaged or headless launch must never crash theme application, so any failure reports
@@ -1381,13 +1414,6 @@ public sealed partial class ShellWindow : Window
             return false;
         }
     }
-
-    private static AppThemePreference NextTheme(AppThemePreference preference) => preference switch
-    {
-        AppThemePreference.System => AppThemePreference.Light,
-        AppThemePreference.Light => AppThemePreference.Dark,
-        _ => AppThemePreference.System,
-    };
 
     // Parse the /year-review/:year route param (web Number(yearParam) || new Date().getFullYear()).
     private static int ParseYearParam(string? year) =>

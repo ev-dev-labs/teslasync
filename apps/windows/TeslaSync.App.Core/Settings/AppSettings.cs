@@ -69,8 +69,27 @@ public sealed record AppSettings
     /// <summary>The fallback API origin used when none has been configured.</summary>
     public const string DefaultApiBaseUrl = "https://teslasync.local";
 
+    /// <summary>The default accent colour theme id (web <c>ThemeProvider</c> theme id).</summary>
+    public const string DefaultAccentThemeId = "neon-cyan";
+
+    /// <summary>The default colour mode id (web <c>ThemeProvider</c> mode id).</summary>
+    public const string DefaultColorModeId = "dark";
+
     /// <summary>The colour theme preference.</summary>
     public AppThemePreference Theme { get; init; } = AppThemePreference.System;
+
+    /// <summary>
+    /// The accent colour theme id (web <c>ThemeProvider</c> theme id: <c>neon-cyan</c>, <c>tesla-red</c>,
+    /// <c>matrix-green</c>, <c>royal-purple</c>, <c>solar-amber</c>, <c>custom</c>). Drives the app-wide accent.
+    /// </summary>
+    public string AccentThemeId { get; init; } = DefaultAccentThemeId;
+
+    /// <summary>
+    /// The colour mode id (web <c>ThemeProvider</c> mode id: <c>dark</c>, <c>light</c>, <c>oled</c>,
+    /// <c>midnight</c>, <c>auto</c>, <c>sunset</c>, <c>nord</c>). Drives the background/surface/text palette
+    /// and the effective light/dark <c>ElementTheme</c>.
+    /// </summary>
+    public string ColorModeId { get; init; } = DefaultColorModeId;
 
     /// <summary>The interface density preference.</summary>
     public InterfaceDensity Density { get; init; } = InterfaceDensity.Comfortable;

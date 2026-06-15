@@ -72,6 +72,10 @@ public sealed class LocalSettingsAppSettingsStore : IAppSettingsStore
     {
         public AppThemePreference Theme { get; init; } = AppThemePreference.System;
 
+        public string AccentThemeId { get; init; } = AppSettings.DefaultAccentThemeId;
+
+        public string ColorModeId { get; init; } = AppSettings.DefaultColorModeId;
+
         public InterfaceDensity Density { get; init; } = InterfaceDensity.Comfortable;
 
         public UnitSystemPreference Units { get; init; } = UnitSystemPreference.Metric;
@@ -97,6 +101,8 @@ public sealed class LocalSettingsAppSettingsStore : IAppSettingsStore
         public AppSettings ToSettings() => new()
         {
             Theme = Theme,
+            AccentThemeId = string.IsNullOrWhiteSpace(AccentThemeId) ? AppSettings.DefaultAccentThemeId : AccentThemeId,
+            ColorModeId = string.IsNullOrWhiteSpace(ColorModeId) ? AppSettings.DefaultColorModeId : ColorModeId,
             Density = Density,
             Units = Units,
             ApiBaseUrl = ApiBaseUrl,
@@ -113,6 +119,8 @@ public sealed class LocalSettingsAppSettingsStore : IAppSettingsStore
         public static SettingsDto From(AppSettings settings) => new()
         {
             Theme = settings.Theme,
+            AccentThemeId = settings.AccentThemeId,
+            ColorModeId = settings.ColorModeId,
             Density = settings.Density,
             Units = settings.Units,
             ApiBaseUrl = settings.ApiBaseUrl,

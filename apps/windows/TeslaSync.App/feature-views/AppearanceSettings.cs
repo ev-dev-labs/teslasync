@@ -362,22 +362,18 @@ public sealed partial class AppearanceSettings : ContentControl, IDisposable
 
     // ── Theme picker (web shared ThemePicker showMode) ───────────────────────────────────────────────────
 
-    private static StackPanel BuildThemeSection(ThemePickerLabels labels)
+    private StackPanel BuildThemeSection(ThemePickerLabels labels)
     {
-        var picker = new TsThemePicker
-        {
-            SystemLabel = labels.System,
-            LightLabel = labels.Light,
-            DarkLabel = labels.Dark,
-            HighContrastLabel = labels.HighContrast,
-            AccessibleName = labels.Label,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            MinWidth = 220,
-        };
-
         var section = new StackPanel { Spacing = 12 };
-        section.Children.Add(BuildSectionHeader(PaletteGlyph, labels.Label, hint: null));
-        section.Children.Add(picker);
+        section.Children.Add(BuildSectionHeader(
+            PaletteGlyph,
+            labels.Label,
+            _localizer.GetString(
+                "help.fields.settings.appearanceTheme",
+                "Pick an accent colour and a display mode applied across the whole app.")));
+
+        section.Children.Add(new TsThemeModePicker(_localizer));
+
         return section;
     }
 

@@ -72,6 +72,9 @@ public sealed partial class SettingsPage : UserControl, IDisposable
     private readonly Caption _checklistDescription = new();
     private readonly TsButton _checklistButton = new() { Variant = ButtonVariant.Subtle, IconGlyph = SettingsRegistration.ChecklistGlyph };
 
+    // Appearance — accent palette + display-mode picker (native ThemeProvider parity, applied app-wide).
+    private readonly TsGlassPanel _themePanel;
+
     /// <summary>Creates the page over the default (empty) settings feed and the shell resource localizer.</summary>
     public SettingsPage()
         : this(EmptySettingsFeed.Instance, ShellLocalizer.Instance)
@@ -101,6 +104,7 @@ public sealed partial class SettingsPage : UserControl, IDisposable
         BuildExportPanel();
         BuildTourPanel();
         BuildChecklistPanel();
+        _themePanel = BuildThemePanel(localizer);
 
         _container = new PageContainer(localizer, _viewModel.Display.Title)
         {
@@ -156,10 +160,20 @@ public sealed partial class SettingsPage : UserControl, IDisposable
         stack.Children.Add(_checklistToast);
         stack.Children.Add(_search);
         stack.Children.Add(_conflictBanner);
+        stack.Children.Add(Fade(_themePanel, 170));
         stack.Children.Add(Fade(_exportLink, 180));
         stack.Children.Add(Fade(_tourPanel, 200));
         stack.Children.Add(Fade(_checklistPanel, 220));
         return stack;
+    }
+
+    private static TsGlassPanel BuildThemePanel(ILocalizer localizer)
+    {
+        var content = new StackPanel { Spacing = 12 };
+        content.Children.Add(new SectionTitle { Value = localizer.GetString("theme.title", "Appearance") });
+        content.Children.Add(new Caption { Value = localizer.GetString("theme.subtitle", "Customize colors and display mode") });
+        content.Children.Add(new TsThemeModePicker(localizer));
+        return new TsGlassPanel { Glow = GlassGlow.None, Content = content };
     }
 
     private void BuildExportPanel()
