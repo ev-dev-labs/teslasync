@@ -1,6 +1,39 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "featureConfig.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla account feature configuration"
+          }
+        }
+      }
+    },
+    "featureConfig.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feature Flags"
+          }
+        }
+      }
+    },
+    "route.teslaFeatures" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feature Flags"
+          }
+        }
+      }
+    },
     "gas.subtitle" : {
       "extractionState" : "manual",
       "localizations" : {
