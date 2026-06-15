@@ -24,6 +24,17 @@ public enum DriveScoreTrend: String, Sendable, CaseIterable {
         }
     }
 
+    /// The resolved (localized) trend label as a `String`, for APIs that take a
+    /// plain string (e.g. `TSStatCard.deltaFormatted`) rather than a
+    /// `LocalizedStringKey`.
+    public var labelText: String {
+        switch self {
+        case .up: String(localized: "driveScore.trendUp")
+        case .down: String(localized: "driveScore.trendDown")
+        case .flat: String(localized: "driveScore.trendFlat")
+        }
+    }
+
     /// Web `TrendIcon` (`Icons.trendUp` / `Icons.trendDown` / `Icons.remove`).
     public var systemImage: String {
         switch self {

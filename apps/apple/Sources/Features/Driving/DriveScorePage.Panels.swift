@@ -22,7 +22,7 @@ struct DriveScoreSummaryStatsSection: View {
                 value: "\(model.averages.total)/100",
                 systemImage: "target",
                 delta: trendDelta,
-                deltaFormatted: String(localized: model.overallTrend.labelKey)
+                deltaFormatted: model.overallTrend.labelText
             )
             TSStatCard(title: "driveScore.bestScore", value: "\(model.bestScore)/100", systemImage: "trophy.fill")
             TSStatCard(
