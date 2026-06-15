@@ -769,3 +769,4 @@ p4-apple/pages/battery/SleepEfficiencyPage.prompt.md
 p4-apple/pages/charging/PowersharePage.prompt.md
 p4-apple/pages/dashboard/GlancePage.prompt.md
 p4-apple/pages/driving/DriveScorePage.prompt.md
+p4-apple/pages/admin/DLQInspectorPage.prompt.md
