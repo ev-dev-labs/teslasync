@@ -1,0 +1,134 @@
+P3-ANDROID A7 — page:charging/TeslaChargingSessionsMap — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/charging/pages/TeslaChargingSessionsMap.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/charging/  (TeslaChargingSessionsMap.kt screen +
+             TeslaChargingSessionsMapPageViewModel + TeslaChargingSessionsMapPageModel)
+Embeds     : the shared TeslaChargingSessionsMap feature view
+             (apps/android/app/src/main/java/com/teslasync/feature-views/TeslaChargingSessionsMap/,
+             package io.teslasync.android.featureviews.teslachargingsessionsmap) — verbatim, DRY (ADR-006), no
+             re-implementation of the map / markers / projection / strings, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED map the Fleet Charging Sessions page embeds; its rows
+arrive from the parent's `useTeslaChargingSessions` read and it renders one fixed-height MapContainer + MapTileLayer
+centered on the sessions' centroid, carrying a clustered marker per session-with-a-coordinate (popup: site name,
+local start time, energy kWh, total cost, charger type; aria-label "{{name}} charging session") under the map's
+aria-label "Charging sessions map". The presentational + projection + data-seam + state-holder surface was already
+implemented at full parity by the predecessor prompt p3-android/feature-views A-TeslaChargingSessionsMap
+(com/teslasync/feature-views/TeslaChargingSessionsMap, committed + green; fv tests
+TeslaChargingSessionsMapProjectionTest + TeslaChargingSessionsMapViewModelTest + UI test
+TeslaChargingSessionsMapUiTest already in the suite). This page prompt targets the separate allowed-files path
+kotlin/com/teslasync/charging/** with a `@Composable screen + ViewModel` contract, so — following the sanctioned
+ConditionBuilder / PresetGallery unrouted-page precedent — this layer is a THIN page wrapper that EMBEDS that one
+shared surface (every map/marker/state/string is the parity-covered feature view's TeslaChargingSessionsMapContent)
+and adds only the page state holder + the stateless screen. Predecessor NOT bypassed; the fv's ChargingSessionsSource
+seam, ChargingStoreSessionsSource binding, TeslaChargingSessionsMapProjection, ChargingSessionsCurrencyPrefs,
+TeslaChargingSession, and TeslaChargingSessionsMapContent are reused as-is.
+
+DATA-SOURCE NOTE (honesty): the manifest record declares NO API data source for this unit ("renders from navigation
+args / local state") — the web COMPONENT is prop-driven (its parent owns the `useTeslaChargingSessions` fetch). The
+native page is a self-contained destination, so — mirroring the web parent and the sibling ConditionBuilder /
+PresetGallery page wrappers — the page ViewModel binds the SAME fleet-sessions feed the web parent supplies through
+the feature view's ChargingSessionsSource seam (ChargingStoreSessionsSource over the shared S8 ChargingStore →
+GET /tesla/charging/sessions) and re-shares that cache-then-network feed onto UiState via the shared
+BaseFeedViewModel.asUiState helper (the standard A7 page-VM job). The empty gate is the feature view's own
+TeslaChargingSessionsMapProjection.hasAnyRenderableLocation (no session, or none with a finite coordinate → empty),
+so the page state holder and the rendered markers never disagree. No HTTP, no business logic, no re-implementation of
+the sessions fetch/decode/projection is added by this layer. The page VM binding mirrors the fully-tested fv VM
+(TeslaChargingSessionsMapViewModel) over the same seam, so it adds no new untested logic.
+
+NAV NOTE (honesty): web route is "(unrouted)". Destinations.kt is the canonical registry — "every web route recorded
+as metadata … never any fabricated stand-in"; DestinationsTest.registryCoversTheWholeWebTaxonomy() LOCKS
+Destinations.all to 137 web routes and RouteTableTest round-trips every Destinations.all entry. An unrouted map has no
+web route, so NO synthetic nav destination is fabricated (doing so would break the locked tests + the registry's
+anti-fabrication contract). The page-layer is embedded by the Fleet Charging Sessions page exactly as the feature
+view is — the prompt's "(if routed)" clause does not apply, identical to the sibling ConditionBuilder / PresetGallery
+unrouted pages (which likewise add no Host / Destination / Application registration).
+
+STRINGS NOTE: all 3 required keys already present in res/values/strings.xml (no new strings added):
+  translation_tesla_sessions_mapLabel   (L6493 "Charging sessions map")
+  translation_tesla_sessions_markerLabel(L6494 "%1$s charging session")
+  translation_tesla_sessions_unknown    (L6509 "Unknown")
+rendered by the embedded fv via rememberChargingSessionsMapStrings(); zero hardcoded literals in the page layer.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+ENVIRONMENT: ANDROID_HOME=C:\Users\AtulM\AppData\Local\Android\Sdk (present); JDK 21 (Android Studio JBR);
+Gradle 8.14.5. Toolchain present → STATUS targets DONE (not BLOCKED).
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_ALLOWED=1   (the pre-existing ChargingCurvePageModel `toDouble` // parity:allow; 0 in any new file)
+PLACEHOLDER_COUNT=0
+   (& ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin)
+BUILD SUCCESSFUL in 3m 22s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug — compileDebugKotlin clean; only the pre-existing unrelated Gradle 9.0 deprecation warning)
+TEST SUCCESSFUL in 1m 46s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — includes the predecessor fv TeslaChargingSessionsMapProjectionTest +
+    TeslaChargingSessionsMapViewModelTest, still green)
+LINT SUCCESSFUL in 10m 50s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug — lint-results-debug written, no errors)
+
+=== PARITY ===
+PARITY_REQUIRED=7
+binding evidence (the page layer binds the StateFlow; the embedded shared feature view renders every item):
+  page layer : apps/android/app/src/main/kotlin/com/teslasync/charging/{TeslaChargingSessionsMap.kt,
+               TeslaChargingSessionsMapPageViewModel.kt, TeslaChargingSessionsMapPageModel.kt}
+  shared fv  : apps/android/app/src/main/java/com/teslasync/feature-views/TeslaChargingSessionsMap/{TeslaChargingSessionsMap.kt,
+               TeslaChargingSessionsMapModel.kt, TeslaChargingSessionsMapSource.kt, TeslaChargingSessionsMapViewModel.kt}
+               (fv = io.teslasync.android.featureviews.teslachargingsessionsmap)
+  bound feed : TeslaChargingSessionsMapPageViewModel.kt:75 state: StateFlow<UiState<List<TeslaChargingSession>>>
+               (refreshTrigger.flatMapLatest{source.stream()}.asUiState{isEmpty=!hasAnyRenderableLocation}, L78)
+               → TeslaChargingSessionsMap.kt:99 TeslaChargingSessionsMapScreen(state,…) → :106 fv TeslaChargingSessionsMapContent(state,…)
+
+# maps (3) — composed by the shared A3 maps wrappers (no maps SDK imported by the page/fv directly)
+[COVERED] map  MapContainer  -> fv/TeslaChargingSessionsMap.kt:274 TeslaMap(cameraPositionState, contentDescription=display.mapContentDescription)
+                               — the Android counterpart of the web <MapContainer> (components/maps/TeslaMap.kt wrapping GoogleMap),
+                               centered on the projected centroid (model `center`, web `center` memo) at zoom 5 (model MAP_ZOOM, web zoom={5}).
+[COVERED] map  MapTileLayer  -> fv/TeslaChargingSessionsMap.kt:274 TeslaMap(...) base map style/tiles
+                               (components/maps/TeslaMap.kt rememberMapStyleOptions/gmsMapType) — the web <MapTileLayer> OSM base layer.
+[COVERED] map  MarkerCluster -> fv/TeslaChargingSessionsMap.kt:279 MarkerClusterLayer(markers, zoom=cameraState.position.zoom)
+                               (components/maps/MarkerCluster.kt — the web leaflet <MarkerCluster>): one clustered marker per
+                               session-with-a-coordinate, density-graded bubbles + singleton dots, popup title/snippet + accessible label.
+
+# data states (1 declared: empty) — bound to the page VM StateFlow
+[COVERED] state empty        -> TeslaChargingSessionsMapPageViewModel.kt:78 asUiState(isEmpty={ !TeslaChargingSessionsMapProjection.hasAnyRenderableLocation(it) })
+                               → UiPhase.Empty; fv/TeslaChargingSessionsMap.kt:183 `if (display.hasMarkers)` else :191 ChargingSessionsMapEmpty(message=display.noDataText)
+                               → :287 EmptyState(icon=MapsGlyphs.Map) ("No location data available yet.") — never a blank map box (ADR-011).
+  (extra web-parity beyond the 1-item contract: loading skeleton fv:302, hard-error QueryError+retry fv:313, stale/offline freshness chip fv:204 — every source state covered, no surface blanks)
+
+# strings (3) — every visible literal via stringResource(R.string.translation_*); web key names preserved (resolved by the embedded fv)
+[COVERED] string tesla_sessions.mapLabel   -> fv/TeslaChargingSessionsMap.kt:331 stringResource(R.string.translation_tesla_sessions_mapLabel)
+                               → display.mapLabel/mapContentDescription → header title :176 + map accessible name :277  (strings.xml L6493 "Charging sessions map")
+[COVERED] string tesla_sessions.markerLabel-> fv/TeslaChargingSessionsMap.kt:333 stringResource(R.string.translation_tesla_sessions_markerLabel)
+                               → markerLabel("{name}") → SessionMarker.accessibleLabel (model markerFor) + summaryLines  (strings.xml L6494 "%1$s charging session")
+[COVERED] string tesla_sessions.unknown    -> fv/TeslaChargingSessionsMap.kt:332 stringResource(R.string.translation_tesla_sessions_unknown)
+                               → siteName fallback (model siteName, web `s.site_location_name || unknown`)  (strings.xml L6509 "Unknown")
+
+PARITY_COVERED=7
+
+=== SUMMARY ===
+data sources : manifest declares none for the unit (web component is prop-driven). The self-contained native destination
+               binds the same feed the web parent supplies — useTeslaChargingSessions (GET /tesla/charging/sessions) — via
+               the fv ChargingSessionsSource seam (ChargingStoreSessionsSource over the shared S8 ChargingStore) and
+               TeslaChargingSessionsMapPageViewModel.asUiState (isEmpty=!hasAnyRenderableLocation); the page performs no HTTP.
+nav          : web route "(unrouted)" — no synthetic destination fabricated (Destinations.kt records only real web routes;
+               DestinationsTest 137-route lock + RouteTableTest round-trip would break otherwise). Surface is embedded by the
+               Fleet Charging Sessions page exactly as the feature view is, like the sibling ConditionBuilder / PresetGallery pages.
+maps         : MapContainer + MapTileLayer = shared TeslaMap; MarkerCluster = shared MarkerClusterLayer. No maps SDK imported by page/fv.
+charts       : none declared.
+strings      : all 3 already present in res/values/strings.xml (translation_tesla_sessions_{mapLabel,markerLabel,unknown}); rendered by
+               the embedded fv via stringResource; zero hardcoded literals in the page layer; web key names preserved.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), opaque map paired with MapAccessibleSummary list alternative + map contentDescription,
+               TalkBack labels, MaterialTheme tokens (no raw hex), energy converted SI Wh→kWh + currency/date formatted at the display
+               boundary (fv model, ADR-013/014/015) — all from the embedded fv. SI stays SI; conversion is display-only.
+placeholder  : PLACEHOLDER_COUNT=0 (1 pre-existing allowed in a sibling file)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+ledger       : apps/parity/android-ledger.json — page:charging/TeslaChargingSessionsMap status=done, covered 7/7.
+parity       : PARITY_COVERED(7) == PARITY_REQUIRED(7)
+[PASS] all android triad gates green; parity 7/7; android ledger row page:charging/TeslaChargingSessionsMap status=done.
+EXIT=0
+STATUS=DONE
