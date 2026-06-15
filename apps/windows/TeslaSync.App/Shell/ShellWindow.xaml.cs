@@ -363,6 +363,9 @@ public sealed partial class ShellWindow : Window
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
+        // Battery / Vampire Drain page (P2/W7) — parity port of web VampireDrainPage at routes
+        // /charging/vampire-drain + /vampire-drain. RouteTable already maps both to "VampireDrain".
+        _viewModel.PageFactory.Register("VampireDrain", static () => new FeatureViews.Battery.VampireDrainPage());
         // Battery / Sleep Efficiency page (P2/W7) — parity port of web SleepEfficiencyPage at route /sleep-efficiency.
         _viewModel.PageFactory.Register("SleepEfficiency", static () => new FeatureViews.Battery.SleepEfficiencyPage());
         // Vehicle Systems / Safety Settings page (P2/W7) — parity port of web SafetySettingsPage at route /safety-settings.
