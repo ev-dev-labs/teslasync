@@ -523,6 +523,24 @@
       "requiredCount": 30,
       "promptId": "p4-apple/P7/page:dashboard/Glance",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-dashboard-GlancePage.log"
+    },
+    {
+      "unitId": "page:driving/DriveScore",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 160,
+      "requiredCount": 160,
+      "promptId": "p4-apple/P7/page:driving/DriveScore",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-DriveScorePage.log"
+    },
+    {
+      "unitId": "page:driving/DriveScore",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 160,
+      "requiredCount": 160,
+      "promptId": "p4-apple/P7/page:driving/DriveScore",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-DriveScorePage.log"
     }
   ]
 }
