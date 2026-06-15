@@ -142,5 +142,14 @@
     "requiredCount": 11,
     "promptId": "p3-android/pages/charging/ChargingCurvePage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingCurvePage.log"
+  },
+  {
+    "unitId": "page:charging/Powershare",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p3-android/pages/charging/PowersharePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-PowersharePage.log"
   }
 ]
