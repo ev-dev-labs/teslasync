@@ -116,6 +116,10 @@ public sealed partial class ShellWindow : Window
         // RouteTable already maps Page("AuditLog","admin/audit-log",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("AuditLog", static () => new FeatureViews.Admin.AuditLogPage());
 
+        // Admin / Backup & Restore page (P2/W7) — parity port of web BackupRestorePage at route /backup.
+        // RouteTable already maps Page("BackupRestore","backup",RouteGroup.SettingsAccountIntegrations).
+        _viewModel.PageFactory.Register("BackupRestore", static () => new FeatureViews.Admin.BackupRestorePage());
+
         // Admin / API Playground page (P2/W7) — parity port of web ApiPlaygroundPage at route /api-playground.
         // RouteTable already maps Page("ApiPlayground","api-playground",RouteGroup.AdminDevTools).
         _viewModel.PageFactory.Register("ApiPlayground", static () => new FeatureViews.Admin.ApiPlaygroundPage());

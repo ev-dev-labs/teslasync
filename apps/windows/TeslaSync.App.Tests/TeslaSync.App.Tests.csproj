@@ -414,6 +414,9 @@
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.Model.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.Source.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.Source.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\AuditLogPage\AuditLogPage.ViewModel.cs" Link="FeatureViews\AuditLogPage\AuditLogPage.ViewModel.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BackupRestorePage\BackupRestorePage.Model.cs" Link="FeatureViews\BackupRestorePage\BackupRestorePage.Model.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BackupRestorePage\BackupRestorePage.Source.cs" Link="FeatureViews\BackupRestorePage\BackupRestorePage.Source.cs" />
+    <Compile Include="..\TeslaSync.App\feature-views\BackupRestorePage\BackupRestorePage.ViewModel.cs" Link="FeatureViews\BackupRestorePage\BackupRestorePage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiPlaygroundPage\ApiPlaygroundPage.Model.cs" Link="FeatureViews\ApiPlaygroundPage\ApiPlaygroundPage.Model.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\ApiPlaygroundPage\ApiPlaygroundPage.ViewModel.cs" Link="FeatureViews\ApiPlaygroundPage\ApiPlaygroundPage.ViewModel.cs" />
     <Compile Include="..\TeslaSync.App\feature-views\DevToolsPage\DevToolsPage.Model.cs" Link="FeatureViews\DevToolsPage\DevToolsPage.Model.cs" />
