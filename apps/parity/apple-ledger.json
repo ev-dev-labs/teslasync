@@ -577,6 +577,24 @@
       "requiredCount": 160,
       "promptId": "p4-apple/P7/page:driving/DriveScore",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-DriveScorePage.log"
+    },
+    {
+      "unitId": "page:admin/System",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/System",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SystemPage.log"
+    },
+    {
+      "unitId": "page:admin/System",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 2,
+      "requiredCount": 2,
+      "promptId": "p4-apple/P7/page:admin/System",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SystemPage.log"
     }
   ]
 }

@@ -128,6 +128,7 @@ struct TeslaSyncApp: App {
         registry = GDPRExportRouteRegistration.registry(base: registry)
         registry = RbacMatrixRouteRegistration.registry(base: registry)
         registry = UsersRouteRegistration.registry(base: registry)
+        registry = SystemRouteRegistration.registry(base: registry)
         return registry
     }
 
