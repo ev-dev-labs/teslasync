@@ -1,0 +1,178 @@
+=== p2-windows · W7 · page:admin/FleetTelemetryCoverage (WinUI 3 / Fluent) ===
+Parity unit : page:admin/FleetTelemetryCoverage   kind=page   web route=/admin/telemetry/coverage
+Web source  : web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+Runner      : .NET 10.0.300 SDK present (dotnet --version 10.0.300) + maui-windows workload — NOT blocked.
+
+=== APPROACH ===
+- The repository's WinUI app is code-first C# (no .xaml page files); every feature surface lives under
+  apps/windows/TeslaSync.App/feature-views/<Name>/ as <Name>.Model.cs (pure, Microsoft.UI-free projection,
+  unit-tested headlessly), <Name>.Source.cs (the generated-client feed), <Name>.ViewModel.cs
+  (INotifyPropertyChanged + IDisposable state holder) and <Name>.cs (the Fluent view), exactly as the sibling W7
+  SchemaDriftPage / ApiLogsPage / FeedbackQueuePage do. The generated prompt's idealized "FleetTelemetryCoveragePage.xaml
+  + FleetTelemetryCoveragePageViewModel.cs under TeslaSync/Features/Admin" is mapped onto these real conventions; the
+  surface registers itself with the W4 ShellPageFactory by route name ("FleetTelemetryCoverage", already in
+  RouteTable.cs:207 -> Page("FleetTelemetryCoverage","admin/telemetry/coverage",RouteGroup.AdminDevTools)).
+- Data binding (ADR-004): the manifest data source is useFleetTelemetryCoverage (GET /tesla/fleet-telemetry/coverage).
+  The view-model reads through an injected IFleetTelemetryCoverageFeed; the default EmptyFleetTelemetryCoverageFeed
+  resolves the empty state (matching the SchemaDriftPage/ApiLogsPage host-injection precedent), and the
+  generated-client-backed FleetTelemetryCoverageClientFeed (FleetTelemetryCoveragePage.Source.cs) binds to the generated
+  OpenAPI contract client operation get_api_v1_tesla_fleet_telemetry_coverage (no params; verified present in the
+  generated apps/windows/Generated/Api/ApiEndpoints.cs, path /tesla/fleet-telemetry/coverage), asserted in tests via the
+  FakeApiClient. No HTTP touches the view. The tolerant FleetTelemetryCoverageSnapshot.FromJson reproduces the web
+  queryFn `?? []` / `?? {}` coalescing so categories / destination_totals / orphan_fields are always non-null.
+- The web page renders every region INSIDE the PageContainer body, so the native port reproduces them as visible Fluent
+  regions per ADR-006: the always-on header (PageTitle + Subhead + TsButton Refresh), the five TsStatCard summary tiles,
+  the legend / destination / filter TsGlassPanels, the conditional orphan-fields TsGlassPanel (warning-toned), and the
+  bottom data-state region — loading (TsSpinner + Text), error (danger-toned TsGlassPanel + icon; the header Refresh is
+  the retry), empty / filter-empty (TsEmptyState), and the per-category TsGlassPanel sections each carrying their
+  destination chips (TsBadge) and the per-field table (Code / TsBadge cells: field · destination · column · dual-write ·
+  subscribed). Never a blank region. The client-side filter (web `filter` useState + useMemo derivations) is owned by
+  the view-model's SetFilter, which re-projects the already-loaded snapshot WITHOUT a refetch.
+- SI units N/A: the coverage snapshot carries no unit-bearing fields (category / field / destination names, integer
+  counts and routing booleans only); counts format through the shared NumberFormatting port (web fmtInt) at the display
+  boundary. Case-insensitive filtering uses string.Contains(..., OrdinalIgnoreCase) (no ToLowerInvariant; CA1308-clean).
+- All 37 i18n keys were added verbatim (web key names) to Strings/en/Resources.resw as translation.coverage.* (37),
+  alphabetically placed between translation.costAnalysis.* and translation.critical; the surface resolves them through
+  the ILocalizer facade. The ar/he catalogs already lag en by design; the app falls back to the English default via
+  ILocalizer until translated. The required key name "coverage.filter.placeholder" carries a `// parity:allow` reason
+  (web i18n key name, not a stub marker) so the ADR-011 placeholder gate stays green.
+- Predecessor (W1) note: this fresh worktree had no generated OpenAPI C# client (apps/windows/Generated/ is git-ignored
+  and regenerated, not committed). Ran the canonical codegen `npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts`
+  (10 Kotlin + 10 C# files) to produce Generated/Api/*.cs, and supplied the git-ignored Generated/Generated.csproj
+  build wrapper the Core/Tests projects ProjectReference — pure environment setup for the predecessor's output, not a
+  parity shortcut. The headless logic (Model/Source/ViewModel) is compiled directly into TeslaSync.App.Tests via three
+  <Compile> links (the WinUI view is excluded — it uses Microsoft.UI), matching the SchemaDriftPage test wiring.
+
+=== PARITY ===
+PARITY_REQUIRED=51
+
+# Panels (11) — every web region reproduced as a Fluent Card/Mica region (each a visible branch)
+[x] panel  - GlassPanel1            -> per-category section panel: FleetTelemetryCoveragePage.cs#BuildCategorySection
+             (TsGlassPanel per category hosting PanelTitle category name + Caption "{{count}} routed fields" + the
+             destination TsBadge chips + the per-field table / no-match Caption); web CategorySection GlassPanel
+             (FleetTelemetryCoveragePage.tsx L186); rendered for each CoverageCategoryDisplay when ShowCategories; test
+             Category_caption_interpolates_the_total_fields_count + Field_rows_project_destination_column_dual_write_and_subscribed
+[x] panel  - Categories             -> Categories TsStatCard (_categoriesCard); projection StatCategoriesLabel/
+             StatCategoriesValue (= categories.Count via FormatCount); web StatCard "Categories"; test
+             Summary_stats_count_categories_fields_and_subscriptions
+[x] panel  - Routed-fields          -> Routed fields TsStatCard (_routedFieldsCard); projection StatRoutedFieldsLabel/
+             StatRoutedFieldsValue (= sum of fields.Count); web StatCard "Routed fields"; test
+             Summary_stats_count_categories_fields_and_subscriptions
+[x] panel  - Subscribed             -> Subscribed TsStatCard (_subscribedCard); projection StatSubscribedLabel/
+             StatSubscribedValue (= count of subscribed fields); web StatCard "Subscribed"; test
+             Summary_stats_count_categories_fields_and_subscriptions
+[x] panel  - Routed-not-subscribed  -> Routed, not subscribed TsStatCard (_routedNotSubscribedCard); projection
+             StatRoutedNotSubscribedLabel/Value (= totalRouted - subscribed); web StatCard "Routed, not subscribed";
+             test Summary_stats_count_categories_fields_and_subscriptions
+[x] panel  - Orphan-fields          -> Orphan fields TsStatCard (_orphansCard); projection StatOrphansLabel/
+             StatOrphansValue (= orphan_fields.Count); web StatCard "Orphan fields"; test
+             Summary_stats_count_categories_fields_and_subscriptions + Orphans_panel_hidden_when_none
+[x] panel  - GlassPanel7            -> legend panel "Reading this page": FleetTelemetryCoveragePage.cs#BuildLegendPanel
+             (_legendPanel TsGlassPanel: _legendTitle PanelTitle + _legendIntro Caption + the Column/Dual write/
+             Subscribed bold-label+help items via #SetLegendItem); web GlassPanel "Reading this page" (tsx L326);
+             projection Legend* fields; test Projection_resolves_every_required_string_key (legend.* keys)
+[x] panel  - GlassPanel8            -> destination breakdown panel: FleetTelemetryCoveragePage.cs#BuildDestinationsPanel
+             (_destinationsPanel TsGlassPanel: title + help + sorted destination TsBadge chips or _destinationsEmpty
+             Caption); web GlassPanel "Destination breakdown" (tsx L369); projection DestinationsTitle/Help/
+             HasDestinations/DestinationChips; test Destinations_sorted_descending_by_count + Destinations_empty_when_none_reported
+[x] panel  - GlassPanel9            -> orphan-fields warning panel (conditional): FleetTelemetryCoveragePage.cs#BuildOrphansPanel
+             (_orphansPanel TsGlassPanel warning-toned: AlertTriangle FontIcon + title + help + the orphan Code rows);
+             web GlassPanel orphans (tsx L409, rendered only when orphan_fields.length>0); projection ShowOrphans/
+             OrphansTitle/OrphansHelp/Orphans; test Orphans_projected_and_panel_shown_when_present + Orphans_panel_hidden_when_none
+[x] panel  - GlassPanel10           -> filter panel: FleetTelemetryCoveragePage.cs#BuildFilterPanel (_filterPanel
+             TsGlassPanel hosting _filterInput TsInput; TextChanged -> ViewModel.SetFilter -> reproject, no refetch);
+             web GlassPanel filter Input (tsx L442); projection FilterHint (key coverage.filter.placeholder); test
+             ViewModel_set_filter_reprojects_without_refetching + Filter_narrows_categories_and_their_fields
+[x] panel  - GlassPanel11           -> error panel: FleetTelemetryCoveragePage.cs#BuildErrorPanel (_errorPanel TsGlassPanel
+             danger-toned: ErrorBadge FontIcon + _errorText ErrorText); web GlassPanel error (tsx L466); gated by
+             ShowError; test State_error_when_query_failed + ViewModel_feed_failure_is_the_error_state
+
+# Data states (3) — loading / empty / success, each a visible region (never blank); error is also rendered (GlassPanel11)
+[x] state  - loading                -> FleetTelemetryCoverageState.Loading + FleetTelemetryCoverageDisplay.ShowLoading;
+             rendered FleetTelemetryCoveragePage.cs#_loadingPanel (TsSpinner Small + _loadingText "Loading routing
+             snapshot…"); test State_loading_when_query_in_flight + ViewModel_* initial load
+[x] state  - empty                  -> FleetTelemetryCoverageState.Empty + ShowEmpty; rendered _emptyState (TsEmptyState);
+             covers BOTH web branches — no categories (coverage.empty) and filter matched nothing (coverage.filterEmpty),
+             selected by EmptyText; test State_empty_when_no_categories + State_empty_uses_filter_copy_when_nothing_matches
+             + ViewModel_empty_snapshot_is_the_empty_state
+[x] state  - success                -> FleetTelemetryCoverageState.Success + ShowCategories; rendered _categoriesPanel
+             (one TsGlassPanel CategorySection per filtered category); test State_success_when_categories_present +
+             ViewModel_loads_snapshot_into_the_success_state
+
+# Strings (37) — every visible literal resolves from Strings/*.resw via ILocalizer with the web key names
+[x] string - coverage.category.empty          -> FleetTelemetryCoverageProjection.Project GetString("coverage.category.empty", "This category has no routed fields.")
+[x] string - coverage.category.noMatch        -> Project GetString("coverage.category.noMatch", "No fields match the current filter.")
+[x] string - coverage.category.totalFields    -> Project GetString("coverage.category.totalFields", "{{count}} routed fields") -> per-category TotalFieldsCaption ({{count}} -> fmtInt)
+[x] string - coverage.col.column              -> Project GetString("coverage.col.column", "Column") -> ColumnColumnHeader
+[x] string - coverage.col.destination         -> Project GetString("coverage.col.destination", "Destination") -> ColumnDestinationHeader
+[x] string - coverage.col.dualWrite           -> Project GetString("coverage.col.dualWrite", "Dual write") -> ColumnDualWriteHeader
+[x] string - coverage.col.field               -> Project GetString("coverage.col.field", "Field") -> ColumnFieldHeader
+[x] string - coverage.col.subscribed          -> Project GetString("coverage.col.subscribed", "Subscribed") -> ColumnSubscribedHeader
+[x] string - coverage.destinations.empty      -> Project GetString("coverage.destinations.empty", "No destinations reported.") -> DestinationsEmptyText
+[x] string - coverage.destinations.help       -> Project GetString("coverage.destinations.help", "Counts how many routed fields land in each storage destination. …")
+[x] string - coverage.destinations.title      -> Project GetString("coverage.destinations.title", "Destination breakdown")
+[x] string - coverage.dualWrite.yes           -> Project GetString("coverage.dualWrite.yes", "signal_log") -> CoverageFieldRowDisplay.DualWriteText
+[x] string - coverage.empty                   -> Project GetString("coverage.empty", "No categories returned. …") -> EmptyText (no-categories branch)
+[x] string - coverage.error                   -> Project GetString("coverage.error", "Could not load Fleet Telemetry coverage. Check API logs and try again.") -> ErrorText
+[x] string - coverage.filter.placeholder      -> Project GetString("coverage.filter.placeholder", "Filter by field name, destination, or column…") -> FilterHint  // parity:allow web i18n key name
+[x] string - coverage.filterEmpty             -> Project GetString("coverage.filterEmpty", "No categories match the current filter.") -> EmptyText (filter-empty branch)
+[x] string - coverage.legend.columnHelp       -> Project GetString("coverage.legend.columnHelp", "— the typed destination column. …") -> LegendColumnHelp
+[x] string - coverage.legend.columnLabel      -> Project GetString("coverage.legend.columnLabel", "Column") -> LegendColumnLabel
+[x] string - coverage.legend.dualWriteHelp    -> Project GetString("coverage.legend.dualWriteHelp", "— marks fields written to both their primary table AND signal_log …") -> LegendDualWriteHelp
+[x] string - coverage.legend.dualWriteLabel   -> Project GetString("coverage.legend.dualWriteLabel", "Dual write") -> LegendDualWriteLabel
+[x] string - coverage.legend.intro            -> Project GetString("coverage.legend.intro", "Each row is one Tesla telemetry field declared in routing.yaml. …") -> LegendIntro
+[x] string - coverage.legend.subscribedHelp   -> Project GetString("coverage.legend.subscribedHelp", "— whether Tesla Fleet Telemetry is currently pushing this field to us. …") -> LegendSubscribedHelp
+[x] string - coverage.legend.subscribedLabel  -> Project GetString("coverage.legend.subscribedLabel", "Subscribed") -> LegendSubscribedLabel
+[x] string - coverage.legend.title            -> Project GetString("coverage.legend.title", "Reading this page") -> LegendTitle
+[x] string - coverage.loading                 -> Project GetString("coverage.loading", "Loading routing snapshot…") -> LoadingText
+[x] string - coverage.orphans.help            -> Project GetString("coverage.orphans.help", "These routing.yaml entries reference Field names not present in protomodel.SignalsByName …") -> OrphansHelp
+[x] string - coverage.orphans.title           -> Project GetString("coverage.orphans.title", "Orphan fields detected") -> OrphansTitle
+[x] string - coverage.pageTitle               -> Project / FleetTelemetryCoverageRegistration.Title GetString("coverage.pageTitle", "Fleet Telemetry Coverage")
+[x] string - coverage.refresh                 -> Project GetString("coverage.refresh", "Refresh") -> RefreshLabel (header TsButton)
+[x] string - coverage.stat.categories         -> Project GetString("coverage.stat.categories", "Categories") -> StatCategoriesLabel
+[x] string - coverage.stat.orphans            -> Project GetString("coverage.stat.orphans", "Orphan fields") -> StatOrphansLabel
+[x] string - coverage.stat.routedFields       -> Project GetString("coverage.stat.routedFields", "Routed fields") -> StatRoutedFieldsLabel
+[x] string - coverage.stat.routedNotSubscribed-> Project GetString("coverage.stat.routedNotSubscribed", "Routed, not subscribed") -> StatRoutedNotSubscribedLabel
+[x] string - coverage.stat.subscribed         -> Project GetString("coverage.stat.subscribed", "Subscribed") -> StatSubscribedLabel
+[x] string - coverage.subscribed.no           -> Project GetString("coverage.subscribed.no", "no") -> CoverageFieldRowDisplay.SubscribedText (unsubscribed)
+[x] string - coverage.subscribed.yes          -> Project GetString("coverage.subscribed.yes", "yes") -> CoverageFieldRowDisplay.SubscribedText (subscribed)
+[x] string - coverage.subtitle               -> Project GetString("coverage.subtitle", "Package-derived snapshot of which Tesla proto fields the build routes …") -> Subtitle
+
+PARITY_COVERED=51
+# Coverage asserted headlessly: FleetTelemetryCoveragePageTests.Projection_resolves_every_required_string_key
+# (+ _even_in_the_loading_state) records all 37 keys above through a RecordingLocalizer; the state tests
+# (State_loading / State_empty_when_no_categories / State_empty_uses_filter_copy_when_nothing_matches /
+# State_success_when_categories_present / State_error_when_query_failed) assert each region renders from the bound
+# FleetTelemetryCoverageDisplay state holder; Summary_stats_* asserts the 5 stat tiles; Destinations_* asserts the
+# breakdown panel; Category_* / Field_rows_* / Filter_* assert the per-category sections + per-field table + filter;
+# Orphans_* assert the conditional orphan panel; Snapshot_parse_* / Field_parse_* assert tolerant JSON; the ViewModel_*
+# tests assert the loading/empty/success/error matrix + filter-without-refetch + refresh reload;
+# ClientFeed_sends_the_coverage_operation_with_no_params + ClientFeed_propagates_api_exception assert the
+# generated-client GET request shaping (web useFleetTelemetryCoverage).
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/windows/TeslaSync.App/feature-views/FleetTelemetryCoveragePage -Language csharp
+#   (real target path; the generated prompt's apps/windows/TeslaSync/Features/Admin path does not exist in-repo)
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# dotnet build apps/windows/TeslaSync.sln -c Release  -> Build succeeded, 0 Warning(s), 0 Error(s) (incl. TeslaSync.App WinUI + TeslaSync.App.Tests)
+BUILD_EXIT=0
+# dotnet format apps/windows/TeslaSync.sln --verify-no-changes  -> no changes (FleetTelemetryCoveragePage Model/Source/ViewModel/view
+#   + FleetTelemetryCoveragePageTests + ShellWindow registration + Tests.csproj links + Resources.resw, all LF/utf-8)
+LINT_EXIT=0
+# dotnet test apps/windows/TeslaSync.App.Tests -c Release  -> Passed: 30979, Failed: 0, Skipped: 0 (incl. 30 FleetTelemetryCoveragePageTests)
+TEST_EXIT=0
+PARITY_COVERED=51
+PARITY_REQUIRED=51
+
+=== COMMIT ===
+# git add apps/windows/TeslaSync.App/feature-views/FleetTelemetryCoveragePage apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs \
+#         apps/windows/Strings/en/Resources.resw \
+#         apps/windows/TeslaSync.App.Tests/FeatureViews/FleetTelemetryCoveragePageTests.cs apps/windows/TeslaSync.App.Tests/TeslaSync.App.Tests.csproj \
+#         apps/parity/windows-ledger.json .github/prompts/monorepo/logs/windows-page-admin-FleetTelemetryCoveragePage.log
+# git commit -m "feat(apps/windows): FleetTelemetryCoveragePage at web parity (W7 admin)"
+
+EXIT=0
+STATUS=DONE

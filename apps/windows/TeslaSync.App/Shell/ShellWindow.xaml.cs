@@ -180,6 +180,11 @@ public sealed partial class ShellWindow : Window
         // Admin / Feedback queue page (P2/W7) — parity port of web FeedbackQueuePage at route /admin/feedback.
         _viewModel.PageFactory.Register("FeedbackQueue", static () => new FeatureViews.Admin.FeedbackQueuePage());
 
+        // Admin / Fleet Telemetry Coverage page (P2/W7) — parity port of web FleetTelemetryCoveragePage at route
+        // /admin/telemetry/coverage. RouteTable already maps Page("FleetTelemetryCoverage","admin/telemetry/coverage",
+        // RouteGroup.AdminDevTools). The default empty-source ctor renders the empty state; tests inject a feed with data.
+        _viewModel.PageFactory.Register("FleetTelemetryCoverage", static () => new FeatureViews.Admin.FleetTelemetryCoveragePage());
+
         // System / Command history page (P2/W7) — parity port of web CommandHistoryPage at route /command-history.
         // The "Commands" back-link navigates to the Commands route.
         _viewModel.PageFactory.Register("CommandHistory", () =>
