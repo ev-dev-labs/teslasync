@@ -160,5 +160,14 @@
     "requiredCount": 7,
     "promptId": "p3-android/pages/charging/TeslaChargingSessionsMap",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:dashboard/Glance",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p3-android/pages/dashboard/GlancePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-dashboard-GlancePage.log"
   }
 ]

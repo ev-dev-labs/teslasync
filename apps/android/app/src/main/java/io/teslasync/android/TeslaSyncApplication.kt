@@ -17,6 +17,7 @@ import io.teslasync.android.battery.batteryhealth.BatteryHealthPageHost
 import io.teslasync.android.battery.energyproducts.EnergyProductsPageHost
 import io.teslasync.android.charging.chargingcurve.ChargingCurvePageHost
 import io.teslasync.android.charging.powershare.PowersharePageHost
+import io.teslasync.android.dashboard.glance.GlancePageHost
 import io.teslasync.android.data.live.AppLifecycleSseBinder
 import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
@@ -85,6 +86,8 @@ class TeslaSyncApplication : Application() {
         ChargingCurvePageHost.register()
         // Register the native Powershare screen for the /powershare route (P3/A7). Idempotent.
         PowersharePageHost.register()
+        // Register the native Glance quick-glance screen for the /glance route (P3/A7). Idempotent.
+        GlancePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
