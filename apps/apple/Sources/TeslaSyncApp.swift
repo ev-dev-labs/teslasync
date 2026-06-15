@@ -115,6 +115,7 @@ struct TeslaSyncApp: App {
         registry = BatteryDegradationRouteRegistration.registry(base: registry)
         registry = SleepEfficiencyRouteRegistration.registry(base: registry)
         registry = PowershareRouteRegistration.registry(base: registry)
+        registry = GlanceRouteRegistration.registry(base: registry, onOpenApp: { selection = .dashboard })
         registry = AutomationsListRouteRegistration.registry(base: registry)
         registry = AuditLogRouteRegistration.registry(base: registry)
         registry = FeatureFlagsRouteRegistration.registry(base: registry)
