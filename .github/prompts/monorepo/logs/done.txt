@@ -988,3 +988,4 @@ p3-android/pages/admin/BackupRestorePage.prompt.md
 p3-android/pages/system/DBHealthPage.prompt.md
 p3-android/pages/charging/CostAnalysisPage.prompt.md
 p3-android/pages/system/MyActivityPage.prompt.md
+p3-android/pages/system/NotFoundPage.prompt.md
