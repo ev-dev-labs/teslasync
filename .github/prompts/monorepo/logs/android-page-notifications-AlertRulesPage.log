@@ -1,0 +1,159 @@
+================================================================================
+P3-ANDROID · A7 · page:notifications/AlertRules — evidence log
+Native Jetpack Compose / Material 3 port of web AlertRulesPage
+Source: web/src/features/notifications/pages/AlertRulesPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/notifications/**
+Package: io.teslasync.android.notifications.alertrules
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; platforms 34/35/36)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk
+  local.properties sdk.dir present.
+  Gradle = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+           the prompt's literal ":app:" is the generic placeholder — this
+           single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / ChargingCurve precedents — 5-file surface)
+  AlertRulesPageModel.kt      framework-free (113 ln): AlertRulesPageRegistration
+                              (ROUTE_ID=notificationsRules, WEB_PATH=/notifications/rules,
+                              SLUG, EDIT_LEASE_KEY=alert-rules/list, STUDIO_ROUTE_ID,
+                              NAME_MAX_LENGTH=120), MasterSelection tri-state, the
+                              AlertRulesInteraction selection snapshot (port of web
+                              useBulkSelection<number>() + masterState), visibleRuleIds,
+                              validateRuleName (web validate ▸ nameTooLong), view.opened.
+  AlertRulesPageSource.kt     seam (66 ln) over NotificationsRepository.alertRules
+                              (web useAlertRules) + bulkEnableRules/bulkDisableRules/
+                              deleteAlertRule/saveAlertRule; production binding
+                              alertRulesPageSourceOf. No HTTP in the view.
+  AlertRulesPageViewModel.kt  BaseFeedViewModel (194 ln): rulesState: StateFlow<UiState<
+                              List<AlertRule>>> via rulesRefresh.flatMapLatest{source
+                              .alertRules()}.asUiState; interaction StateFlow; mutating
+                              StateFlow; toggle/toggleAll/clear/retain selection;
+                              bulkEnable/bulkDisable (clear + refetch on success);
+                              bulkDelete (per-id DELETE fan-out, the web allSettled, no
+                              bulk endpoint); renameRule (Update name); refresh/retry.
+  AlertRulesPage.kt           stateful entry + stateless content (517 ln): header,
+                              EditConflictBanner, BulkActionToolbar + ConfirmDialog,
+                              GlassPanel1 rules table (master + per-row checkboxes,
+                              EditableText rename cell, signal, SeverityBadge, status
+                              Badge), loading/empty/error/success, Open-Studio footer.
+  AlertRulesPageHost.kt       AlertRulesRoute (HttpNotificationsRepository over
+                              container.api + container.cacheStore; Studio deep-link via
+                              LocalDeepLinkRouter + Destinations) + AlertRulesPageHost
+                              .register() for notificationsRules / /notifications/rules
+                              (Destinations.kt L120; registered in TeslaSyncApplication.kt).
+
+DATA SOURCES (each bound through the ViewModel's StateFlow over the KMP core, P1/S8)
+  useAlertRules          → NotificationsRepository.alertRules()                 → rulesState
+  useBulkEnableRules     → NotificationsRepository.bulkEnableRules(ids)         → bulkEnable()
+  useBulkDisableRules    → NotificationsRepository.bulkDisableRules(ids)        → bulkDisable()
+  useDeleteAlertRule     → NotificationsRepository.deleteAlertRule(id) (fan-out) → bulkDelete()
+  useSaveAlertRule       → NotificationsRepository.saveAlertRule(Update)        → renameRule()
+
+SI BOUNDARY (P1/S5)
+  The Notifications domain carries no unit-bearing fields (per NotificationModels.kt /
+  HttpNotificationsRepository) — there is no SI conversion at this surface.
+
+NAVIGATION
+  No LocalNavController is exposed to page hosts; the "Open Alert Studio" affordances
+  (empty-state CTA + footer button) route through LocalDeepLinkRouter.request(
+  "teslasync://app/notifications/studio") resolved via Destinations.find("notificationsStudio")
+  — the same sanctioned cross-route seam BatteryHealthPage's quick-links use.
+
+I18N (ADR-014)
+  All visible text resolves via stringResource(R.string.translation_*). 23 of the 26 keys
+  already existed in the catalog; 3 were absent from the generated catalog (the web page
+  supplied inline defaults the catalog never captured) and were added to the allowed
+  res/values*/strings.xml in all three locales (en + ar/he English fallback):
+    translation_alertRules_subtitle
+    translation_alertRules_empty_body
+    translation_alertRules_bulk_deleteConfirm_body
+
+=== PARITY ===
+PARITY_REQUIRED=31
+
+PANELS (1)
+  [01] panel   GlassPanel1   AlertRulesPage.kt:338  GlassPanel(padding=None) ▸ AlertRulesPanel
+                             wraps the rules table + all four data-state surfaces.
+
+STATES (4) — implemented for the useAlertRules feed; the mutations drive the toolbar busy state
+  [02] state   loading   AlertRulesPage.kt:340  rulesState.isLoading -> AlertRulesLoading() (3× Skeleton h=40dp)
+  [03] state   empty     AlertRulesPage.kt:342  rulesState.isEmpty   -> AlertRulesEmpty() (EmptyState + Open-Studio CTA)
+  [04] state   error     AlertRulesPage.kt:341  rulesState.isError   -> AlertRulesError() (ErrorDisplay + Retry)
+  [05] state   success   AlertRulesPage.kt:343  else -> AlertRulesTable() (master + rows)
+
+STRINGS (26) — every visible literal via stringResource; key names match web
+  [06] string  alertRules.bulk.delete                AlertRulesPage.kt:316  BulkAction delete label
+  [07] string  alertRules.bulk.deleteConfirm.body    AlertRulesPage.kt:248  ConfirmDialog message
+  [08] string  alertRules.bulk.deleteConfirm.title   AlertRulesPage.kt:247  ConfirmDialog title
+  [09] string  alertRules.bulk.disable               AlertRulesPage.kt:309  BulkAction disable label
+  [10] string  alertRules.bulk.enable                AlertRulesPage.kt:302  BulkAction enable label
+  [11] string  alertRules.col.name                   AlertRulesPage.kt:430  table header Caption
+  [12] string  alertRules.col.severity               AlertRulesPage.kt:432  table header Caption
+  [13] string  alertRules.col.signal                 AlertRulesPage.kt:431  table header Caption
+  [14] string  alertRules.col.status                 AlertRulesPage.kt:433  table header Caption
+  [15] string  alertRules.empty.body                 AlertRulesPage.kt:375  EmptyState message
+  [16] string  alertRules.empty.cta                  AlertRulesPage.kt:376  EmptyStateAction label
+  [17] string  alertRules.empty.title                AlertRulesPage.kt:374  EmptyState title
+  [18] string  alertRules.error.nameTooLong          AlertRulesPage.kt:456  EditableText validate message
+  [19] string  alertRules.noun.one                   AlertRulesPage.kt:290  toolbar countText (singular)
+  [20] string  alertRules.noun.other                 AlertRulesPage.kt:291  toolbar countText (plural)
+  [21] string  alertRules.openStudio                 AlertRulesPage.kt:511  footer Button label
+  [22] string  alertRules.selectRule                 AlertRulesPage.kt:453  row checkbox contentDescription({name})
+  [23] string  alertRules.subtitle                   AlertRulesPage.kt:269  header subtitle
+  [24] string  alertRules.title                      AlertRulesPage.kt:199,267  paneTitle + PageTitle
+  [25] string  bulk.selectAll                        AlertRulesPage.kt:413  master checkbox contentDescription
+  [26] string  bulk.selectRow                        AlertRulesPage.kt:451  row checkbox cd (unnamed rule fallback)
+  [27] string  common.delete                         AlertRulesPage.kt:249  ConfirmDialog confirm label
+  [28] string  common.disabled                       AlertRulesPage.kt:499  status Badge (neutral)
+  [29] string  common.enabled                        AlertRulesPage.kt:497  status Badge (success)
+  [30] string  editConflict.resource.alertRules      AlertRulesPage.kt:220  EditConflictBanner resourceLabel
+  [31] string  editableText.rename.alertRule         AlertRulesPage.kt:455  EditableText editActionLabel({name})
+
+PARITY_COVERED=31
+
+LINE-COUNT INTEGRITY (web 268 ln → native decomposition, well above the ≥70% floor)
+  AlertRulesPage.kt 517 · AlertRulesPageViewModel.kt 194 · AlertRulesPageModel.kt 113 ·
+  AlertRulesPageSource.kt 66 · AlertRulesPageHost.kt 53  →  TOTAL 943 ln across 5 files.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 4m 48s (compileDebugKotlin OK; my
+                                          3 new strings carry no format args → no merge warnings)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 8m 49s (abortOnError=true; no errors;
+                                          lint-results-debug.html written)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 5s
+  TEST_EXIT=0
+
+STATIC ANALYSIS (not part of the prompt's gate contract; run for diligence)
+  ./gradlew :android:detekt      → FAILED with 45 pre-existing repo-wide issues; ZERO in
+                                   com/teslasync/notifications/** (my files add no new findings).
+  ./gradlew :android:ktlintCheck → FAILED with 235 pre-existing repo-wide findings; ZERO in
+                                   com/teslasync/notifications/** (my files add no new findings).
+  Both baselines fail on sibling A7 surfaces (battery/charging/dashboard/driving/maps) that are
+  outside this artifact's allowed files; they are not in the four-step gate the prompt defines.
+
+ACCEPTANCE
+  [x] The single named panel (GlassPanel1) implemented; every anonymous region from the web
+      source reproduced (header, edit-conflict banner, bulk toolbar + delete-confirm dialog,
+      master/per-row select table, inline-rename name cell, severity chip, status badge, footer).
+  [x] All 31 parity items render from the bound StateFlow state holder (rulesState + interaction
+      + mutating).
+  [x] loading / empty / error / success implemented for the useAlertRules source; the four
+      mutations (bulk enable/disable/delete + rename) drive the toolbar busy + refetch flow.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (Material checkboxes/buttons);
+      semantics contentDescriptions on master + row checkboxes and the pane title (a11y);
+      Compose-native only (no webview). No unit-bearing fields in this domain (SI N/A).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (31).
+  [x] android ledger row for page:notifications/AlertRules set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

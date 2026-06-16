@@ -929,6 +929,9 @@
   <string name="translation_alertRules_openStudio">Open Alert Studio</string>
   <string name="translation_alertRules_selectRule">Select rule %1$s</string>
   <string name="translation_alertRules_title">Alert rules</string>
+  <string name="translation_alertRules_subtitle">Bulk-manage alert rules. Click a rule to edit it in Alert Studio.</string>
+  <string name="translation_alertRules_empty_body">Create your first alert rule in the Alert Studio.</string>
+  <string name="translation_alertRules_bulk_deleteConfirm_body">These rules will stop firing immediately. This cannot be undone.</string>
   <string name="translation_alerts_ack_ackedAt">%1$s</string>
   <string name="translation_alerts_ack_ackedBy">Acknowledged by %1$s</string>
   <string name="translation_alerts_ack_ackedByAnonymous">Acknowledged</string>
