@@ -112,6 +112,7 @@ import io.teslasync.android.sharing.sharingtrips.SharingTripsPageHost
 import io.teslasync.android.system.ChatbotPageHost
 import io.teslasync.android.system.commandhistory.CommandHistoryPageHost
 import io.teslasync.android.system.dataexport.DataExportPageHost
+import io.teslasync.android.system.datarepair.DataRepairPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -284,6 +285,7 @@ class TeslaSyncApplication : Application() {
         ChatbotPageHost.register()
         CommandHistoryPageHost.register()
         DataExportPageHost.register()
+        DataRepairPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

@@ -1,0 +1,155 @@
+================================================================================
+P3-ANDROID A7 — page:system/DataRepair  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/DataRepairPage.tsx
+promptId: p3-android/pages/system/DataRepairPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present; local.properties sdk.dir set)
+JDK         : Android Studio jbr (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build (includeBuild ../shared, ADR-004) — not modified.
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPage.kt          (@Composable screen: DataRepairPage + DataRepairPageContent + 8 panels + toast host)
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; tab/expand state; 6 repair mutations; refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPageSource.kt    (data seam over the shared resilient ApiHttpClient: GET stale-sessions + 6 mutations)
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPageModel.kt     (framework-free model: @Serializable StaleData/Charging/Drive, only-present repair bodies, hoursOpen/battery formatters, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPageIcons.kt     (Wrench/BatteryCharging/Route/AlertTriangle/CheckCircle/Save/Clock/Trash glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/system/DataRepairPageHost.kt      (PageHosts.register(dataRepair){ DataRepairRoute() } over container.api.dataRepairPageSourceOf())
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt       (NavHost wiring: + DataRepairPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                 (+43 page keys: 41 manifest strings + 2 per-tab empty-state messages)
+apps/parity/android-ledger.json                                                  (ledger row page:system/DataRepair 53/53)
+.github/prompts/monorepo/logs/android-page-system-DataRepairPage.log             (this log)
+
+Data   : single read — DataRepairPageViewModel binds dataRepairPageSourceOf(container.api).staleSessions()
+         (web useQuery(['stale-sessions']) ▸ GET /data-repair/stale-sessions) wrapped into the Resource(Loading→
+         Success/Error) contract; no shared S7/S8 port exists for data-repair, so reads + the six repair
+         mutations route through the SAME shared resilient ApiHttpClient every repository runs on (the sibling
+         GeofencesPage portless-write precedent). No HTTP in the view. Mutation paths are the authoritative ones
+         from internal/api/router.go L4222-4235 (PUT/DELETE /data-repair/charging/{id}/ + POST …/close ; the
+         singular PUT/DELETE /data-repair/drive/{id}/ + POST …/close), matching the generated client descriptors.
+Strings: 43 page keys added to res/values/strings.xml (translation_dataRepair_*); MissingTranslation/ExtraTranslation
+         lint disabled in app/build.gradle.kts, so the EN base catalog is authoritative (no values-ar/he edit needed).
+         The two extra keys (noStaleCharging/noStaleDrives) localize the per-tab empty-state body so nothing is hardcoded.
+Nav    : Destinations 'dataRepair' -> /data-repair pre-existing (count unchanged); host wired via PageHosts.register;
+         deep link auto-registered by TeslaSyncNavHost.
+Units  : SI metres/seconds/mps drive-form labels + the operator-typed kW/kWh/min charging labels mirror the web edit
+         form verbatim; this is a raw operator repair tool, so values round-trip unconverted exactly as the web does.
+Lint fix: first lintDebug surfaced 1 error — LocalContextGetResourceValueCall (DataRepairPage.kt context.getString()
+         in the toast-event collector). Fixed by resolving all 12 outcome strings via stringResource at composition
+         (dataRepairToastMessages()) and looking them up by key in the effect via rememberUpdatedState. Re-run: 0 errors.
+Note   : an interim testDebugUnitTest run failed with a corrupted intermediate ("zip END header not found") caused by
+         launching lintDebug + testDebugUnitTest as two concurrent Gradle invocations; resolved with ./gradlew --stop,
+         deleting build/intermediates/compile_app_classes_jar, and re-running each gate task sequentially. Not a code defect.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module — the prompt's ":app" is the generic placeholder)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL (0 errors; warnings are the pre-existing app baseline)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=53
+--------------------------------------------------------------------------------
+# panels (8) — Material 3 GlassPanel / MetricCard (Surface) ; bound state holder = DataRepairPageViewModel.state
+[COVERED] panel  GlassPanel1    -> DataRepairPage.kt:524 ChargingEditForm() -> GlassPanel(PanelAccent.Warning){ 6 repair Inputs + RepairActionBar }  (web ChargingEditForm <GlassPanel>)
+[COVERED] panel  GlassPanel2    -> DataRepairPage.kt:623 DriveEditForm()    -> GlassPanel(PanelAccent.Warning){ 5 repair Inputs + RepairActionBar }  (web DriveEditForm <GlassPanel>)
+[COVERED] panel  Total-Stale    -> DataRepairPage.kt:332 MetricCard(label=translation_dataRepair_totalStale, value=totalStale, AlertTriangle)  (web MetricCard "Total Stale")
+[COVERED] panel  Stale-Charging -> DataRepairPage.kt:341 MetricCard(label=translation_dataRepair_staleCharging, value=staleCharging.size, BatteryCharging)  (web MetricCard "Stale Charging")
+[COVERED] panel  Stale-Drives   -> DataRepairPage.kt:355 MetricCard(label=translation_dataRepair_staleDrives, value=staleDrives.size, Route)  (web MetricCard "Stale Drives")
+[COVERED] panel  Status         -> DataRepairPage.kt:370 MetricCard(label=translation_dataRepair_status, value=Clean|Needs Repair, Wrench)  (web MetricCard "Status")
+[COVERED] panel  GlassPanel7    -> DataRepairPage.kt:496 ChargingRow() -> :505 StaleRecordRowPanel() -> :689 clickable GlassPanel{ id/date/vehicle/battery/age + Open badge }  (web charging list-row <GlassPanel>)
+[COVERED] panel  GlassPanel8    -> DataRepairPage.kt:595 DriveRow()    -> :604 StaleRecordRowPanel() -> :689 clickable GlassPanel{ id/date/vehicle/battery/age + Open badge }  (web drive list-row <GlassPanel>)
+
+# data states (4 required) — bound to DataRepairPageViewModel.state : StateFlow<UiState<DataRepairStaleData>>
+[COVERED] state  loading        -> DataRepairPage.kt:239 state.isLoading -> LoadingState() Spinner ; DataRepairPageViewModel.asUiState -> UiState.loading()
+[COVERED] state  error          -> DataRepairPage.kt:240 state.isError -> ErrorState(onRetry=actions.onRetry) ; DataRepairPageViewModel.retry()
+[COVERED] state  empty          -> DataRepairPage.kt:447/:465 records.isEmpty() -> :485 DataRepairEmptyState(CheckCircle, "All sessions are complete") ; UiPhase.Empty via model isClean
+[COVERED] state  success        -> DataRepairPage.kt:436 DataRepairRecords else -> :496 ChargingRow / :595 DriveRow rows ; UiPhase.Content
+
+# strings (41) — every visible literal via stringResource(R.string.translation_dataRepair_*); web defaults verbatim
+[COVERED] string All sessions are complete        -> DataRepairPage.kt:489 DataRepairEmptyState(title=translation_dataRepair_allComplete)
+[COVERED] string Cancel                           -> DataRepairPage.kt:765 RepairActionBar(label=translation_dataRepair_cancel)
+[COVERED] string Charger Power (kW)               -> DataRepairPage.kt:559 ChargingEditForm Input(label=translation_dataRepair_chargerPowerKw)
+[COVERED] string Charging Sessions                -> DataRepairPage.kt:395 TabPill(label=translation_dataRepair_chargingSessions)
+[COVERED] string Clean                            -> DataRepairPage.kt:365 Status MetricCard(value=translation_dataRepair_clean)
+[COVERED] string Close Drive                      -> DataRepairPage.kt:675 DriveEditForm RepairActionBar(closeLabel=translation_dataRepair_closeDrive)
+[COVERED] string Close Session                    -> DataRepairPage.kt:582 ChargingEditForm RepairActionBar(closeLabel=translation_dataRepair_closeSession)
+[COVERED] string Cost ($)                         -> DataRepairPage.kt:575 ChargingEditForm Input(label=translation_dataRepair_costUsd)
+[COVERED] string Data Repair                      -> DataRepairPage.kt:278 PageTitle(translation_dataRepair_title)
+[COVERED] string Discard                          -> DataRepairPage.kt:757 RepairActionBar(label=translation_dataRepair_discard)
+[COVERED] string Distance (m)                     -> DataRepairPage.kt:642 DriveEditForm Input(label=translation_dataRepair_distanceM)
+[COVERED] string Drive closed                     -> DataRepairPage.kt:809 dataRepairToastMessages(translation_dataRepair_driveClosed)
+[COVERED] string Drive discarded                  -> DataRepairPage.kt:810 dataRepairToastMessages(translation_dataRepair_driveDiscarded)
+[COVERED] string Drive updated                    -> DataRepairPage.kt:808 dataRepairToastMessages(translation_dataRepair_driveUpdated)
+[COVERED] string Drives                           -> DataRepairPage.kt:402 TabPill(label=translation_dataRepair_drives)
+[COVERED] string Duration (min)                   -> DataRepairPage.kt:568 ChargingEditForm Input(label=translation_dataRepair_durationMin)
+[COVERED] string Duration (s)                     -> DataRepairPage.kt:651 DriveEditForm Input(label=translation_dataRepair_durationS)
+[COVERED] string End Battery %                    -> DataRepairPage.kt:552 ChargingEditForm Input(label=translation_dataRepair_endBatteryPct) (+ :658 drive)
+[COVERED] string End Date (ISO)                   -> DataRepairPage.kt:536 ChargingEditForm Input(label=translation_dataRepair_endDateIso) (+ :635 drive)
+[COVERED] string Energy Added (kWh)               -> DataRepairPage.kt:543 ChargingEditForm Input(label=translation_dataRepair_energyAddedKwh)
+[COVERED] string Failed to close drive            -> DataRepairPage.kt:812 dataRepairToastMessages(translation_dataRepair_failedCloseDrive)
+[COVERED] string Failed to close session          -> DataRepairPage.kt:806 dataRepairToastMessages(translation_dataRepair_failedCloseSession)
+[COVERED] string Failed to discard drive          -> DataRepairPage.kt:813 dataRepairToastMessages(translation_dataRepair_failedDiscardDrive)
+[COVERED] string Failed to discard session        -> DataRepairPage.kt:807 dataRepairToastMessages(translation_dataRepair_failedDiscardSession)
+[COVERED] string Failed to update drive           -> DataRepairPage.kt:811 dataRepairToastMessages(translation_dataRepair_failedUpdateDrive)
+[COVERED] string Failed to update session         -> DataRepairPage.kt:805 dataRepairToastMessages(translation_dataRepair_failedUpdateSession)
+[COVERED] string Fix incomplete or stale sessions -> DataRepairPage.kt:275 DataRepairHeader subtitle (translation_dataRepair_subtitle)
+[COVERED] string Max Speed (m/s)                  -> DataRepairPage.kt:667 DriveEditForm Input(label=translation_dataRepair_maxSpeedMps)
+[COVERED] string Needs Repair                     -> DataRepairPage.kt:367 Status MetricCard(value=translation_dataRepair_needsRepair)
+[COVERED] string Open                             -> DataRepairPage.kt:719 StaleRecordRowPanel Badge(text=translation_dataRepair_open)
+[COVERED] string Save                             -> DataRepairPage.kt:741 RepairActionBar(label=translation_dataRepair_save)
+[COVERED] string Session closed                   -> DataRepairPage.kt:803 dataRepairToastMessages(translation_dataRepair_sessionClosed)
+[COVERED] string Session discarded                -> DataRepairPage.kt:804 dataRepairToastMessages(translation_dataRepair_sessionDiscarded)
+[COVERED] string Session updated                  -> DataRepairPage.kt:802 dataRepairToastMessages(translation_dataRepair_sessionUpdated)
+[COVERED] string Stale Charging                   -> DataRepairPage.kt:341 Stale-Charging MetricCard(label=translation_dataRepair_staleCharging)
+[COVERED] string Stale Drives                     -> DataRepairPage.kt:355 Stale-Drives MetricCard(label=translation_dataRepair_staleDrives)
+[COVERED] string Status                           -> DataRepairPage.kt:370 Status MetricCard(label=translation_dataRepair_status)
+[COVERED] string Total Stale                      -> DataRepairPage.kt:332 Total-Stale MetricCard(label=translation_dataRepair_totalStale)
+[COVERED] string Vehicle                          -> DataRepairPage.kt:713 StaleRecordRowPanel Caption(translation_dataRepair_vehicle)
+[COVERED] string found                            -> DataRepairPage.kt:273 DataRepairHeader subtitle (translation_dataRepair_found)
+[COVERED] string incomplete session               -> DataRepairPage.kt:272 DataRepairHeader subtitle (translation_dataRepair_incompleteSession)
+
+PARITY_COVERED=53
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : DataRepairPageViewModel binds dataRepairPageSourceOf(container.api).staleSessions() (web
+               useQuery(['stale-sessions']) ▸ GET /data-repair/stale-sessions); the typed DataRepairStaleData
+               round-trips through a lenient decoder; the six repair mutations (update/close/discard per kind)
+               are non-throwing Results over the same shared ApiHttpClient.safeRequest. No HTTP in the view.
+si/units     : drive form is SI (m / s / m/s); charging form keeps the operator-typed kW/kWh/min labels — both
+               verbatim from the web edit form; values are passed through unconverted (raw operator repair tool),
+               so no SI display conversion applies. No new non-SI Go fields or DB columns introduced.
+a11y/theme   : shared components supply semantics content descriptions, >=48dp targets (Material Button), dynamic
+               color + dark theme via MaterialTheme (A2 tokens); status colors from TeslaTokens.status; the date
+               locale reads ConfigurationCompat.getLocales(LocalConfiguration.current) (observable); Compose-native
+               (no webview).
+nav          : Destinations 'dataRepair' -> /data-repair (pre-existing) wired to DataRepairRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(53) == PARITY_REQUIRED(53)
+[PASS] all android triad gates green; parity 53/53; android ledger row page:system/DataRepair status=done.
+EXIT=0
+STATUS=DONE
