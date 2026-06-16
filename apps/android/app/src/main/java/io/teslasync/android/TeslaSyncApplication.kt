@@ -3,6 +3,7 @@ package io.teslasync.android
 import android.app.Application
 import androidx.lifecycle.ProcessLifecycleOwner
 import io.teslasync.android.admin.apilogs.ApiLogsPageHost
+import io.teslasync.android.admin.apiplayground.ApiPlaygroundPageHost
 import io.teslasync.android.admin.feedback.FeedbackQueuePageHost
 import io.teslasync.android.admin.gasprice.GasPriceAutoPollPageHost
 import io.teslasync.android.admin.ingestxray.IngestXRayPageHost
@@ -173,6 +174,8 @@ class TeslaSyncApplication : Application() {
         SettingsPageHost.register()
         // Register the native API-logs admin screen for the /api-logs route (P3/A7). Idempotent.
         ApiLogsPageHost.register()
+        // Register the native API-playground admin screen for the /api-playground route (P3/A7). Idempotent.
+        ApiPlaygroundPageHost.register()
         // Register the native feedback-queue admin screen for the /admin/feedback route (P3/A7). Idempotent.
         FeedbackQueuePageHost.register()
         // Register the native gas-price auto-poll admin screen for the /gas-price route (P3/A7). Idempotent.
