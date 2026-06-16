@@ -1,0 +1,299 @@
+================================================================================
+p4-apple · P7 · page:dashboard/QuickStats — SwiftUI / HIG parity
+  web source : web/src/features/dashboard/pages/QuickStatsPage.tsx  (route /quick-stats)
+  output     : apps/apple/Sources/Features/Dashboard/QuickStats*.swift
+               (the live Xcode project — like the sibling GlancePage — hosts
+                dashboard pages under Sources/Features/Dashboard/; the prompt's
+                nominal apps/apple/TeslaSync/Features/Dashboard/** is the
+                allowed-files alias, reconciled here. `Sources/` is the only
+                hand-written group compiled by project.yml; the generated
+                TeslaSync.xcodeproj is git-ignored and rebuilt via xcodegen.)
+================================================================================
+
+--------------------------------------------------------------------------------
+WHAT SHIPPED
+--------------------------------------------------------------------------------
+A complete, HIG-native SwiftUI QuickStatsPage at web parity: a pure @Observable state
+holder (ADR-004 — no networking in the view) over an injectable QuickStatsPageDataSource
+seam whose value types mirror the three web hooks 1:1 (production binds the KMP repos /
+use-cases: GET /vehicles, GET /analytics/fleet?days=30, GET /vehicles/{id}/state through
+the seam). There are no charts and no map (manifest declares 0/0).
+
+The page is a compact "kiosk" surface reproducing the web chrome (PageContainer title +
+its loading / error phases) and BOTH web regions:
+
+  GlassPanel1 — the vehicle header card: a tinted car glyph + the vehicle name
+    (web `display_name || 'Tesla'`) + the "model · connection" subtitle, OR — when no
+    vehicle resolves — the localized no-vehicle EmptyState (ContentUnavailableView). Never
+    hidden; always one or the other so the region is never blank.
+  The 4 MetricCards — Distance ("{{unit}} Driven") / Drives / Energy ("kWh Used") /
+    Cost ("Total Cost"), each a TSCard with a muted label over a large primary value,
+    matching the web `MetricCard` used WITHOUT an icon. They ALWAYS render with the web
+    `?? 0` fallbacks (never gated behind data).
+
+NAMING NOTE (no predecessor bypass): a PRE-EXISTING dashboard-widget feature-view,
+TeslaSync/feature-views/QuickStatsGrid.*, already owns an entire `QuickStats*` type
+namespace in the same app module (incl. `QuickStatsVehicleState` and `QuickStatsFormat`).
+To avoid editing that sibling, EVERY new page type is prefixed `QuickStatsPage*`
+(QuickStatsPageVehicle / …VehicleState / …Summary / …Phase / …DataSource / …Format /
+…MetricCard / …MetricGrid / …VehicleCard / …Footer / …Skeleton, + Sample/Empty/NoVehicle/
+Failing…PageDataSource). Verified collision-free module-wide before + after the full build.
+
+Units (ADR-005): the distance card reads SI metres and converts to the user's unit ONLY at
+the render boundary via the shared `Units` facade (KMP) + QuickStatsPageFormat; energy is
+pinned to kWh and cost to currency exactly as the web hardcodes those labels. Nothing
+non-SI is stored or computed.
+
+Adaptive across macOS/iPad (regular) + iPhone (compact): a centred, width-capped (440pt)
+ScrollView column; the metric grid reflows 1↔2 columns via the `#if os(iOS)`
+horizontalSizeClass branch (web `grid-cols-1 sm:grid-cols-2`). VoiceOver labels/headers
+(.isHeader on the name, combined metric cards, .isLink on the footer link), Dynamic Type
+(token fonts), light/dark + increased-contrast via the P2 tokens.
+
+Files (all new unless noted):
+  Sources/Features/Dashboard/QuickStatsModels.swift            (vehicle/state/summary/phase/datasource)
+  Sources/Features/Dashboard/QuickStatsFormat.swift           (display-boundary formatters)
+  Sources/Features/Dashboard/QuickStatsPageModel.swift        (@Observable model — load/refresh/states)
+  Sources/Features/Dashboard/QuickStatsPageModel.Sample.swift (sample + preview/test seams)
+  Sources/Features/Dashboard/QuickStatsPage.swift             (view: phase switch + ready column + previews)
+  Sources/Features/Dashboard/QuickStatsPage.Sections.swift    (vehicle card / metric card+grid / footer / skeleton)
+  Sources/Features/Dashboard/QuickStatsRouteRegistration.swift (.quickStats route registration)
+  Tests/Unit/Features/Dashboard/QuickStatsPageModelTests.swift (state-machine + formatter + route tests)
+  Sources/App/AppRoute.swift          (MOD: +.quickStats case / pathSegment "quick-stats" / icon / Overview group)
+  Sources/TeslaSyncApp.swift          (MOD: wire QuickStatsRouteRegistration after the Glance registration)
+  Localization/Localizable.xcstrings  (MOD: +10 keys = 9 web parity literals + route.quickStats)
+  apps/parity/apple-ledger.json       (MOD: +2 rows page:dashboard/QuickStats 18/18, apple-macos + apple-ios)
+
+Navigation: the web route /quick-stats maps 1:1 to AppRoute.quickStats (pathSegment
+"quick-stats"), so AppRouteParser resolves it directly with NO alias needed. `.quickStats`
+is added to the Overview sidebar group (web standalone route) and is reachable +
+deep-linkable. The only exhaustive AppRoute switches live in AppRoute.swift (systemImage +
+group); WatchDeepLink is its own enum and is unaffected. The web footer "Open Dashboard"
+link is wired to the shell via onOpenDashboard -> selection = .dashboard.
+
+i18n: every visible literal resolves from Localizable.xcstrings using the WEB key names
+verbatim (quickStats.*). The distance card's `{{unit}} Driven` i18next interpolation is
+reproduced via String(localized: "quickStats.distance") + replacingOccurrences(of:
+"{{unit}}", with: units.distance) — faithful to the web, like the sibling APIKeys {{name}}.
+The connection token ("online"/"asleep"/…, default "offline") is rendered verbatim as a
+DATA value (matching the web's bare `?? 'offline'`), so it is not a hardcoded UI literal.
+Zero hardcoded user-facing strings.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=18
+--------------------------------------------------------------------------------
+[x] panel  — GlassPanel1 (vehicle header / no-vehicle empty)
+       QuickStatsPage.Sections.swift > QuickStatsPageVehicleCard.body
+       (TSGlassPanel wrapping populated(_:) OR TSEmptyState)
+[x] panel  — unit-Driven (distance metric card)
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid (card 1):
+       label distanceDrivenLabel ("{{unit}} Driven"), value
+       QuickStatsPageFormat.distanceDriven(summary.totalDistanceM, units)
+[x] panel  — Drives
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid (card 2):
+       label Text("quickStats.drives"), value QuickStatsPageFormat.drives(totalDrives)
+[x] panel  — kWh-Used
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid (card 3):
+       label Text("quickStats.energy"), value QuickStatsPageFormat.energyKWh(totalEnergyWh)
+[x] panel  — Total-Cost
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid (card 4):
+       label Text("quickStats.cost"), value QuickStatsPageFormat.currency(totalCost)
+[x] state  — loading
+       QuickStatsPage.swift > content/.loading -> QuickStatsPageSkeleton
+       (TSGlassPanel+TSSkeleton header + TSStatGridSkeleton(count:4));
+       model QuickStatsPageModel.phase == .loading  [harness: "initial phase loading" ok]
+[x] state  — empty (no vehicle)
+       QuickStatsPage.Sections.swift > QuickStatsPageVehicleCard (vehicle == nil ->
+       TSEmptyState title "quickStats.noVehicle"); model.hasVehicle == false
+       [harness: "no-vehicle resolves ready" + "hasVehicle false" + metrics still render ok]
+[x] state  — error
+       QuickStatsPage.swift > content/.error -> errorView (TSErrorDisplay + Retry);
+       model.phase == .error(message)  [harness: "failing source -> error phase" ok]
+[x] state  — success
+       QuickStatsPage.swift > readyColumn (vehicle card + metric grid + footer);
+       model.phase == .ready  [harness: "ready after load" + "first vehicle selected" ok]
+[x] string — quickStats.cost
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid cost card Text("quickStats.cost")
+[x] string — quickStats.defaultName
+       QuickStatsPage.Sections.swift > QuickStatsPageVehicleCard.nameText -> Text("quickStats.defaultName")
+[x] string — quickStats.distance
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid.distanceDrivenLabel
+       String(localized: "quickStats.distance") + {{unit}} substitution
+[x] string — quickStats.drives
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid drives card Text("quickStats.drives")
+[x] string — quickStats.energy
+       QuickStatsPage.Sections.swift > QuickStatsPageMetricGrid energy card Text("quickStats.energy")
+[x] string — quickStats.footer
+       QuickStatsPage.Sections.swift > QuickStatsPageFooter Text("quickStats.footer")
+[x] string — quickStats.noVehicle
+       QuickStatsPage.Sections.swift > QuickStatsPageVehicleCard TSEmptyState(title: "quickStats.noVehicle")
+[x] string — quickStats.openDashboard
+       QuickStatsPage.Sections.swift > QuickStatsPageFooter Button Text("quickStats.openDashboard")
+[x] string — quickStats.title
+       QuickStatsPage.swift > .navigationTitle(Text("quickStats.title"))
+       + QuickStatsPageSkeleton accessibilityLabel(Text("quickStats.title"))
+--------------------------------------------------------------------------------
+PARITY_COVERED=18
+(All 18 required items render from the bound @Observable state. All 9 visible literals
+ resolve from Localizable.xcstrings; key names match the web verbatim — each of the 9
+ quickStats.* keys is referenced in the Dashboard source AND present as an xcstrings key.
+ Beyond the gate minimum, every anonymous web region is reproduced: the car-glyph avatar,
+ the "model · connection" subtitle with the `?? 'offline'` data fallback, the centred
+ width-capped kiosk column, and the "Powered by TeslaSync · Open Dashboard" footer link.)
+
+================================================================================
+GATE RESULTS
+================================================================================
+Toolchain present: Xcode 26.5 / Swift 6 / swiftlint / swiftformat 0.61.1 / xcodegen /
+                    pwsh 7 / java 17 (KMP). Xcode runner IS available (gate NOT BLOCKED).
+
+[GREEN] PLACEHOLDER  pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Dashboard -Language swift
+        -> PLACEHOLDER_COUNT=0  EXIT=0   (Tests/Unit/Features/Dashboard also scanned: COUNT=0)
+        My QuickStats* files contribute ZERO placeholders and ZERO opt-outs (verified by
+        grep over my 8 files: no TODO/FIXME/placeholder/parity:allow/fatalError). The
+        reported PLACEHOLDER_ALLOWED=1 is the PRE-EXISTING sibling GlancePage redaction
+        marker, not mine. No stubs — complete implementations.
+
+[GREEN] SWIFTFORMAT  swiftformat --lint  (8 new files + AppRoute + TeslaSyncApp)
+        -> 0/10 files require formatting.
+
+[GREEN] SWIFTLINT    swiftlint --strict --config apps/apple/.swiftlint.yml  (same 10 files)
+        -> "Done linting! Found 0 violations, 0 serious in 10 files."
+
+[GREEN] XCODEGEN     xcodegen generate -> TeslaSync.xcodeproj created; my new files are
+        picked up via the Sources globs (102 build/file references in project.pbxproj).
+
+[GREEN] KMP Shared.xcframework  ./apps/apple/Scripts/build-shared-xcframework.sh
+        -> :core:assembleSharedXCFramework BUILD SUCCESSFUL in 9m12s; release
+        Shared.xcframework staged -> apps/apple/Frameworks/ (ADR-004). The page is built
+        against the REAL KMP core, not a stub.
+
+[GREEN] XCODEBUILD BUILD (macOS app, full surface)
+        xcodebuild -scheme TeslaSync-macOS -configuration Debug -destination 'platform=macOS'
+          CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS=""
+          EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+        -> ** BUILD SUCCEEDED **   (BUILD_EXIT=0)
+        All 7 QuickStats*.swift + AppRoute.swift + TeslaSyncApp.swift compiled as
+        SwiftCompile units in the real app module against the REAL KMP Shared framework,
+        the REAL P2 design tokens, and the REAL P3 component library; ZERO errors
+        attributable to this change (grep "error:" over the full log = 0). The single
+        excluded file, shared-surfaces/Input.Previews.swift, is the SAME pre-existing
+        Xcode-26.5 result-builder breaker the sibling GlancePage log documents — NOT mine
+        (git status --porcelain shows only my allowed files changed).
+
+[GREEN] XCODEBUILD BUILD (iOS-Simulator app, arm64)
+        xcodebuild -scheme TeslaSync -configuration Debug -destination 'generic/platform=iOS Simulator'
+          ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS=""
+          EXCLUDED_SOURCE_FILE_NAMES="Input.Previews.swift" build
+        -> ** BUILD SUCCEEDED **   (BUILD_IOS_EXIT=0)
+        All 7 QuickStats*.swift compiled for iOS arm64 INCLUDING the `#if os(iOS)`
+        horizontalSizeClass / isCompact adaptive branch the macOS build compiles out; 0
+        source errors. (The pre-existing QuickStatsGrid.* widget compiled alongside in the
+        same module — confirming the QuickStatsPage* prefix coexists with the widget's
+        QuickStats* namespace.)
+        NOTE: a first pass with the default `generic/platform=iOS Simulator` type-checked
+        BOTH the arm64 AND x86_64 sim slices with 0 SOURCE errors (EmitSwiftModule succeeded
+        for both) but FAILED only at the x86_64 LINK — "ld: symbol(s) not found for
+        architecture x86_64", because the staged KMP Shared.xcframework's iOS-Simulator
+        slice is arm64-only. That is an arch-availability detail of the vendored KMP
+        framework, NOT a code defect; re-linking for this Apple-Silicon host's native sim
+        arch (arm64) is GREEN, mirroring the sibling Glance log's named-simulator build.
+
+[GREEN] TEST-FILE COMPILE CHECK (my XCTest resolves against the real module)
+        xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete -enable-testing
+          -I <DerivedData>/Build/Products/Debug  (the testable TeslaSync.swiftmodule from the build above)
+          QuickStatsPageModelTests.swift RouteTests.swift
+        -> EVERY one of my symbol references resolves (QuickStatsPageModel / …Format /
+        …Vehicle / …Summary / …VehicleState / QuickStatsRouteRegistration / AppRoute.quickStats
+        / AppRouteParser …). The ONLY diagnostics emitted are XCTest's function-like C macros
+        not expanding under a bare `swiftc -typecheck` ("macro 'XCTAssertTrue' unavailable:
+        function like macros not supported") + their contextual-base cascades — an
+        environment artifact of typechecking XCTest outside a test target, NOT a code defect.
+        (100/100 diagnostics are XCTAssert*/XCTFail or their cascades; 0 reference my code.)
+
+[GREEN] MODEL HARNESS  compiled (Swift 6, -strict-concurrency=complete, -D DEBUG) + EXECUTED
+        the REAL shipped logic files (QuickStatsModels + QuickStatsFormat + QuickStatsPageModel
+        + .Sample) against the sample/empty/no-vehicle/failing seams, with a thin shim for the
+        Units/UnitPreferences facade. Covered: number/integer(em-dash on nan)/drives/energy
+        kWh/distance metric+imperial/currency(em-dash on inf) formatters; resolvedName;
+        displayState offline fallback; summary .zero; and the full state machine — initial
+        loading, load->ready+first-vehicle, no-vehicle->ready+nil+metrics-still-render,
+        empty->ready+nil-state+zero-metrics, failing->error, metrics .zero before load.
+        -> "ALL PASSED" (31 assertions, exit 0).
+        The XCTest peer is Tests/Unit/Features/Dashboard/QuickStatsPageModelTests.swift.
+
+[GREEN] ROUTE HARNESS  compiled + EXECUTED the REAL AppRoute.swift + AppRouteParser.swift:
+        quickStats.pathSegment=="quick-stats", path=="/quick-stats", group==.overview,
+        parse("/quick-stats")==.quickStats (+ trailing-slash tolerance), all 69 path
+        segments unique (RouteTests invariant), every route resolves to its group, and
+        /glance still parses (no regression).  -> "ROUTE ALL PASSED" (8 checks, exit 0).
+        The XCTest peer is Tests/Unit/App/RouteTests.swift (the +.quickStats regression).
+
+[OUT-OF-SCOPE / NOT GREENABLE HERE] xcodebuild `test` (full TeslaSync-macOSTests bundle)
+        Not run to green, and NOT claimed green (Covenant #1). The 1181-file macOS XCTest
+        bundle fails to COMPILE on PRE-EXISTING sibling test files that violate Swift 6.3
+        strict concurrency ("main actor-isolated default value in a nonisolated context"),
+        confirmed here for Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift and
+        Tests/Unit/Features/Analytics/TimelinePageModelTests.swift (the sibling GlancePage
+        log documents the same class of breakage for GDPRExportPageModelTests.swift). NONE
+        are mine — git status --porcelain shows only my allowed files changed; the repo's
+        apps/macos-pending-verifications.md documents macOS test verification as PENDING.
+        My code is fully verified by the full-app BUILD SUCCEEDED (macOS + iOS) + the
+        executed model & route harnesses + the test-file resolve-check above. NOT dressed
+        up as passing.
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green     : in-scope gates GREEN are reported GREEN; the full-bundle
+                         xcodebuild test is explicitly reported OUT-OF-SCOPE / not-greenable
+                         (pre-existing sibling Swift-6 test breakage) and NOT as green.
+ 2 No scope narrowing  : both web regions (vehicle GlassPanel + the 4 MetricCards) + the
+                         footer link + all 4 data states were implemented, not a minimum.
+ 3 No skip-and-assume  : web page + its MetricCard sub-component + the 3 hooks (useVehicles,
+                         useAnalyticsSummary, useVehicleState) read end-to-end; PageContainer
+                         semantics verified (loading/error gate on vehicles||analytics; the
+                         metric cards always render with ?? 0; the empty card is the vehicle
+                         region only).
+ 4 No stubs as final   : PLACEHOLDER_COUNT=0, ZERO opt-outs in my files; complete code.
+ 5 No parity shortcuts : 4 distinct data states; the {{unit}} interpolation reproduced; the
+                         "model · offline" data subtitle; energy pinned to kWh + cost to
+                         currency exactly as the web; every visible string a verbatim web key.
+ 6 No delegation       : implemented here; no sub-agents.
+ 7 No predecessor bypass: did NOT edit the sibling QuickStatsGrid widget or any shared
+                         component; resolved the type-name clash by prefixing ALL my types
+                         QuickStatsPage*. Only ADDED the .quickStats nav case + registration
+                         + 10 strings + 2 ledger rows.
+ 8 No commit on red    : committing on all-GREEN in-scope gates (placeholder / swiftformat /
+                         swiftlint / xcodegen / KMP framework / macOS+iOS full BUILD /
+                         executed model+route harnesses / test-file resolve-check). The only
+                         RED is the out-of-scope, pre-existing, not-mine sibling test-bundle
+                         compile breakage — deferred to its owners / the macOS-pending gate.
+ 9 No silent drift     : changes confined to the files listed above + this log + the ledger.
+                         xcstrings insertion is a single contiguous block after route.glance
+                         (existing entries byte-identical); ledger diff is +2 rows, 0
+                         deletions; AppRoute/TeslaSyncApp diffs are exactly the +.quickStats
+                         case/pathSegment/icon/group + the one registration line.
+10 EXIT/STATUS below.
+
+================================================================================
+LEDGER
+================================================================================
+apps/parity/apple-ledger.json: page:dashboard/QuickStats set covered for both targets
+  apple-macos  status=done coveredCount=18 requiredCount=18
+  apple-ios    status=done coveredCount=18 requiredCount=18
+
+================================================================================
+COMMIT
+================================================================================
+  git add apps/apple/Sources/Features/Dashboard/QuickStats*.swift \
+          apps/apple/Tests/Unit/Features/Dashboard/QuickStatsPageModelTests.swift \
+          apps/apple/Sources/App/AppRoute.swift apps/apple/Sources/TeslaSyncApp.swift \
+          apps/apple/Localization/Localizable.xcstrings \
+          apps/parity/apple-ledger.json \
+          .github/prompts/monorepo/logs/apple-page-dashboard-QuickStatsPage.log
+  git commit -m "feat(apps/apple): QuickStatsPage at web parity (P7 dashboard)"
+
+EXIT=0
+STATUS=DONE
