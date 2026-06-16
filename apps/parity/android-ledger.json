@@ -162,6 +162,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsMap.log"
   },
   {
+    "unitId": "page:charging/CostAnalysis",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "p3-android/pages/charging/CostAnalysisPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-CostAnalysisPage.log"
+  },
+  {
     "unitId": "page:dashboard/Glance",
     "platform": "android",
     "status": "done",
