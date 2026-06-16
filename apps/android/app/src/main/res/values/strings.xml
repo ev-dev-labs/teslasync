@@ -7671,6 +7671,7 @@
   <string name="translation_vehicles_detail_wheels">Wheels</string>
   <string name="translation_vehicles_detail_windows">Windows</string>
   <string name="translation_vehicles_detail_windowsOpen">%1$s open</string>
+  <string name="translation_vehicles_emptyMessage">Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.</string>
   <string name="translation_vehicles_emptyTitle">No vehicles yet</string>
   <string name="translation_vehicles_loadError">Failed to load vehicles.</string>
   <string name="translation_vehicles_photos_deleteFailed">Failed to remove photo.</string>

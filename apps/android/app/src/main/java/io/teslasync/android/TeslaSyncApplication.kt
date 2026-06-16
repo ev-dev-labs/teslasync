@@ -145,6 +145,7 @@ import io.teslasync.android.vehiclesystems.safetysettings.SafetySettingsPageHost
 import io.teslasync.android.vehiclesystems.softwareupdates.SoftwareUpdatesPageHost
 import io.teslasync.android.vehiclesystems.tirepressure.TirePressurePageHost
 import io.teslasync.android.vehicles.vehicledetail.VehicleDetailPageHost
+import io.teslasync.android.vehicles.vehiclelist.VehicleListPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -363,6 +364,7 @@ class TeslaSyncApplication : Application() {
         SoftwareUpdatesPageHost.register()
         TirePressurePageHost.register()
         VehicleDetailPageHost.register()
+        VehicleListPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

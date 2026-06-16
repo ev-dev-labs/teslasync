@@ -1,0 +1,205 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicles/VehicleList — evidence log
+Native Jetpack Compose / Material 3 port of web VehicleListPage
+Source: web/src/features/vehicles/pages/VehicleListPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehicles/**
+Package: io.teslasync.android.vehicles.vehiclelist
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR, JAVA_HOME = C:\Program Files\Android\Android Studio\jbr)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract,
+                 confirmed by the settings.gradle.kts comment "every P3/A* prompt gate
+                 addresses `:android:`").
+  Toolchain present (SDK + Gradle runner) → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / TripList precedents)
+  VehicleListPageModel.kt      framework-free: VehicleListPageRegistration (vehicles / /vehicles / SLUG /
+                               COMPARE_MIN_VEHICLES=2 / COMPARE_PATH / DETAIL_PATH_PREFIX); batterySeverity
+                               (web batteryColor: >60 good / >25 warn / else bad -> BatterySeverity enum);
+                               deriveVehicleStatus + statusBadge (verbatim web deriveVehicleStatus /
+                               statusVariant over VEHICLE_STATES = online/driving/charging/parked/updating/
+                               asleep/offline); VehicleListDisplayPrefs (web useUnits — distance unit +
+                               convertDistanceFromSI/formatDistance + fmtNumber precision/locale);
+                               deriveVehicleListData (the SI->display fold of the four summary metrics, the
+                               per-vehicle battery bars, and every vehicle-card value, incl. the pinned-first
+                               sortByPins comparator).
+  VehicleListPageSource.kt     seam over VehiclesStore.vehicles() (web useVehicles -> GET /vehicles),
+                               VehiclesStore.vehicleState(id) (web fetchVehicleState -> GET /vehicles/{id}/state),
+                               PinnedStore.pinned(Vehicle) (web usePinned('vehicle') -> GET /pinned?type=vehicle),
+                               SettingsStore.settings (web useUnits source), and the syncVehicles / deleteVehicle /
+                               togglePin mutations.
+  VehicleListPageViewModel.kt  BaseFeedViewModel; vehiclesState: StateFlow<UiState<List<Vehicle>>> over
+                               source.vehicles().asUiState (drives loading/empty/error/content); fleetStates:
+                               StateFlow<Map<Long,VehicleState?>> = the id-set ▸ flatMapLatest ▸ combine of the
+                               per-vehicle fetchVehicleState feeds (web Promise.all); pins + displayPrefs
+                               StateFlows; sync / requestDelete / confirmDelete / cancelDelete / togglePin /
+                               retry / recordViewOpened; emits the four web toast outcomes through the UiEvent
+                               channel.
+  VehicleListPage.kt           stateful entry + stateless content; loading skeleton / empty / error-retry /
+                               success; the sync success+error banners; the four summary MetricCards in a 2x2
+                               grid; the fleet-battery-status GlassPanel of per-vehicle bars; the pinned-sorted
+                               vehicle-card list; the remove-confirm dialog; the four toast outcomes via
+                               android.widget.Toast (web toast.*). SI converted only at the display boundary;
+                               Compose-native (no webview); navigation via the sanctioned deep-link Intent seam.
+  VehicleListPageHost.kt       VehicleListRoute() + VehicleListPageHost.register() for the `vehicles` / /vehicles
+                               destination (Destinations.kt L52; registered in TeslaSyncApplication.kt).
+
+DATA SOURCES (bound through the ViewModel's StateFlow over the KMP core, P1/S8)
+  fetchVehicleState → VehicleListPageSource.fetchVehicleState(id) → VehiclesStore.vehicleState(id)
+                      (GET /vehicles/{id}/state) ▸ VehicleListPageViewModel.combineVehicleStates → fleetStates
+  usePinned         → VehicleListPageSource.usePinned() → PinnedStore.pinned(PinnedItemType.Vehicle)
+                      (GET /pinned?type=vehicle) ▸ VehicleListPageViewModel.pins
+  (web useVehicles) → VehicleListPageSource.vehicles() → VehiclesStore.vehicles() (GET /vehicles) ▸ vehiclesState
+  (web useUnits)    → VehicleListPageSource.settings() → SettingsStore.settings() ▸ displayPrefs
+  The web hook names fetchVehicleState + usePinned are kept verbatim as the Kotlin call-site names (Source +
+  ViewModel), so the parity mapping is explicit.
+
+SI BOUNDARY (P1/S5)
+  The model stays SI end to end (meters). Display conversion happens only at the render boundary via
+  VehicleListDisplayPrefs (convertDistanceFromSI + the shared formatDistance) and the ChartFormat-backed
+  fmtNumber. The cache stays SI (ADR-013); no non-SI value is stored or computed. Battery level is a
+  dimensionless percent; the "kW" / "%" symbols are unit symbols the web interpolates verbatim (no i18n key on
+  the web or in the required string set), reproduced as named constants.
+
+=== PARITY ===
+PARITY_REQUIRED=37
+
+PANELS (9) — the three GlassPanels (error + the two sync banners), the four MetricCards, the battery-status
+            panel, and the vehicle card
+  [01] panel  GlassPanel1       VehicleListPage.kt:401  VehicleListErrorPanel(L399): GlassPanel + ErrorDisplay
+                                                        (message=translation_vehicles_loadError L403) — the web
+                                                        error PageContainer GlassPanel; shown on vehiclesState.isError
+  [02] panel  GlassPanel2       VehicleListPage.kt:420  SyncBanners(L416) GlassPanel(accent=Success) +
+                                                        translation_vehicles_syncSuccess (L422) — web syncMut.isSuccess
+  [03] panel  GlassPanel3       VehicleListPage.kt:430  SyncBanners GlassPanel(accent=Danger) +
+                                                        translation_vehicles_syncError (L432) — web syncMut.isError
+  [04] panel  Total-Vehicles    VehicleListPage.kt:466  FleetSummary(L463) MetricCard(label=
+                                                        translation_vehicles_totalVehicles, value=metrics.totalVehicles)
+  [05] panel  Avg-Battery       VehicleListPage.kt:473  MetricCard(label=translation_vehicles_avgBattery,
+                                                        value=metrics.avgBatteryValue + "%")
+  [06] panel  MetricCard6       VehicleListPage.kt:482  MetricCard(label=translation_vehicles_totalRange +
+                                                        " (unit)", value=metrics.totalRangeValue) — the Total-Range card
+  [07] panel  Charging-Online   VehicleListPage.kt:489  MetricCard(label=translation_vehicles_chargingOnline,
+                                                        value="charging / online")
+  [08] panel  GlassPanel8       VehicleListPage.kt:508  FleetBatteryPanel(L504) GlassPanel — header
+                                                        translation_vehicles_batteryStatus (L521) + per-vehicle
+                                                        BatteryBarRow(L541) bars, or EmptyState(common.noData L527)
+  [09] panel  GlassPanel9       VehicleListPage.kt:583  VehicleCard(L577) GlassPanel — name+status Badge, model/vin
+                                                        subtitle, battery bar+%, range/odometer/charger kW,
+                                                        lock+sentry glyphs, pin / open-detail / remove actions
+
+DATA STATES (4) — for the bound vehicles feed (loading / empty / error / success; the holder also carries
+                 stale/offline)
+  [10] state  loading   VehicleListPage.kt:239  vehiclesState.isLoading → VehicleListSkeleton(L316):
+                                                title + StatGridSkeleton(4) + hero + 3 row skeletons
+  [11] state  empty     VehicleListPage.kt:268  vehiclesState.isEmpty → VehicleListEmpty(L446) EmptyState
+                                                (translation_vehicles_emptyTitle/emptyMessage); the battery panel
+                                                also renders EmptyState(common.noData L527) when no states resolved
+  [12] state  error     VehicleListPage.kt:263  vehiclesState.isError → VehicleListErrorPanel(L399) with retry
+  [13] state  success   VehicleListPage.kt:270  loaded body → FleetSummary(L277) + FleetBatteryPanel(L279) +
+                                                AllVehiclesHeader(L281) + VehicleCard list(L284), folded by
+                                                deriveVehicleListData(L271-274)
+
+STRINGS (24) — every visible literal resolves from res/values/strings.xml; key names match web
+  [14] string common.delete            VehicleListPage.kt:300  translation_common_delete (confirm label + remove icon L680)
+  [15] string common.noData            VehicleListPage.kt:527  translation_common_noData (battery panel empty)
+  [16] string nav.vehicles             VehicleListPage.kt:325  translation_nav_vehicles (header + skeleton title L353)
+  [17] string vehicles.allVehicles     VehicleListPage.kt:569  translation_vehicles_allVehicles
+  [18] string vehicles.avgBattery      VehicleListPage.kt:474  translation_vehicles_avgBattery
+  [19] string vehicles.avgLabel        VehicleListPage.kt:523  translation_vehicles_avgLabel
+  [20] string vehicles.batteryStatus   VehicleListPage.kt:521  translation_vehicles_batteryStatus
+  [21] string vehicles.chargingOnline  VehicleListPage.kt:490  translation_vehicles_chargingOnline
+  [22] string vehicles.compareButton   VehicleListPage.kt:376  translation_vehicles_compareButton
+  [23] string vehicles.deleteFailed    VehicleListPage.kt:185  translation_vehicles_deleteFailed (delete-error toast)
+  [24] string vehicles.deleteSuccess   VehicleListPage.kt:184  translation_vehicles_deleteSuccess (delete-success toast)
+  [25] string vehicles.emptyMessage    VehicleListPage.kt:448  translation_vehicles_emptyMessage
+  [26] string vehicles.emptyTitle      VehicleListPage.kt:450  translation_vehicles_emptyTitle
+  [27] string vehicles.loadError       VehicleListPage.kt:403  translation_vehicles_loadError
+  [28] string vehicles.removeMessage   VehicleListPage.kt:299  translation_vehicles_removeMessage (%1$s name arg)
+  [29] string vehicles.removeTitle     VehicleListPage.kt:298  translation_vehicles_removeTitle
+  [30] string vehicles.subtitle        VehicleListPage.kt:355  translation_vehicles_subtitle
+  [31] string vehicles.syncButton      VehicleListPage.kt:384  translation_vehicles_syncButton (header + empty CTA L453)
+  [32] string vehicles.syncError       VehicleListPage.kt:432  translation_vehicles_syncError (sync-error banner)
+  [33] string vehicles.syncFailed      VehicleListPage.kt:183  translation_vehicles_syncFailed (sync-error toast)
+  [34] string vehicles.syncSuccess     VehicleListPage.kt:422  translation_vehicles_syncSuccess (sync-success banner)
+  [35] string vehicles.syncToast       VehicleListPage.kt:182  translation_vehicles_syncToast (sync-success toast)
+  [36] string vehicles.totalRange      VehicleListPage.kt:483  translation_vehicles_totalRange
+  [37] string vehicles.totalVehicles   VehicleListPage.kt:467  translation_vehicles_totalVehicles
+
+PARITY_COVERED=37
+
+STRING CATALOG
+  23 of the 24 keys already existed in res/values/strings.xml (translation_common_delete / translation_common_noData
+  / translation_nav_vehicles + the 20 translation_vehicles_* keys, generated from the shared i18n catalog with the
+  verbatim web inline-default values). One key — translation_vehicles_emptyMessage — was absent (the web only carries
+  it as the inline `t('vehicles.emptyMessage', 'Connect your Tesla account …')` default), so it was added to
+  res/values/strings.xml (an allowed file; sorted before translation_vehicles_emptyTitle) with the verbatim web
+  default. The default `values/` catalog is the only string source touched: the build runs no i18n generation, and
+  MissingTranslation/ExtraTranslation are disabled (app/build.gradle.kts L114) because ar/he ship as full English
+  fallback, so the ar/he mirrors are not required. The status token ({status} badge), the "kW"/"%" unit symbols,
+  and the model/VIN subtitle are data-derived values the web likewise renders verbatim (no i18n key on the web or
+  in the required string set). The web toast outcomes (syncToast / syncFailed / deleteSuccess / deleteFailed) are
+  surfaced as android.widget.Toast via the UiEvent channel — the four messages are pre-resolved with stringResource
+  (VehicleListPage.kt L182-185) and shown by Toast.makeText (L199) keyed on the event's i18n key — the native
+  analogue of the web `toast.success/error`, so all four strings render from strings.xml.
+
+A11Y / THEME / UNITS (ADR-015)
+  - Each battery-bar row carries a merged TalkBack content description ("<name>: <level>%, <range>") via
+    Modifier.semantics (BatteryBarRow L541); the lock / sentry / open-detail / remove glyphs carry localized
+    content descriptions (translation_common_locked / _sentry / _open / _delete); the decorative metric/header
+    icons pass contentDescription=null so accessibility services skip them.
+  - Colours/typography come from MaterialTheme + the generated design tokens (TeslaTokens.status.success/warning/
+    danger/info for battery severity + sync banners) — dark + dynamic colour honoured; the only fixed colours are
+    the per-card MetricCard accents (web color="cyan|green|purple") and the decorative card top-accent gradient
+    (web from-cyan via-purple to-green), dynamic gradient stops not static theme tokens, matching the sibling
+    DrivesList trend-palette precedent.
+  - The summary grid is a responsive 2x2 (web grid-cols-1/2/4). Touch targets use the shared component sizing
+    (Button / PinButton). SI values convert only at the display boundary (VehicleListDisplayPrefs); the page is
+    Compose-native (no webview). The web page has no chart and no map (0 charts, 0 maps).
+
+NAVIGATION
+  No LocalNavController is exposed to page hosts (the ArchivedPage / GlancePage / Settings precedent). The vehicle
+  card title + the open-detail button navigate to /vehicles/{id}, and the compare button (shown at >= 2 vehicles)
+  to /vehicle-comparison?leftId=&rightId= (web pre-fill), through the sanctioned `teslasync://app/...` deep-link
+  ACTION_VIEW Intent seam (openRoute, VehicleListPage.kt L765; NotificationRouteMap.deepLinkUriFor). Not a stub.
+
+GATE (android triad: placeholder + build + lint + test) — re-verified on the final post-fix code
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehicles -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (lint-results-debug.html written; abortOnError=true;
+                                          0 errors, warnings only). NOTE: an earlier pass flagged a single error —
+                                          LocalContextGetResourceValueCall at the toast effect (context.getString
+                                          via LocalContext.current); fixed by pre-resolving the four toast strings
+                                          with stringResource (L182-185) and keying Toast.makeText off the map.
+                                          Re-run after the fix: 0 errors.
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 error / GlassPanel2 sync-success / GlassPanel3 sync-error, the
+      Total-Vehicles / Avg-Battery / Total-Range / Charging-Online MetricCards, the GlassPanel8 fleet-battery
+      panel, the GlassPanel9 vehicle card); every region of the web source reproduced (header title + subtitle +
+      freshness chip + compare/sync actions, the sync banners, the empty state, the summary grid, the battery
+      panel, the All-Vehicles list, the remove-confirm dialog, the four toast outcomes).
+  [x] All 37 parity items render from the bound StateFlow state holders (vehiclesState + fleetStates + pins +
+      displayPrefs), folded by the framework-free deriveVehicleListData.
+  [x] loading / empty / error / success implemented for the bound vehicles data source (plus the per-vehicle
+      fetchVehicleState states + pinned feeds; the holder's stale/offline tier carried through UiState).
+  [x] All visible strings sourced from strings.xml; key names match web; zero hardcoded UI copy (the {status}
+      token, "kW"/"%" unit symbols, and model/VIN subtitle mirror the web's own non-internationalized literals).
+  [x] Dark/dynamic theme via MaterialTheme + design tokens; localized content descriptions + merged battery-row
+      semantics (a11y); SI units honoured at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (37).
+  [x] android ledger row for page:vehicles/VehicleList set covered (apps/parity/android-ledger.json, 37/37 done).
+
+EXIT=0
+STATUS=DONE
