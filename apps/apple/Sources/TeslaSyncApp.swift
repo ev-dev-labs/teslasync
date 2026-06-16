@@ -124,6 +124,7 @@ struct TeslaSyncApp: App {
         registry = LifetimeStatsRouteRegistration.registry(base: registry)
         registry = MileageRouteRegistration.registry(base: registry)
         registry = TrueCostRouteRegistration.registry(base: registry)
+        registry = EnergyRouteRegistration.registry(base: registry)
         registry = BatteryCellsRouteRegistration.registry(base: registry)
         registry = BatteryDegradationRouteRegistration.registry(base: registry)
         registry = SleepEfficiencyRouteRegistration.registry(base: registry)
