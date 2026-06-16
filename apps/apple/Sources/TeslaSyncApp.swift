@@ -134,6 +134,7 @@ struct TeslaSyncApp: App {
         registry = ProjectedRangeRouteRegistration.registry(base: registry)
         registry = VampireDrainRouteRegistration.registry(base: registry)
         registry = DriveScoreRouteRegistration.registry(base: registry)
+        registry = EfficiencyRouteRegistration.registry(base: registry)
         registry = PowershareRouteRegistration.registry(base: registry)
         registry = ChargingHeatmapRouteRegistration.registry(base: registry)
         registry = ChargingListRouteRegistration.registry(base: registry)

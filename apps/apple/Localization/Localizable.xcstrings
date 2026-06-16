@@ -1,6 +1,479 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "efficiency.avg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg"
+          }
+        }
+      }
+    },
+    "efficiency.avgConsumption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg"
+          }
+        }
+      }
+    },
+    "efficiency.avgSpeed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Speed"
+          }
+        }
+      }
+    },
+    "efficiency.avgSpeedCol" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Speed"
+          }
+        }
+      }
+    },
+    "efficiency.co2Label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CO\u2082 Saved"
+          }
+        }
+      }
+    },
+    "efficiency.co2Saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CO\u2082 Saved (kg)"
+          }
+        }
+      }
+    },
+    "efficiency.col.date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "efficiency.col.range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed range"
+          }
+        }
+      }
+    },
+    "efficiency.costPerKm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Est. Cost/km"
+          }
+        }
+      }
+    },
+    "efficiency.costPerKmLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Est. Cost/km"
+          }
+        }
+      }
+    },
+    "efficiency.dailyTrend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily Efficiency (%@)"
+          }
+        }
+      }
+    },
+    "efficiency.dailyTrend.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily efficiency trend area chart"
+          }
+        }
+      }
+    },
+    "efficiency.drives" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drives"
+          }
+        }
+      }
+    },
+    "efficiency.drivesAnalyzed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drives Analyzed"
+          }
+        }
+      }
+    },
+    "efficiency.insights" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy Insights"
+          }
+        }
+      }
+    },
+    "efficiency.kmPerKwh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "km/kWh"
+          }
+        }
+      }
+    },
+    "efficiency.noInsights" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No energy insights available yet"
+          }
+        }
+      }
+    },
+    "efficiency.noStatCards" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No driving statistics available yet"
+          }
+        }
+      }
+    },
+    "efficiency.noStats" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No efficiency data available yet"
+          }
+        }
+      }
+    },
+    "efficiency.noSummary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No efficiency summary available yet"
+          }
+        }
+      }
+    },
+    "efficiency.noTempData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough data for temperature breakdown"
+          }
+        }
+      }
+    },
+    "efficiency.regenRatio" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regen Ratio"
+          }
+        }
+      }
+    },
+    "efficiency.regenRatioLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regen Ratio"
+          }
+        }
+      }
+    },
+    "efficiency.speed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed"
+          }
+        }
+      }
+    },
+    "efficiency.speedDist" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency by Speed Range"
+          }
+        }
+      }
+    },
+    "efficiency.speedDist.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency by speed-range bar chart"
+          }
+        }
+      }
+    },
+    "efficiency.speedVsEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed vs Efficiency"
+          }
+        }
+      }
+    },
+    "efficiency.speedVsEfficiency.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed versus efficiency scatter plot"
+          }
+        }
+      }
+    },
+    "efficiency.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy consumption and driving efficiency analysis"
+          }
+        }
+      }
+    },
+    "efficiency.summary" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency Summary"
+          }
+        }
+      }
+    },
+    "efficiency.temp" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temp"
+          }
+        }
+      }
+    },
+    "efficiency.tempEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency by Temperature Range"
+          }
+        }
+      }
+    },
+    "efficiency.tempRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temp Range"
+          }
+        }
+      }
+    },
+    "efficiency.tempVsEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temperature vs Efficiency"
+          }
+        }
+      }
+    },
+    "efficiency.tempVsEfficiency.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temperature versus efficiency scatter plot"
+          }
+        }
+      }
+    },
+    "efficiency.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency"
+          }
+        }
+      }
+    },
+    "efficiency.topSpeed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Speed"
+          }
+        }
+      }
+    },
+    "efficiency.total" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total"
+          }
+        }
+      }
+    },
+    "efficiency.totalDistLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Distance"
+          }
+        }
+      }
+    },
+    "efficiency.totalDistance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total"
+          }
+        }
+      }
+    },
+    "efficiency.totalDriveTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Drive Time"
+          }
+        }
+      }
+    },
+    "efficiency.totalRegen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Regen"
+          }
+        }
+      }
+    },
+    "route.efficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency"
+          }
+        }
+      }
+    },
     "driveDetail.title" : {
       "extractionState" : "manual",
       "localizations" : {
