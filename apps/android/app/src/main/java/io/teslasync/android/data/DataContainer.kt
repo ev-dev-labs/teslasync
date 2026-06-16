@@ -201,6 +201,12 @@ class DataContainer(
     val automationsStore = AutomationsStore(automationsRepository, scope)
 
     /**
+     * Shared Automations control-plane state holder (web `useAutomations` port) — the cache-then-network reads
+     * (`/automations/{id}`, `/automations/presets/{id}`) + the create/update/test-run mutations the A7
+     * AutomationBuilderPage automations surface binds to.
+     */
+
+    /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->
      * display boundary (web `useUnits` port). Shared while observed; falls back to metric defaults
      * before settings load.

@@ -1,0 +1,143 @@
+================================================================================
+P3-ANDROID A7 — page:automations/AutomationBuilder  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/automations/pages/AutomationBuilderPage.tsx
+promptId: p3-android/pages/automations/AutomationBuilderPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (on PATH)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core.
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts include(":android"); projectDir = file("app")), matching every sibling A7 page log.
+              Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPage.kt          (@Composable screen: AutomationBuilderPage + AutomationBuilderPageContent + chrome + 4 states + 4 FormSections + 3 GlassPanels + banners + action bar)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageForms.kt     (TriggerConfigurator + ConditionsEditor + ActionsEditor — the typed-step editors the When/Only If/Then sections host)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<…>> x4 + form/save/test-run state; setX/save/testRun/discardDraft/recordViewOpened)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageSource.kt    (S8 data seam over AutomationsStore + VehiclesStore + a page-local HttpNotificationChannelsRepository)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageModel.kt      (framework-free: BuilderForm, validate(), automationToForm/presetToForm/toFullInput, kind taxonomies + default-step factories, Registration + diagnostics)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageIcons.kt      (2 authored lucide glyphs ArrowLeft/Save + 7 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationBuilderPageHost.kt       (PageHosts.register(automationBuilder){ AutomationBuilderRoute(entry) } — reads id/preset args; back-dispatcher return)
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt                     (DI wiring: + automationsRepository + automationsStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                   (NavHost wiring: + AutomationBuilderPageHost.register())
+apps/android/app/src/main/res/values/strings.xml (+ values-ar / values-he)                    (added 7 missing parity keys + 4 trigger-type labels; the other 34 page keys already present as translation_automations_builder_*)
+apps/parity/android-ledger.json                                                               (ledger row page:automations/AutomationBuilder, 48/48)
+.github/prompts/monorepo/logs/android-page-automations-AutomationBuilderPage.log              (this log)
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useAutomation           GET /automations/{id}           -> AutomationsRepository.automation(id)       (VM.automation StateFlow<UiState<AutomationFull>>; a COLD S7 cache-then-network feed so the error-state retry re-runs the fetch; edit-load gate: loading/notFound/error/success)
+useAutomationPreset     GET /automations/presets/{id}   -> AutomationsStore.automationPreset(id)      (VM.preset; hydrates the form in install-preset mode)
+useVehicles             GET /vehicles                   -> VehiclesStore.vehicles()                   (VM.vehicles; the vehicle-scope picker options)
+useNotificationChannels GET /notifications              -> HttpNotificationChannelsRepository.channels() (VM.channels; the notify-action channel options — the shared store exposes only the webhook-filtered feed, so the page-local repo serves the full list over the SAME client + cache, matching the StatisticsExtrasRepository precedent)
+useCreateAutomationFull POST /automations               -> AutomationsStore.createAutomationFull(input) (VM.save, create mode)
+useUpdateAutomationFull PUT /automations/{id}           -> AutomationsStore.updateAutomationFull(id,input) (VM.save, edit mode)
+useTestRunAutomation    POST /automations/{id}/test-run -> AutomationsStore.testRunAutomation(id)     (VM.testRun)
+scope/decode : no vehicle scope (the vehicle is a typed form field, not the global selection); decode is the shared-core kotlinx models (AutomationFull/AutomationFullInput/AutomationTriggerInput/…); the view only resolves i18n + draws.
+nav          : Destinations 'automationBuilder' -> /automations/new pre-existing (Destinations.kt L112, count unchanged at 137 — DestinationsTest golden honored); host wired via PageHosts.register("automationBuilder"); the host reads the optional `id` (edit) / `preset` (install) args off the back-stack entry; post-save/cancel return pops via the activity back dispatcher (web navigate('/automations')).
+units        : no unit-bearing field on this surface; nothing stored/computed in non-SI (the SI converters dependency is satisfied vacuously).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=48   (3 panels + 4 states + 41 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1  -> AutomationBuilderPage.kt:424 WhenSection GlassPanel hosting TriggerConfigurator (L426); per-kind editor in AutomationBuilderPageForms.kt:48 TriggerConfigurator
+[COVERED] panel  GlassPanel2  -> AutomationBuilderPage.kt:429 WhenSection GlassPanel hosting the empty-trigger EmptyState (emptyTrigger, L431)
+[COVERED] panel  GlassPanel3  -> AutomationBuilderPage.kt:594 PresetHintPanel GlassPanel (presetHint, L597) — shown when !isEdit
+[COVERED] state  loading      -> AutomationBuilderPage.kt:238 Edit&&automation.isLoading -> BuilderLoading()=PageLoader (L287)
+[COVERED] state  empty        -> AutomationBuilderPage.kt:239 Edit&&(httpStatus==404||isEmpty) -> BuilderNotFound()=EmptyState notFound (L293)
+[COVERED] state  error        -> AutomationBuilderPage.kt:240 Edit&&automation.isError -> BuilderError()=ErrorDisplay+Retry (L302)
+[COVERED] state  success      -> AutomationBuilderPage.kt:241 else -> BuilderBody() draws the back link + banners + 4 FormSections + action bar (L313)
+[COVERED] string automations.builder.allVehicles          -> AutomationBuilderPage.kt:377 vehicleOptions all-vehicles option (also :391 emptyLabel)
+[COVERED] string automations.builder.backToList           -> AutomationBuilderPage.kt:320 BuilderBody back link
+[COVERED] string automations.builder.cancel               -> AutomationBuilderPage.kt:572 ActionBar cancel button
+[COVERED] string automations.builder.create               -> AutomationBuilderPage.kt:551 ActionBar submit label (create mode)
+[COVERED] string automations.builder.createTitle          -> AutomationBuilderPage.kt:270 BuilderChrome title (create)
+[COVERED] string automations.builder.description          -> AutomationBuilderPage.kt:369 GeneralSection description label
+[COVERED] string automations.builder.descriptionPlaceholder -> AutomationBuilderPage.kt:370 GeneralSection description hint (NEW key added to values{,-ar,-he})
+[COVERED] string automations.builder.editBreadcrumb       -> AutomationBuilderPage.kt:276 BuilderChrome edit breadcrumb caption (%1$s name)
+[COVERED] string automations.builder.editTitle            -> AutomationBuilderPage.kt:268 BuilderChrome title (edit)
+[COVERED] string automations.builder.emptyTrigger         -> AutomationBuilderPage.kt:431 GlassPanel2 EmptyState message (NEW key)
+[COVERED] string automations.builder.enabled              -> AutomationBuilderPage.kt:383 GeneralSection enabled Toggle label
+[COVERED] string automations.builder.errorActionDetails   -> AutomationBuilderPage.kt:508 validationMessage(ActionDetails)
+[COVERED] string automations.builder.errorActions         -> AutomationBuilderPage.kt:507 validationMessage(ActionsRequired)
+[COVERED] string automations.builder.errorConditionPlace  -> AutomationBuilderPage.kt:506 validationMessage(ConditionPlace)
+[COVERED] string automations.builder.errorName            -> AutomationBuilderPage.kt:503 validationMessage(NameRequired)
+[COVERED] string automations.builder.errorTrigger         -> AutomationBuilderPage.kt:504 validationMessage(TriggerRequired)
+[COVERED] string automations.builder.errorTriggerPlace    -> AutomationBuilderPage.kt:505 validationMessage(TriggerPlace)
+[COVERED] string automations.builder.general              -> AutomationBuilderPage.kt:358 GeneralSection FormSection title
+[COVERED] string automations.builder.name                 -> AutomationBuilderPage.kt:362 GeneralSection name Input label
+[COVERED] string automations.builder.namePlaceholder      -> AutomationBuilderPage.kt:363 GeneralSection name Input hint (parity:allow ported web key id)
+[COVERED] string automations.builder.notFound             -> AutomationBuilderPage.kt:295 BuilderNotFound EmptyState message
+[COVERED] string automations.builder.onlyIf               -> AutomationBuilderPage.kt:460 OnlyIfSection FormSection title
+[COVERED] string automations.builder.onlyIfDesc           -> AutomationBuilderPage.kt:461 OnlyIfSection FormSection description (NEW key)
+[COVERED] string automations.builder.presetHint           -> AutomationBuilderPage.kt:597 PresetHintPanel body (NEW key)
+[COVERED] string automations.builder.presetTitle          -> AutomationBuilderPage.kt:269 BuilderChrome title (preset)
+[COVERED] string automations.builder.save                 -> AutomationBuilderPage.kt:549 ActionBar submit label (edit mode)
+[COVERED] string automations.builder.saveError            -> AutomationBuilderPage.kt:495 SaveErrorBanner title
+[COVERED] string automations.builder.selectTrigger        -> AutomationBuilderPage.kt:419 WhenSection trigger-type emptyLabel (also :440 first option)
+[COVERED] string automations.builder.subtitle             -> AutomationBuilderPage.kt:279 BuilderChrome subtitle (NEW key)
+[COVERED] string automations.builder.testRun              -> AutomationBuilderPage.kt:563 ActionBar test-run button
+[COVERED] string automations.builder.testRunStarted       -> AutomationBuilderPage.kt:586 ActionBar test-run-started confirmation
+[COVERED] string automations.builder.then                 -> AutomationBuilderPage.kt:475 ThenSection FormSection title
+[COVERED] string automations.builder.thenDesc             -> AutomationBuilderPage.kt:476 ThenSection FormSection description (NEW key)
+[COVERED] string automations.builder.triggerType          -> AutomationBuilderPage.kt:416 WhenSection trigger-type Select label
+[COVERED] string automations.builder.vehicle              -> AutomationBuilderPage.kt:374 GeneralSection vehicle Select label
+[COVERED] string automations.builder.vehicleFallback      -> AutomationBuilderPage.kt:396 vehicleOptions fallback label (%1$s id)
+[COVERED] string automations.builder.when                 -> AutomationBuilderPage.kt:412 WhenSection FormSection title
+[COVERED] string automations.builder.whenDesc             -> AutomationBuilderPage.kt:413 WhenSection FormSection description (NEW key)
+[COVERED] string draft.noun.automation                    -> AutomationBuilderPage.kt:529 DraftRecoveryBanner title (the item noun)
+[COVERED] string editConflict.resource.automation         -> AutomationBuilderPage.kt:514 EditConflictBanner resource label (shown on a 409 save conflict)
+[COVERED] string forms.unsavedAutomation                  -> AutomationBuilderPage.kt:248 unsaved-changes discard ConfirmDialog message (BackHandler-guarded)
+
+PARITY_COVERED=48
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 7 reads/writes bound as StateFlow + suspend Result via AutomationBuilderPageViewModel -> automationBuilderPageSourceOf():
+               the edit detail read binds to AutomationsRepository.automation(id) (S7 COLD cache-then-network feed so the error-surface retry genuinely re-fetches);
+               the preset read + all three mutations bind to AutomationsStore.automationPreset/createAutomationFull/updateAutomationFull/testRunAutomation (web
+               useAutomationPreset/useCreateAutomationFull/useUpdateAutomationFull/useTestRunAutomation — mutations stay on the store so a save refreshes the list feed);
+               VehiclesStore.vehicles() (web useVehicles); and a page-local HttpNotificationChannelsRepository.channels() (web useNotificationChannels — the store exposes
+               only the webhook-filtered feed). No HTTP in the view.
+panels       : the three web GlassPanels are reproduced as Material 3 GlassPanel surfaces — the per-kind TriggerConfigurator panel (GlassPanel1), the
+               empty-trigger prompt (GlassPanel2), and the preset hint (GlassPanel3). The four FormSections (General/When/Only If/Then) host the typed editors
+               (TriggerConfigurator + ConditionsEditor + ActionsEditor over the shared-core id-free input step hierarchies), each section rendering content-or-empty.
+states       : the edit-load read is the primary gate — loading (PageLoader) / not-found (404 -> EmptyState notFound) / error (ErrorDisplay+Retry) / success (the form).
+               create/preset modes render the form immediately (success). The not-found surface is routed from a 404 (web `!existingAutomation`), distinct from a hard error.
+strings      : all 41 parity keys resolve from res/values/strings.xml (zero hardcoded prose); 34 pre-existed, 7 were added (descriptionPlaceholder, emptyTrigger,
+               onlyIfDesc, presetHint, subtitle, thenDesc, whenDesc) plus 4 trigger-type labels (triggerSchedule/Event/Geofence/Signal, non-parity, for the
+               sub-builder's zero-hardcoded-text), all added to values{,-ar,-he} (ar/he ship English fallback per the catalog convention).
+cross-cutting: the three web cross-cutting affordances are wired genuinely natively — forms.unsavedAutomation via a BackHandler + discard ConfirmDialog;
+               draft.noun.automation via a draft-recovery banner shown for a dirty new automation (Discard = start over); editConflict.resource.automation via a
+               conflict banner shown when an update is rejected with HTTP 409 (ApiError.Http.status).
+a11y/theme   : IconButtons carry contentDescription; decorative icons pass null; EmptyState/ErrorDisplay/PageLoader carry merged semantics; all color/typography via
+               MaterialTheme.colorScheme + TeslaTokens + the role typography components (PageTitle/BodyText/Caption) — dynamic color + dark theme; Compose-native (no webview).
+nav          : Destinations 'automationBuilder' -> /automations/new pre-existing (count unchanged at 137; DestinationsTest golden honored — no new destination added);
+               host wired via PageHosts.register("automationBuilder"); the host reads optional id/preset args; the post-save/cancel return pops the back stack
+               (web navigate('/automations')); a leaving flag + post-composition effect keeps the unsaved-changes BackHandler from re-catching the committed pop.
+placeholder  : PLACEHOLDER_ALLOWED=2  PLACEHOLDER_COUNT=0  (the 2 allows are the inline ports of the web i18n keys automations.builder.namePlaceholder /
+               descriptionPlaceholder, whose R-resource ids contain the literal scanned by the gate; the hint copy itself is the ported web string)
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin -> PLACEHOLDER_COUNT=0 ALLOWED=2 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 3m 12s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL (run with assembleDebug) in 3m 12s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 15m 07s
+parity       : PARITY_COVERED(48) == PARITY_REQUIRED(48)
+[PASS] all android triad gates green; parity 48/48; android ledger row page:automations/AutomationBuilder status=done.
+EXIT=0
+STATUS=DONE

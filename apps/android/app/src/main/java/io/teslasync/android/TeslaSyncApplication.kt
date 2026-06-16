@@ -61,6 +61,7 @@ import io.teslasync.android.analytics.weeklydigest.WeeklyDigestPageHost
 import io.teslasync.android.analytics.truecost.TrueCostPageHost
 import io.teslasync.android.automations.activityfeed.AutomationActivityFeedPageHost
 import io.teslasync.android.automations.list.AutomationListPageHost
+import io.teslasync.android.automations.builder.AutomationBuilderPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -185,6 +186,7 @@ class TeslaSyncApplication : Application() {
         TrueCostPageHost.register()
         AutomationActivityFeedPageHost.register()
         AutomationListPageHost.register()
+        AutomationBuilderPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
