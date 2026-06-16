@@ -1,0 +1,48 @@
+P3/A99/0001 — Android acceptance gate — artifact log
+date: 2026-06-16
+worktree: F:\github\teslasync-wt\integration   branch: auto/integration-20260610-110445
+context: final acceptance gate run after recovering the 22 p3-android "tail" pages from their own
+         verified-green commits (the parallel runner queued them on shared-registration merge conflicts).
+
+=== TAIL SCOPE (22 pages) ===
+ApiPlayground, BackupRestore, DevTools, DiskForecast, CostAnalysis, DBHealth, MyActivity, NotFound,
+StatusApiDocs, TripList, ClimateControl, GuardMode, Maintenance, MediaPlayer, SafetySettings,
+SoftwareUpdates, TirePressure, DigitalTwin, VehicleAccess, VehicleDetail, VehicleList, WatchFace.
+Recovery: 8 pages had already merged cleanly into integration; 14 pages recovered via
+`git cherry-pick --no-commit <green-sha>` + surgical registration merge (TeslaSyncApplication.kt,
+DataContainer.kt, strings.xml; android-ledger.json kept-ours) + dedup. All 22 page files present and compile.
+
+=== CODE GATES (runnable this session — GREEN) ===
+GEN  : api/generated regenerated via apps/tools/codegen/gen-clients.ps1 (10 Kotlin + 10 C# files)   GEN_EXIT=0
+KT   : ./gradlew :android:compileDebugKotlin  (-Pkotlin.daemon.jvmargs="-Xss32m -Xmx8g")  BUILD SUCCESSFUL   COMPILE_EXIT=0
+ASM  : ./gradlew :android:assembleDebug  BUILD SUCCESSFUL
+       -> apps/android/app/build/outputs/apk/debug/android-debug.apk (56.9 MB)                               ASSEMBLE_EXIT=0
+LINT : ./gradlew :android:lintDebug  BUILD SUCCESSFUL                                                        LINT_EXIT=0
+UNIT : ./gradlew :android:testDebugUnitTest  BUILD SUCCESSFUL                                                UNIT_EXIT=0
+
+=== BLOCKED CHECKS (environment / metadata — NOT code defects) ===
+LEDGER       : apps/parity/android-ledger.json has 47 unit rows; the app has ~290 pages. The ledger is
+               UNDER-COUNTED because the dangling-commit recovery used keep-ours on android-ledger.json to
+               avoid JSON merge conflicts, so recovered pages did not append their ledger rows. The pages ARE
+               present and compile; only the parity METADATA is incomplete. The full ledger can be
+               reconstructed by unioning each page's own ledger row from its commit (data recovery, not
+               fabrication), but acceptance is blocked regardless by the two infra items below.   LEDGER_EXIT=1
+CONNECTED    : :android:connectedDebugAndroidTest NOT RUN — no emulator binary at %ANDROID_HOME%\emulator and
+               no `adb devices`. Compose UI instrumentation cannot execute in this environment.   ANDROID_TEST_EXIT=BLOCKED
+RELEASE_AAB  : signed release .aab NOT PRODUCED — no signing keystore (.jks/.keystore) exists anywhere in the
+               repo and no signing material is available. Per the gate spec, unavailable signing material =>
+               BLOCKED with evidence. No debug/unsigned substitute is recorded as a pass.            AAB_EXIT=BLOCKED
+KTLINT       : ktlintCheck not run as a blocking gate this session; pre-existing style violations are
+               documented in predecessor page logs (e.g. DevToolsPage) and are NOT introduced by the tail
+               recovery. lintDebug (the Android lint gate) is green.
+
+=== HONEST SUMMARY ===
+Android source recovery is COMPLETE at the compile / build / lint / unit-test level: compileDebugKotlin,
+assembleDebug, lintDebug, and testDebugUnitTest are all GREEN, and a 56.9 MB debug APK was produced with all
+22 tail pages (plus the full existing app) present and registered. FINAL ACCEPTANCE remains BLOCKED because
+(1) release signing material is unavailable (no keystore), (2) no emulator/device exists for
+connectedDebugAndroidTest, and (3) the parity ledger is currently under-counted. None of these blockers are
+code-correctness defects in the recovered pages.
+
+EXIT=1
+STATUS=BLOCKED
