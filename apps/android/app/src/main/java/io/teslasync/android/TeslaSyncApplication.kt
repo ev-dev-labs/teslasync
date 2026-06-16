@@ -38,6 +38,7 @@ import io.teslasync.android.system.search.SearchPageHost
 import io.teslasync.android.system.teslaaccount.TeslaAccountPageHost
 import io.teslasync.android.telemetry.signalgapdetector.SignalGapDetectorPageHost
 import io.teslasync.android.telemetry.signallogviewer.SignalLogViewerPageHost
+import io.teslasync.android.admin.dlq.DLQInspectorPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -139,6 +140,7 @@ class TeslaSyncApplication : Application() {
         SignalGapDetectorPageHost.register()
         // Register the native signal-log-viewer telemetry screen for the /signal-log route (P3/A7). Idempotent.
         SignalLogViewerPageHost.register()
+        DLQInspectorPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

@@ -1,0 +1,182 @@
+================================================================================
+P3-ANDROID · A7 · page:admin/DLQInspector
+Native Jetpack Compose / Material 3 port of web DLQInspectorPage at parity
+Artifact: .github/prompts/monorepo/pages/admin/DLQInspectorPage (generated)
+Web source: web/src/features/admin/pages/DLQInspectorPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/admin/DLQInspectorPage.kt (+ peers)
+Run host: Windows_NT · JDK 21 (Android Studio JBR) · ANDROID_HOME present · Gradle 8.14.5
+================================================================================
+
+--- ENVIRONMENT PREFLIGHT ---
+JAVA_HOME           = C:\Program Files\Android\Android Studio\jbr (OpenJDK 21.0.9)
+ANDROID_HOME        = C:\Users\AtulM\AppData\Local\Android\Sdk (EXISTS)
+Gradle module path  = :android (settings.gradle.kts maps :android -> app/)
+=> Android SDK + Gradle runner AVAILABLE. NOT a BLOCKED scenario; the android
+   triad gate (build + lint + test + placeholder) was executed for real below.
+
+--- DEPENDENCY DISCOVERY (predecessors, no bypass) ---
+Shared P1/S8 DLQ state holder EXISTS and was bound (not re-implemented):
+  apps/shared/core/.../presentation/dlq/DlqStore.kt
+    list() / entry(id,enabled) / audit(dlqId,limit) / replay(id)
+  apps/shared/core/.../data/repo/DlqRepository.kt + HttpDlqRepository.kt
+A6 DLQ feature views EXIST and were COMPOSED verbatim (each self-wraps its
+Material 3 panel + owns its loading/empty/error + i18n):
+  featureviews.statusheader.StatusHeader(data, loading)
+  featureviews.entriestable.EntriesTable(state: UiState<List<DLQEntrySummary>>, onInspect, onRetry)
+  featureviews.auditpanel.AuditPanel(state: UiState<List<DLQReplayAuditRecord>>, scopedDlqId, onRetry)
+  modalsdialogs.entrydrawer.EntryDrawer(open, summary, full, loading, replayEnabled, replayInFlight, onClose, onReplay)
+All 10 page i18n keys ALREADY PRESENT in res/values/strings.xml (component ports
+added the admin.dlq.* catalog) — verified, none fabricated.
+
+--- FILES CREATED (apps/android/app/src/main/kotlin/com/teslasync/admin/) ---
+  DLQInspectorPageModel.kt      registration consts + DlqListView + DlqInspectorParsing
+                                (JsonElement -> the four component types) + EntriesSummary.toDrawerSummary()
+                                + recordDLQInspectorPageOpened (PII-safe view.opened, P1/S11)
+  DLQInspectorPageSource.kt     DLQInspectorSource seam + DlqStore.asDLQInspectorSource()
+  DLQInspectorPageViewModel.kt  BaseFeedViewModel; listState/auditState/entryState (StateFlow<UiState>)
+                                + DlqInteraction snapshot + inspect/closeDrawer/askReplay/confirmReplay/
+                                cancelReplay/dismissBlockedBanner/refresh/retry/recordViewOpened
+  DLQInspectorPage.kt           @Composable screen: header(title+subtitle) + replay-blocked banner +
+                                page error banner + StatusHeader + GlassPanel1(entries) + GlassPanel2(audit)
+                                + EntryDrawer + ConfirmDialog overlays
+  DLQInspectorPageHost.kt       PageHosts.register("adminDlq"){ DLQInspectorRoute() }
+
+--- FILES EDITED (wiring seams; DataContainer documents itself as "the seam A7 prompts widen") ---
+  data/DataContainer.kt         + HttpDlqRepository + DlqStore dlqStore (mirrors adminStore precedent)
+  TeslaSyncApplication.kt       + DLQInspectorPageHost.register() in onCreate (mirrors ApiLogsPageHost)
+  apps/parity/android-ledger.json + page:admin/DLQInspector row (status=done, 15/15)
+NavHost: route "adminDlq" (/admin/dlq) already present in Destinations.kt; the
+generic TeslaSyncNavHost resolves any registered PageHosts id — no NavHost edit needed.
+
+--- DATA BINDING (web hook names kept at the Kotlin call sites) ---
+  useDLQList   -> source.list()            -> listState  : UiState<DlqListView> (StatusHeader + EntriesTable)
+  useDLQEntry  -> source.entry(id,enabled) -> entryState : UiState<DlqEntryFull?> (EntryDrawer; web enabled gate)
+  useDLQAudit  -> source.audit(null,50)    -> auditState : UiState<List<DLQReplayAuditRecord>> (AuditPanel)
+  useDLQReplay -> source.replay(id)        -> confirmReplay(): ok=>close drawer, disabled/403=>replay-blocked banner
+Values stay SI/verbatim (DLQ feeds are not unit-bearing); no non-SI stored/computed.
+
+================================================================================
+GATE (android triad: placeholder + build + lint + test) — REAL RUNS, RAW EXITS
+================================================================================
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+  BUILD SUCCESSFUL in 2m 35s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+  Wrote HTML report to .../app/build/reports/lint-results-debug.html
+  BUILD SUCCESSFUL in 13m 47s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+  BUILD SUCCESSFUL in 2m 11s
+TEST_EXIT=0
+
+Supplementary code-quality (applied plugins; NOT part of the prompt gate command):
+$ ./gradlew :android:ktlintMainSourceSetCheck
+  (after fixing 3 multiline-expression-wrapping nits in DLQInspectorPageModel.kt)
+  DLQ files: 0 violations  -> KTLINT clean for this artifact
+$ ./gradlew :android:detekt
+  DLQ files: 0 issues (added @file:Suppress("MatchingDeclarationName") per the
+  component-file convention). The task still reports 3 weighted issues, ALL
+  PRE-EXISTING in the sibling ApiLogsPage.kt (MatchingDeclarationName/ReturnCount/
+  MaxLineLength) — out of scope, not introduced here. Honest note: detekt is not
+  in the gate contract and was already red before this work; this artifact adds
+  ZERO new detekt debt.
+
+$ ./gradlew :android:compileDebugKotlin   (final state, post all edits)
+  BUILD SUCCESSFUL in 43s
+FINAL_COMPILE_EXIT=0
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=15
+Each item below carries binding evidence (file + symbol).
+--------------------------------------------------------------------------------
+[01] panel  · GlassPanel1 (Dead-letter entries)
+     EVID: DLQInspectorPage.kt $ fun DlqEntriesPanel -> DlqPanelHeader(panels.entries,
+           DataDisplayGlyphs.AlertOctagon) + EntriesTable(state, onInspect, onRetry);
+           EntriesTable renders components.ui.GlassPanel (Material 3 Surface).
+[02] panel  · GlassPanel2 (Recent replay activity)
+     EVID: DLQInspectorPage.kt $ fun DlqAuditPanel -> DlqPanelHeader(panels.audit,
+           DataDisplayGlyphs.History) + AuditPanel(state, scopedDlqId=null, onRetry);
+           AuditPanel renders components.ui.GlassPanel (Material 3 Surface).
+[03] state  · loading
+     EVID: DLQInspectorPageViewModel.kt $ listState/auditState/entryState = ....asUiState{...}
+           (Flow<Resource>.asUiState, UiPhase.Loading); DLQInspectorPage.kt $
+           StatusHeader(loading=listState.isLoading) + EntriesTable/AuditPanel skeletons
+           when their UiState.isLoading + EntryDrawer(loading=entryState.isLoading).
+[04] state  · error
+     EVID: DLQInspectorPage.kt $ DLQInspectorPageContent: if (listState.hasError)
+           AlertBanner(translation_error_loadFailed, action=BannerAction(translation_error_retry,
+           onRetry)); EntriesTable/AuditPanel render error+retry from UiState.isError;
+           confirmReplay() onFailure -> httpStatusOf==403 raises the replay-blocked banner.
+[05] state  · success
+     EVID: DLQInspectorPage.kt $ DLQInspectorPageContent FadeIn { StatusHeader } +
+           FadeIn { DlqEntriesPanel } + FadeIn { DlqAuditPanel } render the resolved
+           DlqListView/audit content (UiPhase.Content).
+[06] string · admin.dlq.banners.replayBlockedMessage
+     EVID: DLQInspectorPage.kt $ AlertBanner(message =
+           stringResource(R.string.translation_admin_dlq_banners_replayBlockedMessage))
+[07] string · admin.dlq.banners.replayBlockedTitle
+     EVID: DLQInspectorPage.kt $ AlertBanner(title =
+           stringResource(R.string.translation_admin_dlq_banners_replayBlockedTitle))
+[08] string · admin.dlq.confirm.confirm
+     EVID: DLQInspectorPage.kt $ ConfirmDialog(confirmLabel =
+           stringResource(R.string.translation_admin_dlq_confirm_confirm))
+[09] string · admin.dlq.confirm.message
+     EVID: DLQInspectorPage.kt $ ConfirmDialog(message =
+           stringResource(R.string.translation_admin_dlq_confirm_message, pendingReplay.id.toString()))
+[10] string · admin.dlq.confirm.title
+     EVID: DLQInspectorPage.kt $ ConfirmDialog(title =
+           stringResource(R.string.translation_admin_dlq_confirm_title))
+[11] string · admin.dlq.pageTitle
+     EVID: DLQInspectorPage.kt $ fun DlqHeader -> PageTitle(
+           stringResource(R.string.translation_admin_dlq_pageTitle));
+           also DLQInspectorPageRegistration.SLUG view-model key.
+[12] string · admin.dlq.panels.audit
+     EVID: DLQInspectorPage.kt $ fun DlqAuditPanel -> DlqPanelHeader(title =
+           stringResource(R.string.translation_admin_dlq_panels_audit))
+[13] string · admin.dlq.panels.entries
+     EVID: DLQInspectorPage.kt $ fun DlqEntriesPanel -> DlqPanelHeader(title =
+           stringResource(R.string.translation_admin_dlq_panels_entries))
+[14] string · admin.dlq.subtitle
+     EVID: DLQInspectorPage.kt $ fun DlqHeader -> BodyText(
+           stringResource(R.string.translation_admin_dlq_subtitle))
+[15] string · common.cancel
+     EVID: DLQInspectorPage.kt $ ConfirmDialog(cancelLabel =
+           stringResource(R.string.translation_common_cancel))
+--------------------------------------------------------------------------------
+PARITY_COVERED=15
+PARITY_REQUIRED == PARITY_COVERED (15 == 15) -> OK
+
+--- ACCEPTANCE CRITERIA ---
+[x] Every named panel implemented (GlassPanel1 entries, GlassPanel2 audit); the
+    web StatusHeader summary, entry drawer, and replay ConfirmDialog reproduced.
+[x] All 15 parity items render from the bound StateFlow state holders.
+[x] loading / empty / error implemented for every data source (StatusHeader,
+    EntriesTable, AuditPanel via UiState; EntryDrawer loading; page error banner).
+[x] All visible strings from strings.xml; zero hardcoded literals; web key names kept.
+[x] Dark/dynamic theme via MaterialTheme tokens; a11y (merged-semantics panel headers,
+    null contentDescription on decorative glyphs, shared >=48dp components); SI honored.
+[x] build + lint + test + placeholder green; PARITY_COVERED == PARITY_REQUIRED.
+[x] Compose-native only (no webview); reuses A6 components (no pixel-cloning, no dup).
+
+--- HONESTY COVENANT (binding) ---
+1 No red-as-green: every EXIT above is the raw $LASTEXITCODE from a real run.
+2 No scope narrowing: all 15 items implemented; page assembles every web section.
+3 No skip-and-assume: predecessors (DlqStore, A6 views, strings) verified present.
+4 No stubs as final: zero placeholders (PLACEHOLDER_COUNT=0); full implementations.
+5 No parity shortcuts: header/banner/StatusHeader/2 panels/drawer/confirm all real.
+6 No delegation: implemented directly.
+7 No predecessor bypass: bound shared DlqStore (S8) + reused A6 views; no re-impl.
+8 No commit on red: gate green before sign-off.
+9 No silent drift: detekt deltas disclosed (3 pre-existing ApiLogs issues, 0 mine).
+10 Log ends with EXIT and STATUS below.
+
+EXIT=0
+STATUS=DONE
