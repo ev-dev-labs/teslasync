@@ -54,6 +54,7 @@ import io.teslasync.android.admin.teslaorders.TeslaOrdersPageHost
 import io.teslasync.android.admin.users.UsersPageHost
 import io.teslasync.android.admin.vehiclecost.VehicleCostPageHost
 import io.teslasync.android.analytics.fleetcompare.FleetComparePageHost
+import io.teslasync.android.analytics.periodcompare.PeriodComparePageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -171,6 +172,7 @@ class TeslaSyncApplication : Application() {
         UsersPageHost.register()
         VehicleCostPageHost.register()
         FleetComparePageHost.register()
+        PeriodComparePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
