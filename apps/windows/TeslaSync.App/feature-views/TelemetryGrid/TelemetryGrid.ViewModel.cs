@@ -46,7 +46,7 @@ public sealed class TelemetryGridViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
     }
 
     /// <inheritdoc />

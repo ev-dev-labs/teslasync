@@ -104,7 +104,7 @@ public sealed class HeroGaugesViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _display = HeroGaugesProjection.Project(HeroFleetAnalytics.Empty, _units, _currencySymbol, _localizer);
     }

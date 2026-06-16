@@ -128,7 +128,7 @@ public sealed class SpeedHeatmapViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _timeZone = timeZone ?? TimeZoneInfo.Local;
         _display = Project(Array.Empty<DriveSample>());
     }

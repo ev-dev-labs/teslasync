@@ -64,7 +64,7 @@ public sealed class DrivesListPageViewModel : INotifyPropertyChanged, IDisposabl
         _source = source;
         _bulkDelete = bulkDelete;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _costPerKwh = costPerKwh;
         _currencySymbol = string.IsNullOrEmpty(currencySymbol) ? "$" : currencySymbol;
         _diagnostics = diagnostics ?? new DrivesListDiagnostics();

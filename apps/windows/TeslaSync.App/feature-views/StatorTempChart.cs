@@ -64,7 +64,7 @@ public sealed partial class StatorTempChart : ContentControl
         ArgumentNullException.ThrowIfNull(localizer);
 
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _model = model ?? StatorTempChartModel.Pending;
         _diagnostics = diagnostics ?? new StatorTempChartDiagnostics();
 

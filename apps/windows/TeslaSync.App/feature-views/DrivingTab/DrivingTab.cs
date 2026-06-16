@@ -56,7 +56,7 @@ public sealed partial class DrivingTab : ContentControl
 
         _localizer = localizer;
         _model = model ?? DrivingTabModel.Pending;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new DrivingTabDiagnostics();
 
         IsTabStop = false;

@@ -128,7 +128,7 @@ public sealed class TirePressureHistoryViewModel : INotifyPropertyChanged, IDisp
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = TirePressureHistoryProjection.Project(Array.Empty<TirePressureSample>(), _size, _units, _localizer);
     }
 

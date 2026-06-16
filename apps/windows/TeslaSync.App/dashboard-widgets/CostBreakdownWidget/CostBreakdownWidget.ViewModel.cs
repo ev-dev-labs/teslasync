@@ -54,7 +54,7 @@ public sealed class CostBreakdownViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _currencyPrecision = currencyPrecision < 0 ? 0 : currencyPrecision;
         _clock = clock ?? (() => DateTimeOffset.Now);

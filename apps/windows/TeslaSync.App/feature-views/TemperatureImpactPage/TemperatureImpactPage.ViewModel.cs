@@ -54,7 +54,7 @@ public sealed class TemperatureImpactPageViewModel : INotifyPropertyChanged, IDi
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new TemperatureImpactDiagnostics();
         _display = TemperatureImpactProjection.Project(BuildModel(), _units, _localizer);

@@ -14,6 +14,7 @@ using TeslaSync.App.Core.Lifecycle;
 using TeslaSync.App.Core.Navigation;
 using TeslaSync.App.Core.Settings;
 using TeslaSync.App.Core.Theme;
+using TeslaSync.App.Core.Units;
 using TeslaSync.App.Notifications;
 using TeslaSync.App.Platform.Lifecycle;
 using TeslaSync.App.Push;
@@ -1397,6 +1398,10 @@ public sealed partial class ShellWindow : Window
         _appliedMode = startup.ColorModeId;
         _appliedUnits = startup.Units;
 
+        // Publish the ambient display-unit preference before any page is built so unit-aware ViewModels
+        // constructed without explicit units fall back to the account preference (web useUnits parity).
+        UnitPrefAmbient.Current = startup.ToUnitPref();
+
         // The startup palette above is the local default; the deferred local-settings load and the
         // backend /settings theme seed (web ThemeProvider parity) arrive as later Changed events. Clear the
         // first-apply guard now so those events rebuild the already-constructed page when the theme actually
@@ -1920,6 +1925,10 @@ public sealed partial class ShellWindow : Window
         _appliedMode = settings.ColorModeId;
         _appliedUnits = settings.Units;
         _firstThemeApply = false;
+
+        // Republish the ambient unit preference before the page rebuild below so the recreated page (and any
+        // unit-aware ViewModel that defaults to the ambient) renders in the new units.
+        UnitPrefAmbient.Current = settings.ToUnitPref();
 
         ApplyDensity(settings.Density);
         MaybeApplyStartupRoute(settings);

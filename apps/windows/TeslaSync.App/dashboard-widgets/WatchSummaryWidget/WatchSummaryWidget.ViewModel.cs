@@ -128,7 +128,7 @@ public sealed class WatchSummaryViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
     }
 

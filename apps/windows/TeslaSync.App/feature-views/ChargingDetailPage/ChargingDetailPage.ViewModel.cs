@@ -69,7 +69,7 @@ public sealed class ChargingDetailPageViewModel : INotifyPropertyChanged, IDispo
         _feed = feed;
         _localizer = localizer;
         _sessionId = sessionId;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _costPerKwh = costPerKwh;
         _currencySymbol = string.IsNullOrEmpty(currencySymbol) ? DefaultCurrencySymbol : currencySymbol;

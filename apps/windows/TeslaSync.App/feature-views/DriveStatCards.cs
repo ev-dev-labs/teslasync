@@ -71,7 +71,7 @@ public sealed partial class DriveStatCards : ContentControl
 
         _localizer = localizer;
         _model = model ?? DriveStatCardsModel.Pending;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _formatting = formatting ?? DriveStatsFormatting.Default;
         _diagnostics = diagnostics ?? new DriveStatCardsDiagnostics();
         _dispatcher = DispatcherQueue.GetForCurrentThread();

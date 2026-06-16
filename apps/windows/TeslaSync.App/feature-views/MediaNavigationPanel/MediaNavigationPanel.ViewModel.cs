@@ -52,7 +52,7 @@ public sealed class MediaNavigationPanelViewModel : INotifyPropertyChanged, IDis
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = MediaNavigationPanelDisplay.Empty(_localizer, _units);
     }
 

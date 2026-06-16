@@ -54,7 +54,7 @@ public sealed class LiveMotorStatusViewModel : INotifyPropertyChanged, IDisposab
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _isolationResistanceKohm = isolationResistanceKohm;
     }
 

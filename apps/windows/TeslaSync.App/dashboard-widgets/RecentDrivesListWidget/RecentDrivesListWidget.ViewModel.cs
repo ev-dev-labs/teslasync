@@ -127,7 +127,7 @@ public sealed class RecentDrivesListViewModel : INotifyPropertyChanged, IDisposa
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = RecentDrivesListProjection.Project(Array.Empty<RecentDrive>(), _size, _units, _clock());
     }

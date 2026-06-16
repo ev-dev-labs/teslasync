@@ -137,7 +137,7 @@ public sealed class WarrantyStatusViewModel : INotifyPropertyChanged, IDisposabl
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _now = now ?? (() => DateTimeOffset.UtcNow);
         _display = WarrantyStatusProjection.Project(WarrantyStatusSnapshot.None, _size, _now(), _localizer, _units);
     }

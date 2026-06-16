@@ -42,7 +42,7 @@ public sealed class RangeViewModel : INotifyPropertyChanged
         _localizer = localizer;
         _state = state;
         _preferredRange = preferredRange;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _precision = precision < 0 ? RangeRegistration.DefaultPrecision : precision;
         _projection = RangeProjection.Project(_state, _preferredRange, _units, _precision, _localizer);
     }

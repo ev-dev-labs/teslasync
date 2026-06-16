@@ -145,7 +145,7 @@ public sealed class ChargeCostTrackerViewModel : INotifyPropertyChanged, IDispos
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _settings = settings ?? ChargeCostTrackerSettings.Default;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = BuildDisplay(Array.Empty<ChargeCostTrackerSession>());

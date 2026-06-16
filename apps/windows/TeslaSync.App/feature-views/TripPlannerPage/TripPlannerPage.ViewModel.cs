@@ -72,7 +72,7 @@ public sealed class TripPlannerPageViewModel : INotifyPropertyChanged, IDisposab
         _sendToCarClient = sendToCarClient;
         _vehicles = vehicles;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _diagnostics = diagnostics ?? new TripPlannerDiagnostics();
         _display = BuildDisplay();

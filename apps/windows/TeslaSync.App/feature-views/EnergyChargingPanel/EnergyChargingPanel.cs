@@ -77,7 +77,7 @@ public sealed partial class EnergyChargingPanel : ContentControl
 
         _localizer = localizer;
         _model = model ?? EnergyChargingPanelModel.Pending;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new EnergyChargingPanelDiagnostics();
 
         IsTabStop = false;

@@ -52,7 +52,7 @@ public sealed class StatisticsPageViewModel : INotifyPropertyChanged, IDisposabl
 
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _diagnostics = diagnostics ?? new StatisticsDiagnostics();
         _display = StatisticsProjection.Project(StatisticsSnapshot.Empty, StatisticsState.Loading, _units, _currencySymbol, _localizer);
@@ -98,7 +98,7 @@ public sealed class StatisticsPageViewModel : INotifyPropertyChanged, IDisposabl
         get => _units;
         set
         {
-            UnitPref resolved = value ?? UnitPref.Metric;
+            UnitPref resolved = value ?? UnitPrefAmbient.Current;
             if (_units == resolved)
             {
                 return;

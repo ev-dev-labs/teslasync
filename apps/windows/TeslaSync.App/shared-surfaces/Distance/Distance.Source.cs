@@ -40,7 +40,7 @@ public sealed class DistanceUnitsSource : IDistanceUnitsSource
 
     /// <summary>Creates a source seeded with an initial preference (null uses <see cref="UnitPref.Metric"/>).</summary>
     /// <param name="preferences">The initial unit preference, or null for the metric default.</param>
-    public DistanceUnitsSource(UnitPref? preferences) => _preferences = preferences ?? UnitPref.Metric;
+    public DistanceUnitsSource(UnitPref? preferences) => _preferences = preferences ?? UnitPrefAmbient.Current;
 
     /// <inheritdoc />
     public event EventHandler? Changed;

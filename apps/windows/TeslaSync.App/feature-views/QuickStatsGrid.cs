@@ -58,7 +58,7 @@ public sealed partial class QuickStatsGrid : ContentControl
 
         _localizer = localizer;
         _model = model ?? QuickStatsGridModel.Pending;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new QuickStatsGridDiagnostics();
 
         IsTabStop = false;

@@ -56,7 +56,7 @@ public sealed class BatteryHealthPageViewModel : INotifyPropertyChanged, IDispos
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new BatteryHealthDiagnostics();
         _display = BatteryHealthProjection.Project(BuildModel(), _units, _localizer, _clock());

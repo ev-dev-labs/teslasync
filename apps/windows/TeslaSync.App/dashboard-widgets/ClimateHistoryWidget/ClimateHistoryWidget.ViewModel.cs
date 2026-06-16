@@ -128,7 +128,7 @@ public sealed class ClimateHistoryViewModel : INotifyPropertyChanged, IDisposabl
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = ClimateHistoryProjection.Project(Array.Empty<ClimateHistorySample>(), _size, _units, _localizer);
     }
 

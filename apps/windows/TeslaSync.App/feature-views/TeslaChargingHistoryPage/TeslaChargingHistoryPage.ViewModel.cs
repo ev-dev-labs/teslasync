@@ -70,7 +70,7 @@ public sealed class TeslaChargingHistoryPageViewModel : INotifyPropertyChanged, 
         _localizer = localizer;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new TeslaChargingHistoryDiagnostics();
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrEmpty(currencySymbol)
             ? TeslaChargingHistoryProjection.DefaultCurrencySymbol
             : currencySymbol;

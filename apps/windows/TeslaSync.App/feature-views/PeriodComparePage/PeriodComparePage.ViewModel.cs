@@ -56,7 +56,7 @@ public sealed class PeriodComparePageViewModel : INotifyPropertyChanged, IDispos
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new PeriodCompareDiagnostics();
         _display = PeriodCompareProjection.Project(BuildModel(), _localizer, _units);
         _state = _display.State;

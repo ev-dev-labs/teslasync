@@ -66,7 +66,7 @@ public sealed class TripReplayPageViewModel : INotifyPropertyChanged, IDisposabl
         _feed = feed;
         _localizer = localizer;
         _driveId = driveId;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new TripReplayPageDiagnostics();
         _display = TripReplayPageProjection.Project(BuildModel(), _units, _localizer, _clock());

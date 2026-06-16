@@ -55,7 +55,7 @@ public sealed class RegenEfficiencyPageViewModel : INotifyPropertyChanged, IDisp
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new RegenEfficiencyDiagnostics();
         _display = RegenEfficiencyProjection.Project(BuildModel(), _units, _localizer, _clock());

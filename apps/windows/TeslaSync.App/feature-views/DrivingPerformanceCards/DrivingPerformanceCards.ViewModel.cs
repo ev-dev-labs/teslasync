@@ -47,7 +47,7 @@ public sealed class DrivingPerformanceCardsViewModel : INotifyPropertyChanged, I
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = DrivingPerformanceProjection.Project(DrivingPerformanceSnapshot.Empty, _units, _localizer);
     }

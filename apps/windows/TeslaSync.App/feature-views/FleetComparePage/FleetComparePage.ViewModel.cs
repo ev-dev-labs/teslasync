@@ -54,7 +54,7 @@ public sealed class FleetComparePageViewModel : INotifyPropertyChanged, IDisposa
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new FleetCompareDiagnostics();
         _display = FleetCompareProjection.Project(FleetCompareData.Empty, null, null, _units, _localizer);
     }

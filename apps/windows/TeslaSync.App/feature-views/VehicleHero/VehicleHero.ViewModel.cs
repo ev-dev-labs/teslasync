@@ -50,7 +50,7 @@ public sealed class VehicleHeroViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _now = now ?? (static () => DateTimeOffset.Now);
         _display = VehicleHeroDisplay.Empty(_localizer, _now());
     }
@@ -134,7 +134,7 @@ public sealed class VehicleHeroViewModel : INotifyPropertyChanged, IDisposable
         get => _units;
         set
         {
-            UnitPref resolved = value ?? UnitPref.Metric;
+            UnitPref resolved = value ?? UnitPrefAmbient.Current;
             if (_units == resolved)
             {
                 return;

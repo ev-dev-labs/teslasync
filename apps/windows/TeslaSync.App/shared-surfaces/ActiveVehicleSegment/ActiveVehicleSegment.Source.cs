@@ -41,7 +41,7 @@ public sealed class InMemoryActiveVehicleUnitsSource : IActiveVehicleUnitsSource
 
     /// <summary>Creates a source seeded with an initial preference (null uses <see cref="UnitPref.Metric"/>).</summary>
     /// <param name="preferences">The initial unit preference, or null for the metric default.</param>
-    public InMemoryActiveVehicleUnitsSource(UnitPref? preferences) => _preferences = preferences ?? UnitPref.Metric;
+    public InMemoryActiveVehicleUnitsSource(UnitPref? preferences) => _preferences = preferences ?? UnitPrefAmbient.Current;
 
     /// <inheritdoc />
     public event EventHandler? Changed;

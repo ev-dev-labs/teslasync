@@ -123,7 +123,7 @@ public sealed class EnergyStatsViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = EnergyStatsProjection.Project(null, _size, _units, _localizer);
     }
 

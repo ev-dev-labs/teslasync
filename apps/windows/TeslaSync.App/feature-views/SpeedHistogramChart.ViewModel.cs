@@ -48,7 +48,7 @@ public sealed class SpeedHistogramChartViewModel : INotifyPropertyChanged, IDisp
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = SpeedHistogramChartProjection.Empty(_units, _localizer);
     }
 

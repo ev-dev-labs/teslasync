@@ -143,7 +143,7 @@ public sealed class LifetimeStatsViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = LifetimeStatsProjection.Project(LifetimeStats.Empty, _size, _units, _currencySymbol, _localizer);

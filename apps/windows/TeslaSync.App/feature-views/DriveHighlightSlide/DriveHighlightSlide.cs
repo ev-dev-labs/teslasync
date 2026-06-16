@@ -61,7 +61,7 @@ public sealed partial class DriveHighlightSlide : ContentControl
 
         _localizer = localizer;
         _model = model ?? DriveHighlightSlideModel.Empty;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new DriveHighlightSlideDiagnostics();
 
         IsTabStop = false;

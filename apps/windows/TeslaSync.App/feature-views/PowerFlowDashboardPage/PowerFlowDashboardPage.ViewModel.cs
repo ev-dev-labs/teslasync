@@ -63,7 +63,7 @@ public sealed class PowerFlowDashboardPageViewModel : INotifyPropertyChanged, ID
         _feed = feed;
         _localizer = localizer;
         _siteId = siteId;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new PowerFlowDashboardDiagnostics();
 

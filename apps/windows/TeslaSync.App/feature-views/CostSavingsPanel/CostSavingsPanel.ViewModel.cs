@@ -54,7 +54,7 @@ public sealed class CostSavingsPanelViewModel : INotifyPropertyChanged, IDisposa
         _source = source;
         _localizer = localizer;
         _settings = settings ?? CostSavingsSettings.Default;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = CostSavingsProjection.Project(DriveCostSnapshot.Empty, _settings, _units, _localizer);
     }
 

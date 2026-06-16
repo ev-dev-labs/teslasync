@@ -313,18 +313,18 @@ public sealed record MotorEfficiencyInsightsModel(
     /// <summary>The initial model: the parent query is in flight and no stats have arrived yet.</summary>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     public static MotorEfficiencyInsightsModel Loading(UnitPref? units = null) =>
-        new(MotorEfficiencyInsightsState.Loading, null, null, units ?? UnitPref.Metric);
+        new(MotorEfficiencyInsightsState.Loading, null, null, units ?? UnitPrefAmbient.Current);
 
     /// <summary>A resolved model with no motor stats — each panel shows its empty state.</summary>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     public static MotorEfficiencyInsightsModel Empty(UnitPref? units = null) =>
-        new(MotorEfficiencyInsightsState.Empty, null, null, units ?? UnitPref.Metric);
+        new(MotorEfficiencyInsightsState.Empty, null, null, units ?? UnitPrefAmbient.Current);
 
     /// <summary>A hard-failure model (no usable snapshot) carrying an optional already-localized message.</summary>
     /// <param name="message">An already-localized error message, or null for the default copy.</param>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     public static MotorEfficiencyInsightsModel Failed(string? message = null, UnitPref? units = null) =>
-        new(MotorEfficiencyInsightsState.Error, null, null, units ?? UnitPref.Metric, ErrorMessage: message);
+        new(MotorEfficiencyInsightsState.Error, null, null, units ?? UnitPrefAmbient.Current, ErrorMessage: message);
 
     /// <summary>A fresh resolved model carrying the motor stats to render.</summary>
     /// <param name="stats">The aggregated motor stats.</param>
@@ -340,7 +340,7 @@ public sealed record MotorEfficiencyInsightsModel(
         bool isFetching = false)
     {
         ArgumentNullException.ThrowIfNull(stats);
-        return new(MotorEfficiencyInsightsState.Ready, stats, style, units ?? UnitPref.Metric, updatedAt, isFetching);
+        return new(MotorEfficiencyInsightsState.Ready, stats, style, units ?? UnitPrefAmbient.Current, updatedAt, isFetching);
     }
 
     /// <summary>A stale snapshot (older than the freshness window) carrying the cached motor stats.</summary>
@@ -355,7 +355,7 @@ public sealed record MotorEfficiencyInsightsModel(
         DateTimeOffset? updatedAt = null)
     {
         ArgumentNullException.ThrowIfNull(stats);
-        return new(MotorEfficiencyInsightsState.Stale, stats, style, units ?? UnitPref.Metric, updatedAt);
+        return new(MotorEfficiencyInsightsState.Stale, stats, style, units ?? UnitPrefAmbient.Current, updatedAt);
     }
 
     /// <summary>An offline snapshot (no connectivity) carrying the last cached motor stats.</summary>
@@ -373,7 +373,7 @@ public sealed record MotorEfficiencyInsightsModel(
     {
         ArgumentNullException.ThrowIfNull(stats);
         return new(
-            MotorEfficiencyInsightsState.Offline, stats, style, units ?? UnitPref.Metric, updatedAt, ErrorMessage: message);
+            MotorEfficiencyInsightsState.Offline, stats, style, units ?? UnitPrefAmbient.Current, updatedAt, ErrorMessage: message);
     }
 }
 

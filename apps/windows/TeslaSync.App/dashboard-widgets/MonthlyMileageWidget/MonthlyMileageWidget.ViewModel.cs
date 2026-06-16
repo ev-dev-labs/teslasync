@@ -132,7 +132,7 @@ public sealed class MonthlyMileageViewModel : INotifyPropertyChanged, IDisposabl
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = MonthlyMileageProjection.Project(
             Array.Empty<MonthlyMileageBucket>(), _size, _units, _localizer, _clock());

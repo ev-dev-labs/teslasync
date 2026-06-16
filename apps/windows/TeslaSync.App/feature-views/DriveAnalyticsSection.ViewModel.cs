@@ -59,7 +59,7 @@ public sealed class DriveAnalyticsSectionViewModel : INotifyPropertyChanged, IDi
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _range = range ?? DefaultRange();
         _display = DriveAnalyticsSectionProjection.Empty(_range, _units, _localizer);
     }

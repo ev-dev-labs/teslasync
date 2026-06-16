@@ -54,7 +54,7 @@ public sealed class ClimateControlPageViewModel : INotifyPropertyChanged, IDispo
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new ClimateControlDiagnostics();
         _display = ClimateControlProjection.Project(BuildModel(), _units, _localizer);

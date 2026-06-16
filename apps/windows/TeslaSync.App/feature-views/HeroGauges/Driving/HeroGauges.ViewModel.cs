@@ -109,7 +109,7 @@ public sealed class HeroGaugesViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = HeroGaugesProjection.Project(DriveGauges.Empty, _units, _localizer);
     }
 

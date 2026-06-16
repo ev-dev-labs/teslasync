@@ -68,7 +68,7 @@ public sealed partial class SummarySlide : ContentControl
 
         _localizer = localizer;
         _model = model ?? SummarySlideModel.Empty;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new SummarySlideDiagnostics();
 
         IsTabStop = false;

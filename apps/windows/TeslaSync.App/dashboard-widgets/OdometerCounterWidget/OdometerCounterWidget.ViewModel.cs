@@ -142,7 +142,7 @@ public sealed class OdometerCounterViewModel : INotifyPropertyChanged, IDisposab
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = OdometerCounterProjection.Project(EmptySnapshot, _size, _units, _localizer);
     }

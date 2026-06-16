@@ -103,7 +103,7 @@ public sealed record HealthGaugeGridModel(
             string.Empty,
             NoSensors,
             null,
-            units ?? UnitPref.Metric);
+            units ?? UnitPrefAmbient.Current);
 
     /// <summary>A resolved model with no drivetrain data — the empty state.</summary>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
@@ -115,7 +115,7 @@ public sealed record HealthGaugeGridModel(
             string.Empty,
             NoSensors,
             null,
-            units ?? UnitPref.Metric);
+            units ?? UnitPrefAmbient.Current);
 
     /// <summary>A hard-failure model (no usable snapshot) carrying an optional already-localized message.</summary>
     /// <param name="message">An already-localized error message, or null for the default copy.</param>
@@ -128,7 +128,7 @@ public sealed record HealthGaugeGridModel(
             string.Empty,
             NoSensors,
             null,
-            units ?? UnitPref.Metric,
+            units ?? UnitPrefAmbient.Current,
             ErrorMessage: message);
 
     /// <summary>A fresh resolved model carrying the drivetrain values to render.</summary>
@@ -159,7 +159,7 @@ public sealed record HealthGaugeGridModel(
             motorStatus,
             sensorValues,
             stats,
-            units ?? UnitPref.Metric,
+            units ?? UnitPrefAmbient.Current,
             updatedAt,
             isFetching);
     }
@@ -190,7 +190,7 @@ public sealed record HealthGaugeGridModel(
             motorStatus,
             sensorValues,
             stats,
-            units ?? UnitPref.Metric,
+            units ?? UnitPrefAmbient.Current,
             updatedAt);
     }
 
@@ -222,7 +222,7 @@ public sealed record HealthGaugeGridModel(
             motorStatus,
             sensorValues,
             stats,
-            units ?? UnitPref.Metric,
+            units ?? UnitPrefAmbient.Current,
             updatedAt,
             ErrorMessage: message);
     }

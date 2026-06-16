@@ -49,7 +49,7 @@ public sealed class QuickStatsPageViewModel : INotifyPropertyChanged, IDisposabl
 
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _diagnostics = diagnostics ?? new QuickStatsDiagnostics();
         _display = QuickStatsProjection.Project(QuickStatsSnapshot.Empty, QuickStatsState.Loading, _units, _currencySymbol, _localizer);
@@ -95,7 +95,7 @@ public sealed class QuickStatsPageViewModel : INotifyPropertyChanged, IDisposabl
         get => _units;
         set
         {
-            UnitPref resolved = value ?? UnitPref.Metric;
+            UnitPref resolved = value ?? UnitPrefAmbient.Current;
             if (_units == resolved)
             {
                 return;

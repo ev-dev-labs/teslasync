@@ -50,7 +50,7 @@ public sealed class PatternsSlideViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _year = year;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = PatternsSlideProjection.Project(YearReviewPatterns.Empty, _units, _localizer);
     }

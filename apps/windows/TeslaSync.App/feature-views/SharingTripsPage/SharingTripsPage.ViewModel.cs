@@ -54,7 +54,7 @@ public sealed class SharingTripsPageViewModel : INotifyPropertyChanged, IDisposa
 
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new SharingTripsDiagnostics();
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = SharingTripsProjection.Project(

@@ -82,12 +82,12 @@ public sealed record TemperatureGaugesModel(
     /// <summary>The initial model: the query is in flight and no sensors have arrived yet.</summary>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     public static TemperatureGaugesModel Loading(UnitPref? units = null) =>
-        new(TemperatureGaugesState.Loading, Array.Empty<TemperatureGaugeSensor>(), units ?? UnitPref.Metric);
+        new(TemperatureGaugesState.Loading, Array.Empty<TemperatureGaugeSensor>(), units ?? UnitPrefAmbient.Current);
 
     /// <summary>A resolved model with no sensors — the empty state.</summary>
     /// <param name="units">The user's unit preference; defaults to metric.</param>
     public static TemperatureGaugesModel Empty(UnitPref? units = null) =>
-        new(TemperatureGaugesState.Empty, Array.Empty<TemperatureGaugeSensor>(), units ?? UnitPref.Metric);
+        new(TemperatureGaugesState.Empty, Array.Empty<TemperatureGaugeSensor>(), units ?? UnitPrefAmbient.Current);
 
     /// <summary>A hard-failure model (no usable snapshot) carrying an optional already-localized message.</summary>
     /// <param name="message">An already-localized error message, or null for the default copy.</param>
@@ -96,7 +96,7 @@ public sealed record TemperatureGaugesModel(
         new(
             TemperatureGaugesState.Error,
             Array.Empty<TemperatureGaugeSensor>(),
-            units ?? UnitPref.Metric,
+            units ?? UnitPrefAmbient.Current,
             ErrorMessage: message);
 
     /// <summary>A fresh resolved model carrying the sensors to render.</summary>
@@ -111,7 +111,7 @@ public sealed record TemperatureGaugesModel(
         bool isFetching = false)
     {
         ArgumentNullException.ThrowIfNull(sensors);
-        return new(TemperatureGaugesState.Ready, sensors, units ?? UnitPref.Metric, updatedAt, isFetching);
+        return new(TemperatureGaugesState.Ready, sensors, units ?? UnitPrefAmbient.Current, updatedAt, isFetching);
     }
 
     /// <summary>A stale snapshot (older than the freshness window) carrying the cached sensors.</summary>
@@ -124,7 +124,7 @@ public sealed record TemperatureGaugesModel(
         DateTimeOffset? updatedAt = null)
     {
         ArgumentNullException.ThrowIfNull(sensors);
-        return new(TemperatureGaugesState.Stale, sensors, units ?? UnitPref.Metric, updatedAt);
+        return new(TemperatureGaugesState.Stale, sensors, units ?? UnitPrefAmbient.Current, updatedAt);
     }
 
     /// <summary>An offline snapshot (no connectivity) carrying the last cached sensors.</summary>
@@ -139,7 +139,7 @@ public sealed record TemperatureGaugesModel(
         string? message = null)
     {
         ArgumentNullException.ThrowIfNull(sensors);
-        return new(TemperatureGaugesState.Offline, sensors, units ?? UnitPref.Metric, updatedAt, ErrorMessage: message);
+        return new(TemperatureGaugesState.Offline, sensors, units ?? UnitPrefAmbient.Current, updatedAt, ErrorMessage: message);
     }
 }
 

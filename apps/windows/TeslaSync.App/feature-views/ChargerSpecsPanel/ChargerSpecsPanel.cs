@@ -71,7 +71,7 @@ public sealed partial class ChargerSpecsPanel : ContentControl
 
         _localizer = localizer;
         _model = model ?? ChargerSpecsPanelModel.Pending;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new ChargerSpecsPanelDiagnostics();
 
         IsTabStop = false;

@@ -133,7 +133,7 @@ public sealed class GlancePageViewModel : INotifyPropertyChanged, IDisposable
         _locationSource = locationSource;
         _commandSender = commandSender;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new GlanceDiagnostics();
         _display = GlanceProjection.Project(BuildModel(), _localizer);
         _state = _display.State;

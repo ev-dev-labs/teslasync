@@ -64,7 +64,7 @@ public sealed partial class TemperatureTrendChart : ContentControl
         ArgumentNullException.ThrowIfNull(localizer);
 
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _model = model ?? TemperatureTrendChartModel.Pending;
         _diagnostics = diagnostics ?? new TemperatureTrendChartDiagnostics();
 

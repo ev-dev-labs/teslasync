@@ -54,7 +54,7 @@ public sealed class AnomalyDashboardPageViewModel : INotifyPropertyChanged, IDis
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new AnomalyDashboardDiagnostics();
         _display = AnomalyDashboardProjection.Project(BuildModel(), _units, _localizer);

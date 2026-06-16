@@ -61,7 +61,7 @@ public abstract partial class FormattedValueControl : ContentControl
     }
 
     /// <summary>The effective preference, falling back to metric defaults.</summary>
-    protected UnitPref EffectivePref => Pref ?? UnitPref.Metric;
+    protected UnitPref EffectivePref => Pref ?? UnitPrefAmbient.Current;
 
     /// <summary>The effective per-call precision, or null when the default applies.</summary>
     protected int? EffectivePrecision => Precision >= 0 ? Precision : null;

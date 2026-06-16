@@ -119,7 +119,7 @@ public sealed class OverviewVehicleComparisonViewModel : INotifyPropertyChanged,
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = OverviewVehicleComparisonProjection.Project(OverviewVehicleComparisonData.Empty, _units, _localizer);
     }
 

@@ -54,7 +54,7 @@ public sealed class EfficiencyPageViewModel : INotifyPropertyChanged, IDisposabl
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new EfficiencyDiagnostics();
         _display = EfficiencyProjection.Project(BuildModel(), _units, _localizer, _clock());

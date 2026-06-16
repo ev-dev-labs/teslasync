@@ -49,7 +49,7 @@ public sealed class CostSummaryCardsViewModel : INotifyPropertyChanged, IDisposa
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _settings = settings ?? CostSummaryCardsSettings.Default;
         _display = BuildDisplay(Array.Empty<CostSummaryCardsSession>());
     }

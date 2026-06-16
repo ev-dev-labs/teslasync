@@ -62,7 +62,7 @@ public sealed class ChargingListPageViewModel : INotifyPropertyChanged, IDisposa
         _source = source;
         _bulkDelete = bulkDelete;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrEmpty(currencySymbol) ? "$" : currencySymbol;
         _diagnostics = diagnostics ?? new ChargingListDiagnostics();
         _clock = clock ?? (() => DateTimeOffset.Now);

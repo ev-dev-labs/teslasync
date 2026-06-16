@@ -63,7 +63,7 @@ public sealed class TripDetailPageViewModel : INotifyPropertyChanged, IDisposabl
         _feed = feed;
         _localizer = localizer;
         _tripId = tripId;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _currencySymbol = string.IsNullOrEmpty(currencySymbol) ? DefaultCurrencySymbol : currencySymbol;
         _diagnostics = diagnostics ?? new TripDetailPageDiagnostics();

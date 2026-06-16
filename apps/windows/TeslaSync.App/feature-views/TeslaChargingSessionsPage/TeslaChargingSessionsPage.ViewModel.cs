@@ -67,7 +67,7 @@ public sealed class TeslaChargingSessionsPageViewModel : INotifyPropertyChanged,
         _localizer = localizer;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new TeslaChargingSessionsDiagnostics();
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrEmpty(currencySymbol)
             ? TeslaChargingSessionsProjection.DefaultCurrencySymbol
             : currencySymbol;

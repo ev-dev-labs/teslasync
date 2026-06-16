@@ -49,7 +49,7 @@ public sealed class TirePressurePanelViewModel : INotifyPropertyChanged, IDispos
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = TirePressurePanelProjection.Empty(_localizer);
     }
 

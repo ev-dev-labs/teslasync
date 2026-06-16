@@ -106,7 +106,7 @@ public partial class TsVehicleHeroCard : ContentControl
     private static void OnPrefChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) =>
         ((TsVehicleHeroCard)d).Rebuild();
 
-    private UnitPref EffectivePref => Pref ?? UnitPref.Metric;
+    private UnitPref EffectivePref => Pref ?? UnitPrefAmbient.Current;
 
     private void BuildHeader()
     {

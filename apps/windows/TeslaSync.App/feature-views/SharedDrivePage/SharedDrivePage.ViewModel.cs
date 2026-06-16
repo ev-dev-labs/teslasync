@@ -57,7 +57,7 @@ public sealed class SharedDrivePageViewModel : INotifyPropertyChanged, IDisposab
         _feed = feed;
         _localizer = localizer;
         _token = token ?? string.Empty;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new SharedDrivePageDiagnostics();
         _display = SharedDrivePageProjection.Project(BuildModel(), _units, _localizer, _clock());

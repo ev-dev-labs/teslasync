@@ -142,7 +142,7 @@ public sealed class ChargeStatusLiveViewModel : INotifyPropertyChanged, IDisposa
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
     }
 
     /// <inheritdoc />

@@ -47,7 +47,7 @@ public sealed class BatteryRangeChartsViewModel : INotifyPropertyChanged, IDispo
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = BatteryRangeChartsProjection.Empty(_units, _localizer);
     }
 

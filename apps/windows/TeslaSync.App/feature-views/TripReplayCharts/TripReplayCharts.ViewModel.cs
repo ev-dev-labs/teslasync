@@ -60,7 +60,7 @@ public sealed class TripReplayChartsViewModel : INotifyPropertyChanged, IDisposa
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = TripReplayChartsProjection.Empty(_units, _localizer);
         _cursorSync.CursorChanged += OnCursorChanged;
     }

@@ -60,7 +60,7 @@ public sealed class DrivingDynamicsPageViewModel : INotifyPropertyChanged, IDisp
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new DrivingDynamicsDiagnostics();
         _range = DefaultRange(_clock());

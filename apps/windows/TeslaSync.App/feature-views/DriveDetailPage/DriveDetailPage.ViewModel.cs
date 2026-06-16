@@ -58,7 +58,7 @@ public sealed class DriveDetailPageViewModel : INotifyPropertyChanged, IDisposab
         _feed = feed;
         _localizer = localizer;
         _driveId = driveId;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new DriveDetailPageDiagnostics();
         _display = DriveDetailProjection.Project(BuildModel(), _units, _localizer, _clock());

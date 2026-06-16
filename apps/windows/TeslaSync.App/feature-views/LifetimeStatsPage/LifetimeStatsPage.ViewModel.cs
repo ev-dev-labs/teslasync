@@ -54,7 +54,7 @@ public sealed class LifetimeStatsPageViewModel : INotifyPropertyChanged, IDispos
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new LifetimeStatsDiagnostics();
         _display = LifetimeStatsProjection.Project(BuildModel(), _units, _localizer, _clock());

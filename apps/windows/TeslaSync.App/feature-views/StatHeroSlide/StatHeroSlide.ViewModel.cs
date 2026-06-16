@@ -66,7 +66,7 @@ public sealed class StatHeroSlideViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         Field = field;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = StatHeroProjection.Project(YearReviewTotals.Empty, field, _units, _localizer);
     }
 

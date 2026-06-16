@@ -124,7 +124,7 @@ public sealed class SpeedProfileViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = SpeedProfileProjection.Project(SpeedProfileData.Empty, _size, _units, _localizer);
     }
 

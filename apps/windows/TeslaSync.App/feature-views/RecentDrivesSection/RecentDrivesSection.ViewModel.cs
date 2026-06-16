@@ -59,7 +59,7 @@ public sealed class RecentDrivesSectionViewModel : INotifyPropertyChanged, IDisp
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = RecentDrivesSectionProjection.Empty(_units, _localizer);
     }
 

@@ -52,7 +52,7 @@ public sealed class SpeedGearPanelViewModel : INotifyPropertyChanged, IDisposabl
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = SpeedGearPanelDisplay.Empty(_localizer, _units);
     }
 

@@ -42,7 +42,7 @@ public sealed class BatteryComparisonViewModel : INotifyPropertyChanged, IDispos
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = BatteryComparisonProjection.Project(BatteryComparisonData.Empty, _units, _localizer);
     }
 

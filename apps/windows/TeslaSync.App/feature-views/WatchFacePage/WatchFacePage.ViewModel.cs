@@ -64,7 +64,7 @@ public sealed class WatchFacePageViewModel : INotifyPropertyChanged, IDisposable
         _summarySource = summarySource;
         _commandSender = commandSender;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _vehicleId = vehicleId;
         _diagnostics = diagnostics ?? new WatchFaceDiagnostics();
         _display = WatchFaceProjection.Project(BuildModel(), _localizer);

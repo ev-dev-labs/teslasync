@@ -59,7 +59,7 @@ public sealed class AnalyticsPageViewModel : INotifyPropertyChanged, IDisposable
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new AnalyticsPageDiagnostics();
         _display = AnalyticsProjection.Project(BuildModel(), _localizer);

@@ -54,7 +54,7 @@ public sealed class RouteEfficiencyPageViewModel : INotifyPropertyChanged, IDisp
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new RouteEfficiencyDiagnostics();
         _display = RouteEfficiencyProjection.Project(BuildModel(), _units, _localizer);

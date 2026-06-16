@@ -67,7 +67,7 @@ public sealed partial class ChargingTelemetrySection : ContentControl
 
         _localizer = localizer;
         _model = model ?? ChargingTelemetrySectionModel.Loading;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new ChargingTelemetrySectionDiagnostics();
 
         IsTabStop = false;

@@ -45,7 +45,7 @@ public sealed class BatteryRangePanelViewModel : INotifyPropertyChanged, IDispos
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = BatteryRangePanelProjection.Project(null, _units, _localizer);
     }
 

@@ -55,7 +55,7 @@ public sealed class BatteryCellsPageViewModel : INotifyPropertyChanged, IDisposa
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new BatteryCellsDiagnostics();
         _display = BatteryCellsProjection.Project(BuildModel(), _units, _localizer, _clock());

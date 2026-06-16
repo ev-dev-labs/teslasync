@@ -49,7 +49,7 @@ public sealed class TemperatureSectionViewModel : INotifyPropertyChanged, IDispo
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = TemperatureSectionProjection.Empty(_units, _localizer);
     }
 

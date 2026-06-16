@@ -55,7 +55,7 @@ public sealed class NavigationRoutePageViewModel : INotifyPropertyChanged, IDisp
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new NavigationRouteDiagnostics();
         _display = NavigationProjection.Project(BuildModel(), _units, _localizer);

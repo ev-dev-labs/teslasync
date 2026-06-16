@@ -54,7 +54,7 @@ public sealed class SpeedProfilePageViewModel : INotifyPropertyChanged, IDisposa
 
         _feed = feed;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _clock = clock ?? (() => DateTimeOffset.Now);
         _diagnostics = diagnostics ?? new SpeedProfileDiagnostics();
         _display = SpeedProfileProjection.Project(BuildModel(), _units, _localizer);

@@ -63,7 +63,7 @@ public sealed class TrueCostPageViewModel : INotifyPropertyChanged, IDisposable
         ArgumentNullException.ThrowIfNull(localizer);
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _currencyPrecision = currencyPrecision < 0 ? 0 : currencyPrecision;
         _gasUnit = gasUnit;

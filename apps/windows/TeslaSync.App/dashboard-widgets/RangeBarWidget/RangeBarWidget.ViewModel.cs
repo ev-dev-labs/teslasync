@@ -137,7 +137,7 @@ public sealed class RangeBarViewModel : INotifyPropertyChanged, IDisposable
         _source = source;
         _localizer = localizer;
         _size = size;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
     }
 
     /// <inheritdoc />

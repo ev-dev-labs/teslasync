@@ -71,7 +71,7 @@ public sealed class VehicleListPageViewModel : INotifyPropertyChanged, IDisposab
         _source = source;
         _mutations = mutations;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _display = VehicleListDisplay.Empty(VehicleListState.Loading, _localizer);
     }
 

@@ -53,7 +53,7 @@ public sealed class TripListPageViewModel : INotifyPropertyChanged, IDisposable
 
         _source = source;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new TripListDiagnostics();
         _clock = clock ?? (() => DateTimeOffset.Now);
         _display = TripListProjection.Project(

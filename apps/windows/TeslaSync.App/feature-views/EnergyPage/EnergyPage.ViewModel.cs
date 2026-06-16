@@ -72,7 +72,7 @@ public sealed class EnergyPageViewModel : INotifyPropertyChanged, IDisposable
         _sessionsSource = sessionsSource;
         _liveSource = liveSource;
         _localizer = localizer;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _currencySymbol = string.IsNullOrWhiteSpace(currencySymbol) ? "$" : currencySymbol;
         _currencyPrecision = currencyPrecision < 0 ? 0 : currencyPrecision;
         _diagnostics = diagnostics ?? new EnergyDiagnostics();

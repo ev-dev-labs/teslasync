@@ -68,7 +68,7 @@ public sealed partial class ThermalLoadPanel : ContentControl
 
         _localizer = localizer;
         _model = model ?? ThermalLoadPanelModel.Loading;
-        _units = units ?? UnitPref.Metric;
+        _units = units ?? UnitPrefAmbient.Current;
         _diagnostics = diagnostics ?? new ThermalLoadPanelDiagnostics();
 
         IsTabStop = false;
