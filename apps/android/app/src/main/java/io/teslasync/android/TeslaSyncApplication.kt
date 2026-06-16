@@ -116,6 +116,7 @@ import io.teslasync.android.system.dataexport.DataExportPageHost
 import io.teslasync.android.system.datarepair.DataRepairPageHost
 import io.teslasync.android.system.dbhealth.DBHealthPageHost
 import io.teslasync.android.system.help.HelpPageHost
+import io.teslasync.android.system.notfound.NotFoundPageHost
 import io.teslasync.android.system.roadmap.RoadmapPageHost
 import io.teslasync.android.system.incidenttimeline.IncidentTimelinePageHost
 import io.teslasync.android.system.scheduledexports.ScheduledExportsPanelPageHost
@@ -307,6 +308,9 @@ class TeslaSyncApplication : Application() {
         DataRepairPageHost.register()
         HelpPageHost.register()
         RoadmapPageHost.register()
+        // Register the native web-parity 404 surface for the /not-found route (P3/A7 system/NotFound), upgrading the
+        // shared bare not-found screen to the full GlassPanel with closest-route suggestions + escape-hatch actions.
+        NotFoundPageHost.register()
         IncidentTimelinePageHost.register()
         ScheduledExportsPanelPageHost.register()
         SystemStatusPageHost.register()

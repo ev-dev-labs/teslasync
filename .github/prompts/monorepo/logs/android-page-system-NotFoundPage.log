@@ -1,0 +1,125 @@
+================================================================================
+P3-ANDROID A7 — page:system/NotFound  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/NotFoundPage.tsx
+promptId: p3-android/pages/system/NotFoundPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr 21.0.9 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED). Note: prompt's literal `:app:` is a template; this artifact's
+              settings.gradle.kts maps the single app module to Gradle path `:android` (every P3/A* gate addresses :android:).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/NotFoundPage.kt          (@Composable screen: NotFoundPage + NotFoundPageContent + NotFoundCard (GlassPanel1) + suggestions + 3 actions + loading seam)
+apps/android/app/src/main/kotlin/com/teslasync/system/NotFoundPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<NotFoundSnapshot>>; refresh()/retry(); recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/system/NotFoundPageModel.kt     (framework-free model: registration, view.opened recorder, RouteCandidate/RouteSuggestion, defaultRouteCandidates (projected from Destinations), closestRoutes + levenshtein (web closestRoute.ts port), buildNotFoundSnapshot, Resource wrapper)
+apps/android/app/src/main/kotlin/com/teslasync/system/NotFoundPageIcons.kt     (4 stroked glyphs: Compass/ArrowLeft/Home/Search — the web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/system/NotFoundPageHost.kt      (PageHosts.register(notFound){ NotFoundRoute(entry path arg) })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt     (NavHost wiring: + import + NotFoundPageHost.register())
+apps/parity/android-ledger.json                                               (ledger row page:system/NotFound 9/9 done)
+.github/prompts/monorepo/logs/android-page-system-NotFoundPage.log             (this log)
+
+Data   : the web page reads NO API — it renders from the current `location.pathname` (navigation/local state) and a
+         Levenshtein ranking of the closest known routes (web closestRoute.ts over routeRegistry.ts). This port mirrors
+         that exactly: NotFoundPageModel.kt ports the two-row `levenshtein` + `closestRoutes` (distance vs BOTH the
+         path and the label, cap <=6, top 5) and projects the suggestion candidates from the app's own canonical
+         `io.teslasync.android.navigation.Destinations` table — the native single-source-of-truth that mirrors
+         web/src/App.tsx, the same role the web ROUTE_REGISTRY plays — excluding parameterized routes (web `if
+         (r.hidden) continue`: they cannot be navigated to without an argument) and the not-found route itself.
+         NotFoundPageViewModel projects buildNotFoundSnapshot(attemptedPath) through the shared cache-then-network
+         Resource -> UiState pipeline (Resource.Success) so the stateless screen renders through the same data-state
+         contract every parity page uses. No HTTP, no store. refresh()/retry() re-derive.
+Path   : the attempted/unmatched URL (web `location.pathname`) is threaded from the nav back-stack entry's optional
+         `path` argument when a caller supplies one; absent that, the model falls back to the canonical not-found path
+         ("/not-found") so the body always reads naturally. The suggestion engine is wired + real either way (a path
+         with close matches surfaces them; an unmatched path with nothing within edit-distance 6 yields no block,
+         exactly as the web hides the section on `suggestions.length === 0`). Documented here, not silent (Covenant #9).
+Strings: every one of the 7 manifest keys (notFound.body/didYouMean/goBack/goHome/heading/openSearch/title) already
+         exists in the generated platform catalog as `translation_notFound_*` (res/values{,-ar,-he}/strings.xml) — they
+         are reused verbatim (no new keys added; notFound.body keeps its `%1$s` path placeholder). Every visible literal
+         resolves via stringResource(R.string.translation_notFound_*); zero hardcoded text.
+Nav    : Destinations 'notFound' -> /not-found pre-existing (Destinations.kt:184; metadata-only). Host wired via
+         PageHosts.register(notFound){ NotFoundRoute() }, upgrading the route from the shared bare NotFoundScreen to the
+         full web-parity GlassPanel surface. The shared NotFoundScreen is intentionally retained as the unhosted-
+         destination fallback (NavigationShellTest asserts it), so the else-branch in TeslaSyncNavHost is untouched.
+         Forward navigation uses the shared DeepLinkRouter (teslasync://app/...) — the sanctioned page-host seam, no
+         LocalNavController is exposed (ExplorePage/GlancePage precedent): Go-to-dashboard -> "/", suggestions ->
+         their path, Open-command-palette -> "/search" (the same target the chrome's search action opens, AppScaffold
+         onSearch — the native analogue of the web command palette). Go-back uses the back dispatcher (web
+         window.history.back()).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=4
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 2m 12s
+  # first compile attempt failed: NotFoundPageModel.kt KDoc contained a literal `/*` (the web catch-all route token);
+  # Kotlin block comments NEST, so it opened a nested comment that swallowed the file => "Unclosed comment" at EOF +
+  # cascade of unresolved-reference errors in the sibling files. Fixed by rewording the KDoc (no behavioral change).
+  # Re-compile clean; full assembleDebug green.
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 11m 38s (0 errors; HTML report written)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 31s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=9
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (Surface) ; bound state holder = NotFoundPageViewModel.uiState : StateFlow<UiState<NotFoundSnapshot>>
+[COVERED] panel  GlassPanel1 -> NotFoundPage.kt:215 GlassPanel(...) inside NotFoundCard() (:207): Compass lead glyph (:228) + heading (:234) + body naming the unmatched path (:239) + "Did you mean" suggestions (:245 NotFoundSuggestions) + the 3 escape-hatch actions (:248 NotFoundActions); rendered at :188 FadeIn { NotFoundCard(snapshot, ...) }  (web `<GlassPanel className="mx-auto max-w-2xl ... text-center">`)
+
+# data state (1 required) — bound to NotFoundPageViewModel.uiState (NotFoundPageViewModel.kt:50 feed.asUiState(isEmpty = { it.isEmpty }))
+[COVERED] state  success -> NotFoundPage.kt:185-196 (else -> FadeIn { NotFoundCard(snapshot) }) ; UiPhase.Content ; NotFoundPageViewModel.kt:68 buildResource -> notFoundSnapshotResource -> Resource.Success(buildNotFoundSnapshot(attemptedPath)) (NotFoundPageModel.kt)
+# (loading skeleton path also implemented at NotFoundPage.kt:185 -> NotFoundLoading() for state symmetry, though the static surface resolves to Content synchronously and never spins; the informational 404 surface is never structurally empty (NotFoundPageModel.kt NotFoundSnapshot.isEmpty == false) and never errors, so no empty/error chrome — matches the web, which renders unconditionally)
+
+# strings (7) — every visible literal via stringResource(R.string.translation_notFound_*); web key names preserved; keys pre-existing in res/values{,-ar,-he}/strings.xml
+[COVERED] string notFound.body       -> NotFoundPage.kt:240 BodyText(stringResource(translation_notFound_body, snapshot.attemptedPath))  (web `t('notFound.body', { path })`, %1$s placeholder)
+[COVERED] string notFound.didYouMean -> NotFoundPage.kt:267 Caption(translation_notFound_didYouMean) in NotFoundSuggestions  (web `t('notFound.didYouMean')`)
+[COVERED] string notFound.goBack     -> NotFoundPage.kt:312 Button(label=translation_notFound_goBack, ArrowLeft, Ghost) -> back dispatcher  (web `t('notFound.goBack')`)
+[COVERED] string notFound.goHome     -> NotFoundPage.kt:318 Button(label=translation_notFound_goHome, Home, Primary) -> "/"  (web `t('notFound.goHome')`)
+[COVERED] string notFound.heading    -> NotFoundPage.kt:214/234 Heading(translation_notFound_heading, semantics{heading()})  (web `<h2>{t('notFound.heading')}</h2>`)
+[COVERED] string notFound.openSearch -> NotFoundPage.kt:324 Button(label=translation_notFound_openSearch, Search, Ghost) -> "/search"  (web `t('notFound.openSearch')`)
+[COVERED] string notFound.title      -> NotFoundPage.kt:126 -> :146 semantics paneTitle (web usePageTitle) ; also :183 PageTitle(translation_notFound_title) (web PageContainer title)
+
+PARITY_COVERED=9
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : none (web renders the 404 from navigation/local state + a Levenshtein closest-route ranking, no API).
+               NotFoundPageViewModel projects buildNotFoundSnapshot(attemptedPath) over the route candidates (projected
+               from Destinations) through Resource.Success -> UiState, so the screen renders the standard success matrix
+               from a bound StateFlow. No HTTP.
+panels       : GlassPanel1 (the centered 404 card): Compass lead glyph, heading, body naming the unmatched path, the
+               "Did you mean" closest-route suggestion list (each row = localized destination title + path, tappable to
+               navigate), and the three escape-hatch actions (Go back / Go to dashboard / Open command palette).
+charts/maps  : none (web page has neither).
+si/units     : not applicable — the 404 page renders no unit-bearing quantities.
+a11y/theme   : root semantics paneTitle = notFound.title; the card carries contentDescription; the heading marked
+               semantics{heading()}; each suggestion row is a >=48dp Role.Button with a content description; the lead
+               Compass is decorative (null description); all color from MaterialTheme (A2 tokens); buttons inherit
+               Material 3 >=48dp targets + dynamic-color/dark theme; Compose-native, no webview.
+nav          : Destinations 'notFound' -> /not-found (pre-existing, Destinations.kt:184) wired to NotFoundRoute() via
+               PageHosts.register; forward nav via shared DeepLinkRouter; back via back dispatcher; deep link auto-
+               registered by TeslaSyncNavHost. NavigationShellTest's bare-screen fallback (else-branch) untouched.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(9) == PARITY_REQUIRED(9)
+[PASS] all android triad gates green; parity 9/9; android ledger row page:system/NotFound status=done.
+EXIT=0
+STATUS=DONE
