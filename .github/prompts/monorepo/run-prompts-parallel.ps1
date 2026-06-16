@@ -502,7 +502,19 @@ $commonDir = (git -C $RepoRoot rev-parse --git-common-dir).Trim()
 if (-not [System.IO.Path]::IsPathRooted($commonDir)) { $commonDir = Join-Path $RepoRoot $commonDir }
 $infoDir = Join-Path $commonDir "info"
 New-Item -ItemType Directory -Path $infoDir -Force | Out-Null
-$attrLines = @('*.resw merge=union','*.resx merge=union','*.xlf merge=union','*.csproj merge=union','*.sln merge=union')
+$attrLines = @(
+    '*.resw merge=union','*.resx merge=union','*.xlf merge=union','*.csproj merge=union','*.sln merge=union',
+    # Page-registration collision fix: every W7 page appends ONE additive
+    # PageFactory.Register(...) line to ShellWindow.xaml.cs (union-safe — concatenating
+    # additive statements yields valid C#) and ONE entry to the parity ledger. Without
+    # these, 10 parallel page workers serialize-conflict on these two shared files and
+    # only the first merges. The ledger uses a no-op 'ours' driver (NOT union) so the
+    # integration copy always stays valid JSON; worker-side ledger entries are dropped
+    # and reconciled at end-of-run.
+    'apps/windows/TeslaSync.App/Shell/ShellWindow.xaml.cs merge=union',
+    'apps/parity/windows-ledger.json merge=ours'
+)
+git -C $RepoRoot config merge.ours.driver true | Out-Null
 Set-Content -Path (Join-Path $infoDir "attributes") -Value $attrLines -Encoding UTF8
 Log "Union merge driver wired for: $($attrLines -join ', ')"
 
@@ -901,7 +913,7 @@ foreach ($seg in $segments) {
 # ---------------------------------------------------------------------------
 # Sequential fixup pass for merge-conflicted (shared-file) prompts
 # ---------------------------------------------------------------------------
-if ($fixupList.Count -gt 0 -and ($failCount -eq 0 -or $ContinueOnRed)) {
+if ($fixupList.Count -gt 0) {   # merge-conflict fixups are INDEPENDENT of genuine reds — a red prompt is never in $fixupList, so don't skip the pass just because an unrelated prompt failed
     Write-Host ""
     Write-Host (">>> SEQUENTIAL FIXUP pass — {0} conflicted prompt(s) <<<" -f $fixupList.Count) -ForegroundColor Magenta
     foreach ($p in $fixupList) {

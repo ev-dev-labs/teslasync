@@ -1,0 +1,145 @@
+[
+  {
+    "id": "component:shell/Sidebar",
+    "kind": "component",
+    "title": "App sidebar (Notion-style: Favorites + Pages tree)",
+    "sourceFiles": [
+      "web/src/components/layout/sidebar/NotionSidebar.tsx",
+      "web/src/components/layout/sidebar/LinearSidebar.tsx"
+    ],
+    "route": "/",
+    "parityChecklist": [
+      "Favorites group with items + icons",
+      "Pages tree (collapsible groups) with per-group count badges",
+      "Search box wired to Ctrl/Cmd+K",
+      "App logo + notification badge",
+      "Active/selected item state",
+      "Exact web route labels and grouping — NO invented items, NO missing items",
+      "Pin/reorder favorites"
+    ],
+    "requiredCount": 7,
+    "notes": "Native nav must be generated from the SAME route registry the web uses. The current native flat header nav (Charging Curve / Powershare / Driving Dynamics / Drive Score / Route Efficiency...) is invented and must be replaced."
+  },
+  {
+    "id": "component:shell/TopToolbar",
+    "kind": "component",
+    "title": "Command Center top toolbar / header actions",
+    "sourceFiles": ["web/src/components/layout/Layout.tsx"],
+    "route": "/",
+    "parityChecklist": [
+      "Refresh", "Download/export", "Share/upload", "Kiosk mode", "Customize",
+      "Notifications bell + count badge", "Live indicator + 'just now'",
+      "Print snapshot", "'Ctrl+K to jump' hint", "Page title + subtitle"
+    ],
+    "requiredCount": 10
+  },
+  {
+    "id": "component:shell/StatusBar",
+    "kind": "component",
+    "title": "Bottom status bar (all segments)",
+    "sourceFiles": [
+      "web/src/components/layout/StatusBar.tsx",
+      "web/src/components/layout/status-bar/ActiveVehicleSegment.tsx",
+      "web/src/components/layout/status-bar/BackgroundWorkSegment.tsx",
+      "web/src/components/layout/status-bar/ConnectionSegment.tsx",
+      "web/src/components/layout/status-bar/HelpSegment.tsx",
+      "web/src/components/layout/status-bar/LiveTelemetrySegment.tsx",
+      "web/src/components/layout/status-bar/VersionSegment.tsx"
+    ],
+    "parityChecklist": [
+      "ActiveVehicle segment", "BackgroundWork segment",
+      "Connection segment (API latency)", "Help segment (Take a tour / shortcuts / Report bug)",
+      "LiveTelemetry segment", "Version segment"
+    ],
+    "requiredCount": 6
+  },
+  {
+    "id": "component:shell/CommandPalette",
+    "kind": "component",
+    "title": "Command palette (Ctrl/Cmd+K)",
+    "sourceFiles": ["web/src/components/ui/CommandPalette.tsx"],
+    "parityChecklist": [
+      "Cmd/Ctrl+K open", "Fuzzy search across routes + commands",
+      "Grouped + recent results", "Keyboard navigation", "Execute command / navigate"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "component:shell/RecentlyViewed",
+    "kind": "component",
+    "title": "Recently Viewed panel",
+    "sourceFiles": [
+      "web/src/components/layout/Layout.tsx",
+      "web/src/features/dashboard/pages/DashboardPage.tsx"
+    ],
+    "parityChecklist": [
+      "List of recently viewed pages", "Relative timestamps (Just now / 10h / 1d)",
+      "Click to navigate", "Multi-column layout matching web"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "component:shell/FloatingAction",
+    "kind": "component",
+    "title": "Floating action button",
+    "sourceFiles": ["web/src/components/layout/Layout.tsx"],
+    "parityChecklist": [
+      "FAB button", "Action menu", "Matches web placement + accent color"
+    ],
+    "requiredCount": 3
+  },
+  {
+    "id": "component:theme/ThemeSystem",
+    "kind": "component",
+    "title": "Theme system (all color themes + modes + picker)",
+    "sourceFiles": [
+      "web/src/components/ui/ThemeProvider.tsx",
+      "web/src/components/ui/ThemePicker.tsx",
+      "apps/design/generated/windows/Tokens.xaml"
+    ],
+    "parityChecklist": [
+      "Color: Neon Cyan", "Color: Tesla Red", "Color: Matrix Green",
+      "Color: Royal Purple", "Color: Solar Amber", "Color: Custom",
+      "Mode: Dark", "Mode: Light", "Mode: OLED Black", "Mode: Midnight",
+      "Mode: Auto", "Mode: Sunset", "Mode: Nord",
+      "ThemePicker UI matching web", "Persisted selection",
+      "Default theme/mode matches web default", "Live apply (no restart)",
+      "Custom theme editor"
+    ],
+    "requiredCount": 18,
+    "notes": "Web exposes 6 color themes and 7 modes. Native currently ships a single dark theme — all themes + modes + the picker must be implemented and the default must match what the web shows on first load."
+  },
+  {
+    "id": "component:dashboard/LayoutSystem",
+    "kind": "component",
+    "title": "Dashboard layout system (presets + editor)",
+    "sourceFiles": [
+      "web/src/features/dashboard/hooks/useDashboardLayout.ts",
+      "web/src/features/dashboard/components/DashboardGrid.tsx",
+      "web/src/features/dashboard/pages/DashboardPage.tsx"
+    ],
+    "parityChecklist": [
+      "Preset: Default", "Preset: New Dashboard", "Preset: Security Monitor",
+      "Preset: Awesomeness", "Preset: Minimal",
+      "Layout dropdown switcher", "Edit mode", "Save as", "New Layout",
+      "Reset", "Drag/resize grid (DashboardGrid)", "Persisted per user"
+    ],
+    "requiredCount": 12
+  },
+  {
+    "id": "component:data-display/DigitalTwin3D",
+    "kind": "component",
+    "title": "Digital Twin — realistic 3D vehicle (TeslaCarViz)",
+    "sourceFiles": ["web/src/components/data-display/TeslaCarViz.tsx"],
+    "parityChecklist": [
+      "Realistic 3D vehicle model (NOT a wireframe outline)",
+      "Correct model/trim render",
+      "Lock / charge / door / frunk / trunk / headlight state indicators",
+      "Live badge + Open action",
+      "Reacts to vehicle state",
+      "Visual match to web TeslaCarViz"
+    ],
+    "requiredCount": 6,
+    "notes": "Native currently renders a crude box/wireframe outline. Must match the web's rendered vehicle."
+  }
+]
