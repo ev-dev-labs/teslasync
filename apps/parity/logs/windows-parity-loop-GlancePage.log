@@ -1,0 +1,17 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/dashboard/pages/GlancePage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/GlancePage/*
+Units: 12 (4 api, 1 chart, 5 panels, 1 page req=30, 1 string-group req=20). Verification-only; gates green.
+
+api: get_api_v1_vehicles (Source.cs:15), get_api_v1_vehicles_vehicleID_state (Source.cs:73),
+     get_api_v1_location_snapshots_latest (Source.cs:131), post_api_v1_vehicles_vehicleID_command (Source.cs:197).
+chart RadialGauge-1: native battery RadialGauge ring (GlancePage.cs:284-286).
+panels(5): GlassPanel1 (cs:168 TsGlassPanel Mica card), Range/Interior/Security/Location (cs:364-367 MetricCard tiles).
+page req=30 = 5 panels + 1 chart + 4 states + 20 strings.
+states(4): loading (cs:159 BuildLoading), empty (cs:237 BuildEmpty "No vehicle found"), error (retry surface cs:28),
+           success (cs:162 BuildSuccess).
+string-group req=20: all 20 required keys verified present among 22 native GetString keys (subset check: 0 missing).
+
+Gates (unchanged, green): build=0 · format=clean · placeholder=0 · test=31537 passed.
+
+=== PARITY === platform=windows file=GlancePage.tsx units=12 status=done (coveredCount==requiredCount each, gates green)

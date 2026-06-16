@@ -1149,7 +1149,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
   },
   {
     "unitId": "route:/guard-mode",
@@ -1834,5 +1834,113 @@
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+  },
+  {
+    "unitId": "api:dashboard/Glance#useLocationSnapshotLatest",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "api:dashboard/Glance#useVehicleCommand",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "api:dashboard/Glance#useVehicleState",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "api:dashboard/Glance#useVehicles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "chart:dashboard/Glance#RadialGauge-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "page:dashboard/Glance",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "panel:dashboard/Glance#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "panel:dashboard/Glance#Interior",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "panel:dashboard/Glance#Location",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "panel:dashboard/Glance#Range",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "panel:dashboard/Glance#Security",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "string-group:dashboard/Glance",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 20,
+    "requiredCount": 20,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
   }
 ]
