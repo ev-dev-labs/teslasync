@@ -16,6 +16,7 @@ using TeslaSync.App.Core.Feedback;
 using TeslaSync.App.Core.Forms;
 using TeslaSync.App.Core.Maps;
 using TeslaSync.App.Core.Notifications;
+using TeslaSync.App.Core.Units;
 using TeslaSync.App.Notifications;
 
 namespace TeslaSync.App.FeatureViews.Maps;
@@ -112,12 +113,13 @@ public sealed partial class MapOverviewPage : UserControl, IDisposable
     /// <summary>Creates the page over an explicit feed and localizer (used by tests / dependency injection).</summary>
     /// <param name="feed">The map-overview data port.</param>
     /// <param name="localizer">The i18n facade every label resolves through.</param>
-    public MapOverviewPage(IMapOverviewFeed feed, ILocalizer localizer)
+    /// <param name="units">The user's unit-display preference (applied at the render boundary); defaults to metric.</param>
+    public MapOverviewPage(IMapOverviewFeed feed, ILocalizer localizer, UnitPref? units = null)
     {
         ArgumentNullException.ThrowIfNull(feed);
         ArgumentNullException.ThrowIfNull(localizer);
 
-        _viewModel = new MapOverviewPageViewModel(feed, localizer);
+        _viewModel = new MapOverviewPageViewModel(feed, localizer, units);
 
         Content = BuildLayout();
 

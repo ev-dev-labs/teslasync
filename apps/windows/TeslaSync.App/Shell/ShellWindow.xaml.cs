@@ -1229,7 +1229,9 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("LiveMap", () =>
         {
             var page = new FeatureViews.Maps.MapOverviewPage(
-                new FeatureViews.Maps.MapOverviewClientFeed(_data.Api), _data.Localizer);
+                new FeatureViews.Maps.MapOverviewClientFeed(_data.Api),
+                _data.Localizer,
+                AppSettingsHost.Current.ToUnitPref());
             page.NavigationRequested += (_, route) => NavigateTo(route);
             return page;
         });
