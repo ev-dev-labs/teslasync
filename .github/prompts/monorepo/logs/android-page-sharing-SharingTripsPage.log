@@ -1,0 +1,222 @@
+================================================================================
+P3-ANDROID A7 — page:sharing/SharingTrips
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/sharing/pages/SharingTripsPage.tsx
+================================================================================
+
+Artifact     : page:sharing/SharingTrips
+Web route    : /sharing/trips
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/sharing/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+SharingTripsPage.tsx is the "Share a trip" page. It reads useTrips({ vehicle_id,
+limit: 20 }) (the recent trips, scoped to the selected vehicle) and renders, inside
+a PageContainer (title + subtitle + loading), two GlassPanels:
+  GlassPanel1 "Recent trips" — a role="listbox" of selectable role="option" rows.
+    Loading shows three h-16 skeletons; an empty result shows an EmptyState (Route
+    icon); each row shows a Route avatar, the trip name (or "Trip #id"), an
+    InlineMetric(Calendar, formatDate(start)), an InlineMetric(Clock,
+    formatDuration(start,end)), a "{{count}} drives" caption, the distance
+    (MapPin, fmtInt(convertDistanceFromSI(total_distance_m)) + unit) and the energy
+    (Zap, fmtNumber(total_energy_wh) + " Wh"). Clicking a row sets selectedTripId.
+  GlassPanel2 "Static share cards" — a data-independent heading + body that points
+    the user at the per-drive Share workflow.
+A third FadeIn renders the propose-only AI share-card surface
+(AITripPostcardShareCardImageGeneration), gated by
+withAiFeature('trip-postcard-share-card-image-generation'); the page is
+contractually required to keep working with AI OFF (ADR-015 §I3), and that AI-off
+baseline is exactly these two panels.
+
+The parity manifest scopes page:sharing/SharingTrips to dataSource useTrips, panels
+[GlassPanel1, GlassPanel2], states [loading, empty, success], and 8 strings —
+requiredCount 13. The AI card is its OWN parity unit
+(shared-surfaces/AITripPostcardShareCardImageGeneration, already built) and is wired
+by its own prompt with the SSE transport it needs; there is no production
+TripImageDraftTransport in the tree yet (verified: zero call sites of
+AITripPostcardShareCardImageGeneration(...) in src/main), so hosting it is out of
+this page artifact's scope. This page still owns the selected-trip interaction the
+AI surface consumes once hosted, so no parity is narrowed.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+New files (package io.teslasync.android.sharing.sharingtrips, dir
+apps/android/app/src/main/kotlin/com/teslasync/sharing/):
+  - SharingTripsPageModel.kt   Registration (ROUTE_ID sharingTrips, WEB_PATH
+                               /sharing/trips, SLUG SharingTripsPage, RECENT_LIMIT 20)
+                               + SharingTripsDisplayPrefs (web useUnits: SI UnitPref +
+                               locale; formatDistance via the shared SI converter ->
+                               "1,234 mi"; formatEnergyWh -> verbatim watt-hours ->
+                               "12,345.00 Wh") + sharingTripRow (per-row projection) +
+                               formatTripDate (web formatDate -> "Apr 4, 2026") +
+                               formatTripDuration (verbatim port of the web
+                               start->end "2h 5m"/"45m"/"—") + recordSharingTrips
+                               PageOpened (PII-safe view.opened, P1/S11). Pure /
+                               framework-free, exercised by the testDebugUnitTest gate.
+  - SharingTripsPageSource.kt  The data seam (selectedVehicleId / trips(params) /
+                               settings) + sharingTripsPageSourceOf over the shared
+                               S7 TripsRepository + SelectedVehicleStore + SettingsStore.
+  - SharingTripsPageViewModel.kt  BaseFeedViewModel (P1/S8): tripsState =
+                               combine(selectedVehicleId, refresh) flatMapLatest
+                               trips(TripsParams(vehicleId, limit=20)) -> asUiState
+                               (web useTrips, vehicle-scoped, empty -> UiPhase.Empty);
+                               displayPrefs from the settings document; selectedTripId
+                               + selectTrip (web selectedTripId useState); refresh/retry;
+                               recordViewOpened.
+  - SharingTripsPage.kt        Stateful entry (viewModel over the host-wired source,
+                               records view.opened, collects tripsState + prefs +
+                               selection) + stateless SharingTripsPageContent: the
+                               header (PageTitle + subtitle + DataFreshness chip) over
+                               RecentTripsPanel (GlassPanel1) and StaticShareCardsPanel
+                               (GlassPanel2). GlassPanel1 switches the trips feed inline:
+                               RecentTripsLoading (3 Skeletons) / RecentTripsError
+                               (ErrorDisplay + retry) / RecentTripsEmpty (EmptyState,
+                               Route) / RecentTripsList (selectableGroup of TripRow
+                               Role.RadioButton rows, >=64dp, selection highlight). SI
+                               values convert only here at the display boundary.
+  - SharingTripsPageHost.kt    SharingTripsRoute() builds the source over
+                               HttpTripsRepository(container.api, container.cacheStore)
+                               + the container's selection/settings holders;
+                               SharingTripsPageHost.register() -> PageHosts.register(
+                               "sharingTrips"). Idempotent.
+
+Edits (registration + ledger only):
+  - TeslaSyncApplication.kt  import + SharingTripsPageHost.register() at process start
+                             (after SqlPlaygroundPageHost.register()). The sharingTrips
+                             /sharing/trips destination already exists in Destinations.kt
+                             (NavGroup.Sharing) — host wiring only (the "NavHost
+                             registration" allowed file).
+  - apps/parity/android-ledger.json  page:sharing/SharingTrips row (done, 13/13).
+
+Notes:
+  - i18n: all 8 keys already exist in the AUTO-GENERATED res/values/strings.xml
+    (translation_sharing_trips_*), so strings.xml was NOT modified. Every visible
+    literal resolves via stringResource (ADR-014); web key names kept. The only
+    non-stringResource text is the unit token suffix ("mi"/"km"/"Wh"), which is a
+    display-boundary unit label sourced from UnitPref — exactly as the web row reads
+    unitPrefs.distance and the literal "Wh" — not translatable UI copy.
+  - SI (Phase-48): trips arrive SI-canonical; total_distance_m converts to the user's
+    unit via the shared SI converter (formatDistance(meters, units, 0)); total_energy_wh
+    renders verbatim in watt-hours (web fmtNumber(total_energy_wh) + " Wh"); nothing is
+    stored/computed non-SI.
+  - States: loading (skeletons) / empty (EmptyState) / success (selectable rows) are
+    the 3 manifest states; a hard error additionally renders ErrorDisplay + Retry
+    (UiState.isError, no cached fallback), and a cache-served stale/offline tier is
+    surfaced by the header DataFreshness chip — no region ever blanks (ADR-011/ADR-013).
+  - Live data: useTrips is cache-then-network, NOT an SSE feed, so there is no >2-min
+    live-staleness pill (ADR-013); the DataFreshness chip carries stale/offline/error.
+  - a11y: PageTitle heading; the recent list is a selectableGroup with a
+    contentDescription; each row is a Role.RadioButton selection target >=64dp with the
+    selected state announced; decorative glyphs pass contentDescription=null (ADR-015).
+    Dynamic-color / dark theme via MaterialTheme tokens (no hardcoded colors).
+  - The AI share-card region is a separate parity unit with no production transport in
+    the tree; not hosted here (honest scope, covenant #2 — the manifest's 13 items are
+    fully covered). The selection model that feeds it IS implemented.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/sharing -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 4m 36s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 14m 44s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 32s
+TEST_EXIT=0
+(testDebugUnitTest aggregate: 16515 tests, 0 failures, 0 errors, 0 skipped across
+ 1287 result files. No new test files were added — the artifact's allowed files are
+ com/teslasync/sharing/**, the NavHost registration, res/values*/strings.xml and this
+ log; the existing suite stays green with the new surface compiled in.)
+
+(the only compileDebugKotlin warnings are the pre-existing LocalClipboardManager
+ deprecations in OTHER surfaces — admin/ApiLogsPage, notifications/ChannelsPage,
+ settings/PrivacyPage, … — none in the new com/teslasync/sharing/* files; lintDebug
+ is green.)
+
+=== PARITY ===
+PARITY_REQUIRED=13
+
+[1] panel : GlassPanel1 (Recent trips)
+    EVIDENCE: RecentTripsPanel(...) in SharingTripsPage.kt — a GlassPanel(padding=Lg)
+              with the PanelTitle heading over the trips-feed body switch. COVERED.
+
+[2] panel : GlassPanel2 (Static share cards)
+    EVIDENCE: StaticShareCardsPanel() in SharingTripsPage.kt — a GlassPanel(padding=Lg)
+              with the staticHint heading + body (data-independent). COVERED.
+
+[3] state : loading
+    EVIDENCE: RecentTripsPanel `tripsState.isLoading -> RecentTripsLoading()` in
+              SharingTripsPage.kt; RecentTripsLoading renders LOADING_ROWS (3) shimmering
+              Skeleton(height=64dp, rounded) rows (web `isLoading ? [1,2,3].map(<Skeleton
+              h-16/>)`). COVERED.
+
+[4] state : empty
+    EVIDENCE: RecentTripsPanel `tripsState.isEmpty -> RecentTripsEmpty()` in
+              SharingTripsPage.kt; RecentTripsEmpty renders EmptyState(icon=NavGlyphs.Route,
+              message=recent.empty), driven by UiState.isEmpty when trips() resolves to
+              an empty list (web `allTrips.length === 0`). COVERED.
+
+[5] state : success
+    EVIDENCE: RecentTripsPanel `else -> RecentTripsList(tripsState.data.orEmpty(), …)` in
+              SharingTripsPage.kt; RecentTripsList is a selectableGroup of TripRow
+              Role.RadioButton rows projected from sharingTripRow(trip, prefs)
+              (SharingTripsPageModel.kt) — name, date, duration, drives, distance, energy,
+              with the selected-trip highlight (web role="listbox"/option rows). COVERED.
+
+[6] string : sharing.trips.recent.empty
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_recent_empty) in
+              RecentTripsEmpty (SharingTripsPage.kt); value "No recent trips. Drive your
+              vehicle to populate this list." in res/values/strings.xml. COVERED.
+
+[7] string : sharing.trips.recent.heading
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_recent_heading) — the
+              PanelTitle of RecentTripsPanel AND the RecentTripsList selectableGroup
+              contentDescription (SharingTripsPage.kt); value "Recent trips". COVERED.
+
+[8] string : sharing.trips.row.drives
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_row_drives,
+              row.driveCount.toString()) in TripRow (SharingTripsPage.kt); value
+              "%1$s drives" (web "{{count}} drives"). COVERED.
+
+[9] string : sharing.trips.row.trip
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_row_trip) in TripRow's
+              name fallback `row.name ?: "$tripLabel #${row.id}"` (SharingTripsPage.kt);
+              value "Trip" (web t('sharing.trips.row.trip','Trip')). COVERED.
+
+[10] string : sharing.trips.staticHint.body
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_staticHint_body) in
+              StaticShareCardsPanel (SharingTripsPage.kt); value "Every drive in
+              TeslaSync can be published as a static, redacted share card …". COVERED.
+
+[11] string : sharing.trips.staticHint.heading
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_staticHint_heading) — the
+              PanelTitle of StaticShareCardsPanel (SharingTripsPage.kt); value "Static
+              share cards". COVERED.
+
+[12] string : sharing.trips.subtitle
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_subtitle) — the subtitle
+              BodyText of SharingTripsHeader (SharingTripsPage.kt); value "Pick a recent
+              trip to share as a static link, postcard, or image." COVERED.
+
+[13] string : sharing.trips.title
+    EVIDENCE: stringResource(R.string.translation_sharing_trips_title) — the PageTitle of
+              SharingTripsHeader (SharingTripsPage.kt); value "Share a trip". COVERED.
+
+PARITY_COVERED=13
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
