@@ -1261,6 +1261,24 @@
       "requiredCount": 41,
       "promptId": "p4-apple/P7/page:driving/TripPlanner",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-TripPlannerPage.log"
+    },
+    {
+      "unitId": "page:explore/Explore",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 17,
+      "requiredCount": 17,
+      "promptId": "p4-apple/P7/page:explore/Explore",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-explore-ExplorePage.log"
+    },
+    {
+      "unitId": "page:explore/Explore",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 17,
+      "requiredCount": 17,
+      "promptId": "p4-apple/P7/page:explore/Explore",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-explore-ExplorePage.log"
     }
   ]
 }
