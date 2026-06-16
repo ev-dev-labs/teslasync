@@ -1,0 +1,123 @@
+================================================================================
+P3-ANDROID · A7 · page:driving/DrivingDynamics — evidence log
+Native Jetpack Compose / Material 3 port of web DrivingDynamicsPage
+Source: web/src/features/driving/pages/DrivingDynamicsPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/driving/**
+Package: io.teslasync.android.driving.drivingdynamics
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 Statistics / ChargingCurve precedents)
+  DrivingDynamicsPageModel.kt      framework-free: registration ids, MotorSnapshotRow,
+                                   CanonicalMotorStats (web computeMotorStats) + per-panel slice
+                                   adapters, MotorHistoryDerived / DrivesDerived fan-outs,
+                                   deriveMotorHistory / deriveDrives, JSON→feature-view decoders
+                                   (motorLiveOf / motorShiftOf / driveDynamicsOf / drivingCoachOf),
+                                   Resource.mapData, view.opened diagnostic.
+  DrivingDynamicsPageSource.kt     seam over VehiclesStore.motorLatest/motorHistory(limit 200)/
+                                   driveDynamicsLatest + a page-local HttpDrivingRepository
+                                   (drives, drivingCoach) + a page-local HttpTelemetryRepository
+                                   (cruise observations) + SelectedVehicleStore; builds the
+                                   AutopilotSectionSource the sub-panel binds to.
+  DrivingDynamicsPageViewModel.kt  BaseFeedViewModel; motorState: StateFlow<UiState<MotorLive?>>
+                                   is the primary (web `motorLoading`) driving the page chrome;
+                                   driveDynamics / motorHistory / drives / coach fan out to the
+                                   feature views; all scoped to the active vehicle (web
+                                   useSelectedVehicle); refresh / retry / recordViewOpened.
+  DrivingDynamicsPage.kt           stateful entry + stateless content; loading/error/success keyed
+                                   off motorState; composes the 11 existing A3 driving feature views.
+  DrivingDynamicsPageHost.kt       DrivingDynamicsRoute + DrivingDynamicsPageHost.register() for the
+                                   `drivingDynamics` /driving-dynamics destination (Destinations.kt L71).
+  TeslaSyncApplication.kt          register() wired into onCreate (NavHost registration).
+  res/values/strings.xml           NOT modified — translation_dynamics_title (L3410) and
+                                   translation_dynamics_subtitle (L3395), plus every dynamics.* /
+                                   a11y.loading / freshness.* key the feature views read, already
+                                   exist in the generated catalog (shipped with the A3 views).
+
+DATA SOURCES (each bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useMotorLatest  GET /motor/latest [vehicle_id]
+      → DrivingDynamicsPageViewModel.motorState (StateFlow<UiState<MotorLive?>>)
+        ← DrivingDynamicsPageSource.motorLatest ← VehiclesStore.motorLatest (shared S8, ADR-013).
+  useMotorHistory GET /motor [vehicle_id, limit=200]
+      → DrivingDynamicsPageViewModel.motorHistory (StateFlow<MotorHistoryDerived> = chart samples +
+        CanonicalMotorStats) ← DrivingDynamicsPageSource.motorHistory ← VehiclesStore.motorHistory.
+  useDrives       GET /drives [vehicle_id]
+      → DrivingDynamicsPageViewModel.drives (StateFlow<DrivesDerived> = SpeedGearPanel samples +
+        DriveAnalyticsSection drives) ← DrivingDynamicsPageSource.drives ← HttpDrivingRepository.drives.
+  useDrivingCoach GET /analytics/driving-coach [vehicle_id, days]
+      → DrivingDynamicsPageViewModel.coach (StateFlow<DrivingCoachData?>)
+        ← DrivingDynamicsPageSource.drivingCoach ← HttpDrivingRepository.drivingCoach.
+  (sub-panel feeds, web-faithful)
+  useDriveDynamicsLatest → DrivingDynamicsPageViewModel.driveDynamics (StateFlow<DriveDynamicsLive?>)
+        ← VehiclesStore.driveDynamicsLatest  (PedalUsage panel).
+  useVehicleState + 2× useSignalObservations → AutopilotSectionSource
+        ← VehiclesStore.vehicleState + HttpTelemetryRepository.signalObservations  (AutopilotSection panel).
+  Values stay SI on the wire + through the cache; display conversion is each feature view's render
+  boundary (P1/S5), never this page.
+
+=== PARITY ===
+PARITY_REQUIRED=5
+  [1] state  loading            DrivingDynamicsPage.kt:153 motorState.isLoading -> DrivingDynamicsLoading() (fn L202; PageLoader)
+  [2] state  error              DrivingDynamicsPage.kt:154 motorState.isError -> DrivingDynamicsError(onRetry) (fn L211; ErrorDisplay + retry)
+  [3] state  success            DrivingDynamicsPage.kt:155 else -> DrivingDynamicsBody (fn L228; composes 11 feature views)
+  [4] string dynamics.subtitle  DrivingDynamicsPage.kt:181 R.string.translation_dynamics_subtitle (strings.xml L3395)
+  [5] string dynamics.title     DrivingDynamicsPage.kt:179 R.string.translation_dynamics_title (strings.xml L3410)
+PARITY_COVERED=5
+
+  The three data states render from the bound StateFlow state holder
+  DrivingDynamicsPageViewModel.motorState (StateFlow<UiState<MotorLive?>>), projected from the
+  shared cache-then-network Resource via BaseFeedViewModel.asUiState (loading / content / error,
+  plus the stale/offline tier surfaced in the freshness chip). The two strings resolve through the
+  generated res/values catalog (ADR-014); zero hardcoded UI literals.
+
+EXTRA WEB-PARITY (every section of the web page reproduced; no scope narrowing, no stubs)
+  The loaded body composes the full set of shipped, tested A3 driving-dynamics feature views, in web
+  order, exactly as the web page threads its motorLatest / motorHistory-derived stats / filteredDrives /
+  coachData props down to the same components:
+    DrivingDynamicsLiveMotorStatus  DrivingDynamicsPage.kt:239  (web LiveMotorStatus — torque/rpm/temp gauges + shift badge)
+    GForcePanel                     DrivingDynamicsPage.kt:240  (web GForcePanel — lateral/longitudinal/combined; self-fetch)
+    PedalUsage                      DrivingDynamicsPage.kt:241  (web PedalUsage — throttle/brake gauges + brake status)
+    SpeedGearPanel                  DrivingDynamicsPage.kt:242  (web SpeedGearPanel — shift/power/avg+top drive speed)
+    AutopilotSection                DrivingDynamicsPage.kt:243  (web AutopilotSection — current/cruise speed + follow distance)
+    MotorHistoryCharts              DrivingDynamicsPage.kt:244  (web MotorHistoryCharts — power/torque/rpm history charts)
+    MotorEfficiencyInsights         DrivingDynamicsPage.kt:245  (web MotorEfficiencyInsights — torque/throttle/thermal)
+    SummaryStats                    DrivingDynamicsPage.kt:249  (web SummaryStats — 6 motor stat tiles)
+    DrivingCoachSection             DrivingDynamicsPage.kt:250  (web DrivingCoachSection — score/style/trend/patterns/recs/table)
+    DriveAnalyticsSection           DrivingDynamicsPage.kt:251  (web DriveAnalyticsSection — speed-dist/accel/power-profile)
+    DrivingTips                     DrivingDynamicsPage.kt:252  (web DrivingTips — derived coaching tips)
+  Each feature view owns its own loading/empty/error/content matrix and renders a friendly empty state
+  when its slice is absent, so no section is ever hidden or blank (ADR-011). computeMotorStats is the
+  verbatim port of the web cross-section stat used by MotorEfficiencyInsights + SummaryStats + DrivingTips.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 6m 45s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 14s (no lint errors; checks active for com/teslasync/driving)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 21s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every web section reproduced (11 A3 feature views composed in web order); no anonymous region dropped.
+  [x] All 5 parity items render from the bound StateFlow state holder (motorState: StateFlow<UiState<…>>).
+  [x] loading / empty / error implemented for every data source (each feature view owns its matrix; the
+      page owns the primary loading/error/success keyed off /motor/latest).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web (dynamics.*).
+  [x] Compose-native only (no webview); SI units honored at each feature view's display boundary;
+      dark/dynamic theme + a11y via the A2/A3 shared components.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (5).
+  [x] android ledger row for page:driving/DrivingDynamics set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
