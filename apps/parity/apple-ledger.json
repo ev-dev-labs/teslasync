@@ -1081,6 +1081,24 @@
       "requiredCount": 45,
       "promptId": "p4-apple/P7/page:battery/VampireDrain",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-VampireDrainPage.log"
+    },
+    {
+      "unitId": "page:charging/ChargingDetail",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 90,
+      "requiredCount": 90,
+      "promptId": "p4-apple/P7/page:charging/ChargingDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-ChargingDetailPage.log"
+    },
+    {
+      "unitId": "page:charging/ChargingDetail",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 90,
+      "requiredCount": 90,
+      "promptId": "p4-apple/P7/page:charging/ChargingDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-ChargingDetailPage.log"
     }
   ]
 }
