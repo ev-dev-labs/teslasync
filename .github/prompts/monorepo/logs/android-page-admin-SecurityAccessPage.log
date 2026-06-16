@@ -1,0 +1,106 @@
+================================================================================
+P3-ANDROID A7 — page:admin/SecurityAccess  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/SecurityAccessPage.tsx
+promptId: p3-android/pages/admin/SecurityAccessPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (NOT BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPage.kt          (@Composable screen: SecurityAccessPage + SecurityAccessPageContent + the two GlassPanels)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; refresh()/retry()/refreshVehicles())
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPageSource.kt    (S8 data seam over VehiclesStore + AdminStore)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPageModel.kt     (framework-free model: union-tolerant row parse, secure/sentry/window derivations, SecurityAccessData, mapData)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPageIcons.kt     (local stroked glyphs: Shield / ShieldAlert / AlertCircle / Lock / Eye)
+apps/android/app/src/main/kotlin/com/teslasync/admin/SecurityAccessPageHost.kt      (PageHosts.register(securityAccess){ SecurityAccessRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt          (NavHost wiring: + SecurityAccessPageHost.register())
+apps/parity/android-ledger.json                                                     (ledger row page:admin/SecurityAccess)
+.github/prompts/monorepo/logs/android-page-admin-SecurityAccessPage.log             (this log)
+
+Strings: all 4 required page keys (admin.security.alert / admin.security.subtitle / admin.security.title /
+         error.loadFailed) — plus the broader admin.security.* live-state catalog used by GlassPanel2 — already
+         present in res/values/strings.xml (+ values-ar / values-he); no catalog edit needed.
+Nav    : Destinations 'securityAccess' -> /security-access pre-existing (count unchanged); host wired via
+         PageHosts.register; deep link auto-registered by TeslaSyncNavHost. DataContainer already exposes the
+         shared adminStore + vehiclesStore + selectedVehicleStore, so no DI-graph edit was required.
+
+--------------------------------------------------------------------------------
+DATA SOURCES (bound through SecurityAccessPageViewModel : StateFlow<UiState<...>>, S8)
+--------------------------------------------------------------------------------
+useSecurityEvents -> GET /security [vehicle_id]  ==> AdminStore.securityEvents(id) : Resource<JsonElement>
+                                                     -> mapData(SecurityAccessData.from) -> securityState : StateFlow<UiState<SecurityAccessData>>
+useVehicles       -> GET /vehicles               ==> VehiclesStore.vehicles() : Resource<List<Vehicle>>
+                                                     -> vehiclesState : StateFlow<UiState<List<Vehicle>>> (error banner + self-healing
+                                                        SelectedVehicleStore.reconcile == web useSelectedVehicle default-to-first)
+Web hooks ported (same names at the Kotlin call sites): useSecurityEvents, useVehicles.
+SI/units : security payload carries NO unit-bearing fields (a lock bool, a sentry enum, door/window strings, small
+           counts, ISO timestamps) — round-trips verbatim, no SI conversion. Display formatting is render-only (S5).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 1m 44s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 9m 50s (lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 35s (16515 tests, 0 failures, 0 errors;
+                                             no regressions — matches the sibling A7 admin-page precedent of no
+                                             co-located surface tests, staying within the prompt's allowed-files set)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=9
+--------------------------------------------------------------------------------
+# panels (2) — each a Material 3 GlassPanel (Surface) ; bound state holder = SecurityAccessPageViewModel.securityState
+[COVERED] panel  GlassPanel1   -> SecurityAccessPage.kt:196 SecurityStatusPanel() GlassPanel(PanelPadding.Md, accent=Danger|Success){ secure/alert }   (web alert-banner GlassPanel; shows admin.security.alert when !isSecure, Shield "Secure" + lock/sentry chips otherwise)
+[COVERED] panel  GlassPanel2   -> SecurityAccessPage.kt:261 LiveStatePanel() GlassPanel(PanelPadding.Md){ Eye + "Live" + KVList }                       (web Digital-Twin / LiveVehicleState GlassPanel; latest lock/sentry/doors/windows + live fields)
+
+# data states (3 required) — bound to SecurityAccessPageViewModel.securityState : StateFlow<UiState<SecurityAccessData>>
+[COVERED] state  loading       -> SecurityAccessPageViewModel asUiState -> UiState.loading() (web isLoading); rendered SecurityAccessPage.kt:202 + :281 Spinner(SpinnerSize.Sm) while UiPhase.Loading
+[COVERED] state  error         -> SecurityAccessPage.kt:147 if(securityState.hasError||vehiclesState.hasError) AlertBanner(error.loadFailed, Tone.Danger, Retry->retry/refreshVehicles); ResourceUiState.toUiState maps Resource.Error(no cache)->UiPhase.Error (web anyError)
+[COVERED] state  success       -> SecurityAccessPage.kt:295 KVList(liveItems(...)) on UiPhase.Content + GlassPanel1 secure/alert content (web latest-driven render)
+# (+ empty additionally implemented: SecurityAccessPage.kt:289 EmptyState(admin.security.live.noData) when latest==null;
+#  + stale/offline preserved by ResourceUiState.toUiState — Error-with-cache keeps data visible + Retry)
+
+# strings (4) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string admin.security.alert    -> SecurityAccessPage.kt:218 SecurityStatusPanel() BodyText(translation_admin_security_alert)   (unsecure branch, web `!isSecure && latest` alert)
+[COVERED] string admin.security.subtitle -> SecurityAccessPage.kt:174 SecurityAccessHeader() BodyText(translation_admin_security_subtitle)
+[COVERED] string admin.security.title    -> SecurityAccessPage.kt:172 SecurityAccessHeader() PageTitle(translation_admin_security_title)
+[COVERED] string error.loadFailed        -> SecurityAccessPage.kt:149 SecurityAccessPageContent() AlertBanner(message=translation_error_loadFailed)
+
+PARITY_COVERED=9
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+arch         : stateless SecurityAccessPageContent driven by two StateFlow<UiState> from a Hilt-free AndroidX
+               SecurityAccessPageViewModel (BaseFeedViewModel) over the narrow SecurityAccessSource seam
+               (securityAccessSourceOf(VehiclesStore, AdminStore)); all derivation in the framework-free
+               SecurityAccessPageModel; no HTTP / no business logic in composables (ADR-002/004).
+selection    : binds the app-wide SelectedVehicleStore (web useSelectedVehicle); the vehicles feed reconciles it
+               (default-to-first / self-heal), the security feed is gated on a selected vehicle (web enabled:!!vehicleId).
+a11y/theme   : both panels carry Modifier.semantics contentDescription; Spinner/EmptyState carry accessible names;
+               colors/typography from MaterialTheme (A2 tokens) — dynamic-color + dark theme; Compose-native (no webview).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(9) == PARITY_REQUIRED(9)
+[PASS] all android triad gates green; parity 9/9; android ledger row page:admin/SecurityAccess status=done.
+EXIT=0
+STATUS=DONE
