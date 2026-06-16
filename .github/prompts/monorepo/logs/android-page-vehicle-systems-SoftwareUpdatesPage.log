@@ -1,0 +1,165 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicle-systems/SoftwareUpdates — evidence log
+Native Jetpack Compose / Material 3 port of web SoftwareUpdatesPage
+Source: web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/**
+Package: io.teslasync.android.vehiclesystems.softwareupdates
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 TripList / ArchivedPage precedents)
+  SoftwareUpdatesPageModel.kt   framework-free: registration ids (softwareUpdates / /software-updates /
+                                /vehicle-systems/software / SLUG); the SoftwareUpdate DTO; parseSoftwareUpdates
+                                (the safeArray JSON→DTO parse, snake_case + camelCase alias, skip-malformed);
+                                statusKindOf (web STATUS_CONFIG[status] ?? available); latestVersionOr /
+                                installedCount / totalUpdateCount (the summary folds); formatSoftwareUpdateDate
+                                (web formatDate, FormatStyle.MEDIUM); releaseNotesUrl (web notateslaapp href);
+                                vehicleNameMap (web vehicleMap).
+  SoftwareUpdatesPageSource.kt  seam over VehicleSystemsRepository.softwareUpdates(vehicleId) (GET /software-updates,
+                                the canonical KMP seam for the web inline request<SoftwareUpdate[]>) + SelectedVehicleStore
+                                (web useSelectedVehicle) + VehiclesStore.vehicles (the owner-name map). Raw SI JSON is
+                                parsed into SoftwareUpdate at the seam, so the view-model/view never touch JSON.
+  SoftwareUpdatesPageViewModel  BaseFeedViewModel; updatesState: StateFlow<UiState<List<SoftwareUpdate>>> over the
+                                combine(effectiveVehicle, refresh) ▸ flatMapLatest(softwareUpdates) ▸ asUiState feed;
+                                vehicleNames StateFlow; refresh / retry / recordViewOpened. effectiveVehicleId mirrors
+                                web useSelectedVehicle (explicit selection, else first enrolled vehicle).
+  SoftwareUpdatesPage.kt        stateful entry + stateless content; loading skeleton / empty / error-retry / success;
+                                the three summary MetricCards; the "Update Timeline" GlassPanel of per-version cards
+                                (version + status chip + release-notes link + resolved vehicle name + installed /
+                                scheduled / created dates). Compose-native (no webview).
+  SoftwareUpdatesGlyphs.kt      the two lucide glyphs the shared sets lack — Smartphone + ArrowUpCircle — authored as
+                                24×24 stroked vectors (the DataDisplayGlyphs precedent), recolored at render time.
+  SoftwareUpdatesPageHost.kt    SoftwareUpdatesRoute() + SoftwareUpdatesPageHost.register() for the `softwareUpdates`
+                                / /software-updates (+ /vehicle-systems/software) destination (Destinations.kt L106 /
+                                RouteTable.kt L30; registered in TeslaSyncApplication.kt).
+
+DATA SOURCES (bound through the ViewModel's StateFlow over the KMP core, P1/S8)
+  /software-updates → VehicleSystemsRepository.softwareUpdates(vehicleId)  (GET /software-updates) → updatesState
+  (web useSelectedVehicle)  → SelectedVehicleStore.selectedId (+ first-vehicle default) → effectiveVehicleId
+  (web vehicleMap)          → VehiclesStore.vehicles()                                  → vehicleNames
+
+  NOTE — the parity manifest record marks this page "no API data sources" because the web page inlines
+  `request<SoftwareUpdate[]>('/software-updates')` rather than the typed useSoftwareUpdates hook, so the
+  generator's hook-scan found none. The canonical KMP seam nonetheless exists
+  (VehicleSystemsRepository.softwareUpdates, GET /software-updates, safeArray-guarded), so the surface binds the
+  REAL repository for genuine loading / empty / error / success states rather than a local-state stub (ADR-011).
+
+  SCOPE NOTE — the web PageContainer `actions` cluster (VehicleSelect, RangePicker) and the opt-in
+  AISoftwareUpdateChangelogSummarizer (which returns null in off mode — absent from the DOM by default, ADR-015)
+  are NOT part of this page's manifest record (page:vehicle-systems/SoftwareUpdates enumerates exactly the 5 panels
+  + 4 states + 14 strings, requiredCount 23). They are intentionally not stubbed (no scope drift). The active
+  vehicle comes from the global SelectedVehicleStore (the app shell's VehicleSelect), as the sibling TripList port;
+  the query-freshness chip is still surfaced (header DataFreshness) and refresh()/retry() back the error surface.
+
+SI BOUNDARY (P1/S5)
+  No unit-bearing quantities are rendered (versions, statuses, ISO dates only); nothing non-SI is stored or
+  computed. Dates stay raw ISO in the model and are formatted only at the render boundary (formatSoftwareUpdateDate,
+  FormatStyle.MEDIUM, locale-aware). The cache stays SI verbatim (ADR-013).
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+PANELS (5) — the three summary MetricCards + the Update-Timeline panel + the per-version card
+  [01] panel  Current-Version   SoftwareUpdatesPage.kt:262  MetricCard(label=translation_Current_Version,
+                                                             value=latestVersionOr) in SoftwareUpdatesSummary(L255)
+  [02] panel  Updates-Installed SoftwareUpdatesPage.kt:269  MetricCard(label=translation_Updates_Installed, value=installedCount)
+  [03] panel  Total-Updates     SoftwareUpdatesPage.kt:276  MetricCard(label=translation_Total_Updates, value=totalUpdateCount)
+  [04] panel  GlassPanel4       SoftwareUpdatesPage.kt:300  GlassPanel + SectionTitle(translation_Update_Timeline) in UpdateTimelinePanel(L292)
+  [05] panel  GlassPanel5       SoftwareUpdatesPage.kt:356  GlassPanel per-version card in UpdateTimelineRow(L339)
+
+DATA STATES (4) — for the /software-updates source (loading / empty / error / success)
+  [06] state  loading  SoftwareUpdatesPage.kt:162  state.isLoading → SoftwareUpdatesLoading(L232): StatGridSkeleton + Skeleton rows
+  [07] state  empty    SoftwareUpdatesPage.kt:316  EmptyState(title=translation_No_update_history, message=translation_No_software_update_history_available)
+  [08] state  error    SoftwareUpdatesPage.kt:183  AlertBanner(Tone.Danger, translation_error_loadFailed) on state.hasError + ErrorDisplay(onRetry) L308
+  [09] state  success  SoftwareUpdatesPage.kt:324  updates.forEach → UpdateTimelineRow (the populated timeline)
+
+STRINGS (14) — every visible literal resolves from res/values/strings.xml; key names match web
+  [10] string Current Version                              SoftwareUpdatesPage.kt:263  translation_Current_Version
+  [11] string No software update history available         SoftwareUpdatesPage.kt:319  translation_No_software_update_history_available
+  [12] string No update history                            SoftwareUpdatesPage.kt:318  translation_No_update_history
+  [13] string Scheduled                                    SoftwareUpdatesPage.kt:428  translation_Scheduled  (scheduled-date prefix)
+  [14] string Software Updates                             SoftwareUpdatesPage.kt:214  translation_Software_Updates  (header PageTitle)
+  [15] string Total Updates                                SoftwareUpdatesPage.kt:277  translation_Total_Updates
+  [16] string Track firmware versions and update history   SoftwareUpdatesPage.kt:216  translation_Track_firmware_versions_and_update_history
+  [17] string Unknown                                      SoftwareUpdatesPage.kt:256  translation_Unknown  (latest-version fallback)
+  [18] string Update Timeline                              SoftwareUpdatesPage.kt:299  translation_Update_Timeline
+  [19] string Updates Installed                            SoftwareUpdatesPage.kt:270  translation_Updates_Installed
+  [20] string Vehicle                                      SoftwareUpdatesPage.kt:501  translation_Vehicle  (resolveVehicleName "Vehicle {id}" fallback)
+  [21] string View release notes                           SoftwareUpdatesPage.kt:387  translation_View_release_notes  (release-notes IconButton CD)
+  [22] string error.loadFailed                             SoftwareUpdatesPage.kt:185  translation_error_loadFailed  (AlertBanner + ErrorDisplay)
+  [23] string softwareUpdates.title                        SoftwareUpdatesPage.kt:169  translation_softwareUpdates_title  (page semantics content-description, web usePageTitle)
+
+PARITY_COVERED=23
+
+STRING CATALOG
+  5 of the 14 keys already existed in res/values/strings.xml (translation_Scheduled, translation_Unknown,
+  translation_Vehicle, translation_error_loadFailed, translation_softwareUpdates_title). The 9 web inline-default
+  literal keys were absent, so they were added — to the canonical web i18n source (web/src/i18n/en.json) AND to the
+  generated res/values{,-ar,-he}/strings.xml (an allowed file) with the verbatim web default values:
+    translation_Current_Version, translation_Updates_Installed, translation_Total_Updates, translation_Update_Timeline,
+    translation_Software_Updates, translation_View_release_notes, translation_No_update_history,
+    translation_No_software_update_history_available, translation_Track_firmware_versions_and_update_history.
+  The status-chip labels reuse the existing translation_widget_softwareUpdate_status* keys (Installed / Installing /
+  Downloading / Available / scheduled), whose values are identical to the web STATUS_CONFIG labels; they are not
+  among the 14 required parity strings.
+  IMPORTANT (no silent drift) — `gen-i18n.ts --check` reports the repo's i18n catalog was ALREADY drifted before this
+  change (web en.json leaves=8096 grouped=8062 vs the committed strings.xml header translated=7781, 11 files), a
+  PRE-EXISTING condition unrelated to this page. Re-running the full generator would balloon the diff across all 11
+  platform files (android/apple/windows × en/ar/he + catalog); per the artifact's allowed-files scope, the 9 keys
+  were added surgically to en.json (canonical, so a future regen reproduces them) + the three android strings.xml
+  catalogs only. ar/he ship as full English fallback, so the mirrors carry the English value (matching the generator).
+
+A11Y / THEME / UNITS (ADR-015)
+  - The page root carries the accessible page name (translation_softwareUpdates_title) via Modifier.semantics; the
+    Update-Timeline panel carries its content-description (translation_Update_Timeline). The release-notes affordance
+    is a shared IconButton (≥48dp Material touch target) with a translation_View_release_notes content description and
+    opens the notateslaapp release-notes URL via LocalUriHandler.
+  - Colours/typography come from MaterialTheme (P1/S9 tokens) — dark + dynamic colour honoured; the only fixed colours
+    are the per-card MetricCard accents + the per-status disc tints (web MetricCard color + STATUS_CONFIG), dynamic
+    per-element values, not static theme tokens, matching the sibling TripList palette precedent. Body text + surfaces
+    are MaterialTheme roles (PageTitle/SectionTitle/PanelTitle/BodyText/Caption).
+  - SI is honoured (no non-SI value stored/computed); dates format at the display boundary. Compose-native — no webview,
+    no charts (0 charts), no map (0 maps) per the manifest record.
+
+UNIT COVERAGE (off-device, :android:testDebugUnitTest)
+  SoftwareUpdatesPageModelTest.kt — 8 tests, all passing: snake_case parse, camelCase-alias + skip-malformed parse,
+  empty/non-array parse, status classification (incl. unknown→Available), summary folds, latest-version fallback,
+  release-notes URL, date formatter (ISO / bare / null / blank / garbage).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 1m 21s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 09s (lint-results-debug.html written; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 37s (SoftwareUpdatesPageModelTest: tests=8 failures=0 errors=0)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (Current-Version / Updates-Installed / Total-Updates MetricCards, the
+      Update-Timeline GlassPanel4, the per-version GlassPanel5 card); every region of the web source reproduced
+      (header title + subtitle + freshness chip, the error banner, the three summary cards, the timeline with its
+      empty + error states, the per-version cards with status chip + release-notes link + vehicle + dates). The
+      PageContainer actions cluster + the opt-in AI summarizer are separate/optional and correctly out of scope.
+  [x] All 23 parity items render from the bound StateFlow state holder (updatesState + vehicleNames), folded by the
+      framework-free SoftwareUpdatesPageModel.
+  [x] loading / empty / error / success implemented for the /software-updates data source.
+  [x] All visible strings sourced from strings.xml; key names match web; zero hardcoded UI copy.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets; page + panel semantics (a11y); SI honoured; Compose-native
+      only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (23).
+  [x] android ledger row for page:vehicle-systems/SoftwareUpdates set covered (apps/parity/android-ledger.json, 23/23 done).
+
+EXIT=0
+STATUS=DONE

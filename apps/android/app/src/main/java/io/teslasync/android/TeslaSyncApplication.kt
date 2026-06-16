@@ -141,6 +141,7 @@ import io.teslasync.android.vehicles.digitaltwin.DigitalTwinPageHost
 import io.teslasync.android.admin.backuprestore.BackupRestorePageHost
 import io.teslasync.android.vehiclesystems.GuardModePageHost
 import io.teslasync.android.vehiclesystems.safetysettings.SafetySettingsPageHost
+import io.teslasync.android.vehiclesystems.softwareupdates.SoftwareUpdatesPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -355,6 +356,7 @@ class TeslaSyncApplication : Application() {
         BackupRestorePageHost.register()
         GuardModePageHost.register()
         SafetySettingsPageHost.register()
+        SoftwareUpdatesPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

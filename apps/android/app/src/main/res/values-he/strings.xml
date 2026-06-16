@@ -257,6 +257,15 @@
   <string name="translation_SLW">SLW</string>
   <string name="translation_Save">Save</string>
   <string name="translation_Savings">Savings</string>
+  <string name="translation_Current_Version">Current Version</string>
+  <string name="translation_No_software_update_history_available">No software update history available</string>
+  <string name="translation_No_update_history">No update history</string>
+  <string name="translation_Software_Updates">Software Updates</string>
+  <string name="translation_Total_Updates">Total Updates</string>
+  <string name="translation_Track_firmware_versions_and_update_history">Track firmware versions and update history</string>
+  <string name="translation_Update_Timeline">Update Timeline</string>
+  <string name="translation_Updates_Installed">Updates Installed</string>
+  <string name="translation_View_release_notes">View release notes</string>
   <string name="translation_Scheduled">Scheduled</string>
   <string name="translation_Score">Score</string>
   <string name="translation_Select_Vehicle">Select Vehicle</string>
