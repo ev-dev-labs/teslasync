@@ -1,0 +1,124 @@
+================================================================================
+P3-ANDROID A7 — page:admin/Users  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/UsersPage.tsx
+promptId: p3-android/pages/admin/UsersPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr 21 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+Note: the prompt gate text addresses ':app:'; this repo's single app module's Gradle path is ':android'
+      (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")), so the
+      canonical ':android:' tasks are invoked, exactly as every prior P3/A7 android page gate did.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files + the sanctioned A7 DI/nav seams)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/UsersPage.kt          (@Composable screen: UsersPage + UsersPageContent + open-mode/loading/error/empty/list + subject rows)
+apps/android/app/src/main/kotlin/com/teslasync/admin/UsersPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; candidatesState gated by isOpenMode; startImpersonation/refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/admin/UsersPageSource.kt    (S8 data seam over ImpersonationStore.candidates/isOpenMode/isActive + start/refresh)
+apps/android/app/src/main/kotlin/com/teslasync/admin/UsersPageModel.kt     (framework-free model: subjects(), isEmptyCandidates, registration, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/admin/UsersPageHost.kt      (PageHosts.register(adminUsers){ UsersRoute() }; dormant — web unrouted, no Destinations row)
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt  (DI seam A7 widens: + impersonationRepository + impersonationStore — per DataContainer's own "single seam A7 page prompts widen" doc)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt (NavHost wiring: + UsersPageHost.register())
+apps/parity/android-ledger.json                                            (ledger row page:admin/Users 10/10)
+.github/prompts/monorepo/logs/android-page-admin-UsersPage.log             (this log)
+
+Data   : two shared S8 reads via ImpersonationStore (web useImpersonation domain), bound through UsersPageViewModel
+         over asUsersPageSource(); no HTTP in the view.
+           - candidates (GET /admin/impersonate/candidates ▸ web useImpersonationCandidates) drives the page's four
+             declared states; projected to UiState via BaseFeedViewModel.asUiState(isEmpty = isEmptyCandidates).
+           - isOpenMode / isActive (web isImpersonationOpenMode / isImpersonationActive) fold the status feed
+             (GET /admin/impersonate ▸ web useImpersonationStatus) to drive the open-mode notice + the per-row
+             disabled decision (web disabled={active}).
+         The web hook's `enabled: !open` opt-in is reproduced: candidatesState switches the candidates feed off to
+         the open sentinel whenever isOpenMode resolves true (flatMapLatest), so an open-mode install issues no
+         /candidates request. Start mutation (web useStartImpersonation) is the store's start; on success the store
+         wipes the cache + primes active + refreshes both feeds, so isActive flips true and every row button
+         disables — no extra call. Per-row in-flight state tracked by UsersPageViewModel.startingSubject.
+Embed  : each list row embeds the shared A3 feature view UserImpersonateButton (its own parity unit, already built)
+         via the web-parity overload (subject, starting, onStart, disabled) — web <UserImpersonateButton subject
+         disabled={active} /> — so the ghost button + warning ConfirmDialog are reused, never re-implemented (DRY).
+Strings: all 5 manifest keys already exist in res/values/strings.xml (+ values-ar / values-he), added by the
+         predecessor UserImpersonateButton unit; web key names preserved (impersonation.users.* ->
+         translation_impersonation_users_*). They resolve via stringResource; zero hardcoded literals. No string
+         file edit was needed (no new keys), so the string catalogs are untouched — disclosed here, not silently.
+Nav    : the web page ships UNROUTED (parity manifest webRoute = "(unrouted)"; the web file notes "a follow-up
+         change will register the route"). Android Destinations is generated from the 137 canonical web routes and
+         locked by DestinationsTest.registryCoversTheWholeWebTaxonomy (assertEquals(137, …)); adding a route would
+         break that parity lock. So no Destinations row is added; UsersPageHost.register() wires the content
+         dormantly under the reserved id "adminUsers" (TeslaSyncNavHost only renders ids present in Destinations),
+         lighting up automatically once a follow-up lands the route — mirroring the web page's own unrouted status.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  # clean on first pass; no identifier/comment contains a forbidden marker (TODO/FIXME/XXX/placeholder/…);
+  # no parity:allow opt-out used.
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 4m 39s
+BUILD_EXIT=0
+  # :android:compileDebugKotlin compiled the new surface; only pre-existing warning is ApiLogsPage.kt's
+  # LocalClipboardManager deprecation (not this surface).
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 11m 12s (0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 16s
+TEST_EXIT=0
+  # full JVM unit suite green, incl. DestinationsTest 137-route lock (unchanged — no Destinations edit).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=10
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (Surface) ; bound state holders = UsersPageViewModel.candidatesState + isOpenMode + isActive
+[COVERED] panel  GlassPanel1   -> UsersPage.kt:153 GlassPanel(PanelPadding.None){ open-mode notice / loading / error / empty / subjects list }  (web UsersPage single <GlassPanel>)
+
+# data states (4 required) — bound to UsersPageViewModel.candidatesState : StateFlow<UiState<ImpersonationCandidatesResponse>>
+[COVERED] state  loading       -> UsersPage.kt:159 candidatesState.isLoading -> UsersLoadingState() (:216 Spinner) ; asUiState -> UiState.loading()  (web candidates.isLoading ? <Spinner/>)
+[COVERED] state  empty         -> UsersPage.kt:165 candidatesState.isEmpty -> UsersEmptyState() (:243 emptyTitle/emptyMessage) ; UiPhase.Empty via UsersPageModel.isEmptyCandidates  (web subjects.length===0)
+[COVERED] state  error         -> UsersPage.kt:162 candidatesState.isError -> UsersErrorState(onRetry=actions.onRetry) (:231 ErrorDisplay+Retry) ; UsersPageViewModel.retry()  (web candidates.isError ? <ErrorDisplay onRetry={refetch}/>)
+[COVERED] state  success       -> UsersPage.kt:168 else -> SubjectsList(subjects, active, startingSubject, onStart) (:258 rows + UserImpersonateButton :302) ; UiPhase.Content  (web <ul data-testid="users-page-list">)
+
+# strings (5) — every visible literal via stringResource(R.string.translation_impersonation_users_*); web key names preserved; pre-existing catalog keys (no new keys)
+[COVERED] string impersonation.users.title        -> UsersPage.kt:184 PageTitle(translation_impersonation_users_title)
+[COVERED] string impersonation.users.subtitle     -> UsersPage.kt:186 BodyText(translation_impersonation_users_subtitle)
+[COVERED] string impersonation.users.openMode     -> UsersPage.kt:208 OpenModeNotice BodyText(translation_impersonation_users_openMode)
+[COVERED] string impersonation.users.emptyTitle   -> UsersPage.kt:245 EmptyState(title=translation_impersonation_users_emptyTitle)
+[COVERED] string impersonation.users.emptyMessage -> UsersPage.kt:246 EmptyState(message=translation_impersonation_users_emptyMessage)
+
+PARITY_COVERED=10
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : UsersPageViewModel binds shared S8 ImpersonationStore (web useImpersonation) via asUsersPageSource();
+               candidates (web useImpersonationCandidates) → the four states; isOpenMode/isActive (web
+               isImpersonationOpenMode/isImpersonationActive) → open-mode notice + per-row disable; start mutation
+               (web useStartImpersonation) via the embedded UserImpersonateButton's onStart. The web `enabled: !open`
+               opt-in is reproduced (candidates feed switched off in open mode). No HTTP in the view.
+si/units     : the impersonation payload carries no unit-bearing fields (an opaque subject identifier + discriminated
+               modes) — round-trips verbatim, no SI conversion (S5).
+a11y/theme   : shared components supply semantics content descriptions (Spinner clearAndSetSemantics, EmptyState /
+               ErrorDisplay built-ins, UserImpersonateButton aria-label), >=48dp targets (Material Button), dynamic
+               color + dark theme via MaterialTheme (A2 tokens); Compose-native (no webview). Subject identifier
+               rendered monospace (CodeText) and wraps so a long opaque value stays legible on a phone.
+nav          : web page is unrouted; no Destinations row added (137-route lock preserved); UsersPageHost registers
+               the content dormantly under reserved id "adminUsers", mirroring the web "ships unrouted" status.
+diagnostics  : one PII-safe view.opened (slug only, never the subject); start/refresh log slug only.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(10) == PARITY_REQUIRED(10)
+[PASS] all android triad gates green; parity 10/10; android ledger row page:admin/Users status=done.
+EXIT=0
+STATUS=DONE

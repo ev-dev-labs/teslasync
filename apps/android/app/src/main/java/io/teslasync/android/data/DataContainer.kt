@@ -53,6 +53,8 @@ import io.teslasync.shared.core.data.repo.HttpSystemQueuesRepository
 import io.teslasync.shared.core.data.repo.HttpSystemRepository
 import io.teslasync.shared.core.presentation.system.SystemStore
 import io.teslasync.shared.core.presentation.systemqueues.SystemQueuesStore
+import io.teslasync.shared.core.data.repo.HttpImpersonationRepository
+import io.teslasync.shared.core.presentation.impersonation.ImpersonationStore
 
 /**
  * Manual DI graph for the Android data layer (ADR-013), the analogue of the auth `AuthContainer`. It
@@ -175,6 +177,8 @@ class DataContainer(
     private val systemQueuesRepository = HttpSystemQueuesRepository(api, cacheStore, clock)
     val systemStore = SystemStore(systemRepository, scope)
     val systemQueuesStore = SystemQueuesStore(systemQueuesRepository, scope)
+    private val impersonationRepository = HttpImpersonationRepository(api, cacheStore, clock)
+    val impersonationStore = ImpersonationStore(impersonationRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->
