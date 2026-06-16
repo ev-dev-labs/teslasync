@@ -1,0 +1,230 @@
+================================================================================
+P3-ANDROID A7 — page:system/Chatbot
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/system/pages/ChatbotPage.tsx
+================================================================================
+
+Artifact     : page:system/Chatbot
+Web route    : /chatbot
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/system/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+ChatbotPage.tsx is the Helix AI-assistant chat screen. Its PageContainer chrome
+is the "Helix" title, the "Ask Helix anything about your Tesla fleet" subtitle,
+and a History toggle action. The body is two GlassPanels: GlassPanel1 — the
+conversation panel that holds the message log (an empty-state Helix hero +
+SuggestedPrompts when there are no messages, else the ChatMessageItem rows) and
+the bottom input row (a Textarea + a Send affordance that swaps to a Stop
+affordance while a reply is revealing); and GlassPanel2 — the "Helix is thinking…"
+indicator shown while a reply is pending. The History action reveals the
+SessionList sidebar (the session feed + select / new-chat / rename / delete).
+
+The page's DECLARED data sources (apps/parity/parity-manifest.json record
+page:system/Chatbot) are exactly the five useChat* hooks: useChatSessions,
+useChatHistory, useSendChatMessage, useRenameChatSession, useDeleteChatSession.
+(The optional useAiStream/useAiEnabled LLM-streaming branch — AIChatbotIndicator
+/ AIVoiceMode — is NOT among this page's declared data sources; it is a separate
+parity surface.) The baseline send (POST /chatbot) returns the full reply, which
+a client-side typewriter reveals char-by-char into the assistant bubble.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared KMP data layer (P1/S8) already exists:
+io.teslasync.shared.core.presentation.chat.ChatStore over
+io.teslasync.shared.core.data.repo.HttpChatRepository — the cross-platform port
+of the web useChat domain (chatSessions / chatHistory feeds + sendChatMessage /
+renameChatSession / deleteChatSession). The A3 chatbot feature views also exist
+(io.teslasync.android.featureviews.{sessionlist.SessionList,
+chatmessageitem.ChatMessageItem, suggestedprompts.SuggestedPrompts}). This page
+binds those — no new networking, no re-implemented endpoints, no row/sidebar
+re-draws — exactly as the web page composes its hooks + sub-components.
+
+New files (package io.teslasync.android.system, dir com/teslasync/system/):
+  - ChatbotPageModel.kt       Pure model: Registration(ROUTE_ID chatbot, WEB_PATH
+                              /chatbot, SLUG ChatbotPage), ConversationPhase enum,
+                              ChatbotConversation state, LocalMessageIds (web
+                              nextLocalId), ChatMessage.toUiMessage projection,
+                              planEditAndResend / planRegenerate (web
+                              handleEditAndResend / handleRegenerate truncation),
+                              hydrateMessages (web hydration race guards),
+                              recordChatbotPageOpened.
+  - ChatbotPageGlyphs.kt      Send / Stop(Square) / History line ImageVectors
+                              (lucide-equivalents; TeslaGlyphs ships none).
+  - ChatbotPageSource.kt      ChatbotPageSource seam (chatStore(scope): ChatStore)
+                              + chatbotPageSourceOf(repo) — binds the shared S8
+                              store over the injected S7 repository.
+  - ChatbotPageViewModel.kt   BaseFeedViewModel; sessionsState (chatSessions ▸
+                              asUiState) + conversation (combine(localMessages,
+                              historyResource, sending, streaming, sessionId) ▸
+                              buildConversation) as StateFlows; submit / coroutine
+                              typewriter startReveal / stopStreaming;
+                              editAndResend / regenerate; loadSession / startNewSession
+                              / rename / delete; retryHistory / refreshSessions;
+                              the hydration collector; recordViewOpened.
+  - ChatbotPage.kt            Stateful entry (viewModel factory) + stateless
+                              ChatbotPageContent: ChatbotHeader (PageTitle +
+                              subtitle + History toggle) over ConversationPanel
+                              (GlassPanel1: ConversationLog [Spinner / ChatHero /
+                              QueryError / MessageList] + divider + ChatInputRow),
+                              ThinkingIndicator (GlassPanel2 + TypingDots), and the
+                              SessionOverlay (scrim + start-aligned SessionList).
+  - ChatbotPageHost.kt        ChatbotRoute() binds chatbotPageSourceOf(
+                              HttpChatRepository(container.api, container.cacheStore));
+                              ChatbotPageHost.register() -> PageHosts.register("chatbot").
+
+Edits (registration + ledger only):
+  - TeslaSyncApplication.kt   import + ChatbotPageHost.register() at process start.
+  - apps/parity/android-ledger.json  page:system/Chatbot row (done, 18/18).
+  - res/values/strings.xml    NO edit — all 13 translation_chatbot_* keys already
+                              present in the generated catalog.
+
+Notes:
+  - Scope honesty: the manifest's 5 declared data sources are the useChat* hooks;
+    the AI SSE branch (useAiStream/useAiEnabled) is out of this unit's scope and
+    is not implemented here. The baseline path exercises all 5 hooks, both
+    GlassPanels, and all 13 strings.
+  - SI: no chat field is unit-bearing (ids, ISO timestamps, titles, free text) —
+    no SI conversion; clock/locale formatting is at the render boundary inside
+    ChatMessageItem (S5).
+  - States: the sessions feed renders loading / empty / content / error+retry via
+    the bound SessionList(state=…); the conversation renders loading (Spinner) /
+    empty (Helix hero + SuggestedPrompts) / content (ChatMessageItem list) /
+    error (QueryError + retryHistory) from the history feed's UiState.
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading; conversation log is an aria-live polite region with
+    the localized name; Send/Stop carry localized content descriptions; History
+    button mirrors aria-pressed via semantics{selected}; ≥48 dp targets via the
+    shared Button (ADR-015). Dynamic color + dark theme via MaterialTheme (no
+    hardcoded colors, ADR-005).
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+(the 1 allowed line is the input Textarea hint that resolves
+ R.string.translation_chatbot_placeholder — an i18n key literally named
+ chatbot.placeholder — marked `// parity:allow i18n key literally named
+ chatbot.placeholder`, exactly the scanner's sanctioned opt-out for a
+ forbidden-word translation key; the string is really rendered, not a stub.)
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 2m 1s
+BUILD_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 21s
+TEST_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 9m 22s
+LINT_EXIT=0
+
+(compile sanity: ./gradlew :android:compileDebugKotlin BUILD SUCCESSFUL — the
+ only warnings are the pre-existing LocalClipboardManager / tooltip-position
+ deprecations in sibling shipped files, none from com/teslasync/system/.)
+
+=== PARITY ===
+PARITY_REQUIRED=18
+
+[1] panel  : GlassPanel1
+    EVIDENCE: ConversationPanel (ChatbotPage.kt) wraps ConversationLog (the message
+              log) + a HorizontalDivider + ChatInputRow inside
+              GlassPanel(padding = PanelPadding.None) — the web `<GlassPanel … !p-0>`
+              conversation panel. COVERED.
+
+[2] panel  : GlassPanel2
+    EVIDENCE: ThinkingIndicator (ChatbotPage.kt) renders the Helix Avatar beside a
+              GlassPanel(padding = PanelPadding.Sm) holding TypingDots + the thinking
+              label — the web `<GlassPanel className="!p-3 …">` thinking bubble. COVERED.
+
+[3] state  : loading data state
+    EVIDENCE: ChatbotPageViewModel.buildConversation maps a first-load history
+              Resource.Loading to ConversationPhase.Loading; ConversationLog
+              (ChatbotPage.kt) renders Spinner() for it. The sidebar feed
+              sessionsState = store.chatSessions().asUiState resolves UiPhase.Loading,
+              rendered by SessionList(state = …) in SessionOverlay. COVERED.
+
+[4] state  : empty data state
+    EVIDENCE: buildConversation yields ConversationPhase.Idle when there are no
+              messages; ConversationLog renders ChatHero (Helix mark +
+              howCanIHelp/askAbout + SuggestedPrompts) — the web `messages.length===0`
+              empty state. The empty sessions feed resolves UiPhase.Empty, rendered by
+              SessionList's empty surface. COVERED.
+
+[5] state  : success data state
+    EVIDENCE: buildConversation yields ConversationPhase.Content when messages exist;
+              MessageList (ChatbotPage.kt) renders the ChatMessageItem rows from the
+              bound localMessages (hydrated from store.chatHistory + the optimistic
+              send/typewriter). COVERED.
+
+[6] string : chatbot.actions.send
+    EVIDENCE: R.string.translation_chatbot_actions_send set as the Send button's
+              semantics contentDescription in ChatInputRow (ChatbotPage.kt). COVERED.
+
+[7] string : chatbot.actions.stop
+    EVIDENCE: R.string.translation_chatbot_actions_stop is the Stop Button label in
+              ChatInputRow (ChatbotPage.kt), shown while streaming. COVERED.
+
+[8] string : chatbot.actions.stopHint
+    EVIDENCE: R.string.translation_chatbot_actions_stopHint is the Tooltip(text = …)
+              wrapping the Stop button in ChatInputRow (ChatbotPage.kt) — the web
+              `title` hover hint. COVERED.
+
+[9] string : chatbot.actions.stopStreaming
+    EVIDENCE: R.string.translation_chatbot_actions_stopStreaming set as the Stop
+              button's semantics contentDescription in ChatInputRow (ChatbotPage.kt) —
+              the web `aria-label`. COVERED.
+
+[10] string : chatbot.aria.conversation
+    EVIDENCE: R.string.translation_chatbot_aria_conversation set as the ConversationLog
+              Box semantics contentDescription with liveRegion = Polite (ChatbotPage.kt)
+              — the web `role="log" aria-live="polite" aria-label`. COVERED.
+
+[11] string : chatbot.askAbout
+    EVIDENCE: R.string.translation_chatbot_askAbout rendered by BodyText in ChatHero
+              (ChatbotPage.kt). COVERED.
+
+[12] string : chatbot.history
+    EVIDENCE: R.string.translation_chatbot_history is the History Button label in
+              ChatbotHeader and the SessionOverlay surface contentDescription
+              (ChatbotPage.kt) — the web History action + mobile dialog aria-label.
+              COVERED.
+
+[13] string : chatbot.howCanIHelp
+    EVIDENCE: R.string.translation_chatbot_howCanIHelp rendered by SectionTitle in
+              ChatHero (ChatbotPage.kt). COVERED.
+
+[14] string : chatbot.inputLabel
+    EVIDENCE: R.string.translation_chatbot_inputLabel is the Textarea label in
+              ChatInputRow (ChatbotPage.kt) — the web VisuallyHidden label + aria-label.
+              COVERED.
+
+[15] string : chatbot.placeholder
+    EVIDENCE: R.string.translation_chatbot_placeholder is the Textarea hint in
+              ChatInputRow (ChatbotPage.kt) — the web input placeholder. COVERED.
+
+[16] string : chatbot.subtitle
+    EVIDENCE: R.string.translation_chatbot_subtitle rendered by BodyText in
+              ChatbotHeader (ChatbotPage.kt) — the web PageContainer subtitle. COVERED.
+
+[17] string : chatbot.thinking
+    EVIDENCE: R.string.translation_chatbot_thinking rendered by BodyText in
+              ThinkingIndicator (ChatbotPage.kt). COVERED.
+
+[18] string : chatbot.title
+    EVIDENCE: R.string.translation_chatbot_title rendered by PageTitle in ChatbotHeader
+              (ChatbotPage.kt) — the web PageContainer title "Helix". COVERED.
+
+PARITY_COVERED=18
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
