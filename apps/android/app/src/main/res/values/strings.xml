@@ -8548,6 +8548,12 @@
   <!-- P3-ANDROID A7 driving/DrivesListPage parity keys (web defaults from DrivesListPage.tsx). -->
   <string name="translation_bulk_noun_drive_one">drive</string>
   <string name="translation_bulk_noun_drive_other">drives</string>
+  <!-- P3-ANDROID A7 notifications/AlertStudioPage parity keys (web defaults from AlertStudioPage.tsx). -->
+  <string name="translation_bulk_noun_rule_one">alert rule</string>
+  <string name="translation_bulk_noun_rule_other">alert rules</string>
+  <string name="translation_notifications_alertStudio_kind_computedMetricHint">Aggregate metric (cost, kWh, distance) over a time window.</string>
+  <string name="translation_notifications_alertStudio_kind_signalHint">Fires when a raw telemetry signal crosses a threshold.</string>
+  <string name="translation_notifications_alertStudio_snooze_description">Suppress this rule temporarily. Snooze auto-expires; the rule will fire again afterwards if its condition is true.</string>
   <string name="translation_drives_anomalyCount">%1$s %2$s in this range</string>
   <string name="translation_drives_anomaly_one">anomaly</string>
   <string name="translation_drives_anomaly_other">anomalies</string>

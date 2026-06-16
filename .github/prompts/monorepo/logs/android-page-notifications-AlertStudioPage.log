@@ -1,0 +1,232 @@
+================================================================================
+P3-ANDROID - A7 - page:notifications/AlertStudio - evidence log
+Native Jetpack Compose / Material 3 port of web AlertStudioPage
+Source: web/src/features/notifications/pages/AlertStudioPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/notifications/**
+Package: io.teslasync.android.notifications.alertstudio
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; local.properties sdk.dir)
+  JDK          = OpenJDK 21
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder - this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present -> STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 ChargingCurve / FeedbackQueue precedents)
+  AlertStudioPageModel.kt        framework-free: registration ids, RuleKind/SignalValueType/ValueKind/
+                                 TriggerMode enums, AlertStudioEditor + AlertStudioInteraction state,
+                                 ruleTemplates + signalCatalog, filterRules/filterTemplates (web useMemos),
+                                 operatorsForType/valueKindFor (web getOperatorsForType/valueKind),
+                                 canSave (force-choose gate), editorFromRule/editorFromTemplate,
+                                 buildSaveRequest (web buildSavePayload -> AlertRuleSaveRequest), view.opened.
+  AlertStudioPageSource.kt       seam over NotificationsRepository (alertRules/alertMetrics/
+                                 notificationChannels + save/delete/toggle/bulkEnable/bulkDisable/test/
+                                 snooze) + VehiclesRepository.vehicles; production binding
+                                 alertStudioPageSourceOf over the shared HttpNotificationsRepository +
+                                 HttpVehiclesRepository (shared resilient client + offline cache, ADR-013).
+  AlertStudioPageViewModel.kt    BaseFeedViewModel; rulesState/metricsState/channelsState/vehiclesState:
+                                 StateFlow<UiState<...>> via refresh-trigger flatMapLatest + asUiState;
+                                 interaction StateFlow (editor/selection/search/bulk/snooze/test-channels);
+                                 isSaving; mutations bump the rule-list trigger on success (web
+                                 invalidateQueries parity).
+  AlertStudioPage.kt             stateful entry + stateless content; loading/empty/error/success; header +
+                                 templates panel (1) + template card (2) + rules-list panel (3) + rule row
+                                 (4) + snooze Modal; shared display helpers (severityLabel, signalTypeLabel,
+                                 rememberInstantFormatter via LocalConfiguration).
+  AlertStudioPageEditorPanel.kt  rule editor panel (5) + allowed-operators panel (6) + any-change panel (7)
+                                 + test-channels panel (8); every editor field group + the unsaved-changes
+                                 guard + the save/delete/test/reset actions.
+  AlertStudioPageHost.kt         AlertStudioRoute + AlertStudioPageHost.register() for the
+                                 `notificationsStudio` /notifications/studio destination (Destinations.kt L121).
+  TeslaSyncApplication.kt        AlertStudioPageHost.register() wired into onCreate (NavHost registration).
+  res/values/strings.xml         added the 5 parity keys missing from the catalog (bulk.noun.rule_one/_other,
+                                 kind.computedMetricHint, kind.signalHint, snooze.description); lint disables
+                                 MissingTranslation so the default catalog suffices.
+
+DATA SOURCES (each bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useAlertRules           -> rulesState     <- NotificationsRepository.alertRules (AlertStudioPage.kt GlassPanel 3/4)
+  useAlertMetrics         -> metricsState   <- NotificationsRepository.alertMetrics (computed-metric editor)
+  useNotificationChannels -> channelsState  <- NotificationsRepository.notificationChannels (AlertStudioPageEditorPanel.kt GlassPanel 8)
+  useVehicles             -> vehiclesState  <- VehiclesRepository.vehicles (rule-scope picker)
+  useSaveAlertRule / useDeleteAlertRule / useToggleAlertRule / useBulkEnableRules / useBulkDisableRules /
+  useTestAlertRule / useSnoozeAlertRule -> AlertStudioPageViewModel mutations -> NotificationsRepository
+     (HttpNotificationsRepository over the shared resilient client + offline cache; SI verbatim, ADR-013).
+
+=== PARITY ===
+PARITY_REQUIRED=137
+  [  1] panel  GlassPanel1 (templates)             TemplatesPanel -> GlassPanel L308
+  [  2] panel  GlassPanel2 (template card)         TemplateCard -> GlassPanel L362
+  [  3] panel  GlassPanel3 (rules list)            RulesListPanel -> GlassPanel L407
+  [  4] panel  GlassPanel4 (rule row)              RuleRow -> GlassPanel L526
+  [  5] panel  GlassPanel5 (rule editor)            RuleEditorPanel -> GlassPanel L77
+  [  6] panel  GlassPanel6 (allowed operators)     AllowedOperatorsPanel -> GlassPanel L335
+  [  7] panel  GlassPanel7 (any change)            AnyChangePanel -> GlassPanel L415
+  [  8] panel  GlassPanel8 (test channels)         TestChannelsPanel -> GlassPanel L562
+  [  9] state  loading                             if (rulesState.isLoading) -> AlertStudioLoading (fn L686)
+  [ 10] state  empty                               rules.isEmpty() -> EmptyState(emptyTitle/emptyDescription)
+  [ 11] state  error                               rulesState.isError -> ErrorDisplay(onRetry=onRetryRules)
+  [ 12] state  success                             else -> rule rows (filtered.forEach RuleRow); channels panel
+                                                  carries its own loading/error/empty/success matrix (-590)
+  [ 13] string bulk.actions.disable                                           AlertStudioPage.kt:495
+  [ 14] string bulk.actions.enable                                            AlertStudioPage.kt:489
+  [ 15] string bulk.noun.rule_one                                             AlertStudioPage.kt:478
+  [ 16] string bulk.noun.rule_other                                           AlertStudioPage.kt:480
+  [ 17] string common.cancel                                                  AlertStudioPage.kt:501
+  [ 18] string common.delete                                                  AlertStudioPage.kt:608
+  [ 19] string draft.noun.rule                                                AlertStudioPageEditorPanel.kt:139
+  [ 20] string forms.discard                                                  AlertStudioPageEditorPanel.kt:699
+  [ 21] string forms.keepEditing                                              AlertStudioPageEditorPanel.kt:700
+  [ 22] string forms.unsavedRule                                              AlertStudioPageEditorPanel.kt:696
+  [ 23] string forms.unsavedTitle                                             AlertStudioPageEditorPanel.kt:694
+  [ 24] string forms.unsavedWarning                                           AlertStudioPageEditorPanel.kt:698
+  [ 25] string forms.validationFailed                                         AlertStudioPageEditorPanel.kt:82
+  [ 26] string notifications.alertStudio.actions.createRule                   AlertStudioPageEditorPanel.kt:651
+  [ 27] string notifications.alertStudio.actions.delete                       AlertStudioPageEditorPanel.kt:665
+  [ 28] string notifications.alertStudio.actions.newRule                      AlertStudioPage.kt:280
+  [ 29] string notifications.alertStudio.actions.reset                        AlertStudioPageEditorPanel.kt:679
+  [ 30] string notifications.alertStudio.actions.saving                       AlertStudioPageEditorPanel.kt:649
+  [ 31] string notifications.alertStudio.actions.templates                    AlertStudioPage.kt:274
+  [ 32] string notifications.alertStudio.actions.test                         AlertStudioPageEditorPanel.kt:672
+  [ 33] string notifications.alertStudio.actions.updateRule                   AlertStudioPageEditorPanel.kt:650
+  [ 34] string notifications.alertStudio.boolean.false                        AlertStudioPageEditorPanel.kt:384
+  [ 35] string notifications.alertStudio.boolean.true                         AlertStudioPageEditorPanel.kt:383
+  [ 36] string notifications.alertStudio.channels.alertHistory                AlertStudioPageEditorPanel.kt:547
+  [ 37] string notifications.alertStudio.channels.browserToast                AlertStudioPageEditorPanel.kt:546
+  [ 38] string notifications.alertStudio.channels.emptyDescription            AlertStudioPageEditorPanel.kt:589
+  [ 39] string notifications.alertStudio.channels.emptyTitle                  AlertStudioPageEditorPanel.kt:588
+  [ 40] string notifications.alertStudio.channels.externalChannels            AlertStudioPageEditorPanel.kt:573
+  [ 41] string notifications.alertStudio.channels.testTargetLabel             AlertStudioPageEditorPanel.kt:545
+  [ 42] string notifications.alertStudio.editor.alertBehavior.forceChoose     AlertStudioPageEditorPanel.kt:474
+  [ 43] string notifications.alertStudio.editor.alertBehavior.onceDesc        AlertStudioPageEditorPanel.kt:475
+  [ 44] string notifications.alertStudio.editor.alertBehavior.onceLabel       AlertStudioPageEditorPanel.kt:464
+  [ 45] string notifications.alertStudio.editor.alertBehavior.recommendBanner AlertStudioPageEditorPanel.kt:448
+  [ 46] string notifications.alertStudio.editor.alertBehavior.recommendBannerAlt AlertStudioPageEditorPanel.kt:456
+  [ 47] string notifications.alertStudio.editor.alertBehavior.repeatDesc      AlertStudioPageEditorPanel.kt:479
+  [ 48] string notifications.alertStudio.editor.alertBehavior.repeatLabel     AlertStudioPageEditorPanel.kt:465
+  [ 49] string notifications.alertStudio.editor.alertBehaviorLabel            AlertStudioPageEditorPanel.kt:442
+  [ 50] string notifications.alertStudio.editor.alertBehaviorPlaceholder      AlertStudioPageEditorPanel.kt:470
+  [ 51] string notifications.alertStudio.editor.allowedOperatorsLabel         AlertStudioPageEditorPanel.kt:336
+  [ 52] string notifications.alertStudio.editor.allowedOperatorsPlaceholder   AlertStudioPageEditorPanel.kt:340
+  [ 53] string notifications.alertStudio.editor.anyChangeDescription          AlertStudioPageEditorPanel.kt:416
+  [ 54] string notifications.alertStudio.editor.booleanValueLabel             AlertStudioPageEditorPanel.kt:388
+  [ 55] string notifications.alertStudio.editor.cooldownLabel                 AlertStudioPageEditorPanel.kt:429
+  [ 56] string notifications.alertStudio.editor.disabled                      AlertStudioPageEditorPanel.kt:161
+  [ 57] string notifications.alertStudio.editor.editTitle                     AlertStudioPageEditorPanel.kt:133
+  [ 58] string notifications.alertStudio.editor.enabled                       AlertStudioPageEditorPanel.kt:160
+  [ 59] string notifications.alertStudio.editor.enabledLabel                  AlertStudioPageEditorPanel.kt:165
+  [ 60] string notifications.alertStudio.editor.escalationAfterLabel          AlertStudioPageEditorPanel.kt:520
+  [ 61] string notifications.alertStudio.editor.escalationAfterPlaceholder    AlertStudioPageEditorPanel.kt:521
+  [ 62] string notifications.alertStudio.editor.escalationCheckboxLabel       AlertStudioPageEditorPanel.kt:513
+  [ 63] string notifications.alertStudio.editor.escalationHint                AlertStudioPageEditorPanel.kt:534
+  [ 64] string notifications.alertStudio.editor.escalationSeverityLabel       AlertStudioPageEditorPanel.kt:530
+  [ 65] string notifications.alertStudio.editor.escalationSeverityPlaceholder AlertStudioPageEditorPanel.kt:531
+  [ 66] string notifications.alertStudio.editor.kindLabel                     AlertStudioPageEditorPanel.kt:213
+  [ 67] string notifications.alertStudio.editor.maxFiresHint                  AlertStudioPageEditorPanel.kt:500
+  [ 68] string notifications.alertStudio.editor.maxFiresLabel                 AlertStudioPageEditorPanel.kt:495
+  [ 69] string notifications.alertStudio.editor.maxFiresPlaceholder           AlertStudioPageEditorPanel.kt:496
+  [ 70] string notifications.alertStudio.editor.maxValueLabel                 AlertStudioPageEditorPanel.kt:404
+  [ 71] string notifications.alertStudio.editor.minValueLabel                 AlertStudioPageEditorPanel.kt:397
+  [ 72] string notifications.alertStudio.editor.nameLabel                     AlertStudioPageEditorPanel.kt:153
+  [ 73] string notifications.alertStudio.editor.namePlaceholder               AlertStudioPageEditorPanel.kt:154
+  [ 74] string notifications.alertStudio.editor.newTitle                      AlertStudioPageEditorPanel.kt:135
+  [ 75] string notifications.alertStudio.editor.noSignalDescription           AlertStudioPageEditorPanel.kt:355
+  [ 76] string notifications.alertStudio.editor.noSignalTitle                 AlertStudioPageEditorPanel.kt:354
+  [ 77] string notifications.alertStudio.editor.numericValueLabel             AlertStudioPageEditorPanel.kt:365
+  [ 78] string notifications.alertStudio.editor.operatorLabel                 AlertStudioPageEditorPanel.kt:302
+  [ 79] string notifications.alertStudio.editor.severityLabel                 AlertStudioPageEditorPanel.kt:324
+  [ 80] string notifications.alertStudio.editor.signalNameLabel               AlertStudioPageEditorPanel.kt:264
+  [ 81] string notifications.alertStudio.editor.signalNamePlaceholder         AlertStudioPageEditorPanel.kt:265
+  [ 82] string notifications.alertStudio.editor.signalTypeHint                AlertStudioPageEditorPanel.kt:274
+  [ 83] string notifications.alertStudio.editor.textValueLabel                AlertStudioPageEditorPanel.kt:374
+  [ 84] string notifications.alertStudio.editor.textValuePlaceholder          AlertStudioPageEditorPanel.kt:375
+  [ 85] string notifications.alertStudio.editor.typedValueLabel               AlertStudioPageEditorPanel.kt:351
+  [ 86] string notifications.alertStudio.editor.vehiclesLabel                 AlertStudioPageEditorPanel.kt:179
+  [ 87] string notifications.alertStudio.kind.computedMetric                  AlertStudioPageEditorPanel.kt:222
+  [ 88] string notifications.alertStudio.kind.computedMetricHint              AlertStudioPageEditorPanel.kt:230
+  [ 89] string notifications.alertStudio.kind.signal                          AlertStudioPageEditorPanel.kt:216
+  [ 90] string notifications.alertStudio.kind.signalHint                      AlertStudioPageEditorPanel.kt:232
+  [ 91] string notifications.alertStudio.rules.confirmDelete                  AlertStudioPage.kt:606
+  [ 92] string notifications.alertStudio.rules.confirmDeleteTitle             AlertStudioPage.kt:606
+  [ 93] string notifications.alertStudio.rules.countMany                      AlertStudioPage.kt:704
+  [ 94] string notifications.alertStudio.rules.countOne                       AlertStudioPage.kt:702
+  [ 95] string notifications.alertStudio.rules.deleteRule                     AlertStudioPage.kt:598
+  [ 96] string notifications.alertStudio.rules.disable                        AlertStudioPage.kt:578
+  [ 97] string notifications.alertStudio.rules.disableRule                    AlertStudioPage.kt:584
+  [ 98] string notifications.alertStudio.rules.emptyDescription               AlertStudioPage.kt:439
+  [ 99] string notifications.alertStudio.rules.emptyTitle                     AlertStudioPage.kt:438
+  [100] string notifications.alertStudio.rules.enable                         AlertStudioPage.kt:580
+  [101] string notifications.alertStudio.rules.enableRule                     AlertStudioPage.kt:586
+  [102] string notifications.alertStudio.rules.noMatches                      AlertStudioPage.kt:444
+  [103] string notifications.alertStudio.rules.noMatchesTitle                 AlertStudioPage.kt:444
+  [104] string notifications.alertStudio.rules.onceMode                       AlertStudioPage.kt:537
+  [105] string notifications.alertStudio.rules.onceModeHint                   AlertStudioPage.kt:537
+  [106] string notifications.alertStudio.rules.searchPlaceholder              AlertStudioPage.kt:420
+  [107] string notifications.alertStudio.rules.selectRow                      AlertStudioPage.kt:529
+  [108] string notifications.alertStudio.rules.title                          AlertStudioPage.kt:412
+  [109] string notifications.alertStudio.rules.untitled                       AlertStudioPage.kt:521
+  [110] string notifications.alertStudio.severity.critical                    AlertStudioPage.kt:712
+  [111] string notifications.alertStudio.severity.info                        AlertStudioPage.kt:711
+  [112] string notifications.alertStudio.severity.warn                        AlertStudioPage.kt:713
+  [113] string notifications.alertStudio.signalCategories.custom              AlertStudioPageEditorPanel.kt:285
+  [114] string notifications.alertStudio.signalTypes.bool                     AlertStudioPage.kt:722
+  [115] string notifications.alertStudio.signalTypes.numeric                  AlertStudioPage.kt:720
+  [116] string notifications.alertStudio.signalTypes.text                     AlertStudioPage.kt:721
+  [117] string notifications.alertStudio.signals.customOptionLabel            AlertStudioPageEditorPanel.kt:283
+  [118] string notifications.alertStudio.signals.optionLabel                  AlertStudioPageEditorPanel.kt:250
+  [119] string notifications.alertStudio.snooze.1h                            AlertStudioPage.kt:645
+  [120] string notifications.alertStudio.snooze.24h                           AlertStudioPage.kt:657
+  [121] string notifications.alertStudio.snooze.4h                            AlertStudioPage.kt:651
+  [122] string notifications.alertStudio.snooze.badge                         AlertStudioPage.kt:548
+  [123] string notifications.alertStudio.snooze.button                        AlertStudioPage.kt:574
+  [124] string notifications.alertStudio.snooze.cancel                        AlertStudioPage.kt:664
+  [125] string notifications.alertStudio.snooze.currentlySnoozed              AlertStudioPage.kt:639
+  [126] string notifications.alertStudio.snooze.description                   AlertStudioPage.kt:635
+  [127] string notifications.alertStudio.snooze.manage                        AlertStudioPage.kt:572
+  [128] string notifications.alertStudio.snooze.title                         AlertStudioPage.kt:632
+  [129] string notifications.alertStudio.subtitle                             AlertStudioPage.kt:269
+  [130] string notifications.alertStudio.templates.allCategory                AlertStudioPage.kt:342
+  [131] string notifications.alertStudio.templates.header                     AlertStudioPage.kt:309
+  [132] string notifications.alertStudio.templates.noMatches                  AlertStudioPage.kt:322
+  [133] string notifications.alertStudio.templates.noMatchesTitle             AlertStudioPage.kt:322
+  [134] string notifications.alertStudio.templates.searchPlaceholder          AlertStudioPage.kt:316
+  [135] string notifications.alertStudio.templates.use                        AlertStudioPage.kt:380
+  [136] string notifications.alertStudio.test.defaultMessage                  AlertStudioPageEditorPanel.kt:646
+  [137] string notifications.alertStudio.title                                AlertStudioPage.kt:267
+PARITY_COVERED=137
+
+NOTES
+  - The 8 GlassPanels map 1:1 to the web source's 8 <GlassPanel> usages (AlertStudioPage.tsx L1307/1361/
+    1414/1454/1512/1659/1880/2183). The web AI components (AINLAlertBuilder, AIAlertTuningSuggestions,
+    AICrossRuleConflictDetection) are opt-in/ai-mode-gated and are not manifest parity items.
+  - 4 data states implemented for the primary rule feed AND replicated inside the channels panel (8).
+  - Strings: 120 of the 125 keys already shipped in the generated res/values catalog; 5 (bulk.noun.rule_one,
+    bulk.noun.rule_other, kind.computedMetricHint, kind.signalHint, snooze.description) were added to
+    res/values/strings.xml with the web t(...) defaults. Zero hardcoded UI literals; every key matches web.
+  - SI verbatim: no unit-bearing fields in this domain; instants formatted at the display boundary via the
+    device locale (LocalConfiguration). Dark/dynamic theme + a11y via MaterialTheme + semantics contentDescription.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+    PLACEHOLDER_ALLOWED=11   (10 `...Placeholder` i18n key refs + 1 toDoubleOrNull "toDo" substring, all // parity:allow)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 1m 12s (re-run on the final locale-fixed sources)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 11m 56s (lint-results-debug written; 0 errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 25s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel 1-8); every web region reproduced (incl. snooze Modal).
+  [x] All 137 parity items render from the bound StateFlow state holder.
+  [x] loading / empty / error / success implemented for every data source listed above.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Compose-native only (no webview); SI honored at the display boundary; dark/dynamic theme + a11y.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (137).
+  [x] android ledger row for page:notifications/AlertStudio set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
