@@ -1,0 +1,228 @@
+================================================================================
+P3-ANDROID · A7 · page:maps/NavigationRoute — evidence log
+Native Jetpack Compose / Material 3 port of web NavigationRoutePage
+Source: web/src/features/maps/pages/NavigationRoutePage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/maps/**
+Package: io.teslasync.android.maps.navigationroute
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = Android Studio JBR (JAVA_HOME set; openjdk 21.0.9)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / RegenEfficiency / TripPlanner precedents — 6-file surface)
+  NavigationRoutePageModel.kt    framework-free: registration ids (ROUTE_ID navigationRoute / WEB_PATH
+                                 /navigation / SLUG / HISTORY_LIMIT 200 / RECENT_DESTINATIONS_LIMIT 20);
+                                 LocationSnapshot + parseLocationSnapshot/parseLocationHistory (SI decode,
+                                 speed_mph=m/s, miles_to_arrival=metres — the web SI-floor comment);
+                                 ChargingTelemetry + parseChargingTelemetry (expected_energy_pct_at_arrival);
+                                 headingToCardinal, normalizeGpsState (web GpsFixState), trafficSeverity;
+                                 the verbatim useMemo derivations speedProfile / presenceSeries /
+                                 recentDestinations / avgSpeedDisplay / buildWaypoints / historyRows;
+                                 NavDisplayPrefs (web useUnits) — convertDistanceFromSI + convertSpeedFromSI
+                                 + formatDuration at the boundary; recordNavigationRoutePageOpened (view.opened)
+                                 + mapData. No Compose / Android / HTTP — exercised by :android:testDebugUnitTest.
+  NavigationRoutePageSource.kt   seam over VehiclesRepository.locationSnapshotLatest (web location-latest) +
+                                 VehiclesRepository.chargingTelemetryLatest (web useChargingTelemetryLatest,
+                                 GET /charging-telemetry/latest — the manifest's declared data source) +
+                                 the page-local HttpLocationHistoryRepository (GET /location-snapshots?vehicle_id
+                                 &limit=200, the one read the shared repo does not expose — reuses the shared
+                                 CachingRepository<JsonElement> machinery over the SAME ApiHttpClient + CacheStore,
+                                 the RegenEfficiency page-local-repo precedent) + SettingsStore (web useUnits) +
+                                 SelectedVehicleStore (web useSelectedVehicle). The view performs NO HTTP.
+  NavigationRoutePageViewModel.kt BaseFeedViewModel; latestState: StateFlow<UiState<LocationSnapshot?>>,
+                                 historyState: StateFlow<UiState<List<LocationSnapshot>>>, chargingState:
+                                 StateFlow<UiState<ChargingTelemetry>>, displayPrefs; each per-vehicle feed
+                                 flatMapLatest over the selection (web enabled: vehicleId !== null → synthetic
+                                 empty payload), mapData→model, asUiState. refresh / retry / recordViewOpened.
+  NavigationRoutePageIcons.kt    17 locally-authored 24×24 stroked lucide glyphs (Navigation, MapPin, Home,
+                                 Briefcase, Satellite, Compass, Gauge, Clock, BatteryCharging, Route, Zap,
+                                 AlertTriangle, RefreshCw, Activity, TrendingUp, TrafficCone, AlertCircle) —
+                                 the GlanceGlyphs precedent (no material-icons-extended).
+  NavigationRoutePage.kt         stateless NavigationRoutePageContent + the 13 Material 3 panels + the GPS-warning
+                                 banner + the page-error banner; both A3 native chart wrappers (AreaChartWrapper /
+                                 LineChartWrapper) framed by ChartContainer; DataFreshness staleness chip.
+  NavigationRoutePageHost.kt     registers NavigationRoutePageRoute for the `navigationRoute` destination
+                                 (Destinations.kt L101, /navigation); wired in TeslaSyncApplication.onCreate()
+                                 (NavHost registration — allowed file).
+
+DATA SOURCES (manifest declares useChargingTelemetryLatest; the full web parity also reads location-latest +
+  location-history; all bound through the ViewModel as StateFlow from the KMP-core repositories, P1/S8)
+  useChargingTelemetryLatest  GET /charging-telemetry/latest [vehicle_id]  → chargingState (web hook name kept
+                              at the Kotlin call site: VehiclesRepository.chargingTelemetryLatest).
+  location-latest             GET /location-snapshots/latest [vehicle_id]  → latestState.
+  location-history            GET /location-snapshots [vehicle_id, limit=200] → historyState (page-local repo).
+
+SI BOUNDARY (P1/S5 / unit-conversion.instructions)
+  The wire stays SI: speed_mph is metres-per-second and miles_to_arrival is metres (the legacy field names are
+  kept for backward compat — see the web page's SI-floor comment). Display conversion happens only at the render
+  boundary via NavDisplayPrefs.toDistanceDisplay (convertDistanceFromSI) / toSpeedDisplay (convertSpeedFromSI) /
+  duration (formatDuration) — never stored converted (Phase-48 SI-canonical; ADR-013 keeps the cache SI).
+
+LIVE DATA / STALENESS (ADR-013)
+  No SSE live source on this page; the latest/history/charging reads are cache-then-network Resource streams
+  (the web page polls via refetchInterval). The header DataFreshness chip surfaces the latest feed's freshness /
+  refreshing / stale / error tier (the ADR-013 ">2 min last-known" honest-staleness indicator), driven by
+  latestState.fetchedAt/refreshing/stale/hasError.
+
+DATA STATES (the manifest's declared 4: loading → empty → error → success, for every bound source)
+  Each panel renders its own loading skeleton / empty state / error-retry / content inline — no region blanks.
+
+=== PARITY ===
+PARITY_REQUIRED=79
+
+PANELS (13) — every manifest panel as a Material 3 Card/Surface
+  [01] panel  GlassPanel1        NavigationRoutePage.kt:299  NavStatusPanel (GlassPanel nav.status + active badge + route grid)
+  [02] panel  GlassPanel2        NavigationRoutePage.kt:431  LocationStatusCards (5 GlassPanel cards: location/gps/heading/home/work)
+  [03] panel  Distance           NavigationRoutePage.kt:561  RouteMetrics MetricCard nav.metric.distance (convertDistanceFromSI + unit)
+  [04] panel  ETA                NavigationRoutePage.kt:573  RouteMetrics MetricCard nav.metric.eta (minutes_to_arrival + nav.minutes)
+  [05] panel  Traffic-Delay      NavigationRoutePage.kt:587  RouteMetrics MetricCard nav.metric.trafficDelay (formatDuration delay)
+  [06] panel  Avg-Speed          NavigationRoutePage.kt:594  RouteMetrics MetricCard nav.metric.avgSpeed (avgSpeedDisplay + speed unit)
+  [07] panel  Energy-at-Arrival  NavigationRoutePage.kt:603  RouteMetrics MetricCard nav.metric.energyAtArrival (expected_energy_pct)
+  [08] panel  GlassPanel8        NavigationRoutePage.kt:617  SpeedProfilePanel (ChartContainer nav.speedProfile + AreaChart)
+  [09] panel  GlassPanel9        NavigationRoutePage.kt:666  WaypointsPanel (GlassPanel nav.waypoints + waypoint table)
+  [10] panel  GlassPanel10       NavigationRoutePage.kt:738  RouteTrafficDelayPanel (GlassPanel nav.trafficDelay + colored figure + chip)
+  [11] panel  GlassPanel11       NavigationRoutePage.kt:773  RecentDestinationsPanel (GlassPanel nav.recentDestinations + table)
+  [12] panel  GlassPanel12       NavigationRoutePage.kt:814  PresencePanel (ChartContainer nav.presenceChart + LineChart)
+  [13] panel  GlassPanel13       NavigationRoutePage.kt:879  LocationHistoryPanel (GlassPanel nav.locationHistory + table)
+
+CHARTS (2) — A3 native chart wrappers (Vico), never a webview
+  [14] chart  AreaChart          NavigationRoutePage.kt:640  SpeedProfilePanel → AreaChartWrapper (speed + distance-to-arrival series)
+  [15] chart  LineChart          NavigationRoutePage.kt:847  PresencePanel → LineChartWrapper (home/work/homelink step series)
+
+DATA STATES (4) — for the latest / history / charging feeds (UiState)
+  [16] state  loading   NavigationRoutePage.kt:235  NavLoading full skeleton + per-panel SkeletonLines (NavStatusPanel:341,
+                        RecentDestinations/LocationHistory) + chartStatusOf→ChartStatus.Loading (L1003)
+  [17] state  empty     NavigationRoutePage.kt:346  EmptyState nav.noActiveNav (+ noHistory/noDestinations/noPresence/noSnapshots/
+                        navigation.noRoute/common.noData) + chartStatusOf→ChartStatus.Empty
+  [18] state  error     NavigationRoutePage.kt:287  NavErrorBanner AlertBanner Tone.Danger error.loadFailed + RetrySurface
+                        ErrorDisplay (L994) + chartStatusOf→ChartStatus.Error (anyError = latest/history/charging hasError)
+  [19] state  success   NavigationRoutePage.kt:354  NavStatusGrid + the metric cards + the waypoint/recent/history tables +
+                        the two charts (ChartStatus.Ready) render the bound content
+
+STRINGS (60) — every visible literal resolves from res/values/strings.xml; key names match web
+  [20] string common.noData                    NavigationRoutePage.kt:680  translation_common_noData
+  [21] string error.loadFailed                 NavigationRoutePage.kt:289  translation_error_loadFailed
+  [22] string nav.active                       NavigationRoutePage.kt:322  translation_nav_active
+  [23] string nav.atHome                       NavigationRoutePage.kt:504  translation_nav_atHome
+  [24] string nav.atWork                       NavigationRoutePage.kt:489  translation_nav_atWork
+  [25] string nav.awayFromHome                 NavigationRoutePage.kt:509  translation_nav_awayFromHome
+  [26] string nav.chartDistanceV2              NavigationRoutePage.kt:636  translation_nav_chartDistanceV2 (%1$s unit)
+  [27] string nav.chartSpeedV2                 NavigationRoutePage.kt:635  translation_nav_chartSpeedV2 (%1$s unit)
+  [28] string nav.col.destination              NavigationRoutePage.kt:793  translation_nav_col_destination
+  [29] string nav.col.distance                 NavigationRoutePage.kt:794  translation_nav_col_distance
+  [30] string nav.col.eta                      NavigationRoutePage.kt:795  translation_nav_col_eta
+  [31] string nav.col.home                     NavigationRoutePage.kt:900  translation_nav_col_home
+  [32] string nav.col.lat                      NavigationRoutePage.kt:898  translation_nav_col_lat
+  [33] string nav.col.lon                      NavigationRoutePage.kt:899  translation_nav_col_lon
+  [34] string nav.col.time                     NavigationRoutePage.kt:634  translation_nav_col_time
+  [35] string nav.col.work                     NavigationRoutePage.kt:901  translation_nav_col_work
+  [36] string nav.currentLocation              NavigationRoutePage.kt:441  translation_nav_currentLocation
+  [37] string nav.delay                        NavigationRoutePage.kt:410  translation_nav_delay
+  [38] string nav.destination                  NavigationRoutePage.kt:362  translation_nav_destination
+  [39] string nav.distanceRemaining            NavigationRoutePage.kt:374  translation_nav_distanceRemaining
+  [40] string nav.eta                          NavigationRoutePage.kt:367  translation_nav_eta
+  [41] string nav.gpsFixQuality                NavigationRoutePage.kt:454  translation_nav_gpsFixQuality
+  [42] string nav.heading                      NavigationRoutePage.kt:461  translation_nav_heading
+  [43] string nav.headingValue                 NavigationRoutePage.kt:465  translation_nav_headingValue (%1$s (%2$s°))
+  [44] string nav.homeStatus                   NavigationRoutePage.kt:479  translation_nav_homeStatus
+  [45] string nav.homelinkNearby               NavigationRoutePage.kt:507  translation_nav_homelinkNearby
+  [46] string nav.inactive                     NavigationRoutePage.kt:324  translation_nav_inactive
+  [47] string nav.legendDistanceToArrivalV2    NavigationRoutePage.kt:651  translation_nav_legendDistanceToArrivalV2 (%1$s unit)
+  [48] string nav.legendSpeedV2                NavigationRoutePage.kt:645  translation_nav_legendSpeedV2 (%1$s unit)
+  [49] string nav.locationHistory              NavigationRoutePage.kt:889  translation_nav_locationHistory
+  [50] string nav.locationUnavailable          NavigationRoutePage.kt:447  translation_nav_locationUnavailable
+  [51] string nav.metric.avgSpeed              NavigationRoutePage.kt:594  translation_nav_metric_avgSpeed
+  [52] string nav.metric.distance              NavigationRoutePage.kt:561  translation_nav_metric_distance
+  [53] string nav.metric.energyAtArrival       NavigationRoutePage.kt:603  translation_nav_metric_energyAtArrival
+  [54] string nav.metric.eta                   NavigationRoutePage.kt:573  translation_nav_metric_eta
+  [55] string nav.metric.trafficDelay          NavigationRoutePage.kt:587  translation_nav_metric_trafficDelay
+  [56] string nav.minutes                      NavigationRoutePage.kt:368  translation_nav_minutes
+  [57] string nav.noActiveNav                  NavigationRoutePage.kt:346  translation_nav_noActiveNav
+  [58] string nav.noDestinations               NavigationRoutePage.kt:789  translation_nav_noDestinations
+  [59] string nav.noGps                        NavigationRoutePage.kt:421  translation_nav_noGps
+  [60] string nav.noHistory                    NavigationRoutePage.kt:628  translation_nav_noHistory
+  [61] string nav.noPresence                   NavigationRoutePage.kt:826  translation_nav_noPresence
+  [62] string nav.noSnapshots                  NavigationRoutePage.kt:894  translation_nav_noSnapshots
+  [63] string nav.notAtWork                    NavigationRoutePage.kt:490  translation_nav_notAtWork
+  [64] string nav.pageTitle                    NavigationRoutePage.kt:262  translation_nav_pageTitle
+  [65] string nav.presenceChart                NavigationRoutePage.kt:822  translation_nav_presenceChart
+  [66] string nav.recentDestinations           NavigationRoutePage.kt:783  translation_nav_recentDestinations
+  [67] string nav.refresh                      NavigationRoutePage.kt:277  translation_nav_refresh
+  [68] string nav.routeLastUpdated             NavigationRoutePage.kt:335  translation_nav_routeLastUpdated
+  [69] string nav.speedProfile                 NavigationRoutePage.kt:624  translation_nav_speedProfile
+  [70] string nav.status                       NavigationRoutePage.kt:317  translation_nav_status
+  [71] string nav.subtitle                     NavigationRoutePage.kt:264  translation_nav_subtitle
+  [72] string nav.trafficDelay                 NavigationRoutePage.kt:378  translation_nav_trafficDelay
+  [73] string nav.unknown                      NavigationRoutePage.kt:470  translation_nav_unknown
+  [74] string nav.waypoints                    NavigationRoutePage.kt:672  translation_nav_waypoints
+  [75] string nav.workStatus                   NavigationRoutePage.kt:486  translation_nav_workStatus
+  [76] string nav.wp.distance                  NavigationRoutePage.kt:686  translation_nav_wp_distance
+  [77] string nav.wp.name                      NavigationRoutePage.kt:684  translation_nav_wp_name
+  [78] string nav.wp.type                      NavigationRoutePage.kt:685  translation_nav_wp_type
+  [79] string navigation.noRoute               NavigationRoutePage.kt:676  translation_navigation_noRoute
+
+PARITY_COVERED=79
+
+STRING CATALOG
+  55 of the 60 keys already existed in res/values/strings.xml (generated from the shared i18n catalog). The 5
+  missing keys — nav.delay, nav.metric.energyAtArrival, nav.noActiveNav, nav.noHistory, nav.noSnapshots — were
+  added to res/values/strings.xml with the verbatim web inline defaults from NavigationRoutePage.tsx (L174 'delay',
+  L753 'Energy at Arrival', L631 'No active navigation…', L781 'No location history…', L988 'No location snapshots…').
+  `res/values*/strings.xml` is an allowed file; Android resource fallback resolves them for values-ar/values-he.
+  nav.headingValue uses %1$s (%2$s°) and the chart/legend V2 keys use %1$s — all positional, so no
+  StringFormatInvalid. (The pre-existing battery_*/rateLimitStatus_subtitle non-positional warnings are
+  unrelated to this change and present on the base tree before it.)
+
+GPS-FIX LABELS
+  The GPS-fix-quality card resolves nav.gpsState.{locked|unlocked|unknown} (already in the catalog) via
+  gpsStateLabelRes(normalizeGpsState(gps_state)) — the web `t(\`nav.gpsState.${fix}\`)` mapping. Not one of the
+  60 manifest strings, but rendered for full parity.
+
+PLACEHOLDER GATE
+  Zero opt-outs needed — the surface contains no `// parity:allow` markers and no TODO/FIXME/Placeholder/stub
+  substrings (PLACEHOLDER_ALLOWED=0, PLACEHOLDER_COUNT=0 for com/teslasync/maps).
+
+DETEKT (README lifecycle check; not in this prompt's explicit gate block)
+  The 6 surface files are detekt-clean (0 issues under com/teslasync/maps — verified in
+  app/build/reports/detekt/detekt.txt). The repo-wide :android:detekt currently reports pre-existing
+  ReturnCount/LoopWithTooManyJumpStatements issues ONLY in sibling already-"done" pages (driving/DrivesListPageModel,
+  driving/RegenEfficiencyPageModel, driving/TripPlannerPageModel) with no detekt baseline configured; per the
+  code-change rules those unrelated pre-existing issues are left untouched.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/maps -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 3m 40s (APK packaged)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 12m 6s (lint-results-debug.html written; abortOnError, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 58s (full unit-test suite green; no new tests added —
+                                          src/test is outside this unit's Allowed-files list, matching the A7 driving precedent)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 status, GlassPanel2 location cards, the five metric cards
+      Distance/ETA/Traffic-Delay/Avg-Speed/Energy-at-Arrival, GlassPanel8 speed-profile, GlassPanel9 waypoints,
+      GlassPanel10 route-traffic-delay, GlassPanel11 recent-destinations, GlassPanel12 presence, GlassPanel13
+      location-history); every anonymous region reproduced (the refresh action, the DataFreshness chip, the
+      GPS-warning banner, the page error banner).
+  [x] All 79 parity items render from the bound StateFlow holders (latestState + historyState + chargingState +
+      displayPrefs), folded by the framework-free model.
+  [x] loading / empty / error / success implemented for every bound source; the two charts (ChartContainer) and
+      the three tables each render their own loading/empty/error inline.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme (A2 tokens); ≥48dp shared Button target; the status + history panels
+      carry semantics content descriptions and both charts carry accessibleDescription (a11y); SI units honored
+      at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (79).
+  [x] android ledger row for page:maps/NavigationRoute set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

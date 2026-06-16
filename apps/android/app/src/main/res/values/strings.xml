@@ -9013,4 +9013,9 @@
   <string name="translation_Unique_Cities">Unique Cities</string>
   <string name="translation_Unique_Places">Unique Places</string>
   <string name="translation_Visited_Locations">Visited Locations</string>
+  <string name="translation_nav_delay">delay</string>
+  <string name="translation_nav_metric_energyAtArrival">Energy at Arrival</string>
+  <string name="translation_nav_noActiveNav">No active navigation. Start a route in your vehicle to see details here.</string>
+  <string name="translation_nav_noHistory">No location history available for this vehicle.</string>
+  <string name="translation_nav_noSnapshots">No location snapshots recorded yet.</string>
 </resources>
