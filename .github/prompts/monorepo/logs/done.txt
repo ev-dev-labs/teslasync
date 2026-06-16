@@ -993,3 +993,14 @@ p3-android/pages/trips/TripListPage.prompt.md
 p3-android/pages/vehicle-systems/MediaPlayerPage.prompt.md
 p3-android/pages/vehicles/DigitalTwinPage.prompt.md
 p3-android/pages/watch/WatchFacePage.prompt.md
+p3-android/pages/admin/DevToolsPage.prompt.md
+p3-android/pages/system/StatusApiDocsPage.prompt.md
+p3-android/pages/vehicle-systems/ClimateControlPage.prompt.md
+p3-android/pages/vehicle-systems/GuardModePage.prompt.md
+p3-android/pages/vehicle-systems/MaintenancePage.prompt.md
+p3-android/pages/vehicle-systems/SafetySettingsPage.prompt.md
+p3-android/pages/vehicle-systems/SoftwareUpdatesPage.prompt.md
+p3-android/pages/vehicle-systems/TirePressurePage.prompt.md
+p3-android/pages/vehicles/VehicleAccessPage.prompt.md
+p3-android/pages/vehicles/VehicleDetailPage.prompt.md
+p3-android/pages/vehicles/VehicleListPage.prompt.md
