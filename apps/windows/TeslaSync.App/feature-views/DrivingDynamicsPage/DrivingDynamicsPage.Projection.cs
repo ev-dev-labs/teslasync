@@ -115,7 +115,7 @@ public static class DrivingDynamicsProjection
             MotorCharts: BuildMotorCharts(snapshot.MotorHistory, localizer),
             Efficiency: BuildEfficiency(stats, units, localizer),
             Summary: BuildSummary(stats, units, localizer),
-            Coach: BuildCoach(snapshot.Coach, localizer),
+            Coach: BuildCoach(snapshot.Coach, units, localizer),
             Analytics: BuildAnalytics(filteredDrives, model.Range, units, localizer),
             Tips: BuildTips(stats, localizer),
             AutomationName: $"{title}. {subtitle}");
@@ -442,7 +442,7 @@ public static class DrivingDynamicsProjection
     }
 
     // ── 9. Driving Coach ─────────────────────────────────────────────────────────────────────────────────
-    private static CoachDisplay BuildCoach(CoachData? coach, ILocalizer l)
+    private static CoachDisplay BuildCoach(CoachData? coach, UnitPref units, ILocalizer l)
     {
         double score = coach?.OverallScore ?? 0;
         int total = coach?.TotalDrivesAnalyzed ?? 0;
@@ -451,7 +451,7 @@ public static class DrivingDynamicsProjection
         var weekly = BuildWeeklySeries(coach, l);
         var patterns = BuildPatterns(coach, l);
         var (recsHas, recs) = BuildRecommendations(coach, l);
-        var (perHas, perRows) = BuildPerDrive(coach);
+        var (perHas, perRows) = BuildPerDrive(coach, units);
 
         return new CoachDisplay(
             l.GetString("dynamics.coach.title", "Driving Coach"),
@@ -465,9 +465,9 @@ public static class DrivingDynamicsProjection
             segments,
             rows,
             l.GetString("dynamics.coach.avgEfficiency", "Avg Efficiency"),
-            $"{ScalarFormatters.FormatNumber(coach?.EfficiencyWhKm ?? 0, 0)} Wh/km",
+            $"{ScalarFormatters.FormatNumber(UnitConverters.EfficiencyFromWhPerKm(coach?.EfficiencyWhKm ?? 0, units.Distance), 0)} {UnitLabels.EfficiencyLabel(units.Distance)}",
             l.GetString("dynamics.coach.bestEfficiency", "Best Efficiency"),
-            $"{ScalarFormatters.FormatNumber(coach?.BestEfficiencyWhKm ?? 0, 0)} Wh/km",
+            $"{ScalarFormatters.FormatNumber(UnitConverters.EfficiencyFromWhPerKm(coach?.BestEfficiencyWhKm ?? 0, units.Distance), 0)} {UnitLabels.EfficiencyLabel(units.Distance)}",
             l.GetString("dynamics.coach.weeklyTrend", "Weekly Score Trend"),
             (coach?.WeeklyTrend.Count ?? 0) > 1,
             l.GetString("dynamics.coach.needWeeks", "Need at least 2 weeks of data for trend analysis."),
@@ -485,7 +485,7 @@ public static class DrivingDynamicsProjection
                 l.GetString("dynamics.coach.col.date", "Date"),
                 l.GetString("dynamics.coach.col.score", "Score"),
                 l.GetString("dynamics.coach.col.style", "Style"),
-                l.GetString("dynamics.coach.col.efficiency", "Wh/km"),
+                UnitLabels.EfficiencyLabel(units.Distance),
                 l.GetString("dynamics.coach.col.distance", "Distance"),
             ],
             perRows);
@@ -578,7 +578,7 @@ public static class DrivingDynamicsProjection
         return (true, rows);
     }
 
-    private static (bool, IReadOnlyList<CoachScoreRow>) BuildPerDrive(CoachData? coach)
+    private static (bool, IReadOnlyList<CoachScoreRow>) BuildPerDrive(CoachData? coach, UnitPref units)
     {
         var scores = coach?.PerDriveScores ?? System.Array.Empty<CoachDriveScore>();
         if (scores.Count == 0)
@@ -603,8 +603,8 @@ public static class DrivingDynamicsProjection
                 scoreStatus,
                 s.Style,
                 styleStatus,
-                ScalarFormatters.FormatNumber(s.Efficiency, 0),
-                $"{ScalarFormatters.FormatNumber(s.Distance, 0)} km"));
+                ScalarFormatters.FormatNumber(UnitConverters.EfficiencyFromWhPerKm(s.Efficiency, units.Distance), 0),
+                $"{ScalarFormatters.FormatNumber(UnitConverters.DistanceFromSi(s.Distance * 1000.0, units.Distance), 0)} {UnitLabels.Label(units.Distance)}"));
         }
 
         return (true, rows);
