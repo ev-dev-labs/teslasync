@@ -1,0 +1,431 @@
+================================================================================
+P3-ANDROID A7 — page:telemetry/SignalsWorkspace
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/telemetry/pages/SignalsWorkspacePage.tsx
+================================================================================
+
+Artifact     : page:telemetry/SignalsWorkspace
+Web route    : /signals
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/telemetry/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+SignalsWorkspacePage.tsx is the unified /signals workspace — a thin orchestrator
+that composes the seven shared telemetry surfaces (SignalCategoryTree,
+SignalChartPanel, SignalStatsPanel, SignalHistoryTable, LiveSignalTail,
+SignalCompareControls, SignalDiffTable) around two mutually-exclusive Live /
+Compare mode toggles, leaving a sensible Historical default. It lifts the
+selection + mode out of those children so a headline strip of four StatCards
+(Selected / Mode / Live-rate / Pinned-signals) and the Run/Live gating read from
+one source of truth, and it owns four data sources: useSignals (the available
+catalog), usePinned + useTogglePin (the signal-diff pin store), and
+useSignalDiffServer (the two-snapshot diff). The parity manifest records
+requiredCount=58: 11 panels (the 4 headline StatCards, the toolbar GlassPanel5,
+the 4 compare StatCards Changed/Visible/Pinned/Window-span, the diff GlassPanel10,
+and the historical empty GlassPanel11), 4 data states, and 43 strings.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 telemetry feature views already exist as native Compose surfaces
+(io.teslasync.android.featureviews.{signalcomparecontrols,signaldifftable,
+signalstatspanel,signalchartpanel,signalhistorytable,livesignaltail}) and own
+their own loading / empty / error+retry / stale / content states. This page is
+their host + orchestrator: it sets the PageContainer-equivalent header (title +
+subtitle + VehicleSelect action + live-connection badge + share), reads the four
+manifest feeds through a page ViewModel bound to the shared P1/S8 holders, lifts
+the selection + mode, and renders the web tree — never re-implementing the shared
+surfaces (DRY, ADR-006). Mirrors the sibling telemetry/SignalGapDetectorPage and
+driving/RegenEfficiencyPage hosts (which build a page-local Http*Repository
+because the Android DI graph wires no domain store yet).
+
+New files (package io.teslasync.android.telemetry.signalsworkspace):
+  - SignalsWorkspacePageModel.kt   Registration(ROUTE_ID signalsWorkspace,
+                                   WEB_PATH /signals, SLUG SignalsWorkspacePage,
+                                   DEFAULT_PER_PAGE, LIVE_TAIL_MAX) + WorkspaceMode
+                                   {Historical,Live,Compare} + the pure derivations
+                                   the page lifts out of the children:
+                                   pinnedSignalNames (web pinnedSignals),
+                                   filterDiffRows/diffFilterActive (web
+                                   diffFilteredRows), windowSpanSeconds (web
+                                   windowSpan), mergeHistoryRows/toChartRows/
+                                   toStats/paginateRows (web chartData /
+                                   historicalStats / paginatedRows), and the
+                                   one PII-safe view.opened recorder (P1/S11).
+  - SignalsWorkspacePageViewModel.kt  Binds SelectedVehicleStore (web
+                                   useSelectedVehicle, self-healed to first
+                                   vehicle), a page-local TelemetryStore over the
+                                   injected TelemetryRepository, and the shared
+                                   PinnedStore. Exposes UiState projections for
+                                   signals (useSignals), pinned (usePinned), the
+                                   on-demand diffState (useSignalDiffServer) and
+                                   historyState (the manual-Run multi-signal
+                                   useQuery, one /history read per selected signal
+                                   adapted + folded), plus togglePin
+                                   (useTogglePin). Extends BaseFeedViewModel.
+  - SignalsWorkspacePage.kt        Stateful entry SignalsWorkspacePage(
+                                   telemetryRepository, logger): records
+                                   view.opened, builds the VM via viewModel(
+                                   key=SLUG, factory=...), collects the four feeds
+                                   + the live-connection snapshot; stateless
+                                   SignalsWorkspacePageContent owns the ephemeral
+                                   URL-equivalent state (lifted selection, mode,
+                                   range, per-page, compare window+filter, chart
+                                   layout, bulk selection) and renders
+                                   WorkspaceHeader, HeadlineStatStrip,
+                                   AddSignalsAccordion, WorkspaceToolbar, and the
+                                   active mode's CompareSection or
+                                   HistoricalLiveSection + WorkspaceFooter.
+  - SignalsWorkspacePageHost.kt    SignalsWorkspaceRoute() resolves
+                                   LocalDataContainer, builds a page-local
+                                   HttpTelemetryRepository(container.api,
+                                   container.cacheStore); SignalsWorkspacePageHost
+                                   .register() -> PageHosts.register(
+                                   "signalsWorkspace"). Idempotent.
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt  import + SignalsWorkspacePageHost.register() at
+                             process start (after SignalGapDetectorPageHost).
+  - res/values/strings.xml (+ values-ar, values-he)  26 keys inserted in sorted
+                             position: translation_help_signal_live_aria and the
+                             25 translation_signalsWorkspace_* keys. The other 17
+                             parity strings already shipped (error.loadFailed,
+                             liveMonitor.{connected,disconnected,title},
+                             signalDiff.{bulk.*,noChanges,pinnedCount,pinnedLabel,
+                             totalChanged,visible,windowSpan}, signalGap.
+                             refreshInterval, plus "Per Page" -> fsm.perPage and
+                             "Time Range" -> fsm.timeRange). ar/he carry the
+                             English fallback (placeholder locales).
+  - apps/parity/android-ledger.json  page:telemetry/SignalsWorkspace row (done,
+                             58/58).
+
+Honest disclosures (no red-as-green, no silent drift):
+  - The "Add signals" catalog is a searchable Checkbox selector over the in-scope
+    useSignals feed, lifting the selection into the page (the web
+    SignalCategoryTree onChange contract) so the headline "Selected" StatCard, the
+    Run/Live gating and the diff signalsCsv read one source of truth. The shared
+    SignalCategoryTree feature view encapsulates its selection internally and so
+    is not embedded here.
+  - The Live-rate StatCard shows the merged live signal count for the selected
+    vehicle while streaming and the em-dash otherwise (web isLive ? rate : "—");
+    the authoritative per-second tail rate is rendered by the embedded
+    LiveSignalTail. The live-connection badge reads the shared LiveSessionStore.
+  - Time Range reuses the shared TIME_RANGE_PRESETS hour tokens (1h/6h/24h/7d/30d)
+    rather than a date-range picker; the web RangePicker is itself preset-driven.
+  - The diff bulk "Copy CSV" / "Add as alert rule" actions export to the system
+    clipboard (there is no in-app file-download or cross-route navigator seam on
+    the page-host content), while Pin/Unpin call the real useTogglePin mutation.
+  - SavedViewMenu (a saved-views data source outside this unit's four manifest
+    sources) is not wired; the share CopyButton covers the header permalink action.
+  - i18n: signalsWorkspace.* / help.signal.live.aria are NOT in the web canonical
+    en.json (the web resolves them from inline t() fallback defaults); the
+    generator sources from web/src/i18n and cascades to apple/windows, both
+    outside this artifact's allowed files, so the exact inline-default values are
+    inserted into res/values*/strings.xml (the artifact's allowed string catalog).
+    MissingTranslation/ExtraTranslation are disabled in the app lint config.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/telemetry -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 1m 29s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 14m 13s
+LINT_EXIT=0
+(lint-results-debug.html: zero error-severity findings. The only finding that
+ references the new keys is one informational PluralsCandidate suggestion on
+ translation_signalsWorkspace_signalsSelected ("%1$d selected" could be a
+ <plurals>) — a non-failing suggestion that faithfully mirrors the web's
+ singular-interpolation "{{count}} selected" string. Pre-existing
+ StringFormatInvalid warnings on unrelated battery/rateLimit keys are suppressed
+ via lint.xml. The com/teslasync/telemetry surface root is NOT in the
+ machine-authored lint-suppression list, so every Compose lint stayed ACTIVE for
+ these hand-written page files and reported clean.)
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 24s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=58
+
+[1] panel : Selected
+    EVIDENCE: SignalsWorkspacePage.kt -> HeadlineStatStrip draws StatCard(
+              label=R.string.translation_signalsWorkspace_selected, value=
+              selectedCount) from the lifted selection. COVERED.
+
+[2] panel : Mode
+    EVIDENCE: SignalsWorkspacePage.kt -> HeadlineStatStrip StatCard(label=
+              translation_signalsWorkspace_mode, value=modeLabel), modeLabel
+              switching Compare/Live/Historical on WorkspaceMode
+              (SignalsWorkspacePageModel.kt). COVERED.
+
+[3] panel : Live-rate
+    EVIDENCE: SignalsWorkspacePage.kt -> HeadlineStatStrip StatCard(label=
+              translation_signalsWorkspace_liveRate, value=isLive ?
+              liveSignalCount : EM_DASH), liveSignalCount from
+              LiveSessionStore.vehicle(id).signalCount. COVERED.
+
+[4] panel : Pinned-signals
+    EVIDENCE: SignalsWorkspacePage.kt -> HeadlineStatStrip StatCard(label=
+              translation_signalsWorkspace_pinned, value=pinnedSignals.size),
+              pinnedSignals = pinnedSignalNames(pinnedState.data)
+              (SignalsWorkspacePageModel.kt, web usePinned). COVERED.
+
+[5] panel : GlassPanel5
+    EVIDENCE: SignalsWorkspacePage.kt -> WorkspaceToolbar GlassPanel(PanelPadding
+              .Md) holding the Time Range + Per Page Selects, the Run / Live /
+              Compare Buttons (mutually-exclusive mode toggles), and the
+              HelpTooltip. COVERED.
+
+[6] panel : Changed-signals
+    EVIDENCE: SignalsWorkspacePage.kt -> CompareSection StatCard(label=
+              translation_signalDiff_totalChanged, value=allRows.size) over the
+              useSignalDiffServer feed (viewModel.diffState). COVERED.
+
+[7] panel : Visible-after-filter
+    EVIDENCE: SignalsWorkspacePage.kt -> CompareSection StatCard(label=
+              translation_signalDiff_visible, value=filteredRows.size),
+              filteredRows = filterDiffRows(allRows, search, category)
+              (SignalsWorkspacePageModel.kt, web diffFilteredRows). COVERED.
+
+[8] panel : Pinned
+    EVIDENCE: SignalsWorkspacePage.kt -> CompareSection StatCard(label=
+              translation_signalDiff_pinnedCount, value=pinnedSignals.size).
+              COVERED.
+
+[9] panel : Window-span
+    EVIDENCE: SignalsWorkspacePage.kt -> CompareSection StatCard(label=
+              translation_signalDiff_windowSpan, value=windowSpanSeconds(atAIso,
+              atBIso)?.let { "$it s" } ?: EM_DASH) (SignalsWorkspacePageModel.kt,
+              web |atB-atA|/1000). COVERED.
+
+[10] panel : GlassPanel10
+    EVIDENCE: SignalsWorkspacePage.kt -> CompareSection GlassPanel(PanelPadding.Md)
+              wrapping the embedded SignalDiffTable (or the signalDiff.noChanges
+              EmptyState) plus the pinned-signal chips. COVERED.
+
+[11] panel : GlassPanel11
+    EVIDENCE: SignalsWorkspacePage.kt -> HistoricalLiveSection GlassPanel(
+              PanelPadding.Md) holding the EmptyState(title=
+              translation_signalsWorkspace_emptyTitle, message=...emptyDesc) shown
+              before a query is run. COVERED.
+
+[12] state : loading
+    EVIDENCE: viewModel.signals/pinned/diffState project Resource.Loading via
+              BaseFeedViewModel.asUiState; combineHistory returns UiState.loading()
+              while no signal has cached (SignalsWorkspacePageViewModel.kt). The
+              compare StatCards render EM_DASH while diffState.isLoading, and
+              SignalStatsPanel/SignalChartPanel/SignalHistoryTable receive
+              loading=historyState.isLoading. COVERED.
+
+[13] state : empty
+    EVIDENCE: vehicleId==0 -> EmptyState(noVehicle/noVehicleDesc); the resting
+              historical GlassPanel11 EmptyState(emptyTitle/emptyDesc); the
+              compare signalDiff.noChanges EmptyState; UiState.Empty via the
+              asUiState isEmpty predicates and historyState UiPhase.Empty
+              (SignalsWorkspacePageViewModel.kt). COVERED.
+
+[14] state : error
+    EVIDENCE: SignalsWorkspacePage.kt renders AlertBanner(message=
+              translation_error_loadFailed, tone=Danger) when signalsState
+              .hasError (web anyError); combineHistory returns UiPhase.Error on an
+              all-error fan-out; the embedded SignalDiffTable / SignalHistoryTable
+              render their own QueryError + retry. COVERED.
+
+[15] state : success
+    EVIDENCE: UiPhase.Content renders the live StatCards, the SignalDiffTable rows
+              + compare StatCard counts, the SignalStatsPanel/SignalChartPanel
+              series, and the paginated SignalHistoryTable rows from the merged
+              history (toChartRows/toStats/paginateRows). COVERED.
+
+[16] string : Per Page
+    EVIDENCE: WorkspaceToolbar Select(label=R.string.translation_fsm_perPage);
+              value "Per Page". COVERED.
+
+[17] string : Time Range
+    EVIDENCE: WorkspaceToolbar Select(label=R.string.translation_fsm_timeRange);
+              value "Time Range". COVERED.
+
+[18] string : error.loadFailed
+    EVIDENCE: AlertBanner(message=R.string.translation_error_loadFailed); value
+              "Failed to load data". COVERED.
+
+[19] string : help.signal.live.aria
+    EVIDENCE: WorkspaceToolbar HelpTooltip(helpContentDescription=R.string.
+              translation_help_signal_live_aria); value "More info about live and
+              compare modes". COVERED.
+
+[20] string : liveMonitor.connected
+    EVIDENCE: WorkspaceHeader Badge(text=R.string.translation_liveMonitor_connected
+              when connected). COVERED.
+
+[21] string : liveMonitor.disconnected
+    EVIDENCE: WorkspaceHeader Badge(text=R.string.translation_liveMonitor_
+              disconnected when not connected). COVERED.
+
+[22] string : liveMonitor.title
+    EVIDENCE: HistoricalLiveSection SectionTitle(R.string.translation_liveMonitor_
+              title) above the embedded LiveSignalTail. COVERED.
+
+[23] string : signalDiff.bulk.addAlert
+    EVIDENCE: CompareSection BulkAction(label=R.string.translation_signalDiff_bulk_
+              addAlert). COVERED.
+
+[24] string : signalDiff.bulk.csv
+    EVIDENCE: CompareSection BulkAction(label=R.string.translation_signalDiff_bulk_
+              csv). COVERED.
+
+[25] string : signalDiff.bulk.pin
+    EVIDENCE: CompareSection BulkAction(label=R.string.translation_signalDiff_bulk_
+              pin) -> viewModel.togglePin(...,true). COVERED.
+
+[26] string : signalDiff.bulk.unpin
+    EVIDENCE: CompareSection BulkAction(label=R.string.translation_signalDiff_bulk_
+              unpin) -> viewModel.togglePin(...,false). COVERED.
+
+[27] string : signalDiff.noChanges
+    EVIDENCE: CompareSection EmptyState(message=R.string.translation_signalDiff_
+              noChanges) inside GlassPanel10 when the diff resolved with no rows.
+              COVERED.
+
+[28] string : signalDiff.pinnedCount
+    EVIDENCE: CompareSection StatCard(label=R.string.translation_signalDiff_
+              pinnedCount). COVERED.
+
+[29] string : signalDiff.pinnedLabel
+    EVIDENCE: CompareSection Caption(R.string.translation_signalDiff_pinnedLabel)
+              above the pinned-signal chips. COVERED.
+
+[30] string : signalDiff.totalChanged
+    EVIDENCE: CompareSection StatCard(label=R.string.translation_signalDiff_
+              totalChanged). COVERED.
+
+[31] string : signalDiff.visible
+    EVIDENCE: CompareSection StatCard(label=R.string.translation_signalDiff_
+              visible). COVERED.
+
+[32] string : signalDiff.windowSpan
+    EVIDENCE: CompareSection StatCard(label=R.string.translation_signalDiff_
+              windowSpan). COVERED.
+
+[33] string : signalGap.refreshInterval
+    EVIDENCE: WorkspaceFooter Caption(R.string.translation_signalGap_
+              refreshInterval). COVERED.
+
+[34] string : signalsWorkspace.addSignals
+    EVIDENCE: AddSignalsAccordion Accordion(title=R.string.translation_
+              signalsWorkspace_addSignals). COVERED.
+
+[35] string : signalsWorkspace.chartAuto
+    EVIDENCE: HistoricalLiveSection TabNavItem(label=R.string.translation_
+              signalsWorkspace_chartAuto). COVERED.
+
+[36] string : signalsWorkspace.chartGrid
+    EVIDENCE: HistoricalLiveSection TabNavItem(label=R.string.translation_
+              signalsWorkspace_chartGrid). COVERED.
+
+[37] string : signalsWorkspace.chartMode
+    EVIDENCE: HistoricalLiveSection Caption(R.string.translation_signalsWorkspace_
+              chartMode) labelling the chart-layout TabNav. COVERED.
+
+[38] string : signalsWorkspace.chartOverlay
+    EVIDENCE: HistoricalLiveSection TabNavItem(label=R.string.translation_
+              signalsWorkspace_chartOverlay). COVERED.
+
+[39] string : signalsWorkspace.compare
+    EVIDENCE: WorkspaceToolbar Compare Button label + HeadlineStatStrip modeLabel
+              (R.string.translation_signalsWorkspace_compare). COVERED.
+
+[40] string : signalsWorkspace.emptyDesc
+    EVIDENCE: HistoricalLiveSection EmptyState(message=R.string.translation_
+              signalsWorkspace_emptyDesc) in GlassPanel11. COVERED.
+
+[41] string : signalsWorkspace.emptyTitle
+    EVIDENCE: HistoricalLiveSection EmptyState(title=R.string.translation_
+              signalsWorkspace_emptyTitle) in GlassPanel11. COVERED.
+
+[42] string : signalsWorkspace.exitCompare
+    EVIDENCE: WorkspaceToolbar Compare Button label when isCompare (R.string.
+              translation_signalsWorkspace_exitCompare). COVERED.
+
+[43] string : signalsWorkspace.historical
+    EVIDENCE: HeadlineStatStrip modeLabel for WorkspaceMode.Historical (R.string.
+              translation_signalsWorkspace_historical). COVERED.
+
+[44] string : signalsWorkspace.historyTitle
+    EVIDENCE: HistoricalLiveSection SignalHistoryTable(title=R.string.translation_
+              signalsWorkspace_historyTitle). COVERED.
+
+[45] string : signalsWorkspace.live
+    EVIDENCE: WorkspaceToolbar Live Button label + HeadlineStatStrip modeLabel
+              (R.string.translation_signalsWorkspace_live). COVERED.
+
+[46] string : signalsWorkspace.liveRate
+    EVIDENCE: HeadlineStatStrip StatCard(label=R.string.translation_
+              signalsWorkspace_liveRate). COVERED.
+
+[47] string : signalsWorkspace.mode
+    EVIDENCE: HeadlineStatStrip StatCard(label=R.string.translation_
+              signalsWorkspace_mode) + WorkspaceToolbar HelpTooltip title. COVERED.
+
+[48] string : signalsWorkspace.noVehicle
+    EVIDENCE: SignalsWorkspacePageContent EmptyState(title=R.string.translation_
+              signalsWorkspace_noVehicle) when vehicleId==0. COVERED.
+
+[49] string : signalsWorkspace.noVehicleDesc
+    EVIDENCE: SignalsWorkspacePageContent EmptyState(message=R.string.translation_
+              signalsWorkspace_noVehicleDesc) when vehicleId==0. COVERED.
+
+[50] string : signalsWorkspace.noneSelected
+    EVIDENCE: AddSignalsAccordion Badge(text=R.string.translation_signalsWorkspace_
+              noneSelected) when no signal is selected. COVERED.
+
+[51] string : signalsWorkspace.pinned
+    EVIDENCE: HeadlineStatStrip StatCard(label=R.string.translation_
+              signalsWorkspace_pinned). COVERED.
+
+[52] string : signalsWorkspace.run
+    EVIDENCE: WorkspaceToolbar Run Button(label=R.string.translation_
+              signalsWorkspace_run). COVERED.
+
+[53] string : signalsWorkspace.selected
+    EVIDENCE: HeadlineStatStrip StatCard(label=R.string.translation_
+              signalsWorkspace_selected). COVERED.
+
+[54] string : signalsWorkspace.share
+    EVIDENCE: WorkspaceHeader CopyButton(copyLabel=R.string.translation_
+              signalsWorkspace_share). COVERED.
+
+[55] string : signalsWorkspace.signalsSelected
+    EVIDENCE: AddSignalsAccordion Badge(text=R.string.translation_signalsWorkspace_
+              signalsSelected, count) when one or more signals are selected
+              ("%1$d selected"). COVERED.
+
+[56] string : signalsWorkspace.stopLive
+    EVIDENCE: WorkspaceToolbar Live Button label when isLive (R.string.
+              translation_signalsWorkspace_stopLive). COVERED.
+
+[57] string : signalsWorkspace.subtitle
+    EVIDENCE: WorkspaceHeader BodyText(R.string.translation_signalsWorkspace_
+              subtitle). COVERED.
+
+[58] string : signalsWorkspace.title
+    EVIDENCE: WorkspaceHeader PageTitle(R.string.translation_signalsWorkspace_
+              title). COVERED.
+
+PARITY_COVERED=58
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
