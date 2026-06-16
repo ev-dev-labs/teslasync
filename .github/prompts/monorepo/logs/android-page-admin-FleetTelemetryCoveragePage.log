@@ -1,0 +1,117 @@
+P3-ANDROID A7 — page:admin/FleetTelemetryCoverage — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/FleetTelemetryCoveragePage.tsx  (route /admin/telemetry/coverage)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (FleetTelemetryCoveragePage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.fleetTelemetryStore (S8 FleetTelemetryStore over HttpFleetTelemetryRepository), TeslaSyncApplication -> FleetTelemetryCoveragePageHost.register("adminTelemetryCoverage")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared FleetTelemetryStore
+(io.teslasync.shared.core.presentation.fleettelemetry.FleetTelemetryStore) + its S7
+HttpFleetTelemetryRepository + the FleetTelemetryCoverageResponse / FleetTelemetryCategoryCoverage /
+FleetTelemetryFieldCoverage / FleetTelemetryCoverage.normalize models already exist on this branch
+(shared :core compiles green, UP-TO-DATE). The Android DI graph was widened — the documented A7 seam
+(DataContainer "the single seam A7 page prompts widen ... register their store") — to expose
+`fleetTelemetryStore`, exactly mirroring the pre-existing `adminStore` / `feedbackStore`. No predecessor
+was stubbed or bypassed; the page binds the real shared holder end to end (coverage() cache-then-network
+Resource feed + refreshCoverage()).
+
+NAV NOTE: the `adminTelemetryCoverage` -> /admin/telemetry/coverage destination already exists in
+Destinations.kt (pre-existing metadata row); this prompt only attaches host content via
+PageHosts.register, and the deep link is auto-registered by TeslaSyncNavHost.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/);
+the prompt snippet's ':app:' is the same module.
+
+I18N NOTE (honesty / no silent drift): the 37 coverage.* keys did not previously exist in the canonical
+web i18n source (web/src/i18n/en.json — the web page used inline t(key, fallback) defaults). They were
+added to en.json (canonical, durable) AND to apps/android/app/src/main/res/values/strings.xml as
+translation_coverage_*. A FULL re-run of gen-i18n.ts was deliberately NOT performed: the generated
+catalog is already ~194 keys behind en.json on this integration branch (pre-existing committed drift),
+so a full regen would sweep hundreds of unrelated keys across apple/windows/catalog. The hand-added
+android entries were verified byte-for-byte against gen-i18n.ts's own androidName + renderValue logic
+(expected=37 actual=37 mismatches=0), so they introduce ZERO coverage-specific drift; the pre-existing
+194-key catalog drift is untouched and out of scope. lint disables MissingTranslation (placeholder
+ar/he locales are English fallback), so values/ is sufficient.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 1m 33s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 49s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 57s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=51
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (FleetTelemetryCoveragePage.kt screen, FleetTelemetryCoveragePageViewModel.kt, FleetTelemetryCoveragePageModel.kt)
+
+# panels (11) — Material 3 Card/Surface (GlassPanel) + StatCard tiles
+[COVERED] panel  GlassPanel1            -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() summary-tiles section (FadeIn region, 5 StatCards)
+[COVERED] panel  Categories             -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() StatCard(translation_coverage_stat_categories)
+[COVERED] panel  Routed-fields          -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() StatCard(translation_coverage_stat_routedFields)
+[COVERED] panel  Subscribed             -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() StatCard(translation_coverage_stat_subscribed)
+[COVERED] panel  Routed-not-subscribed  -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() StatCard(translation_coverage_stat_routedNotSubscribed)
+[COVERED] panel  Orphan-fields          -> FleetTelemetryCoveragePage.kt:CoverageStatsSection() StatCard(translation_coverage_stat_orphans)
+[COVERED] panel  GlassPanel7            -> FleetTelemetryCoveragePage.kt:CoverageLegendPanel() GlassPanel ("Reading this page" + 3 legend items)
+[COVERED] panel  GlassPanel8            -> FleetTelemetryCoveragePage.kt:CoverageDestinationsPanel() GlassPanel (FlowRow of destination chips / empty text)
+[COVERED] panel  GlassPanel9            -> FleetTelemetryCoveragePage.kt:CoverageOrphansPanel() GlassPanel(accent=Warning, AlertTriangle + orphan list); shown only when orphans non-empty (web parity)
+[COVERED] panel  GlassPanel10           -> FleetTelemetryCoveragePage.kt:CoverageFilterPanel() GlassPanel (filter Input)
+[COVERED] panel  GlassPanel11           -> FleetTelemetryCoveragePage.kt:CoverageCategoriesSection()/CoverageCategoryPanel() GlassPanel (per-category header + field table)
+
+# data states (3 required) — bound to FleetTelemetryCoveragePageViewModel.state: StateFlow<UiState<FleetTelemetryCoverageResponse>>
+[COVERED] state  loading  -> FleetTelemetryCoveragePage.kt:CoverageLoadingState() (state.isLoading) Spinner + translation_coverage_loading; StatCard(loading=true) shimmer
+[COVERED] state  empty    -> FleetTelemetryCoveragePage.kt:CoverageCategoriesSection() EmptyState(translation_coverage_empty) via UiPhase.Empty (FleetTelemetryCoverageResponse.isEmptyCoverage)
+[COVERED] state  success  -> FleetTelemetryCoveragePage.kt:CoverageCategoryPanel() content branch (UiState.Content) rendering CoverageFieldTable
+# (also implemented, beyond the 3 required: error -> CoverageErrorState() state.isError + Retry; filter-empty -> EmptyState(translation_coverage_filterEmpty))
+
+# strings (37) — every visible literal via stringResource(R.string.translation_coverage_*); web key names preserved
+[COVERED] string coverage.category.empty          -> CoverageCategoryPanel() empty-category branch (translation_coverage_category_empty)
+[COVERED] string coverage.category.noMatch        -> CoverageCategoryPanel() filtered-out branch (translation_coverage_category_noMatch)
+[COVERED] string coverage.category.totalFields    -> CoverageCategoryPanel() header Caption %1$s (translation_coverage_category_totalFields)
+[COVERED] string coverage.col.column              -> CoverageFieldTable() HeaderCell (translation_coverage_col_column)
+[COVERED] string coverage.col.destination         -> CoverageFieldTable() HeaderCell (translation_coverage_col_destination)
+[COVERED] string coverage.col.dualWrite           -> CoverageFieldTable() HeaderCell (translation_coverage_col_dualWrite)
+[COVERED] string coverage.col.field               -> CoverageFieldTable() HeaderCell (translation_coverage_col_field)
+[COVERED] string coverage.col.subscribed          -> CoverageFieldTable() HeaderCell (translation_coverage_col_subscribed)
+[COVERED] string coverage.destinations.empty      -> CoverageDestinationsPanel() empty BodyText (translation_coverage_destinations_empty)
+[COVERED] string coverage.destinations.help       -> CoverageDestinationsPanel() Caption (translation_coverage_destinations_help)
+[COVERED] string coverage.destinations.title      -> CoverageDestinationsPanel() PanelTitle (translation_coverage_destinations_title)
+[COVERED] string coverage.dualWrite.yes           -> CoverageFieldRow() dual-write Badge (translation_coverage_dualWrite_yes)
+[COVERED] string coverage.empty                   -> CoverageCategoriesSection() EmptyState (translation_coverage_empty)
+[COVERED] string coverage.error                   -> CoverageErrorState() ErrorText (translation_coverage_error)
+[COVERED] string coverage.filter.placeholder      -> CoverageFilterPanel() Input hint (translation_coverage_filter_placeholder)
+[COVERED] string coverage.filterEmpty             -> CoverageCategoriesSection() EmptyState (translation_coverage_filterEmpty)
+[COVERED] string coverage.legend.columnHelp       -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_columnHelp)
+[COVERED] string coverage.legend.columnLabel      -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_columnLabel)
+[COVERED] string coverage.legend.dualWriteHelp    -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_dualWriteHelp)
+[COVERED] string coverage.legend.dualWriteLabel   -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_dualWriteLabel)
+[COVERED] string coverage.legend.intro            -> CoverageLegendPanel() Caption (translation_coverage_legend_intro)
+[COVERED] string coverage.legend.subscribedHelp   -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_subscribedHelp)
+[COVERED] string coverage.legend.subscribedLabel  -> CoverageLegendPanel()->LegendItem (translation_coverage_legend_subscribedLabel)
+[COVERED] string coverage.legend.title            -> CoverageLegendPanel() PanelTitle (translation_coverage_legend_title)
+[COVERED] string coverage.loading                 -> CoverageLoadingState() BodyText (translation_coverage_loading)
+[COVERED] string coverage.orphans.help            -> CoverageOrphansPanel() Caption (translation_coverage_orphans_help)
+[COVERED] string coverage.orphans.title           -> CoverageOrphansPanel() PanelTitle (translation_coverage_orphans_title)
+[COVERED] string coverage.pageTitle               -> CoverageHeader() PageTitle (translation_coverage_pageTitle)
+[COVERED] string coverage.refresh                 -> CoverageHeader() Refresh Button + CoverageErrorState() Retry Button (translation_coverage_refresh)
+[COVERED] string coverage.stat.categories         -> CoverageStatsSection() StatCard label (translation_coverage_stat_categories)
+[COVERED] string coverage.stat.orphans            -> CoverageStatsSection() StatCard label (translation_coverage_stat_orphans)
+[COVERED] string coverage.stat.routedFields       -> CoverageStatsSection() StatCard label (translation_coverage_stat_routedFields)
+[COVERED] string coverage.stat.routedNotSubscribed-> CoverageStatsSection() StatCard label (translation_coverage_stat_routedNotSubscribed)
+[COVERED] string coverage.stat.subscribed         -> CoverageStatsSection() StatCard label (translation_coverage_stat_subscribed)
+[COVERED] string coverage.subscribed.no           -> CoverageFieldRow() subscribed Badge (translation_coverage_subscribed_no)
+[COVERED] string coverage.subscribed.yes          -> CoverageFieldRow() subscribed Badge (translation_coverage_subscribed_yes)
+[COVERED] string coverage.subtitle                -> CoverageHeader() BodyText (translation_coverage_subtitle)
+
+PARITY_COVERED=51
+
+=== SUMMARY ===
+data sources : FleetTelemetryCoveragePageViewModel binds shared S8 FleetTelemetryStore.coverage() (typed FleetTelemetryCoverageResponse {categories, destinationTotals, orphanFields}, cache-then-network Resource) via asFleetTelemetryCoverageSource().asUiState(isEmpty = isEmptyCoverage); refresh()/retry() route through the seam to FleetTelemetryStore.refreshCoverage() (web useFleetTelemetryCoverage refetch); no HTTP in the view; all derivations (summarise, filteredCategories, filteredFields, sortedDestinations) in the framework-free FleetTelemetryCoveragePageModel.kt.
+nav          : Destinations 'adminTelemetryCoverage' -> /admin/telemetry/coverage (pre-existing) wired to FleetTelemetryCoverageRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+strings      : 37 coverage.* keys added to web/src/i18n/en.json (canonical) + res/values/strings.xml (translation_coverage_*), verified byte-identical to gen-i18n.ts output (mismatches=0).
+placeholder  : PLACEHOLDER_COUNT=0 (1 parity:allow on the filter-hint resource id, reason supplied)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(51) == PARITY_REQUIRED(51)
+[PASS] all android triad gates green; parity 51/51; android ledger row page:admin/FleetTelemetryCoverage status=done.
+EXIT=0
+STATUS=DONE

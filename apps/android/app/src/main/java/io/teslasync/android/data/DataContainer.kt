@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import io.teslasync.shared.core.data.repo.HttpDlqRepository
 import io.teslasync.shared.core.presentation.dlq.DlqStore
+import io.teslasync.shared.core.data.repo.HttpFleetTelemetryRepository
+import io.teslasync.shared.core.presentation.fleettelemetry.FleetTelemetryStore
 
 /**
  * Manual DI graph for the Android data layer (ADR-013), the analogue of the auth `AuthContainer`. It
@@ -149,6 +151,8 @@ class DataContainer(
     val userStore = UserStore(userRepository, scope)
     private val dlqRepository = HttpDlqRepository(api, cacheStore, clock)
     val dlqStore = DlqStore(dlqRepository, scope)
+    private val fleetTelemetryRepository = HttpFleetTelemetryRepository(api, cacheStore, clock)
+    val fleetTelemetryStore = FleetTelemetryStore(fleetTelemetryRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

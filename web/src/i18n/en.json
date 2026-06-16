@@ -9426,6 +9426,63 @@
       "badge": "Helix"
     }
   },
+  "coverage": {
+    "pageTitle": "Fleet Telemetry Coverage",
+    "subtitle": "Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.",
+    "refresh": "Refresh",
+    "loading": "Loading routing snapshot…",
+    "error": "Could not load Fleet Telemetry coverage. Check API logs and try again.",
+    "empty": "No categories returned. The embedded routing.yaml may be empty or the loader failed silently.",
+    "filterEmpty": "No categories match the current filter.",
+    "stat": {
+      "categories": "Categories",
+      "routedFields": "Routed fields",
+      "subscribed": "Subscribed",
+      "routedNotSubscribed": "Routed, not subscribed",
+      "orphans": "Orphan fields"
+    },
+    "legend": {
+      "title": "Reading this page",
+      "intro": "Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean \"not applicable\" for that field — they are expected, not missing data.",
+      "columnLabel": "Column",
+      "columnHelp": "— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.",
+      "dualWriteLabel": "Dual write",
+      "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
+      "subscribedLabel": "Subscribed",
+      "subscribedHelp": "— whether Tesla Fleet Telemetry is currently pushing this field to us. \"No\" means the writer is wired but the subscription request omits the field."
+    },
+    "destinations": {
+      "title": "Destination breakdown",
+      "help": "Counts how many routed fields land in each storage destination. Fields routed with also_signal_log:true are counted under both their primary destination and signal_log, matching the runtime fan-out — totals may exceed the unique routed-fields count.",
+      "empty": "No destinations reported."
+    },
+    "orphans": {
+      "title": "Orphan fields detected",
+      "help": "These routing.yaml entries reference Field names not present in protomodel.SignalsByName and not a strict prefix-extension of a compound parent. This is a deployment drift between the vendored Tesla proto and routing.yaml — investigate before relying on the affected destinations."
+    },
+    "filter": {
+      "placeholder": "Filter by field name, destination, or column…"
+    },
+    "col": {
+      "field": "Field",
+      "destination": "Destination",
+      "column": "Column",
+      "dualWrite": "Dual write",
+      "subscribed": "Subscribed"
+    },
+    "dualWrite": {
+      "yes": "signal_log"
+    },
+    "subscribed": {
+      "yes": "yes",
+      "no": "no"
+    },
+    "category": {
+      "totalFields": "{{count}} routed fields",
+      "noMatch": "No fields match the current filter.",
+      "empty": "This category has no routed fields."
+    }
+  },
   "feedback": {
     "title": "Report a bug / Send feedback",
     "openShort": "Report bug",
