@@ -1,0 +1,176 @@
+================================================================================
+P3-ANDROID A7 — page:settings/TwoFactorAuth
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/settings/pages/TwoFactorAuthPage.tsx
+================================================================================
+
+Artifact     : page:settings/TwoFactorAuth
+Web route    : /account/2fa
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/settings/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+TwoFactorAuthPage.tsx is a thin promotion wrapper: it sets a PageContainer
+(title, subtitle, copyLink) and embeds <TOTPEnrollmentSection /> verbatim, so
+per-user TOTP enrollment (TOTP enroll/verify, QR + manual secret, backup codes,
+regenerate, disable) lives at /account/2fa with a real page title/breadcrumb
+under the new "Account" side-nav category instead of competing as a section in
+the dense Settings page. The page itself declares no data of its own (the parity
+manifest records zero dataSources, zero panels, and exactly two strings —
+requiredCount=2: account.twoFactor.title + account.twoFactor.subtitle); the
+embedded TOTPEnrollmentSection owns the cache-then-network status feed
+(useTOTPStatus) and the four mutations (useTOTPEnroll / useTOTPVerify /
+useTOTPRevoke / useTOTPRegenerateBackupCodes) plus its full dialog flow.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 TOTPEnrollmentSection feature-view already exists
+(io.teslasync.android.featureviews.totpenrollmentsection.TOTPEnrollmentSection)
+and owns every TOTP data state for its cache-then-network status feed: the
+loading spinner row, the open-mode "requires forward-auth" empty notice, the
+not-enrolled body with the Enroll button, the active-credential body
+(last-used + backup-codes-remaining + Regenerate/Disable), the stale/offline
+notice + retry, the hard-error QueryError + retry, the enroll modal (QR +
+manual secret + CopyButton + 6-digit verify + per-error text), the
+backup-codes reveal modal (download via SAF + copy), the typed-confirmation
+("DISABLE") disable dialog, and the toast queue. This page is its host: it sets
+the PageContainer-equivalent header and embeds the feature view — never
+re-implementing it (DRY, ADR-006). This mirrors the sibling
+notifications/ChannelsPage and notifications/ArchivedPage 2-string wrappers
+that embed a shared feature view.
+
+ViewModel note (output spec "@Composable screen + ViewModel"): a thin wrapper
+page with zero data sources owns no page-level data, so — exactly like the
+shipped ChannelsPage / ArchivedPage / TeslaRegionPage siblings — it does NOT
+fabricate an empty page-level ViewModel (that would be a no-op stub, ADR-011).
+The real ViewModel exposing the page's StateFlow state is the embedded feature
+view's TOTPEnrollmentSectionViewModel (status: StateFlow<UiState<TOTPStatus>>,
+dialog: StateFlow<TOTPDialogUiState>), constructed by the feature view from the
+host-supplied source. Honest disclosure (no scope narrowing): the manifest's
+2 parity items are both strings; there is genuinely no page-owned feed to hoist.
+
+New files (package io.teslasync.android.settings.twofactor):
+  - TwoFactorAuthPageModel.kt  Registration(ROUTE_ID account2fa,
+                               WEB_PATH /account/2fa, SLUG TwoFactorAuthPage) +
+                               recordTwoFactorAuthPageOpened (the one PII-safe
+                               view.opened diagnostic, P1/S11). No page-level
+                               feed — the embedded feature view owns the TOTP
+                               status data.
+  - TwoFactorAuthPage.kt       Stateful entry TwoFactorAuthPage(source, logger):
+                               records view.opened, renders header above the
+                               shared TOTPEnrollmentSection(source, logger);
+                               stateless TwoFactorAuthPageContent (verticalScroll
+                               Column: header + TOTPEnrollmentSection) +
+                               TwoFactorAuthPageHeader (PageTitle + subtitle
+                               BodyText + copy-link IconButton writing WEB_PATH
+                               to the clipboard).
+  - TwoFactorAuthPageHost.kt   TwoFactorAuthRoute() resolves LocalDataContainer,
+                               builds the feature view source over
+                               HttpTOTPRepository (shared resilient client +
+                               offline cache) via bindTOTPEnrollmentSectionSource
+                               (repository=…); TwoFactorAuthPageHost.register() ->
+                               PageHosts.register("account2fa"). Idempotent.
+                               Repository binding (not the shared S8 store) so the
+                               feature view's view-model controls refetch-on-retry
+                               (refreshTrigger re-collects source.status()); the
+                               repo evicts the status cache key on every mutation
+                               success (web invalidate(totpKeys.status)).
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt   import + TwoFactorAuthPageHost.register() at
+                              process start (after SqlPlaygroundPageHost.register()).
+                              Destination account2fa /account/2fa NavGroup.Settings
+                              already exists in Destinations.kt (metadata-only until
+                              this host registered).
+  - web/src/i18n/en.json      settings.account.twoFactor.{title,subtitle} added to
+                              the canonical key set (ADR-014) — the web page
+                              previously only had them as inline t() fallback
+                              defaults. Validated: JSON parses; settings.account.
+                              twoFactor = {title, subtitle}.
+  - res/values/strings.xml (+ values-ar, values-he)  2 generated keys
+                              translation_settings_account_twoFactor_{title,subtitle}
+                              inserted in sorted position, generator-identical
+                              format (no tokens, no chars needing escaping); ar/he
+                              carry the English fallback (placeholder locales,
+                              translated=false). copy-link reuses the existing
+                              translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:settings/TwoFactorAuth row (done, 2/2).
+
+Notes:
+  - i18n catalog generator: res/values*/strings.xml is AUTO-GENERATED by
+    apps/shared/i18n/generators/gen-i18n.ts from web/src/i18n/en.json. The
+    committed catalog is ALREADY drifted from en.json before this change
+    (pre-existing, unrelated to this artifact). To avoid sweeping that unrelated
+    drift into this page artifact, the two new keys were added at the en.json
+    source AND hand-inserted into the three Android strings.xml files
+    byte-identically to what emitAndroidStrings()/androidName()/renderValue()
+    produce: androidName('translation.settings.account.twoFactor.title') =
+    'translation_settings_account_twoFactor_title' (dots->underscores), value
+    has no &/</> so renderValue is a passthrough; sorted between
+    'translation.sessions' and 'translation.settings.advanced.*' (account<advanced,
+    sessions<settings). A future full gen-i18n.ts run re-emits these exact lines
+    (no conflict). Honest disclosure (no silent drift, covenant #9).
+  - SI: no field on this surface is unit-bearing — no SI conversion needed.
+  - States: TOTPEnrollmentSection renders loading / empty(open-mode) /
+    not-enrolled / active / stale-offline / error+retry for its bound status
+    feed (verified by the shared TOTPEnrollmentSectionViewModelTest +
+    TOTPEnrollmentSectionUiTest + TOTPEnrollmentSectionProjectionTest, run by
+    testDebugUnitTest below).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading + copy-link IconButton contentDescription; the
+    feature view supplies pill/field/modal/QR content descriptions + dynamic/dark
+    theme (ADR-015).
+  - Layout: the feature view lays out as a non-lazy Column, so it composes safely
+    inside the page's outer verticalScroll container.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/settings -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 3m 41s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 9m 51s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 7s
+TEST_EXIT=0
+
+(the only compile warning is the LocalClipboardManager deprecation, identical to
+ the shipped sibling notifications/ChannelsPage.kt / ArchivedPage.kt / WebhooksPage.kt
+ copy-link affordance; accepted precedent, not an error — lintDebug is green.)
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1] string : account.twoFactor.title
+    EVIDENCE: R.string.translation_settings_account_twoFactor_title rendered by
+              PageTitle(...) in TwoFactorAuthPageHeader (TwoFactorAuthPage.kt);
+              value "Two-factor authentication" in res/values/strings.xml; source
+              key settings.account.twoFactor.title in web/src/i18n/en.json.
+              COVERED.
+
+[2] string : account.twoFactor.subtitle
+    EVIDENCE: R.string.translation_settings_account_twoFactor_subtitle rendered by
+              BodyText(...) in TwoFactorAuthPageHeader (TwoFactorAuthPage.kt);
+              value "Add a second factor to your sign-in. Required for sensitive
+              admin actions." in res/values/strings.xml; source key
+              settings.account.twoFactor.subtitle in web/src/i18n/en.json.
+              COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

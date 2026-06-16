@@ -106,6 +106,7 @@ import io.teslasync.android.poweruser.grafanapanel.GrafanaPanelPageHost
 import io.teslasync.android.settings.sessions.ActiveSessionsPageHost
 import io.teslasync.android.settings.helix.HelixPageHost
 import io.teslasync.android.settings.safety.SafetyPageHost
+import io.teslasync.android.settings.twofactor.TwoFactorAuthPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -273,6 +274,7 @@ class TeslaSyncApplication : Application() {
         ActiveSessionsPageHost.register()
         HelixPageHost.register()
         SafetyPageHost.register()
+        TwoFactorAuthPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

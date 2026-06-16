@@ -7873,6 +7873,12 @@
         }
       }
     },
+    "account": {
+      "twoFactor": {
+        "title": "Two-factor authentication",
+        "subtitle": "Add a second factor to your sign-in. Required for sensitive admin actions."
+      }
+    },
     "totp": {
       "title": "Two-factor authentication",
       "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",

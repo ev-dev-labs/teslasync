@@ -5973,6 +5973,8 @@
   <string name="translation_sessions">sessions</string>
   <string name="translation_settings_account_sessions_subtitle">Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.</string>
   <string name="translation_settings_account_sessions_title">Active sessions</string>
+  <string name="translation_settings_account_twoFactor_subtitle">Add a second factor to your sign-in. Required for sensitive admin actions.</string>
+  <string name="translation_settings_account_twoFactor_title">Two-factor authentication</string>
   <string name="translation_settings_advanced_restoreConfirms_description">Re-enable “Don’t ask again” prompts you previously silenced.</string>
   <string name="translation_settings_advanced_restoreConfirms_empty">No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.</string>
   <string name="translation_settings_advanced_restoreConfirms_keys_discardDraft">Discard unsaved draft</string>
