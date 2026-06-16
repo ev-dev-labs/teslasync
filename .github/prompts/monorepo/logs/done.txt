@@ -990,3 +990,4 @@ p3-android/pages/charging/CostAnalysisPage.prompt.md
 p3-android/pages/system/MyActivityPage.prompt.md
 p3-android/pages/system/NotFoundPage.prompt.md
 p3-android/pages/trips/TripListPage.prompt.md
+p3-android/pages/vehicle-systems/MediaPlayerPage.prompt.md
