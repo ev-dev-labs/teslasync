@@ -1,0 +1,79 @@
+P3-ANDROID A7 — page:telemetry/LiveSignalMonitor — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx  (route /live-monitor)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/telemetry/ (LiveSignalMonitorPage + ViewModel + Source + Model + Host)
+Wiring     : DataContainer.liveSessionStore (S8 app-scoped SSE LiveSessionStore, ADR-009);
+             TeslaSyncApplication -> LiveSignalMonitorPageHost.register("liveSignalMonitor");
+             Destinations page("liveSignalMonitor","/live-monitor") pre-existing -> PageHosts seam (deep link auto-registered).
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+REUSE NOTE (honesty): the web page is a thin wrapper over the shared useLiveSignalStream +
+LiveSignalTail. The native LiveSignalTail feature view
+(io.teslasync.android.featureviews.livesignaltail.LiveSignalTail) was already built and binds
+the single shared SSE stream itself (firehose buffer, 4 stat cards, filter + Pause/Auto-scroll/
+Clear, 5-column table, loading/empty/error/stale states). This page reproduces the web chrome
+(title + subtitle + global VehicleSelect + the success/danger connection Badge) and hosts that
+tail — NO second SSE subscription is opened (ADR-009 single-stream mandate). All 4 liveMonitor.*
+strings already exist in res/values/strings.xml, so the string catalog needed no edit.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' ->
+app/; the prompt snippet's ':app:' is the same module per the README gate contract).
+
+DETEKT NOTE (honesty): detekt is NOT part of the android-triad gate (placeholder + assembleDebug
++ lintDebug + testDebugUnitTest). ktlint (runKtlintCheckOverMainSourceSet / TestSourceSet) PASSED
+including the 5 new telemetry files + the new unit test. A module-wide `detekt` run reports 51
+pre-existing weighted issues spread across OTHER, untouched A7 pages (DrivesListPage,
+GlancePageModel, ApiLogsPage, EnergyProductsPage, …); ZERO are in com/teslasync/telemetry/** —
+verified by grepping app/build/reports/detekt/detekt.xml (0 hits for the telemetry surface).
+Fixing other pages is explicitly out of scope for this artifact, so that pre-existing debt is
+left untouched.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/telemetry -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 1m 46s
+BUILD_EXIT=0
+# ./gradlew :android:lintDebug   (lintReportDebug -> app/build/reports/lint-results-debug.html)
+BUILD SUCCESSFUL in 14m 55s
+LINT_EXIT=0
+# ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 07s
+TEST_EXIT=0
+# new unit test: io.teslasync.android.telemetry.livesignalmonitor.LiveSignalMonitorPageViewModelTest
+#   tests=6 failures=0 errors=0 skipped=0  (TEST-…LiveSignalMonitorPageViewModelTest.xml)
+# ktlint (not gated, run for hygiene): runKtlintCheckOverMainSourceSet + TestSourceSet PASSED
+
+=== PARITY ===
+PARITY_REQUIRED=4
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/telemetry/ (LiveSignalMonitorPage.kt
+screen, LiveSignalMonitorPageViewModel.kt, LiveSignalMonitorPageModel.kt, LiveSignalMonitorPageSource.kt,
+LiveSignalMonitorPageHost.kt); strings resolve from app/src/main/res/values/strings.xml.
+
+# strings (4) — every visible literal via stringResource(R.string.translation_liveMonitor_*); web key names preserved
+[COVERED] string liveMonitor.connected    -> LiveSignalMonitorPage.kt:LiveConnectionBadge() stringResource(R.string.translation_liveMonitor_connected); BadgeVariant.Success when isLiveConnected(status)
+[COVERED] string liveMonitor.disconnected -> LiveSignalMonitorPage.kt:LiveConnectionBadge() stringResource(R.string.translation_liveMonitor_disconnected); BadgeVariant.Danger otherwise
+[COVERED] string liveMonitor.subtitle     -> LiveSignalMonitorPage.kt:LiveSignalMonitorHeader() HelperText(stringResource(R.string.translation_liveMonitor_subtitle))
+[COVERED] string liveMonitor.title        -> LiveSignalMonitorPage.kt:LiveSignalMonitorHeader() PageTitle(stringResource(R.string.translation_liveMonitor_title), semantics{heading()})
+
+PARITY_COVERED=4
+
+=== SUMMARY ===
+data sources : page header connection badge binds shared S8 LiveSessionStore.state.status via
+               liveSignalMonitorPageSource() -> LiveSignalMonitorPageViewModel.uiState:
+               StateFlow<LiveMonitorUiState> (collectAsStateWithLifecycle); the live tail binds the
+               same single stream itself. No HTTP in the view. SI values stay raw (Phase-42).
+data states  : the manifest declares no API data sources/states for this page (renders from the live
+               wire + local state); the hosted LiveSignalTail renders loading/empty/error/stale itself,
+               and the header badge honestly reflects Connected/Reconnecting/Disconnected/Unknown +
+               the ADR-013 stale tier (carried on LiveMonitorUiState).
+a11y         : PageTitle semantics{heading()}; connection Badge semantics{contentDescription=Connected/Disconnected}.
+nav          : Destinations 'liveSignalMonitor' -> /live-monitor (pre-existing) wired to
+               LiveSignalMonitorRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(4) == PARITY_REQUIRED(4)
+[PASS] all android triad gates green; parity 4/4; android ledger row page:telemetry/LiveSignalMonitor status=done.
+EXIT=0
+STATUS=DONE
