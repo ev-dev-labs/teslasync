@@ -45,6 +45,7 @@ public sealed partial class ShellWindow : Window
     private ElementTheme _theme = ElementTheme.Default;
     private string? _appliedAccent;
     private string? _appliedMode;
+    private UnitSystemPreference _appliedUnits = UnitSystemPreference.Metric;
     private bool _firstThemeApply = true;
     private AccessibilitySettings? _accessibility;
     private bool _navigating;
@@ -1337,16 +1338,20 @@ public sealed partial class ShellWindow : Window
         // (DashboardStatsWidget is intentionally omitted — its backend GET /dashboard/stats endpoint currently 500s.)
         _viewModel.PageFactory.Register("Dashboard", () =>
         {
+            // Resolve the current unit preference (web useUnits() parity) so the data widgets render in the
+            // account's units. The factory re-runs on a settings change (ApplySettings rebuilds on a units
+            // flip), so the widgets pick up metric/imperial changes without a manual refresh.
+            var units = AppSettingsHost.Current.ToUnitPref();
             var widgets = new UIElement[]
             {
-                DashboardWidgets.VehicleHeroCardWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.VehicleHeroCardWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer, units: units),
                 DashboardWidgets.DigitalTwinWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.BatteryRadialGaugeWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.BatteryDegradationForecastWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
-                DashboardWidgets.MotorPerformanceWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
-                DashboardWidgets.ChargeStatusWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
-                DashboardWidgets.RecentDrivesWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
-                DashboardWidgets.AnalyticsSummaryWidget.Create(_data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.MotorPerformanceWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer, units: units),
+                DashboardWidgets.ChargeStatusWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer, units: units),
+                DashboardWidgets.RecentDrivesWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer, units: units),
+                DashboardWidgets.AnalyticsSummaryWidget.Create(_data.Api, _data.Engine, _data.Options, _data.Localizer, units: units),
                 DashboardWidgets.SoftwareUpdateHistoryWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
             };
             var page = new FeatureViews.Dashboard.DashboardPage(
@@ -1386,6 +1391,7 @@ public sealed partial class ShellWindow : Window
             startup.AccentThemeId, startup.ColorModeId, SystemPrefersDark(), Content as FrameworkElement);
         _appliedAccent = startup.AccentThemeId;
         _appliedMode = startup.ColorModeId;
+        _appliedUnits = startup.Units;
 
         // The startup palette above is the local default; the deferred local-settings load and the
         // backend /settings theme seed (web ThemeProvider parity) arrive as later Changed events. Clear the
@@ -1886,6 +1892,11 @@ public sealed partial class ShellWindow : Window
             && (!string.Equals(_appliedAccent, settings.AccentThemeId, StringComparison.Ordinal)
                 || !string.Equals(_appliedMode, settings.ColorModeId, StringComparison.Ordinal));
 
+        // Units flip the same way: pages resolve their unit pref at construction (mirrors the web's
+        // useUnits() at render), so a metric/imperial change needs a rebuild for non-reactive pages. List
+        // pages that subscribe to settings.Changed re-apply units themselves; the rebuild covers the rest.
+        bool unitsChanged = !_firstThemeApply && _appliedUnits != settings.Units;
+
         if (highContrast)
         {
             if (Content is FrameworkElement hcRoot)
@@ -1903,12 +1914,13 @@ public sealed partial class ShellWindow : Window
 
         _appliedAccent = settings.AccentThemeId;
         _appliedMode = settings.ColorModeId;
+        _appliedUnits = settings.Units;
         _firstThemeApply = false;
 
         ApplyDensity(settings.Density);
         MaybeApplyStartupRoute(settings);
 
-        if (themeChanged && !string.IsNullOrEmpty(_viewModel.CurrentPath))
+        if ((themeChanged || unitsChanged) && !string.IsNullOrEmpty(_viewModel.CurrentPath))
         {
             NavigateTo(_viewModel.CurrentPath, pushHistory: false, record: false);
         }

@@ -60,7 +60,7 @@ public partial class App : Application
     private static async Task InitializeSettingsThenThemeAsync(ShellDataContext data)
     {
         await AppSettingsHost.InitializeAsync().ConfigureAwait(false);
-        await BackendThemeSync.ApplyAsync(data).ConfigureAwait(false);
+        await BackendSettingsSync.ApplyAsync(data).ConfigureAwait(false);
     }
 
     /// <summary>
