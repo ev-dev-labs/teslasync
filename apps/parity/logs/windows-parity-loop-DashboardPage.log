@@ -1,0 +1,8 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/dashboard/pages/DashboardPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/DashboardPage/*
+Units: 6 (2 api, 2 panels, 1 page req=41, 1 string-group req=36). Verification-only; gates green.
+api: useAuthStatus -> GET /auth/status (get_api_v1_auth_status registered); useSyncVehicles -> POST /vehicles/sync (post_api_v1_vehicles_sync registered). IAuthStatusSource/IVehicleSyncGateway (cs:135).
+panels(2): GlassPanel1/GlassPanel2 = onboarding hero + feature grid. states(3): loading/error/success (cs:55 three-state switch).
+string-group req=36: 36/36 present among 38 native keys (0 missing).
+=== PARITY === platform=windows file=DashboardPage.tsx units=6 status=done

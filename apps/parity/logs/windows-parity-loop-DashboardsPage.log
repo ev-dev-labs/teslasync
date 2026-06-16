@@ -1,0 +1,8 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/power-user/pages/DashboardsPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/DashboardsPage/*
+Units: 4 (2 panels, 1 page req=16, 1 string-group req=13). Verification-only; gates green.
+panels(2): GlassPanel1 = _editorPanel manual dashboard JSON editor (cs:60); GlassPanel2 = _catalogPanel curated panel catalog (cs:74).
+page req=16 = 2 panels + 1 state(success) + 13 strings. route registered "PowerDashboards" (shell:723).
+string-group req=13: 13/13 present (keys bound via const Key + localizer.GetString(Key); 0 missing).
+=== PARITY === platform=windows file=DashboardsPage.tsx units=4 status=done
