@@ -131,6 +131,7 @@ import io.teslasync.android.trips.tripdetail.TripDetailPageHost
 import io.teslasync.android.trips.triplist.TripListPageHost
 import io.teslasync.android.telemetry.signalsworkspace.SignalsWorkspacePageHost
 import io.teslasync.android.vehiclesystems.mediaplayer.MediaPlayerPageHost
+import io.teslasync.android.vehicles.digitaltwin.DigitalTwinPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -329,6 +330,8 @@ class TeslaSyncApplication : Application() {
         SignalsWorkspacePageHost.register()
         // Register the native media-player vehicle-systems screen for the /media-player route (P3/A7). Idempotent.
         MediaPlayerPageHost.register()
+        // Register the native digital-twin vehicles screen for the /digital-twin route (P3/A7). Idempotent.
+        DigitalTwinPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

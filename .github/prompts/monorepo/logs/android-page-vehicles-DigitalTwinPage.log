@@ -1,0 +1,171 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicles/DigitalTwin — evidence log
+Native Jetpack Compose / Material 3 port of web DigitalTwinPage
+Source: web/src/features/vehicles/pages/DigitalTwinPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehicles/**
+Package: io.teslasync.android.vehicles.digitaltwin
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME     = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK              = OpenJDK 21.0.9 (Android Studio jbr)
+  Gradle           = 8.14.5; module Gradle path = :android (settings.gradle.kts
+                     `include(":android"); project(":android").projectDir = file("app")`;
+                     the prompt's literal ":app:" is the generic placeholder — this
+                     single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 MediaPlayer precedent)
+  DigitalTwinPageModel.kt      framework-free: registration ids; parseVehicles / parseSecurity /
+                               parseVehicleState / parseCharging (decode GET /vehicles,
+                               /vehicles/{id}/state, /security/latest, /charging-telemetry/latest;
+                               null guards = web optional chaining); the verbatim port of
+                               web/src/lib/vehicleState.ts — buildTwinState, parseDoorState,
+                               parseWindowState, parseTurnSignal, parseWindowOpenSummary,
+                               isChargingActive, isVehicleDriving — producing the shared
+                               io.teslasync.android.sharedsurfaces.vehicletwin.VehicleTwinState;
+                               deriveVehicleStatus + deriveBadgeStatus (web `badgeStatus` useMemo);
+                               doorRows / windowRows / securityRows (web doorItems / windowItems /
+                               securityItems) as TwinLabel+TwinValue token rows resolved to strings
+                               at the render boundary; lastUpdatedTime (web `formatTime`);
+                               recordDigitalTwinPageOpened (view.opened); mapData.
+  DigitalTwinPageSource.kt     seam over the shared resilient ApiHttpClient.safeRequest for
+                               `/vehicles`, `/vehicles/{id}/state`, `/security/latest?vehicle_id=`,
+                               `/charging-telemetry/latest?vehicle_id=` (web inline request() reads;
+                               no digital-twin S7 repo exists, same as the MediaPlayer inline-read
+                               precedent) + SelectedVehicleStore (web useSelectedVehicle).
+  DigitalTwinPageViewModel.kt  BaseFeedViewModel; vehiclesState: StateFlow<UiState<List<TwinVehicle>>>
+                               drives the primary loading→empty(no vehicles)→content lifecycle;
+                               vehicleStateState / securityState / chargingState re-collected on
+                               vehicle change / refresh, gated on the active vehicle, empty when the
+                               decode is null (web optional chaining); refresh/retry/recordViewOpened.
+                               No HTTP in the view.
+  DigitalTwinPage.kt           stateless DigitalTwinPageContent + the five Material 3 GlassPanels;
+                               the real A3 VehicleTwin / VehiclePaintPicker / VehicleSelect surfaces
+                               are reused (Compose-native, never a webview); doors/windows/security
+                               rows render via the shared KVList; the live StatusBadge renders the
+                               derived badge status.
+  DigitalTwinPageHost.kt       registers DigitalTwinRoute for the `digitalTwin` destination
+                               (Destinations.kt L55, /digital-twin); wired in
+                               TeslaSyncApplication.onCreate() (NavHost registration).
+
+SI BOUNDARY (P1/S5)
+  This surface carries no displayed SI quantity: the physical-state fields are booleans / enums
+  (door/window/lock/sentry/charge-port/seat/lights). The charging-active predicate reads the SI
+  canonical `charger_power_w` (with the legacy `charger_power_kw` as a fallback during the SI
+  migration) but renders only the boolean "Charging" / "Yes"; nothing is stored converted. The only
+  render-boundary formatting is the locale-aware last-updated time (web `useDateFormat.formatTime`).
+
+LIVE DATA / STALENESS (ADR-013)
+  None of the four feeds is an SSE live stream; each is a cache-then-network Resource stream
+  projected to UiState (the web page polls every 5s via refetchInterval — the native refresh()
+  trigger is the analogue), so the header DataFreshness chip surfaces fetchedAt / refreshing /
+  stale / error. The reused VehicleTwin / VehicleSelect surfaces carry their own freshness tiers.
+
+=== PARITY ===
+PARITY_REQUIRED=45
+
+PANELS (5) — every web GlassPanel, as Material 3 GlassPanel surfaces
+  [01] panel  GlassPanel1  DigitalTwinPage.kt:241  NoVehiclesPanel (GlassPanel L243 + EmptyState noVehicles, web `!vehicle && !vehiclesLoading`)
+  [02] panel  GlassPanel2  DigitalTwinPage.kt:287  TwinVisualizationPanel (GlassPanel L293 + VehicleTwin L297 + VehiclePaintPicker L307 + lastUpdated L313)
+  [03] panel  GlassPanel3  DigitalTwinPage.kt:321  TwinDoorsPanel (GlassPanel L325 + KVList doorRows | EmptyState noDoorData)
+  [04] panel  GlassPanel4  DigitalTwinPage.kt:341  TwinWindowsPanel (GlassPanel L345 + KVList windowRows | EmptyState noWindowData)
+  [05] panel  GlassPanel5  DigitalTwinPage.kt:361  TwinSecurityPanel (GlassPanel L365 + KVList securityRows + StatusBadge)
+
+DATA STATES (3) — for the /vehicles feed (the per-vehicle feeds render their own side-panel states)
+  [06] state  loading  DigitalTwinPage.kt:172  vehiclesState.isLoading -> DigitalTwinLoading() (ChartBlockSkeleton blocks L217)
+  [07] state  empty    DigitalTwinPage.kt:174  vehiclesState.isEmpty -> NoVehiclesPanel() (web `!vehicle` empty branch)
+  [08] state  success  DigitalTwinPage.kt:175  else -> DigitalTwinBody(...) (buildTwinState body, def L261)
+
+STRINGS (37) — every visible literal resolves from res/values/strings.xml; key names match web
+  [09] string common.active                  DigitalTwinPage.kt:390  translation_common_active
+  [10] string common.closed                  DigitalTwinPage.kt:386  translation_common_closed
+  [11] string common.inactive                DigitalTwinPage.kt:391  translation_common_inactive
+  [12] string common.no                      DigitalTwinPage.kt:389  translation_common_no
+  [13] string common.off                     DigitalTwinPage.kt:393  translation_common_off
+  [14] string common.on                      DigitalTwinPage.kt:392  translation_common_on
+  [15] string common.open                    DigitalTwinPage.kt:385  translation_common_open
+  [16] string common.yes                     DigitalTwinPage.kt:388  translation_common_yes
+  [17] string digitalTwin.chargePort         DigitalTwinPage.kt:418  translation_digitalTwin_chargePort
+  [18] string digitalTwin.charging           DigitalTwinPage.kt:396  translation_digitalTwin_charging (value L396, label L416)
+  [19] string digitalTwin.doorDriverFront    DigitalTwinPage.kt:404  translation_digitalTwin_doorDriverFront
+  [20] string digitalTwin.doorDriverRear     DigitalTwinPage.kt:406  translation_digitalTwin_doorDriverRear
+  [21] string digitalTwin.doorPassengerFront DigitalTwinPage.kt:405  translation_digitalTwin_doorPassengerFront
+  [22] string digitalTwin.doorPassengerRear  DigitalTwinPage.kt:407  translation_digitalTwin_doorPassengerRear
+  [23] string digitalTwin.doorsTitle         DigitalTwinPage.kt:326  translation_digitalTwin_doorsTitle
+  [24] string digitalTwin.driverSeat         DigitalTwinPage.kt:419  translation_digitalTwin_driverSeat
+  [25] string digitalTwin.driving            DigitalTwinPage.kt:415  translation_digitalTwin_driving
+  [26] string digitalTwin.empty              DigitalTwinPage.kt:395  translation_digitalTwin_empty
+  [27] string digitalTwin.frunk              DigitalTwinPage.kt:408  translation_digitalTwin_frunk
+  [28] string digitalTwin.hazards            DigitalTwinPage.kt:421  translation_digitalTwin_hazards
+  [29] string digitalTwin.headlights         DigitalTwinPage.kt:420  translation_digitalTwin_headlights
+  [30] string digitalTwin.lastUpdated        DigitalTwinPage.kt:313  translation_digitalTwin_lastUpdated
+  [31] string digitalTwin.locked             DigitalTwinPage.kt:414  translation_digitalTwin_locked
+  [32] string digitalTwin.noDoorData         DigitalTwinPage.kt:332  translation_digitalTwin_noDoorData
+  [33] string digitalTwin.noVehicles         DigitalTwinPage.kt:245  translation_digitalTwin_noVehicles
+  [34] string digitalTwin.noWindowData       DigitalTwinPage.kt:352  translation_digitalTwin_noWindowData
+  [35] string digitalTwin.occupied           DigitalTwinPage.kt:394  translation_digitalTwin_occupied
+  [36] string digitalTwin.securityTitle      DigitalTwinPage.kt:366  translation_digitalTwin_securityTitle
+  [37] string digitalTwin.sentryMode         DigitalTwinPage.kt:417  translation_digitalTwin_sentryMode
+  [38] string digitalTwin.subtitle           DigitalTwinPage.kt:199  translation_digitalTwin_subtitle
+  [39] string digitalTwin.title              DigitalTwinPage.kt:197  translation_digitalTwin_title (also a11y desc L292)
+  [40] string digitalTwin.trunk              DigitalTwinPage.kt:409  translation_digitalTwin_trunk
+  [41] string digitalTwin.windowFD           DigitalTwinPage.kt:410  translation_digitalTwin_windowFD
+  [42] string digitalTwin.windowFP           DigitalTwinPage.kt:411  translation_digitalTwin_windowFP
+  [43] string digitalTwin.windowRD           DigitalTwinPage.kt:412  translation_digitalTwin_windowRD
+  [44] string digitalTwin.windowRP           DigitalTwinPage.kt:413  translation_digitalTwin_windowRP
+  [45] string digitalTwin.windowsTitle       DigitalTwinPage.kt:346  translation_digitalTwin_windowsTitle
+
+PARITY_COVERED=45
+
+STRING CATALOG
+  All 37 required keys already existed in res/values/strings.xml (generated from the shared i18n
+  catalog by apps/shared/i18n/generators/gen-i18n.ts) under the `translation_<namespace>_<key>`
+  naming the generator emits for catalog keys (translation_common_* and translation_digitalTwin_*),
+  so they are reused verbatim — NO strings.xml edit was required (zero drift). The window "Partial"
+  value reuses the existing generated translation_widget_doorWindow_partial; the unknown-value em
+  dash "—" is a non-text symbol constant (TWIN_EM_DASH). The error-surface message reuses the
+  existing translation_error_loadFailed. The Kotlin compile resolving every R.string reference
+  (compileDebugKotlin BUILD SUCCESSFUL) is the proof that all referenced keys exist.
+
+A11Y / THEME (ADR-015)
+  Dark / dynamic theme via MaterialTheme; the VehicleTwin visualization panel carries a
+  Modifier.semantics contentDescription (L292, the digitalTwin.title string); the reused VehicleTwin
+  / VehiclePaintPicker / VehicleSelect / EmptyState / StatusBadge surfaces provide their own
+  semantics + ≥48dp targets; PanelTitle headings group each side panel; KVList rows are accessible
+  label/value Text. Compose-native only (no webview cloning).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehicles -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 1m 08s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 13m 11s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 28s (no regressions in the existing suite)
+  TEST_EXIT=0
+  (compileDebugKotlin BUILD SUCCESSFUL in 1m 08s — every R.string reference resolved.)
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 no-vehicles empty, GlassPanel2 VehicleTwin
+      visualization + paint picker + last-updated, GlassPanel3 doors, GlassPanel4 windows,
+      GlassPanel5 security & status); every anonymous region from the web source reproduced (the
+      header title+subtitle+freshness+VehicleSelect, the doors/windows KVLists, the security KVList
+      + StatusBadge, the last-updated caption).
+  [x] All 45 parity items render from the bound StateFlow state holders (vehiclesState +
+      vehicleStateState + securityState + chargingState + selectedVehicleId), merged by the
+      framework-free model (buildTwinState / doorRows / windowRows / securityRows / deriveBadgeStatus).
+  [x] loading / empty / success implemented for the /vehicles source; the per-vehicle security feed
+      powers the doors + windows panels, each with its own EmptyState (no-door-data / no-window-data);
+      a hard-error retry surface is also provided.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; semantics content descriptions; ≥48dp targets (shared
+      surfaces); SI honored; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (45).
+  [x] android ledger row for page:vehicles/DigitalTwin set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
