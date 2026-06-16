@@ -1329,20 +1329,24 @@ public sealed partial class ShellWindow : Window
             return page;
         });
 
-        // Dashboard / Command Center — inject a curated set of self-contained, data-backed widgets (vehicle hero,
-        // fleet stats, battery, charge status, recent drives, analytics) so the dashboard shows real fleet data
-        // instead of only the onboarding hero. Each widget loads its own data through the shared data layer; the
-        // live auth source + sync gateway keep the connect/sync affordances honest.
+        // Dashboard / Command Center — inject a curated set of self-contained, data-backed widgets so the dashboard
+        // matches the web's rich Command Center: vehicle hero, digital twin, battery gauge + degradation forecast,
+        // motor performance, charge status, recent drives, analytics and software-update history. Each widget loads
+        // its own data through the shared data layer; the live auth source + sync gateway keep connect/sync honest.
+        // (DashboardStatsWidget is intentionally omitted — its backend GET /dashboard/stats endpoint currently 500s.)
         _viewModel.PageFactory.Register("Dashboard", () =>
         {
             var widgets = new UIElement[]
             {
                 DashboardWidgets.VehicleHeroCardWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
-                DashboardWidgets.DashboardStatsWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.DigitalTwinWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.BatteryRadialGaugeWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.BatteryDegradationForecastWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.MotorPerformanceWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.ChargeStatusWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.RecentDrivesWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
                 DashboardWidgets.AnalyticsSummaryWidget.Create(_data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.SoftwareUpdateHistoryWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
             };
             var page = new FeatureViews.Dashboard.DashboardPage(
                 new FeatureViews.Dashboard.AuthStatusClientSource(_data.Api, _data.Engine, _data.Options),
