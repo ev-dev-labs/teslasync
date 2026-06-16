@@ -1,0 +1,249 @@
+================================================================================
+p4-apple · P7 · page:automations/ConflictWarnings — SwiftUI / Apple HIG
+Native SwiftUI parity of web/src/features/automations/pages/ConflictWarnings.tsx
+Targets: apple-macos + apple-ios (single adaptive SwiftUI source — ADR-002/006)
+Delegation: FORBIDDEN (authored directly; no sub-agents)
+================================================================================
+
+--------------------------------------------------------------------------------
+SCOPE / APPROACH
+--------------------------------------------------------------------------------
+The web source is an UNROUTED presentational leaf: the automation builder maps a
+validation result into `conflicts: AutomationConflict[]` and renders the leaf
+inline, which maps each conflict to an `<AlertBanner>` (variant + icon branch on
+`severity`: warning → amber/AlertTriangle, else → info/Info), a constant title
+`t('automations.builder.conflict','Potential Conflict')`, and a verbatim
+`"{automation_name}": {reason}` body — rendering nothing when the list is empty.
+Manifest record requires PARITY 3 = 2 states (empty · error) + 1 string
+(automations.builder.conflict).
+
+PREDECESSOR REUSE (Honesty Covenant #7 — no predecessor bypass; DRY): the
+canonical, fully-stated native surface ALREADY ships as the P4 feature view
+TeslaSync/feature-views/ConflictWarnings.{swift,Model,Adapter,Views,Previews,
+strings,Tests} (predecessor 0084). It owns the severity→banner projection
+(ConflictWarningsProjection → ConflictWarningRow, web icon/title/`"{name}":
+{reason}` body), the `ConflictWarningsModel` (@Observable, an S8
+`ConflictWarningsSource` seam), and EVERY state — loading skeletons, the
+never-a-blank-box empty (web `return null`), the query-error retry, plus the
+P4 stale/offline chips. This P7 PAGE unit ships the standalone, deep-linkable
+SwiftUI SCREEN that HOSTS that surface unchanged (no second copy) through a
+page-level @Observable model + a NavigationDestination seam — exactly mirroring
+the accepted sibling page:automations/AutomationCard (Page + PageModel + Route
+in Sources/Features/Automations, tests in Tests/Unit/Features/Automations).
+
+OUTPUT-PATH DEVIATION (recorded — no silent drift): the generated prompt names
+apps/apple/TeslaSync/Features/Automations/** (a path that does not exist in this
+repo, and which the XcodeGen project.yml does NOT enumerate as a source root, so
+files placed there would never compile/test). The real, build-enumerated
+conventions are Sources/Features/<Domain>/** (pages) + Tests/Unit/Features/
+<Domain>/** (co-located XCTest) + TeslaSync/feature-views/** (the reused
+component) — the same roots the sibling P7 automations pages used and were
+accepted under. Files shipped there; all compile into the single TeslaSync module.
+
+--------------------------------------------------------------------------------
+FILES (allowed: Sources/Features/Automations/**, navigation registration, the
+       string catalog, this log)
+--------------------------------------------------------------------------------
+ A  apps/apple/Sources/Features/Automations/ConflictWarningsPageModel.swift
+ A  apps/apple/Sources/Features/Automations/ConflictWarningsPage.swift
+ A  apps/apple/Sources/Features/Automations/ConflictWarningsRouteRegistration.swift
+ A  apps/apple/Tests/Unit/Features/Automations/ConflictWarningsPageModelTests.swift
+ M  apps/apple/Localization/Localizable.xcstrings  (+2 catalog keys — see STRINGS)
+ M  apps/parity/apple-ledger.json                  (2 rows: apple-macos + apple-ios, 3/3 done)
+ A  .github/prompts/monorepo/logs/apple-page-automations-ConflictWarnings.log (this log)
+
+ REUSED (unmodified) — TeslaSync/feature-views/ConflictWarnings.{swift,Model,
+   Adapter,Views,strings}: the canonical surface the page hosts. Its per-surface
+   ConflictWarnings.strings table already carries automations.builder.conflict =
+   "Potential Conflict" + the native chrome/a11y keys (verified below).
+
+STRINGS — only TWO catalog keys added to Localizable.xcstrings, both
+   non-divergent: automations.builder.conflict = "Potential Conflict" (the
+   manifest's required web key, value identical to the predecessor table's, so
+   the required string also resolves from the master catalog) and
+   automations.conflicts.title = "Conflicts" (the standalone screen's nav title).
+   An earlier draft added 5 further automations.conflicts.* keys; they were
+   REVERTED because their English values diverged from the predecessor's own
+   ConflictWarnings.strings table (silent-drift risk, Covenant #9). The hosted
+   surface resolves its loading/empty/error/stale/offline copy from that table.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + Apple HIG)
+--------------------------------------------------------------------------------
+- Navigation entry: ConflictWarningsRouteRegistration.swift exposes the unrouted
+  unit as a typed NavigationDestination (ConflictWarningsLink + View
+  .conflictWarningsDestination()) any NavigationStack/NavigationSplitView can
+  deep-link, plus ConflictWarningsRouteRegistration.make(source:) for a
+  ready-built screen over a custom conflict source (no top-level AppRoute claimed
+  — the builder owns the inline placement).
+- Screen scaffold: ConflictWarningsPage (SwiftUI View) + @Observable @MainActor
+  ConflictWarningsPageModel, which owns the reused ConflictWarningsModel
+  (`surface`) built over an injectable ConflictWarningsSource (default = two
+  representative local conflicts) and exposes load()/refresh(); no business logic
+  in the view body; no networking (ADR-004). The page renders
+  ConflictWarnings(model: model.surface) inside an adaptive scaffold.
+- Adaptive (ADR-002/006): compact iPhone fills width; macOS/iPad cap the banner
+  column to a readable measure (horizontalSizeClass; #if os gated).
+- 3 data states: the hosted surface drives loading (skeletons) / empty
+  (ContentUnavailableView, web `return null`) / error (message + Retry) /
+  conflicts(list); the manifest's required `empty` + `error` render from the
+  bound @Observable surface. Never a blank region (ADR-013).
+- Live/freshness (ADR-013): the surface's stale + offline chips downgrade the
+  conflict-check freshness; the page model passes those flags through.
+- i18n (ADR-014): page nav title via the catalog key automations.conflicts.title;
+  the hosted banner title resolves automations.builder.conflict; web key names
+  preserved verbatim. No hardcoded literals.
+- a11y (ADR-015): the reused banner sets VoiceOver labels
+  (ConflictWarningsAccessibility.bannerSummary = title + severity word + body);
+  Dynamic Type; light/dark; the scaffold's teslaSyncTheme().
+- Units (ADR-005): N/A — no SI quantities on this surface.
+
+================================================================================
+GATES (apple triad: build + lint + format + test + placeholder scan)
+================================================================================
+Toolchain present on this host: xcodebuild (Xcode 26.5), swift/swiftc 6.3.2,
+swiftlint 0.63.3, swiftformat, pwsh, xcodegen 2.45.4, KMP gradlew (+ JDK).
+An Xcode runner IS available, so the gate is NOT BLOCKED.
+
+[shared core] Scripts/build-shared-xcframework.sh → :core:assembleSharedXCFramework
+    BUILD SUCCESSFUL in 16m40s; staged apps/apple/Frameworks/Shared.xcframework
+    with slices ios-arm64 + ios-arm64-simulator + macos-arm64 (no x86_64-sim
+    slice — KMP emits arm64 only on this host).
+    SHARED_BUILD_EXIT=0
+
+[placeholder] apps/tools/check-placeholders.ps1 -Path <4 shipped files> -Language swift
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0          ← no TODO/FIXME/stub/Lorem/placeholder in shipped code
+
+[format] swiftformat --lint (4 shipped files, repo .swiftformat, --swiftversion 6.0)
+    0/4 files require formatting.
+    FORMAT_EXIT=0
+
+[lint] swiftlint lint --strict (4 shipped files, repo .swiftlint.yml)
+    0 violations.
+    LINT_EXIT=0
+
+[build · macOS] xcodegen generate && xcodebuild -scheme TeslaSync-macOS
+    -destination 'platform=macOS,arch=arm64' -configuration Debug
+    CODE_SIGNING_ALLOWED=NO build
+    ** BUILD SUCCEEDED **        ← the FULL TeslaSync-macOS app compiled + linked,
+    MAC_BUILD_EXIT=0               my 3 page files compiling in the same module
+                                   batch as the reused ConflictWarnings.* under
+                                   Swift 6 -strict-concurrency=complete; zero
+                                   diagnostics in any shipped file.
+
+[build · iOS Simulator] xcodebuild -scheme TeslaSync
+    -destination 'generic/platform=iOS Simulator' ARCHS=arm64 ONLY_ACTIVE_ARCH=YES
+    -configuration Debug CODE_SIGNING_ALLOWED=NO build
+    ** BUILD SUCCEEDED **        ← the FULL TeslaSync iOS app compiled + linked for
+    IOS_BUILD_EXIT=0               the iOS 18 simulator SDK; zero diagnostics in any
+                                   shipped file (single adaptive source, ADR-002).
+    (The default 2-arch simulator build also fans out to x86_64, for which the
+    KMP Shared.xcframework has no slice — the documented host limitation; the
+    arm64 simulator slice links cleanly, so the build is pinned to ARCHS=arm64.)
+
+[test] xcodebuild -scheme TeslaSync-macOS ... -only-testing:TeslaSync-macOSTests/
+    ConflictWarningsPageModelTests test  →  blocked, NOT by this unit: the shared
+    TeslaSync(-macOS)Tests bundle currently fails to COMPILE on PRE-EXISTING,
+    unrelated Swift-6 actor-isolation errors in other teams' test files
+    (Tests/Unit/Features/Analytics/TimelinePageModelTests.swift:318 'utcDayKey';
+    Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20 'artifact(…)';
+    batched, so more may follow) — all outside this prompt's allowed files and
+    forbidden to "fix" (predecessor-bypass / anti-revert). My test file itself has
+    ZERO diagnostics (the bundle compiler only ever reports the OTHER files).
+    To EXECUTE the tests in isolation, a SwiftPM harness compiled the REAL
+    closure (ConflictWarnings.Adapter + ConflictWarnings.Model +
+    ConflictWarningsPageModel, Swift-6 mode) + the test verbatim:
+        Test Suite 'ConflictWarningsPageModelTests' passed
+        Executed 8 tests, with 0 failures (0 unexpected)
+    SWIFT_TEST_EXIT=0          ← every render state (loaded/empty/error) + the
+                                 stale/offline pass-through + refresh delegation +
+                                 the projection/string parity, EXECUTED green.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=3
+Each item below carries binding evidence (file → symbol). The required string is
+verified present in BOTH the reused TeslaSync/feature-views/ConflictWarnings.strings
+table (automations.builder.conflict = "Potential Conflict") AND, after this change,
+apps/apple/Localization/Localizable.xcstrings (same value), so it resolves from the
+master catalog. Each item is exercised by an EXECUTED unit test (8/8 green).
+================================================================================
+[x] state  — empty
+        evidence: hosted ConflictWarningsModel.render(for: .loaded([])) → .empty
+        (ConflictWarnings.Model.swift), rendered by ConflictWarnings.swift
+        content switch → ConflictWarningsEmpty (ContentUnavailableView, web
+        `return null`); driven through the page by ConflictWarningsPageModel
+        (ConflictWarningsPageModel.swift, surface). Test:
+        testLoadEmptyResolvesEmptyState (PASS).
+[x] state  — error
+        evidence: ConflictWarningsModel.render(for: .failed) → .failed
+        (ConflictWarnings.Model.swift), rendered by ConflictWarnings.swift →
+        ConflictWarningsError (message + ConflictRetryButton → surface.refresh);
+        the page model's refresh() delegates to the bound source. Tests:
+        testLoadFailureResolvesErrorState, testRefreshDelegatesToSource (PASS).
+[x] string — automations.builder.conflict
+        evidence: ConflictWarningBanner.title = CWCopy.title.resolved(CWStrings.string)
+        with CWCopy.title = CWText("automations.builder.conflict","Potential Conflict")
+        (ConflictWarnings.Adapter.swift; rendered ConflictWarnings.Views.swift).
+        PRESENT in ConflictWarnings.strings AND Localizable.xcstrings. Test:
+        testParityBannerTitleKeyIsWebKey (PASS).
+PARITY_COVERED=3
+
+================================================================================
+HONESTY COVENANT (binding — verbatim adherence)
+================================================================================
+ 1 No red-as-green ...... every exit pasted above is real tool output. The full
+                          xcodebuild TEST is honestly reported as blocked by
+                          PRE-EXISTING unrelated test-bundle compile errors; the
+                          unit's tests are proven green by an EXECUTED SwiftPM
+                          harness over the real source, and the full macOS APP
+                          build is reported SUCCEEDED (EXIT=0), not inflated.
+ 2 No scope narrowing ... all 3 manifest parity items implemented + tested.
+ 3 No skip-and-assume ... every state/string traced to a file→symbol + a test.
+ 4 No stubs as final .... shipped code reuses the fully-stated predecessor; the
+                          only stub (HarnessSurfaceSlugStub) lives in the throwaway
+                          /tmp SwiftPM harness, never in the repo.
+ 5 No parity shortcuts .. empty + error + the web string all reproduced natively.
+ 6 No delegation ........ authored directly.
+ 7 No predecessor bypass  the P4 ConflictWarnings surface is REUSED unchanged, not
+                          re-implemented; a duplicate Views draft was deleted.
+ 8 No commit on red ..... committed only after lint/format/placeholder/macOS-build
+                          /harness-test all green (see COMMIT).
+ 9 No silent drift ...... output-path + catalog-key divergences disclosed above;
+                          5 divergent draft keys reverted.
+10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>.
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+ [x] Every named panel/region reproduced — the web banner list + every web data
+     branch, via the reused fully-stated ConflictWarnings surface.
+ [x] All 3 parity items render from the bound @Observable state holder
+     (ConflictWarningsPageModel.surface : ConflictWarningsModel).
+ [x] loading / empty / error implemented for the conflict source (hosted surface).
+ [x] All visible strings catalog-sourced; key names match web; zero hardcoded
+     literals; no divergent keys.
+ [x] Dark mode + Dynamic Type + a11y + adaptive macOS/iOS; SwiftUI-native only.
+ [x] format + lint + placeholder + macOS build green; tests EXECUTED green via
+     harness; PARITY_COVERED==PARITY_REQUIRED (3==3). Full xcodebuild TEST blocked
+     only by pre-existing unrelated sibling errors (disclosed).
+ [x] apple ledger rows (apple-macos + apple-ios) for page:automations/
+     ConflictWarnings set covered 3/3.
+
+================================================================================
+SUMMARY (machine-readable)
+================================================================================
+SHARED_BUILD_EXIT=0
+PLACEHOLDER_EXIT=0     (COUNT=0)
+FORMAT_EXIT=0          (0/4 require formatting)
+LINT_EXIT=0           (0 violations)
+MAC_BUILD_EXIT=0      (** BUILD SUCCEEDED ** — full TeslaSync-macOS app)
+IOS_BUILD_EXIT=0      (** BUILD SUCCEEDED ** — full TeslaSync iOS app, ARCHS=arm64 sim)
+SWIFT_TEST_EXIT=0     (8/8 via SwiftPM harness over real source; full bundle blocked by pre-existing unrelated errors)
+PARITY_REQUIRED=3
+PARITY_COVERED=3
+
+EXIT=0
+STATUS=DONE
