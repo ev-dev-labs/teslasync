@@ -1,0 +1,131 @@
+================================================================================
+P3-ANDROID · A7 · page:explore/Explore — evidence log
+Native Jetpack Compose / Material 3 port of web ExplorePage (the Feature Hub)
+Source: web/src/features/explore/pages/ExplorePage.tsx (+ featureCatalog.ts, closestRoute.ts)
+Output: apps/android/app/src/main/kotlin/com/teslasync/explore/**
+Package: io.teslasync.android.explore
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 GlancePage / DrivesListPage precedents)
+  ExplorePageModel.kt      framework-free: ExplorePageRegistration (ROUTE_ID/WEB_PATH/SLUG/RECENT_LIMIT),
+                           ExploreGating (web minVehicles fleetCompare>=2 + requiresAuth set + isVisible),
+                           ExploreEntry / ExploreSection / HighlightSegment / ExploreSuggestion / ExploreGate,
+                           exploreGateResource (freshness-preserving Resource fold), filterExploreCatalog
+                           (web filterFeatureCatalog), groupExploreCatalog (web groupFeatureCatalog),
+                           highlightExplore (web Highlight splitter), closestExploreRoutes + levenshtein
+                           (web closestRoutes), recordExplorePageOpened (view.opened diagnostic).
+  ExplorePageStrings.kt    ExploreDescriptions: webPath -> @StringRes desc id (web DESCRIPTIONS record), with a
+                           localized `Open %1$s.` fallback; resolved off the Compose boundary via Context.getString.
+  ExplorePageSource.kt     seam over VehiclesStore.vehicles (web useVehicles) + AuthModeStore.isForwardAuth
+                           (web useIsForwardAuth) + RecentPagesStore (web getRecentPages); refresh re-fetches auth.
+  ExplorePageViewModel.kt  BaseFeedViewModel; uiState: StateFlow<UiState<ExploreGate>> = refreshTrigger
+                           ▸ flatMapLatest(combine(vehicles, isForwardAuth) ▸ exploreGateResource) ▸ asUiState
+                           (isEmpty=false, so the catalog is never gated behind a spinner); recent StateFlow;
+                           refresh/retry; recordViewOpened.
+  ExplorePage.kt           stateful entry + stateless content; PageLoader first-frame loader; header (title +
+                           live subtitle + DataFreshness + retry); recently-visited strip; search panel
+                           (GlassPanel1) + anchor strip; categorized feature-card grid (FlowRow, 2-up) with
+                           query highlight; no-results empty panel (GlassPanel2) + did-you-mean suggestions +
+                           clear; pane title = explore.pageTitle (web usePageTitle). Forward navigation through
+                           the shared LocalDeepLinkRouter seam (no NavController is exposed to page hosts).
+  ExplorePageHost.kt       ExploreRoute + ExplorePageHost.register() for the `explore` /explore destination
+                           (Destinations.kt L51); page-local AuthModeStore over the shared client+cache (the DI
+                           graph wires no app-wide AuthModeStore, as the GlancePageHost VehicleCommandStore notes)
+                           + SharedPreferencesRecentPagesStore(LocalContext).
+  TeslaSyncApplication.kt  ExplorePageHost.register() wired into onCreate (NavHost registration).
+  res/values/strings.xml   13 translation_explore_* keys + translation_explore_cardFallback + 103
+                           translation_explore_desc_* descriptions added (well-formed XML, 8347 strings total).
+
+DATA SOURCES (each bound through the ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useVehicles        → ExplorePageViewModel.uiState (vehicleCount gate) ← ExplorePageSource.vehicles
+                       ← VehiclesStore.vehicles; gates the `/vehicle-comparison` (fleetCompare>=2) card.
+  useIsForwardAuth   → ExplorePageViewModel.uiState (auth gate) ← ExplorePageSource.isForwardAuth
+                       ← AuthModeStore.isForwardAuth; hides myActivity/account2fa/accountSessions in open mode.
+  getRecentPages     → ExplorePageViewModel.recent ← ExplorePageSource.recentPages ← RecentPagesStore
+                       (SharedPreferences, the web localStorage recent-pages registry); resolved against the
+                       visible catalog for the recently-visited strip.
+  Catalog source: RouteTable.drawerSections (the same localized nav registry the Android sidebar uses, the
+  analogue of the web `navSections`); labels via navTitleRes, sections via navGroupTitleRes, icons via navIcon,
+  descriptions via ExploreDescriptions — folded into ExploreEntry at the Compose boundary (LayoutStrings precedent).
+
+=== PARITY ===
+PARITY_REQUIRED=17
+  [1]  panel  GlassPanel1               ExplorePage.kt:355 ExploreSearchPanel → GlassPanel(PanelPadding.Md) {Input + AnchorStrip}
+  [2]  panel  GlassPanel2               ExplorePage.kt:511 ExploreEmptyResult → GlassPanel(PanelPadding.Lg) {no-results panel}
+  [3]  state  empty                     ExplorePage.kt:226 grouped.isEmpty() -> ExploreEmptyResult (GlassPanel2, web grouped.length===0)
+  [4]  state  success                   ExplorePage.kt:239 grouped.forEach -> ExploreSectionBand (categorized card grid)
+  [5]  string explore.anchorCountAria   ExplorePage.kt:383 R.string.translation_explore_anchorCountAria (count semantics)
+  [6]  string explore.empty.body        ExplorePage.kt:524 R.string.translation_explore_empty_body
+  [7]  string explore.empty.clear       ExplorePage.kt:539 R.string.translation_explore_empty_clear (clear-filter Button)
+  [8]  string explore.empty.didYouMean  ExplorePage.kt:527 R.string.translation_explore_empty_didYouMean
+  [9]  string explore.empty.title       ExplorePage.kt:523 R.string.translation_explore_empty_title (with query arg)
+  [10] string explore.pageTitle         ExplorePage.kt:158 R.string.translation_explore_pageTitle → paneTitle L65 (web usePageTitle)
+  [11] string explore.recent.heading    ExplorePage.kt:306 R.string.translation_explore_recent_heading (ExploreRecentStrip Subhead)
+  [12] string explore.searchLabel       ExplorePage.kt:359 R.string.translation_explore_searchLabel (Input label)
+  [13] string explore.searchPlaceholder ExplorePage.kt:360 R.string.translation_explore_searchPlaceholder (Input hint)
+  [14] string explore.sectionsAriaLabel ExplorePage.kt:376 R.string.translation_explore_sectionsAriaLabel (anchor strip nav label)
+  [15] string explore.subtitle.all      ExplorePage.kt:259 R.string.translation_explore_subtitle_all (header subtitle, total arg)
+  [16] string explore.subtitle.filtered ExplorePage.kt:261 R.string.translation_explore_subtitle_filtered (matches/total/query)
+  [17] string explore.title             ExplorePage.kt:269 R.string.translation_explore_title (header PageTitle, web PageContainer title)
+PARITY_COVERED=17
+
+EXTRA WEB-PARITY (anonymous regions from the web source, beyond the manifest's 17-item contract; no narrowing)
+  recently-visited strip   ExplorePage.kt ExploreRecentStrip — resolves the on-device recent-pages list against the
+                           visible catalog (web `recentResolved`), shown only when not filtering (web `!query`).
+  section-anchor strip     ExplorePage.kt ExploreAnchorStrip — one chip per section + match count (web
+                           SectionAnchorStrip); the web jump-links become a labeled section index on touch.
+  feature cards            ExplorePage.kt ExploreFeatureCard — icon box + label + 2-line description, navigating via
+                           the DeepLinkRouter (web FeatureCard `<a>`), laid out as a 2-up FlowRow grid.
+  query highlight          ExplorePage.kt HighlightedText + highlightExplore — query-token runs wrapped in a primary
+                           wash (web `<mark>`), inside both the card label and description.
+  did-you-mean suggestions ExplorePage.kt ExploreEmptyResult + closestExploreRoutes — Levenshtein closest routes over
+                           the visible catalog (web `closestRoutes`/`EmptyResult`).
+  live subtitle            ExplorePage.kt ExploreHeader — `{{matches}} of {{total}}` / `{{total}} in total` (web subtitle).
+  freshness + retry        ExplorePage.kt ExploreHeader DataFreshness + retry — the bound feed's refreshing/stale/
+                           offline state + a retry affordance; the catalog renders regardless (web defaults vehicleCount=0).
+  loading                  ExplorePage.kt:159 uiState.isLoading -> PageLoader (centered spinner; the brief first frame
+                           before the vehicle/auth StateFlows emit, never blank).
+  diagnostics              ExplorePageViewModel.recordViewOpened -> recordExplorePageOpened (PII-safe view.opened, slug only).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/explore -Language kotlin
+    PLACEHOLDER_ALLOWED=1   (the `translation_explore_searchPlaceholder` reference — the web i18n key name
+                             contains the substring "placeholder"; marked // parity:allow, not a stub marker)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 4m 7s (compileDebugKotlin clean; the strings.xml
+                                          non-positional-format warnings are pre-existing battery/rateLimit keys,
+                                          not explore — every explore format string is positional %1$/%2$/%3$)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 12m 55s (lint-results-debug.html written, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 48s (compileDebugUnitTestKotlin clean; full module
+                                          unit-test suite green)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 search + GlassPanel2 empty); every anonymous web region
+      reproduced (recent strip, anchor strip, feature cards, highlight, did-you-mean suggestions, live subtitle).
+  [x] All 17 parity items render from the bound StateFlow<UiState<ExploreGate>> state holder (gate → catalog →
+      filter → empty/success), gated by useVehicles + useIsForwardAuth.
+  [x] loading (PageLoader) / empty (no-results GlassPanel2) / success (card bands) implemented; the data-source
+      error/offline is surfaced as the header freshness chip + retry, and the catalog never blanks (web parity:
+      it renders immediately with vehicleCount defaulting to 0).
+  [x] All visible strings sourced from strings.xml (translation_explore_*); zero hardcoded literals; key names
+      match web (explore.*). Feature descriptions externalized as 103 translation_explore_desc_* + a localized
+      fallback, so no English literal is hardcoded.
+  [x] Compose-native only (no webview); MaterialTheme tokens (dark + dynamic), semantics content descriptions on
+      panels/anchor counts + merged card nodes for TalkBack, >=48dp Material targets, no SI units on this page.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (17).
+  [x] android ledger row for page:explore/Explore set covered (17/17).
+
+EXIT=0
+STATUS=DONE

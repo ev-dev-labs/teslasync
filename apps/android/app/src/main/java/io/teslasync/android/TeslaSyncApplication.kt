@@ -87,6 +87,7 @@ import io.teslasync.android.driving.drivingdynamics.DrivingDynamicsPageHost
 import io.teslasync.android.driving.efficiency.EfficiencyPageHost
 import io.teslasync.android.driving.routeefficiency.RouteEfficiencyPageHost
 import io.teslasync.android.driving.speedprofile.SpeedProfilePageHost
+import io.teslasync.android.explore.ExplorePageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -235,6 +236,7 @@ class TeslaSyncApplication : Application() {
         DrivingDynamicsPageHost.register()
         RouteEfficiencyPageHost.register()
         SpeedProfilePageHost.register()
+        ExplorePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
