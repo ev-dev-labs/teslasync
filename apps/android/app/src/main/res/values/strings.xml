@@ -9478,4 +9478,20 @@
   <string name="translation_signalExplorer_noVehicle">Select a vehicle to begin</string>
   <string name="translation_signalExplorer_noVehicleDesc">Pick a vehicle from the picker above to explore its signals.</string>
   <string name="translation_signalExplorer_stopLive">Stop live</string>
+  <!-- P3/A7 vehicle-systems MediaPlayerPage parity strings (web t() defaults; key names match web). -->
+  <string name="translation_Media_Player">Media Player</string>
+  <string name="translation_Now_playing_volume_and_listening_history">Now playing, volume, and listening history</string>
+  <string name="translation_No_track">No track</string>
+  <string name="translation_Unknown_artist">Unknown artist</string>
+  <string name="translation_Unique_Tracks">Unique Tracks</string>
+  <string name="translation_Top_Source">Top Source</string>
+  <string name="translation_Avg_Volume">Avg Volume</string>
+  <string name="translation_Volume_Step">Volume Step</string>
+  <string name="translation_Volume_over_Time">Volume over Time</string>
+  <string name="translation_No_volume_data_for_this_period">No volume data for this period</string>
+  <string name="translation_Source_Distribution">Source Distribution</string>
+  <string name="translation_No_source_data_available">No source data available</string>
+  <string name="translation_Playback_History">Playback History</string>
+  <string name="translation_No_playback_history">No playback history</string>
+  <string name="translation_No_playback_history_for_this_period">No playback history for this period</string>
 </resources>

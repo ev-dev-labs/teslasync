@@ -1,0 +1,171 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicle-systems/MediaPlayer — evidence log
+Native Jetpack Compose / Material 3 port of web MediaPlayerPage
+Source: web/src/features/vehicle-systems/pages/MediaPlayerPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/**
+Package: io.teslasync.android.vehiclesystems.mediaplayer
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21.0.9
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts
+                 `include(":android"); project(":android").projectDir = file("app")`;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 RegenEfficiency / SharedDrive precedents)
+  MediaPlayerPageModel.kt      framework-free: registration ids; parseLatestMedia /
+                               parseMediaHistory (decode GET /media/latest + GET /media,
+                               null/empty guards = web `latest?` / `history?.length`);
+                               the verbatim ports of the web useMemo chain — mediaStats
+                               (web `stats`), volumePoints (web `volumeChartData`),
+                               sourceSlices (web `sourceData`), mediaProgressPercent
+                               (web `progressPct`), volumeMaxOf (web `|| 11`),
+                               formatPlayTime (web `fmtPlayTime`), MediaStatusKind
+                               (web statusVariant/statusLabel); MediaPlayerDisplayPrefs
+                               (web fmtInt/fmtNumber, locale-aware, no SI math — volume
+                               is a raw device scale); recordMediaPlayerPageOpened
+                               (view.opened); mapData.
+  MediaPlayerPageSource.kt     seam over the shared resilient ApiHttpClient.safeRequest
+                               for `/media/latest` + `/media?limit=500` (web inline
+                               request() reads; no media S7 repo exists, same as the
+                               SharedDrive/TemperatureImpact inline-read precedent) +
+                               SelectedVehicleStore (web useSelectedVehicle) +
+                               SettingsStore.settings (web useFormatting).
+  MediaPlayerPageViewModel.kt  BaseFeedViewModel; latestState: StateFlow<UiState<
+                               MediaSnapshot?>> re-collected on vehicle/refresh, gated on
+                               the active vehicle, empty when the decode is null (web
+                               `latest?`); historyState: StateFlow<UiState<List<
+                               MediaSnapshot>>>; displayPrefs StateFlow; refresh/retry/
+                               recordViewOpened. No HTTP in the view.
+  MediaPlayerPage.kt           stateless MediaPlayerPageContent + the nine Material 3
+                               panels; the latest snapshot drives the now-playing card +
+                               the volume gauge, the history feed is folded by the model
+                               into the four metric cards, the two charts, and the table.
+  MediaPlayerPageHost.kt       registers MediaPlayerRoute for the `mediaPlayer`
+                               destination (Destinations.kt L109, /media-player); wired in
+                               TeslaSyncApplication.onCreate() (NavHost registration).
+
+SI BOUNDARY (P1/S5)
+  This surface carries no SI quantity: audio volume is a raw device scale (0..max), the
+  counts are integers, and the play position is milliseconds formatted as m:ss. The only
+  render-boundary formatting is the locale-aware fmtInt/fmtNumber port in
+  MediaPlayerDisplayPrefs (web useFormatting); nothing is stored converted.
+
+LIVE DATA / STALENESS (ADR-013)
+  Neither feed is an SSE live stream; both are cache-then-network Resource streams
+  projected to UiState (the web page polls /media/latest every 10s via refetchInterval —
+  the native refresh() trigger is the analogue), so the header DataFreshness chip surfaces
+  fetchedAt / refreshing / stale / error rather than a >2 min live-staleness badge.
+
+=== PARITY ===
+PARITY_REQUIRED=42
+
+PANELS (9) — every web GlassPanel + the four named metric cards, as Material 3 Surfaces
+  [01] panel  GlassPanel1     MediaPlayerPage.kt:312  MediaNowPlayingPanel (GlassPanel: album tile + title + status Badge + artist/album + source + progress)
+  [02] panel  GlassPanel2     MediaPlayerPage.kt:390  MediaVolumeGaugePanel (GlassPanel + RadialGauge)
+  [03] panel  Unique-Tracks   MediaPlayerPage.kt:418  MetricCard Unique Tracks (label L419, prefs.integer)
+  [04] panel  Top-Source      MediaPlayerPage.kt:425  MetricCard Top Source (label L426)
+  [05] panel  Avg-Volume      MediaPlayerPage.kt:434  MetricCard Avg Volume (label L435, prefs.integer)
+  [06] panel  Volume-Step     MediaPlayerPage.kt:441  MetricCard Volume Step (label L442, prefs.decimal | em-dash)
+  [07] panel  GlassPanel7     MediaPlayerPage.kt:453  MediaVolumeChartPanel (ChartContainer + AreaChartWrapper)
+  [08] panel  GlassPanel8     MediaPlayerPage.kt:482  MediaSourceDistributionPanel (donut + legend | EmptyState)
+  [09] panel  GlassPanel9     MediaPlayerPage.kt:587  MediaPlaybackHistoryPanel (records Badge + table | EmptyState)
+
+CHARTS (3) — native A3 wrappers (RadialGauge canvas + Vico area + a Compose-canvas donut), never a webview
+  [10] chart  RadialGauge     MediaPlayerPage.kt:396  RadialGauge(value=audioVolume, max=volumeMaxOf, color=cyan, size=120)
+  [11] chart  AreaChart       MediaPlayerPage.kt:464  AreaChartWrapper(series=[volume], xLabels=time) inside ChartContainer L455
+  [12] chart  PieChart        MediaPlayerPage.kt:541  MediaSourceDonut Canvas drawArc (web <PieChart><Pie innerRadius=45 outerRadius=80 paddingAngle=3>), used L503
+
+DATA STATES (4) — for the /media/latest source (the /media history source renders its own per-section states)
+  [13] state  loading   MediaPlayerPage.kt:204  if (latestState.isLoading) MediaLoading() (skeleton L233)
+  [14] state  empty     MediaPlayerPage.kt:327  now-playing "No track" fallback + ChartStatus.Empty L457 + donut EmptyState L490 + table EmptyState L603 (latestState.isEmpty → null card)
+  [15] state  error     MediaPlayerPage.kt:219  if (latestState.isError) MediaError(onRetry) (L274, error.loadFailed + retry)
+  [16] state  success   MediaPlayerPage.kt:222  MediaLoaded(latest, history=historyState.data.orEmpty()) (L293)
+
+STRINGS (26) — every visible literal resolves from res/values/strings.xml; key names match web
+  [17] string Artist                                      MediaPlayerPage.kt:627  translation_Artist
+  [18] string Avg Volume                                  MediaPlayerPage.kt:435  translation_Avg_Volume
+  [19] string Media Player                                MediaPlayerPage.kt:256  translation_Media_Player
+  [20] string No playback history                         MediaPlayerPage.kt:605  translation_No_playback_history
+  [21] string No playback history for this period         MediaPlayerPage.kt:606  translation_No_playback_history_for_this_period
+  [22] string No source data available                    MediaPlayerPage.kt:492  translation_No_source_data_available
+  [23] string No track                                    MediaPlayerPage.kt:327  translation_No_track
+  [24] string No volume data for this period              MediaPlayerPage.kt:460  translation_No_volume_data_for_this_period
+  [25] string Now playing, volume, and listening history  MediaPlayerPage.kt:258  translation_Now_playing_volume_and_listening_history
+  [26] string Paused                                      MediaPlayerPage.kt:686  translation_Paused
+  [27] string Playback History                            MediaPlayerPage.kt:598  translation_Playback_History
+  [28] string Playing                                     MediaPlayerPage.kt:685  translation_Playing
+  [29] string Source                                      MediaPlayerPage.kt:628  translation_Source
+  [30] string Source Distribution                         MediaPlayerPage.kt:486  translation_Source_Distribution
+  [31] string Status                                      MediaPlayerPage.kt:630  translation_Status
+  [32] string Stopped                                     MediaPlayerPage.kt:687  translation_Stopped
+  [33] string Time                                        MediaPlayerPage.kt:461  translation_Time
+  [34] string Top Source                                  MediaPlayerPage.kt:426  translation_Top_Source
+  [35] string Track                                       MediaPlayerPage.kt:626  translation_Track
+  [36] string Unique Tracks                               MediaPlayerPage.kt:419  translation_Unique_Tracks
+  [37] string Unknown artist                              MediaPlayerPage.kt:693  translation_Unknown_artist
+  [38] string Volume                                      MediaPlayerPage.kt:399  translation_Volume
+  [39] string Volume Step                                 MediaPlayerPage.kt:442  translation_Volume_Step
+  [40] string Volume over Time                            MediaPlayerPage.kt:456  translation_Volume_over_Time
+  [41] string error.loadFailed                            MediaPlayerPage.kt:278  translation_error_loadFailed
+  [42] string records                                     MediaPlayerPage.kt:599  translation_records
+
+PARITY_COVERED=42
+
+STRING CATALOG
+  11 of the 26 keys already existed in res/values/strings.xml (generated from the shared
+  i18n catalog) and are reused verbatim: translation_Artist, translation_Source,
+  translation_Status, translation_Track, translation_Time, translation_Volume,
+  translation_Playing, translation_Paused, translation_Stopped, translation_records,
+  translation_error_loadFailed. The 15 missing keys (Media Player, Now playing…,
+  No track, Unknown artist, Unique Tracks, Top Source, Avg Volume, Volume Step,
+  Volume over Time, No volume data for this period, Source Distribution, No source data
+  available, Playback History, No playback history, No playback history for this period)
+  were added to res/values/strings.xml with the verbatim web t() default values, following
+  the same `translation_<websanitized>` naming the catalog uses for natural-language keys
+  (e.g. translation_No_stats_available, translation_Avg_Voltage) — `res/values*/strings.xml`
+  is an allowed file. MissingTranslation/ExtraTranslation are disabled for the catalog
+  (app/build.gradle.kts L114), so the default-locale add raises no lint error.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 6m 55s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 40s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 08s
+  TEST_EXIT=0
+    MediaPlayerPageModelTest      16 tests, 0 failures/errors/skipped
+    MediaPlayerPageViewModelTest  10 tests, 0 failures/errors/skipped
+
+ACCEPTANCE
+  [x] Every named panel implemented (now-playing GlassPanel1, volume gauge GlassPanel2,
+      the four metric cards Unique-Tracks / Top-Source / Avg-Volume / Volume-Step,
+      Volume-over-Time GlassPanel7, Source-Distribution GlassPanel8, Playback-History
+      GlassPanel9); every anonymous region from the web source reproduced (the album-art
+      tile, the status badge, the now-playing progress bar, the source row, the donut
+      legend, the records count badge).
+  [x] All 42 parity items render from the bound StateFlow state holders (latestState +
+      historyState + displayPrefs), folded by the framework-free model (mediaStats /
+      volumePoints / sourceSlices).
+  [x] loading / empty / error / success implemented for the /media/latest source; the
+      /media history feed powers the metric cards + both charts + the table, each with its
+      own empty surface (ChartStatus.Empty / EmptyState).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names
+      match web (sanitized to valid resource ids).
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared MetricCard/Badge);
+      RadialGauge + the source donut carry semantics content descriptions (a11y); audio
+      volume formatted at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (42).
+  [x] android ledger row for page:vehicle-systems/MediaPlayer set covered
+      (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
