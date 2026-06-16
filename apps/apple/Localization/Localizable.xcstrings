@@ -1,6 +1,611 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "energy.breakdown.sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sessions"
+          }
+        }
+      }
+    },
+    "energy.chart.chargerBreakdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charger Type Breakdown"
+          }
+        }
+      }
+    },
+    "energy.chart.chargerBreakdown.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charger type share pie chart"
+          }
+        }
+      }
+    },
+    "energy.chart.chargingByTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging by Time of Day"
+          }
+        }
+      }
+    },
+    "energy.chart.chargingByTime.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging energy and session count by time of day bar chart"
+          }
+        }
+      }
+    },
+    "energy.chart.distance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance ({{unit}})"
+          }
+        }
+      }
+    },
+    "energy.chart.efficiencyTrend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency Trend"
+          }
+        }
+      }
+    },
+    "energy.chart.efficiencyTrend.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily efficiency and distance area chart"
+          }
+        }
+      }
+    },
+    "energy.chart.energy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy"
+          }
+        }
+      }
+    },
+    "energy.chart.energyCostDaily" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy & Cost Daily"
+          }
+        }
+      }
+    },
+    "energy.chart.energyCostDaily.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily energy and efficiency composed chart with bars and a line"
+          }
+        }
+      }
+    },
+    "energy.chart.energyKwh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy (kWh)"
+          }
+        }
+      }
+    },
+    "energy.chart.noEfficiencyData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No efficiency data yet"
+          }
+        }
+      }
+    },
+    "energy.chart.noEnergyData" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect vehicle to see energy data"
+          }
+        }
+      }
+    },
+    "energy.chart.sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.evCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EV Cost"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.gasEquivalent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gas Equivalent"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.less" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "less"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.periodTotal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{{days}}-Day Total"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.projectedAnnual" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projected Annual"
+          }
+        }
+      }
+    },
+    "energy.cost_decimal.saving" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saving"
+          }
+        }
+      }
+    },
+    "energy.empty.hero" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No energy data yet — connect your vehicle and complete a drive or charging session to see efficiency, cost, and CO₂ savings."
+          }
+        }
+      }
+    },
+    "energy.gauge.co2Saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CO₂ Saved"
+          }
+        }
+      }
+    },
+    "energy.gauge.efficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Efficiency"
+          }
+        }
+      }
+    },
+    "energy.gauge.energyUsed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy Used"
+          }
+        }
+      }
+    },
+    "energy.gauge.totalCost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Cost"
+          }
+        }
+      }
+    },
+    "energy.lifetime.energyUsed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime Energy Used"
+          }
+        }
+      }
+    },
+    "energy.lifetime.energyUsedDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total energy consumed since vehicle delivery"
+          }
+        }
+      }
+    },
+    "energy.lifetime.periodEnergy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last {{days}} Days"
+          }
+        }
+      }
+    },
+    "energy.lifetime.periodEnergyDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy added during selected date range"
+          }
+        }
+      }
+    },
+    "energy.lifetime.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lifetime Metrics"
+          }
+        }
+      }
+    },
+    "energy.metric.costPerDist" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost per {{unit}}"
+          }
+        }
+      }
+    },
+    "energy.metric.costPerKwh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost per kWh"
+          }
+        }
+      }
+    },
+    "energy.metric.monthlyEst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly Est."
+          }
+        }
+      }
+    },
+    "energy.metric.sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sessions"
+          }
+        }
+      }
+    },
+    "energy.metric.totalDistance" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Distance"
+          }
+        }
+      }
+    },
+    "energy.metric.yearlyEst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yearly Est."
+          }
+        }
+      }
+    },
+    "energy.pageSubtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deep cost analytics, efficiency trends, savings projections, and consumption patterns"
+          }
+        }
+      }
+    },
+    "energy.pageTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy Intelligence"
+          }
+        }
+      }
+    },
+    "energy.sessions.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No charging sessions recorded"
+          }
+        }
+      }
+    },
+    "energy.sessions.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent Charging Sessions"
+          }
+        }
+      }
+    },
+    "energy.table.battery" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery"
+          }
+        }
+      }
+    },
+    "energy.table.cost_decimal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cost"
+          }
+        }
+      }
+    },
+    "energy.table.date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Date"
+          }
+        }
+      }
+    },
+    "energy.table.energy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy"
+          }
+        }
+      }
+    },
+    "energy.table.perKwh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "$/kWh"
+          }
+        }
+      }
+    },
+    "energy.table.power" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Power"
+          }
+        }
+      }
+    },
+    "energy.table.type" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Type"
+          }
+        }
+      }
+    },
+    "energy.timeOfDay.afternoon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afternoon (12-18)"
+          }
+        }
+      }
+    },
+    "energy.timeOfDay.evening" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Evening (18-24)"
+          }
+        }
+      }
+    },
+    "energy.timeOfDay.morning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Morning (6-12)"
+          }
+        }
+      }
+    },
+    "energy.timeOfDay.night" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Night (0-6)"
+          }
+        }
+      }
+    },
+    "energy.tip.offPeak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off-peak charging saves money"
+          }
+        }
+      }
+    },
+    "energy.tip.solar" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solar-optimal: 10am–3pm"
+          }
+        }
+      }
+    },
+    "energy.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy"
+          }
+        }
+      }
+    },
     "compare.allTime" : {
       "extractionState" : "manual",
       "localizations" : {
