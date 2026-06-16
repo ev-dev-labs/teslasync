@@ -1243,6 +1243,24 @@
       "requiredCount": 67,
       "promptId": "p4-apple/P7/page:driving/Efficiency",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-EfficiencyPage.log"
+    },
+    {
+      "unitId": "page:driving/TripPlanner",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 41,
+      "requiredCount": 41,
+      "promptId": "p4-apple/P7/page:driving/TripPlanner",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-TripPlannerPage.log"
+    },
+    {
+      "unitId": "page:driving/TripPlanner",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 41,
+      "requiredCount": 41,
+      "promptId": "p4-apple/P7/page:driving/TripPlanner",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-TripPlannerPage.log"
     }
   ]
 }
