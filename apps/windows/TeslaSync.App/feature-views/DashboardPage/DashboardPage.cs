@@ -86,11 +86,10 @@ public sealed partial class DashboardPage : UserControl, IDisposable
     private readonly StackPanel _editActions;
 
     // Conditional banners (web ThemeFirstRunBanner / customize hint / anyError / auth warning).
-    private readonly TsAlertBanner _themeBanner = new() { Variant = CalloutVariant.Info, Dismissible = true, IsOpen = true };
+    private readonly TsAlertBanner _themeBanner = new() { Variant = CalloutVariant.Info, Dismissible = true, IsOpen = false };
     private readonly TsAlertBanner _customizeHintBanner = new() { Variant = CalloutVariant.Info, Dismissible = true, IsOpen = false };
     private readonly TsAlertBanner _errorBanner = new() { Variant = CalloutVariant.Danger, Dismissible = false, IsOpen = false };
     private readonly TsAlertBanner _authBanner = new() { Variant = CalloutVariant.Warning, Dismissible = false, IsOpen = false };
-    private bool _themeDismissed;
     private bool _customizeHintDismissed;
 
     // Edit-mode hint + reset confirmation + new-dashboard surface.
@@ -166,7 +165,6 @@ public sealed partial class DashboardPage : UserControl, IDisposable
         _authBanner.ActionInvoked += (_, _) => RaiseNavigation("settings");
         _resetConfirmBanner.ActionInvoked += OnResetConfirmed;
         _customizeHintBanner.ActionInvoked += OnCustomizeClick;
-        _themeBanner.Dismissed += (_, _) => _themeDismissed = true;
         _customizeHintBanner.Dismissed += (_, _) => _customizeHintDismissed = true;
         // Dashboard customization (widget layout) is not yet ported; suppress the customize hint so the page never
         // prompts for an unreachable mode (the Customize entry point is omitted from the toolbar).
@@ -495,11 +493,11 @@ public sealed partial class DashboardPage : UserControl, IDisposable
 
     private void RenderBanners(DashboardDisplay d)
     {
-        _themeBanner.Title = d.ThemeFirstRunTitle;
-        _themeBanner.Message = d.ThemeFirstRunBody;
-        _themeBanner.ActionText = d.ThemeFirstRunOpen;
-        _themeBanner.SecondaryActionText = d.ThemeFirstRunLater;
-        _themeBanner.IsOpen = !_themeDismissed;
+        // Web parity (web/src/features/dashboard): the dashboard surfaces neither the native-only
+        // "Personalize TeslaSync" first-run banner nor a "Tesla account not connected" warning banner.
+        // The live web shows the GET STARTED onboarding checklist instead (theme + connection appear there
+        // as completed steps), so both dark banners stay closed — they read as broken dark-on-light chrome.
+        _themeBanner.IsOpen = false;
 
         _customizeHintBanner.Message = d.CustomizeHint;
         _customizeHintBanner.ActionText = d.CustomizeHintCta;
@@ -508,10 +506,7 @@ public sealed partial class DashboardPage : UserControl, IDisposable
         _errorBanner.Message = d.ErrorText;
         _errorBanner.IsOpen = d.HasError;
 
-        _authBanner.Title = d.AuthNotConnected;
-        _authBanner.Message = $"{d.AuthConnectPrompt} {d.AuthSettings} {d.AuthToStart}";
-        _authBanner.ActionText = d.AuthSettings;
-        _authBanner.IsOpen = d.ShowAuthWarning;
+        _authBanner.IsOpen = false;
     }
 
     private void RenderEditSurfaces(DashboardDisplay d)

@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using System.Globalization;
 using TeslaSync.App.Auth;
 using TeslaSync.App.Auth.Onboarding;
 using TeslaSync.App.Components.Feedback;
@@ -1386,6 +1387,12 @@ public sealed partial class ShellWindow : Window
         _appliedAccent = startup.AccentThemeId;
         _appliedMode = startup.ColorModeId;
 
+        // The startup palette above is the local default; the deferred local-settings load and the
+        // backend /settings theme seed (web ThemeProvider parity) arrive as later Changed events. Clear the
+        // first-apply guard now so those events rebuild the already-constructed page when the theme actually
+        // differs (token brushes are resolved at construction, so a palette swap needs a rebuild to land).
+        _firstThemeApply = false;
+
         appWindow.Changed += OnAppWindowChanged;
         appWindow.Closing += OnAppWindowClosing;
 
@@ -1456,6 +1463,34 @@ public sealed partial class ShellWindow : Window
 
     private void BuildNavigation()
     {
+        // Favorites section (web sidebar "FAVORITES"): a curated set of high-traffic destinations pinned above the
+        // collapsible groups. Each maps to an existing route; missing routes are skipped so the rail never breaks.
+        string[] favPaths = { "", "digital-twin", "vehicles", "charging", "live" };
+        string[] favGlyphs = { "\uE80F", "\uE7F4", "\uE804", "\uE945", "\uE707" };
+        var favItems = new List<NavigationViewItem>();
+        for (int i = 0; i < favPaths.Length; i++)
+        {
+            var resolved = _viewModel.Registry.Resolve(favPaths[i]);
+            if (resolved.Route.IsCatchAll)
+            {
+                continue;
+            }
+
+            favItems.Add(CreateFavoriteItem(resolved.Route, favGlyphs[i]));
+        }
+
+        if (favItems.Count > 0)
+        {
+            RootNavigation.MenuItems.Add(new NavigationViewItemHeader { Content = "Favorites" });
+            foreach (var fav in favItems)
+            {
+                RootNavigation.MenuItems.Add(fav);
+            }
+        }
+
+        // Collapsible groups with item counts (web sidebar groups: HOME 5, DRIVING 12, …). Each group is an expandable
+        // parent NavigationViewItem (default-collapsed) hosting its routes as children — so the rail is a compact set of
+        // counted, collapsible sections instead of one long flat list.
         foreach (var info in RouteGroups.Ordered)
         {
             var routes = _viewModel.Registry.RoutesInGroup(info.Group);
@@ -1464,20 +1499,76 @@ public sealed partial class ShellWindow : Window
                 continue;
             }
 
-            RootNavigation.MenuItems.Add(new NavigationViewItemHeader
-            {
-                Content = Localization.GroupTitle(info),
-            });
-
-            foreach (var route in routes)
-            {
-                RootNavigation.MenuItems.Add(CreateNavItem(route));
-            }
+            RootNavigation.MenuItems.Add(CreateGroupItem(info, routes));
         }
 
         // Footer shortcuts: settings + account.
         RootNavigation.FooterMenuItems.Add(CreateFooterItem("settings", "Settings", "\uE713"));
         RootNavigation.FooterMenuItems.Add(CreateFooterItem("account/privacy", "Account", "\uE77B"));
+    }
+
+    // A collapsible group parent (web sidebar group): label + right-aligned route count, colour-coded icon, its routes
+    // as expandable children, collapsed by default and non-navigating itself.
+    private NavigationViewItem CreateGroupItem(RouteGroupInfo info, IReadOnlyList<RouteDefinition> routes)
+    {
+        var grid = new Grid { MinWidth = 180 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        var label = new TextBlock { Text = Localization.GroupTitle(info), VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(label, 0);
+        grid.Children.Add(label);
+
+        var count = new TextBlock
+        {
+            Text = routes.Count.ToString(CultureInfo.InvariantCulture),
+            VerticalAlignment = VerticalAlignment.Center,
+            Opacity = 0.55,
+            Margin = new Thickness(8, 0, 8, 0),
+        };
+        Grid.SetColumn(count, 1);
+        grid.Children.Add(count);
+
+        var group = new NavigationViewItem
+        {
+            Content = grid,
+            SelectsOnInvoked = false,
+            IsExpanded = false,
+        };
+        var icon = new FontIcon { Glyph = info.Glyph };
+        if (NavGroupBrush(info.Group) is { } brush)
+        {
+            icon.Foreground = brush;
+        }
+
+        group.Icon = icon;
+        AutomationProperties.SetName(group, Localization.GroupTitle(info));
+
+        foreach (var route in routes)
+        {
+            group.MenuItems.Add(CreateNavItem(route));
+        }
+
+        return group;
+    }
+
+    private static NavigationViewItem CreateFavoriteItem(RouteDefinition route, string glyph)
+    {
+        var label = Localization.Title(route);
+        var icon = new FontIcon { Glyph = glyph };
+        if (NavGroupBrush(route.Group) is { } brush)
+        {
+            icon.Foreground = brush;
+        }
+
+        var item = new NavigationViewItem
+        {
+            Content = label,
+            Tag = route.PathPattern,
+            Icon = icon,
+        };
+        AutomationProperties.SetName(item, label);
+        return item;
     }
 
     private NavigationViewItem CreateNavItem(RouteDefinition route)

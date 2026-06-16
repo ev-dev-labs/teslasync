@@ -43,10 +43,24 @@ public partial class App : Application
         // Rehydrate any persisted session from the Credential Locker (non-blocking).
         _ = AppAuth.InitializeAsync();
 
-        // Load non-secret preferences (theme/density/units/startup) from LocalSettings (non-blocking).
-        _ = AppSettingsHost.InitializeAsync();
+        // Load non-secret preferences (theme/density/units/startup) from LocalSettings, then seed the
+        // accent theme + colour mode from the backend /settings document so the native app shows the SAME
+        // theme the web app shows for this account (web ThemeProvider parity). Non-blocking, best-effort.
+        _ = InitializeSettingsThenThemeAsync(data);
 
         HandleActivation(AppInstance.GetCurrent().GetActivatedEventArgs());
+    }
+
+    /// <summary>
+    /// Loads local preferences first, then overlays the backend <c>/settings</c> theme so the native app
+    /// matches the web app's theme for this account (web <c>ThemeProvider</c> parity). The ordering matters:
+    /// the local load establishes the baseline, then the backend value wins — exactly as the web provider
+    /// applies its backend fetch over the default. Both steps are best-effort and never block launch.
+    /// </summary>
+    private static async Task InitializeSettingsThenThemeAsync(ShellDataContext data)
+    {
+        await AppSettingsHost.InitializeAsync().ConfigureAwait(false);
+        await BackendThemeSync.ApplyAsync(data).ConfigureAwait(false);
     }
 
     /// <summary>
