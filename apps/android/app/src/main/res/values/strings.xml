@@ -8857,4 +8857,12 @@
   <string name="translation_charging_totalEnergy">Energy (kWh)</string>
   <string name="translation_charging_totalSessions">Sessions</string>
   <string name="translation_charging_viewAnomalies">View anomalies</string>
+  <string name="translation_drivetrain_frontMotor">Front Motor</string>
+  <string name="translation_drivetrain_rearMotor">Rear Motor</string>
+  <string name="translation_drivetrain_inverter">Inverter</string>
+  <string name="translation_drivetrain_battery">Battery</string>
+  <string name="translation_drivetrain_statorTempHistory_aria">Front, rear-left and rear-right motor stator temperature history line chart</string>
+  <string name="translation_drivetrain_torqueHistory_aria">Motor inverter torque output history area chart</string>
+  <string name="translation_drivetrain_tempHistory_aria">Outside temperature trend line chart per recent drive</string>
+  <string name="translation_drivetrain_powerOutput_aria">Per-drive peak and regen motor power output history area chart</string>
 </resources>

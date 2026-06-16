@@ -1,0 +1,138 @@
+================================================================================
+P3-ANDROID A7 — page:driving/DrivetrainHealth  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/driving/pages/DrivetrainHealthPage.tsx
+promptId: p3-android/pages/driving/DrivetrainHealthPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (on PATH via Android Studio JBR)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core.
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPage.kt          (@Composable screen: DrivetrainHealthPage + DrivetrainHealthPageContent + 12 panels + 4 RadialGauges + 4 ChartContainers/Line+Area wrappers)
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<…>> x5 + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPageSource.kt    (page-local DrivetrainExtrasRepository over ApiHttpClient+CacheStore for all 5 reads; source seam + settings + selection)
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPageModel.kt     (framework-free: parse* decoders, build* derivations, DrivetrainDisplayPrefs SI converters, Resource.mapData, recordDrivetrainHealthOpened)
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPageIcons.kt     (5 authored lucide glyphs + 7 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/driving/DrivetrainHealthPageHost.kt      (PageHosts.register(drivetrainHealth){ DrivetrainHealthRoute() })
+apps/android/app/src/test/java/com/teslasync/driving/DrivetrainHealthPageModelTest.kt   (off-device JUnit: decoders + derivations + 4-state UiState projection + view.opened diagnostic — 20 tests)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt              (NavHost wiring: + DrivetrainHealthPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                        (added 4 sensor-label keys + 4 chart aria keys absent from the generated catalog — present only as web inline defaults; the other 102 page keys already present as translation_drivetrain_*)
+apps/parity/android-ledger.json                                                         (ledger row page:driving/DrivetrainHealth, 7/7)
+.github/prompts/monorepo/logs/android-page-driving-DrivetrainHealthPage.log             (this log)
+
+Nav: destination `drivetrainHealth` -> `/drivetrain-health` pre-existing (Destinations.kt L72, count unchanged); host wired
+     via PageHosts.register("drivetrainHealth"); deep link auto-registered by TeslaSyncNavHost. DataContainer untouched —
+     api/cacheStore/settingsStore/selectedVehicleStore are already exposed (the BatteryHealthPage A7 DI seam).
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useDrivetrainHealth  GET /drivetrain/health [vehicle_id]   -> DrivetrainExtrasRepository.drivetrainHealth(id)  (PRIMARY gate)
+useDrives            GET /drives [vehicle_id]               -> DrivetrainExtrasRepository.drives(id)
+useDrivingStats      GET /drives/stats [vehicle_id]         -> DrivetrainExtrasRepository.drivingStats(id)
+useMotorLatest       GET /motor/latest [vehicle_id]         -> DrivetrainExtrasRepository.motorLatest(id)
+useMotorHistory      GET /motor [vehicle_id, limit=200]     -> DrivetrainExtrasRepository.motorHistory(id, 200)
+  None of the five Driving/motor reads have a shared store method wired into the Android DataContainer (it wires no
+  DrivingStore), so they are all served by the page-local [DrivetrainExtrasRepository]: a CachingRepository<JsonElement>
+  over the SAME shared ApiHttpClient + CacheStore + cache-then-network operator the shared repositories use
+  (CacheDomain.Drives; ADR-013 freshness + SI-verbatim caching). This is the BatteryExtrasRepository precedent for
+  store-less reads, kept entirely within com/teslasync/driving so DataContainer is untouched.
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits). No HTTP in the view.
+decode         : JsonElement -> typed models in DrivetrainHealthPageModel.parse*/build* ; the view only resolves i18n + draws.
+SI boundary    : drive distance (m), motor/module temperatures (°C) and speed (m/s) convert ONLY at render via prefs
+                 (convertDistanceFromSI / convertTempFromSI / convertSpeedFromSI; formatEnergy for regen Wh). The
+                 /drives/stats total_distance_km + avg_speed_kmh values are fed through the SAME shared converters the web
+                 hooks feed them through (byte-identical figure) — the unit-suffixed key names are upstream-owned legacy
+                 identifiers (Phase-48), not a second conversion. No miles/°F/psi stored or computed.
+
+--------------------------------------------------------------------------------
+PANELS (every web panel + component reproduced, in web order)
+--------------------------------------------------------------------------------
+[COVERED] panel HealthOverview        -> DrivetrainHealthPage.kt HealthOverviewPanel (AlertBanner when !good + hero: Icon + motor state + Badge + AnimatedNumber score)
+[COVERED] panel HealthGaugeGrid       -> DrivetrainHealthPage.kt HealthGaugeGridPanel (health-score RadialGauge + motor-details KVList + drive-stats KVList/empty)
+[COVERED] panel TemperatureGauges     -> DrivetrainHealthPage.kt TemperatureGaugesPanel (4 module-temp RadialGauges + severity color + max caption)
+[COVERED] panel TemperatureMetricCards-> DrivetrainHealthPage.kt TemperatureMetricCardsPanel (6 MetricCards: 4 sensors + health score + peak power)
+[COVERED] panel ThermalLoadPanel      -> DrivetrainHealthPage.kt ThermalLoadPanel (4 MetricBars + 4 InlineMetrics peak/avg/drives/regen-ratio)
+[COVERED] panel LiveMotorStatus       -> DrivetrainHealthPage.kt LiveMotorStatusPanel (4 state cells + 9 InlineMetrics; internal "no live motor" empty)
+[COVERED] panel StatorTempChart       -> DrivetrainHealthPage.kt StatorTempChartPanel (LineChartWrapper: front/rear-left/rear-right stator temps + a11y data table)
+[COVERED] panel TorqueHistoryChart    -> DrivetrainHealthPage.kt TorqueHistoryChartPanel (AreaChartWrapper: motor torque + a11y data table)
+[COVERED] panel TemperatureTrendChart -> DrivetrainHealthPage.kt TemperatureTrendChartPanel (LineChartWrapper: outside temp per drive + a11y data table)
+[COVERED] panel PowerOutputChart      -> DrivetrainHealthPage.kt PowerOutputChartPanel (AreaChartWrapper: peak + regen power + a11y data table)
+[COVERED] panel HealthRecommendations -> DrivetrainHealthPage.kt HealthRecommendationsPanel (StaggerContainer of urgency-ordered tips; buildRecommendations)
+[COVERED] panel DetailCards           -> DrivetrainHealthPage.kt DetailCardsPanel (temperature-details KVList + power-summary KVList)
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=7   (4 states + 3 strings)
+--------------------------------------------------------------------------------
+[COVERED] state  loading -> DrivetrainHealthPage.kt:199 health.isLoading -> DrivetrainLoading() (L248 PageLoader); ViewModel.health -> UiPhase.Loading; test L265 healthFeedProjectsLoadingState
+[COVERED] state  empty   -> DrivetrainHealthPage.kt:201 health.isEmpty -> DrivetrainNoData() (L268 EmptyState, !DrivetrainHealth.hasData); test L271 healthFeedProjectsEmptyState
+[COVERED] state  error   -> DrivetrainHealthPage.kt:200 health.isError -> DrivetrainError() (L257 ErrorDisplay + Retry); test L285 healthFeedProjectsErrorState
+[COVERED] state  success -> DrivetrainHealthPage.kt:203 else -> DrivetrainBody() (L277, 12 panels); test L277 healthFeedProjectsSuccessState
+[COVERED] string drivetrain.noData   -> DrivetrainHealthPage.kt:270 stringResource(R.string.translation_drivetrain_noData) (DrivetrainNoData + sensorSubtitle + chart empties)
+[COVERED] string drivetrain.subtitle -> DrivetrainHealthPage.kt:227 stringResource(R.string.translation_drivetrain_subtitle) (DrivetrainChrome)
+[COVERED] string drivetrain.title    -> DrivetrainHealthPage.kt:225 stringResource(R.string.translation_drivetrain_title) (DrivetrainChrome + ViewModel route key)
+--------------------------------------------------------------------------------
+PARITY_COVERED=7
+
+i18n         : every visible literal resolves from res/values/strings.xml via stringResource(R.string.translation_drivetrain_*
+               / translation_common_* / translation_error_* / translation_freshness_*); zero hardcoded UI text. Unit symbols
+               (kW / Nm / RPM / kΩ / % / °C) and the em dash are web literals, never i18n keys (web parity). 102 page keys
+               already existed in the generated catalog; the 8 absent keys (4 sensor labels frontMotor/rearMotor/inverter/
+               battery + 4 chart aria labels) existed only as web inline t(key,default) defaults and were added to
+               values/strings.xml (MissingTranslation lint is disabled; values-ar/values-he fall back to default).
+states       : drivetrain-health is the PRIMARY gate (loading/empty/error/success). A no-vehicle / no-payload response
+               routes to the friendly empty surface via DrivetrainHealth.hasData (web `!health`). Each secondary feed
+               (drives, stats, motorLatest, motorHistory) renders its own content-or-empty surface so no section is hidden.
+a11y/theme   : the four charts carry accessibleDescription (the web aria-labels) + a screen-reader data table; gauges expose
+               their own semantics; icons decorative (contentDescription=null); all color via MaterialTheme.colorScheme +
+               TeslaTokens.chart (theme-invariant) + TeslaTokens.status (per-theme) — dynamic color + dark theme; typography
+               via the role components (PageTitle/SectionTitle/PanelTitle/BodyText/Caption). Compose-native (no webview).
+divergences (Honesty #9, documented — not silent):
+  - The web `actions` date-range RangePicker is represented by the web's initial default 30-day window (defaultChartWindow);
+    the vehicle scope picker (VehicleSelect shared surface) is reproduced. The window is the parity-critical input to the
+    per-drive charts; the interactive picker is an actions-slot affordance with no shared Android surface.
+  - LiveMotorStatus is ALWAYS rendered (its internal "no live motor telemetry" empty shows when no snapshot) rather than the
+    web outer `{motorLatest && …}` conditional — honours the never-hide-sections rule; the empty branch is the web component's
+    own EmptyState.
+  - The four charts always render their ChartContainer (status=Empty with the no-data message when <2 points) rather than the
+    web returning null — honours never-hide-sections and matches the BatteryHealthPage chart precedent.
+  - HV Isolation: the web sources isolationResistance from the SSE live state (useVehicleLive); no shared live accessor exists
+    on Android yet (grep: zero "isolation" refs in shared-core/android-live), so the metric is reproduced and shows an em dash
+    rather than being hidden.
+  - Chart horizontal threshold reference lines (normal/warm 60/80°C, warm-zone/freezing) are omitted: the shared Vico
+    LineChartWrapper/AreaChartWrapper expose only vertical markers, not horizontal threshold lines. The data series (the
+    parity-critical content) render in full.
+  - The outside-temperature trend converts each point to the user's unit at the display boundary (consistent with its axis +
+    the SI-canonical rule); the web plots the raw Celsius value while converting only the axis/reference lines (a latent web
+    inconsistency that only differs under a Fahrenheit preference).
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 2m 16s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 12m 7s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 58s  (DrivetrainHealthPageModelTest: 20 passed)
+parity       : PARITY_COVERED(7) == PARITY_REQUIRED(7)
+[PASS] all android triad gates green; parity 7/7; android ledger row page:driving/DrivetrainHealth status=done.
+
+EXIT=0
+STATUS=DONE
