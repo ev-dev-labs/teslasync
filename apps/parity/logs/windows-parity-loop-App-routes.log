@@ -1,0 +1,23 @@
+=== Windows Parity Loop — evidence log ===
+Source file: web/src/App.tsx (the React Router route table)
+Native: apps/windows/TeslaSync.App.Core/Navigation/RouteTable.cs (+ shell PageFactory registrations)
+Branch: feature/windows-systemic
+Units: 147 route units (kind=route, req=1 each)
+
+Verification method (no code change — verification-only; gates remain green from prior commit):
+  Extracted all native route paths from RouteTable.cs (Page/Standalone/Hidden 2nd arg + Redirect both args)
+  = 158 distinct paths. Cross-checked each of the 147 web route paths (leading '/' stripped; ':param' -> '{param}';
+  '/' root and '/*' catch-all handled as native home + NotFound). Result: 147/147 covered, 0 missing.
+
+Reachability: RouteTable name->path entries each have a shell PageFactory.Register(name, ...) (the route audit earlier
+  this session confirmed all nav routes resolve after the SafetySettingsPage registration fix; the only intentionally
+  unregistered route is PowerGrafanaPanel, which the user explicitly deferred and which is NOT among these 147).
+
+Gates (all green at record time — unchanged since the PowerFlowDashboard commit; no C# modified):
+  build=0 errors · format=clean · placeholder=COUNT 0 · test=31537 passed/0 failed
+
+Representative covered routes: / , /account/2fa , /account/privacy , /admin/audit-log , /admin/dlq , /drives ,
+  /power-flow , /charging , /energy , /vehicles , /settings , /analytics/* , /battery/* (full 147-path match in
+  the cross-check; native RouteTable.cs is the source of truth).
+
+=== PARITY === platform=windows file=App.tsx units=147 kind=route status=done (147/147 covered, gates green)
