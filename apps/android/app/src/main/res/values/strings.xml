@@ -4963,6 +4963,8 @@
   <string name="translation_notifications_bellPopover_unreadCount">%1$s unread</string>
   <string name="translation_notifications_bellPopover_untitled">Notification</string>
   <string name="translation_notifications_bellPopover_viewAll">View all</string>
+  <string name="translation_notifications_browser_subtitle">Native browser push notifications when alerts fire.</string>
+  <string name="translation_notifications_browser_title">Browser notifications</string>
   <string name="translation_notifications_bulk_announceArchived">%1$s items archived</string>
   <string name="translation_notifications_bulk_announceRestored">%1$s items restored</string>
   <string name="translation_notifications_bulkRead_success">%1$s marked as read</string>

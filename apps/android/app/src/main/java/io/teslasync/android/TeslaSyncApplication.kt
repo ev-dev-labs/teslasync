@@ -97,6 +97,7 @@ import io.teslasync.android.notifications.alertrules.AlertRulesPageHost
 import io.teslasync.android.notifications.alertslist.AlertsListPageHost
 import io.teslasync.android.notifications.alertstudio.AlertStudioPageHost
 import io.teslasync.android.notifications.auditlog.AuditLogPageHost
+import io.teslasync.android.notifications.browser.BrowserNotificationsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -255,6 +256,7 @@ class TeslaSyncApplication : Application() {
         AlertsListPageHost.register()
         AlertStudioPageHost.register()
         AuditLogPageHost.register()
+        BrowserNotificationsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

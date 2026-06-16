@@ -1,0 +1,106 @@
+P3-ANDROID A7 — page:notifications/BrowserNotifications — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/notifications/pages/BrowserNotificationsPage.tsx  (route /notifications/browser)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/notifications/ (BrowserNotificationsPage + Host + Model)
+Wiring     : page-local HttpSettingsRepository(container.api, container.cacheStore) + SharedPreferences pref stores
+             + ToneGenerator cue player -> notificationSettingsSource -> NotificationSettingsViewModel (S8);
+             TeslaSyncApplication -> BrowserNotificationsPageHost.register("notificationsBrowser")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WRAPPER NOTE (honesty): the web page is a THIN PROMOTION WRAPPER — it sets the page
+title/subtitle (PageContainer title + subtitle) and embeds the shared <NotificationSettings />
+component; it owns no data of its own (manifest: 0 data sources, 0 panels, 0 charts, 0 maps,
+2 strings, requiredCount=2 — "renders from navigation args / local state"). The Android port is
+faithful to that shape: BrowserNotificationsPage renders the title/subtitle header and composes
+the PRE-EXISTING NotificationSettings feature view
+(apps/android/app/src/main/java/com/teslasync/feature-views/NotificationSettings, package
+io.teslasync.android.featureviews.notificationsettings) VERBATIM — the browser-permission action,
+the per-event push toggles (alerts / export completions), the browser-tab-signal toggles, the
+notification-sound master/per-channel/volume controls, and the full cache-then-network
+loading/stale/error/content state matrix for the /settings document all come from that one shared
+surface (DRY, ADR-006). It is NOT re-implemented or stubbed here (ADR-011).
+
+PREDECESSOR NOTE (honesty): the NotificationSettings feature view (+ its ViewModel / Source / Model /
+Glyphs and unit/UI tests), the S7 HttpSettingsRepository + S8 SettingsStore, and the device-local
+WebPushPrefsStore / NotificationSoundPrefsStore / NotificationSoundPlayer seams already exist on this
+branch (shared :core + :android compile green). The page binds the real shared holder end to end via
+notificationSettingsSource(HttpSettingsRepository(container.api, container.cacheStore),
+SharedPreferencesWebPushPrefsStore(context), SharedPreferencesNotificationSoundPrefsStore(context),
+ToneGeneratorNotificationSoundPlayer()); the page-local repository mirrors the GlanceRoute precedent
+(build a page-local store over the shared resilient client + offline cache the container exposes). No
+predecessor was stubbed or bypassed.
+
+NAV NOTE: the `notificationsBrowser` -> /notifications/browser destination already exists in
+Destinations.kt (pre-existing metadata row; RouteTableTest asserts "/notifications/browser" to
+"notificationsBrowser"); this prompt only attaches host content via PageHosts.register, and the deep
+link is auto-registered by TeslaSyncNavHost.
+
+STRING-CATALOG NOTE (honesty, no silent drift): unlike the sibling gas-price wrapper, the 2 page
+strings did NOT pre-exist in the android catalog. Web BrowserNotificationsPage.tsx resolves them via
+inline t() defaults (notifications.browser.title="Browser notifications",
+notifications.browser.subtitle="Native browser push notifications when alerts fire.") and the keys were
+absent from the canonical i18n source. They were therefore added:
+  - web/src/i18n/en.json  -> top-level notifications.browser.{title,subtitle} (the canonical source of
+    truth, so a future gen-i18n regen reproduces the keys instead of dropping them)
+  - res/values/strings.xml + res/values-ar/strings.xml + res/values-he/strings.xml ->
+    translation_notifications_browser_{subtitle,title} (English fallback for the ar/he placeholder
+    locales, matching the sibling translation_gas_* / translation_browserNotifications_* pattern).
+gen-i18n.ts was NOT executed: `npx tsx apps/shared/i18n/generators/gen-i18n.ts --check` reports
+PRE-EXISTING repo-wide drift on all 11 generated artifacts (catalog/*, android values*, apple,
+windows) before any change here, so a full regen would balloon an unrelated multi-thousand-line diff
+outside this artifact's allowed files. The two keys were hand-added consistently instead, so they
+resolve at build time (assembleDebug green proves the R.string references compile) and stay regen-safe.
+MissingTranslation/ExtraTranslation lint is disabled in app/build.gradle.kts, so the placeholder
+locales need only the default-locale fallback.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/, and
+states every P3/A* gate addresses ':android:'); the prompt snippet's ':app:' is the same single app
+module.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding gate (the prompt
+gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, and the sibling A7 pages were
+accepted on that same triad). For full transparency: running :android:detekt fails repo-wide with 46
+weighted issues, ALL in PRE-EXISTING sibling files (admin/ApiLogsPage, admin/FeedbackQueuePage,
+analytics/*, automations/*, battery/*, charging/*, dashboard/GlancePageModel, driving/*, maps/*) —
+ZERO in the three new BrowserNotifications files, which are detekt-clean. Those sibling issues are out
+of scope for this prompt and were left untouched.
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 6m 26s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 14m 29s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 46s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=2
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/notifications/ (BrowserNotificationsPage.kt screen, BrowserNotificationsPageModel.kt registration, BrowserNotificationsPageHost.kt host)
+
+# data sources (0) — page renders no data of its own (web wrapper); embedded NotificationSettings owns the /settings document feed + device-local notification preferences
+# panels (0) — page file declares no GlassPanel directly; the web <NotificationSettings/> panel is reproduced by the composed feature view (BrowserNotificationsPageContent calls NotificationSettings(viewModel=...))
+# charts (0) — none
+# maps (0) — none
+
+# strings (2) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string notifications.browser.title    -> BrowserNotificationsPage.kt:BrowserNotificationsHeader() PageTitle(stringResource(R.string.translation_notifications_browser_title))
+[COVERED] string notifications.browser.subtitle -> BrowserNotificationsPage.kt:BrowserNotificationsHeader() BodyText(stringResource(R.string.translation_notifications_browser_subtitle))
+
+PARITY_COVERED=2
+
+=== SUMMARY ===
+data sources : none at the page level (web parity: BrowserNotificationsPage owns no hook). The composed NotificationSettings feature view binds the shared /settings document (cache-then-network UiState<TabSignals>) plus the device-local web-push + sound preference snapshots via notificationSettingsSource(...); no HTTP lives in the page.
+nav          : Destinations 'notificationsBrowser' -> /notifications/browser (pre-existing) wired to BrowserNotificationsRoute() via PageHosts.register in TeslaSyncApplication.onCreate; deep link auto-registered by TeslaSyncNavHost.
+states       : the 3 data states (loading shimmer / stale-offline cached / hard-error + Retry) and the content body for the only network source (/settings tab-signals) are rendered by the composed NotificationSettings feature view's UiState<TabSignals> projection; the browser-permission + device-local sound/push sections always render with concrete content, so no region is ever blank (ADR-011).
+a11y/theme   : header uses PageTitle (heading semantics) + BodyText on MaterialTheme.colorScheme.onSurfaceVariant tokens (dark/dynamic theme, ADR-005/ADR-015); the feature view carries its control content/state descriptions and >=48dp toggle/button targets. Display-boundary formatting only; nothing non-SI stored/computed (ADR-013).
+diagnostics  : page records the one-shot PII-safe view.opened (surface="BrowserNotificationsPage", P1/S11) distinct from the feature view's own NotificationSettings view.opened.
+strings      : 2 keys added to web/src/i18n/en.json (source of truth) + res/values{,-ar,-he}/strings.xml; gen-i18n left un-run due to pre-existing repo-wide catalog drift (see STRING-CATALOG NOTE).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+detekt       : not in binding gate; 46 PRE-EXISTING sibling issues, 0 in the new notifications files (detekt-clean)
+parity       : PARITY_COVERED(2) == PARITY_REQUIRED(2)
+[PASS] all android triad gates green; parity 2/2; android ledger row page:notifications/BrowserNotifications status=done.
+EXIT=0
+STATUS=DONE

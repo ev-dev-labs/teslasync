@@ -7247,6 +7247,10 @@
       "archived": "Archived",
       "channels": "Channels"
     },
+    "browser": {
+      "title": "Browser notifications",
+      "subtitle": "Native browser push notifications when alerts fire."
+    },
     "inbox": {
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
