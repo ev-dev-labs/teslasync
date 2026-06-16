@@ -1,0 +1,172 @@
+================================================================================
+P3-ANDROID A7 — page:battery/Energy  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/EnergyPage.tsx
+promptId: p3-android/pages/battery/EnergyPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present; local.properties sdk.dir set)
+JDK         : Android Studio jbr (JAVA_HOME=C:\Program Files\Android\Android Studio\jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPage.kt           (@Composable screen: EnergyPage + EnergyPageContent + 9 panels + 4 RadialGauges + Combo/Area/Bar charts + Canvas donut + DataTable)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<…>> x3 + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPageSource.kt     (S8 data seam over EnergyStore + VehiclesStore + SettingsStore + SelectedVehicleStore; page-local HttpChargingRepository for the paginated /charging read)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPageModel.kt      (framework-free: parseEnergyStats/parseEnergyLive decoders, EnergyDerived metrics, timeOfDayBuckets, chargerBreakdown, recentSessionRows, EnergyDisplayPrefs SI/currency formatters, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPageIcons.kt      (6 authored lucide glyphs Leaf/Fuel/Sun/Moon/Activity/DollarSign + 4 re-exported Bolt/ArrowRight/Gauge/MapPin from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyPageHost.kt       (PageHosts.register(energy){ EnergyRoute() }; builds page-local HttpChargingRepository over container.api + container.cacheStore)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt    (NavHost wiring: + EnergyPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                              (added the 13 missing page keys; the other 43 energy.* / common.noData keys already present as translation_*)
+apps/parity/android-ledger.json                                               (ledger row page:battery/Energy, 81/81)
+.github/prompts/monorepo/logs/android-page-battery-EnergyPage.log             (this log)
+
+DI note: the shared DataContainer already exposes energyStore + vehiclesStore + settingsStore + selectedVehicleStore + api + cacheStore,
+so NO DataContainer edit was needed. The one read the holders do not expose (paginated /charging) is served by a page-local
+HttpChargingRepository constructed by the host over the SAME shared ApiHttpClient + CacheStore — the same precedent the widget layer's
+WidgetContainer follows (ADR-013 freshness + SI-verbatim caching identical to every shared feed).
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useEnergyStats               GET /vehicles/{id}/energy?days=30        -> EnergyStore.energyStats(id,30)                 PRIMARY feed: drives loading/error/success gate (web isLoading/error)
+useChargingSessionsPaginated GET /charging?vehicle_id&limit=100&start&end -> page-local HttpChargingRepository.sessionsPaginated(id,100,0,start,end) -> typed List<ChargingSession>
+useChargingTelemetryLatest   GET /charging-telemetry/latest [vehicle_id]  -> VehiclesStore.chargingTelemetryLatest(id) (lifetime_energy_used -> lifetime panel)
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits/useFormatting). No HTTP in the view.
+window         : fixed 30-day default (web defaultStartDate=today-30 .. defaultEndDate=today); EnergyPageViewModel.windowStart/windowEnd via java.time.LocalDate.
+decode         : JsonElement -> typed models in EnergyPageModel.parse* ; the view only resolves i18n + draws.
+nav            : Destinations 'energy' -> /energy pre-existing (Destinations.kt L78, count unchanged); host wired via PageHosts.register("energy"); deep link auto-registered.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=81   (9 panels + 12 charts + 4 states + 56 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1               -> EnergyPage.kt:278 HeroGaugesPanel GlassPanel (4 hero gauges, or empty-hero EmptyState L284 when hasNoEnergyData)
+[COVERED] panel  GlassPanel2               -> EnergyPage.kt:341 QuickMetricsStrip (6 MetricChip: cost/dist, cost/kWh, distance, sessions, monthly, yearly)
+[COVERED] panel  GlassPanel3               -> EnergyPage.kt:410 LifetimeMetricsPanel (lifetime energy used + selected-window energy; SectionHeader L415)
+[COVERED] panel  GlassPanel4               -> EnergyPage.kt:462 CostComparisonRow -> 2x CostComparisonCard (L486 period-total + projected-annual)
+[COVERED] panel  Energy-Cost-Daily         -> EnergyPage.kt:528 EnergyCostDailyPanel ChartContainer (L533) + ComboChart (L557)
+[COVERED] panel  Efficiency-Trend          -> EnergyPage.kt:565 EfficiencyTrendPanel ChartContainer (L570) + AreaChartWrapper (L592)
+[COVERED] panel  Charging-by-Time-of-Day   -> EnergyPage.kt:600 ChargingByTimePanel ChartContainer (L606) + BarChartWrapper (L644) + off-peak/solar tips (L650-651)
+[COVERED] panel  Charger-Type-Breakdown    -> EnergyPage.kt:673 ChargerBreakdownPanel ChartContainer (L678) + ChargerDonut (L696) + per-slice legend (ChargerLegendRow)
+[COVERED] panel  GlassPanel9               -> EnergyPage.kt:754 RecentSessionsPanel GlassPanel (EnergySessionsTable L779, or sessions-empty EmptyState L769)
+[COVERED] chart  RadialGauge (1/4)         -> EnergyPage.kt:294 HeroGaugesPanel RadialGauge(value=energyGaugeValue,max,unit=energyLabel) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (2/4)         -> EnergyPage.kt:302 HeroGaugesPanel RadialGauge(value=efficiencyGaugeValue,max=toEfficiencyDisplay(300),unit=Wh/km|Wh/mi)
+[COVERED] chart  RadialGauge (3/4)         -> EnergyPage.kt:315 HeroGaugesPanel RadialGauge(value=co2SavedKg,max,unit=kg)
+[COVERED] chart  RadialGauge (4/4)         -> EnergyPage.kt:323 HeroGaugesPanel RadialGauge(value=totalCost,max,unit=$)
+[COVERED] chart  ChartContainer (1/4)      -> EnergyPage.kt:533 EnergyCostDailyPanel ChartContainer(status,accessibleDescription,emptyMessage) (A3 components.charts.ChartContainer)
+[COVERED] chart  ComposedChart             -> EnergyPage.kt:557 EnergyCostDailyPanel ComboChart(energy_wh Bar + efficiency_wh_per_m Line, xLabels=date) (A3 ComboChart, Vico)
+[COVERED] chart  ChartContainer (2/4)      -> EnergyPage.kt:570 EfficiencyTrendPanel ChartContainer(status,accessibleDescription,emptyMessage)
+[COVERED] chart  AreaChart                 -> EnergyPage.kt:592 EfficiencyTrendPanel AreaChartWrapper(efficiency_wh_per_m + distance_m areas, xLabels=date) (A3 AreaChartWrapper, Vico)
+[COVERED] chart  ChartContainer (3/4)      -> EnergyPage.kt:606 ChargingByTimePanel ChartContainer(status,accessibleDescription,emptyMessage)
+[COVERED] chart  BarChart                  -> EnergyPage.kt:644 ChargingByTimePanel BarChartWrapper(energy + count per time-of-day slot, xLabels=slot) (A3 BarChartWrapper, Vico)
+[COVERED] chart  ChartContainer (4/4)      -> EnergyPage.kt:678 ChargerBreakdownPanel ChartContainer(status,accessibleDescription,emptyMessage)
+[COVERED] chart  PieChart                  -> EnergyPage.kt:696 ChargerDonut Compose Canvas donut sized by per-slice energy share + legend (A3 lacks a pie wrapper — Compose-native, no webview)
+[COVERED] state  loading                   -> EnergyPage.kt:189 state.isLoading -> EnergyLoading()=PageLoader (L234)
+[COVERED] state  empty                     -> EnergyPage.kt:284 HeroGaugesPanel empty-hero EmptyState (hasNoEnergyData) + 4x ChartStatus.Empty (L533/L570/L606/L678) + RecentSessions EmptyState (L769)
+[COVERED] state  error                     -> EnergyPage.kt:190 state.isError -> EnergyError()=ErrorDisplay+Retry (L243)
+[COVERED] state  success                   -> EnergyPage.kt:191 else -> EnergyBody(...) (L254) draws the 9 panels from the bound StateFlows
+[COVERED] string common.noData                    -> EnergyPage.kt:611 + :683 (translation_common_noData; chart empty messages)
+[COVERED] string energy.breakdown.sessions        -> EnergyPage.kt:737 (translation_energy_breakdown_sessions)
+[COVERED] string energy.chart.chargerBreakdown    -> EnergyPage.kt:680 (translation_energy_chart_chargerBreakdown)
+[COVERED] string energy.chart.chargerBreakdown.aria -> EnergyPage.kt:681 ChartContainer accessibleDescription (translation_energy_chart_chargerBreakdown_aria; NEW key)
+[COVERED] string energy.chart.chargingByTime      -> EnergyPage.kt:608 (translation_energy_chart_chargingByTime)
+[COVERED] string energy.chart.chargingByTime.aria -> EnergyPage.kt:609 ChartContainer accessibleDescription (translation_energy_chart_chargingByTime_aria; NEW key)
+[COVERED] string energy.chart.distance            -> EnergyPage.kt:587 EfficiencyTrend distance series label %1$s=unit (translation_energy_chart_distance)
+[COVERED] string energy.chart.efficiencyTrend     -> EnergyPage.kt:572 (translation_energy_chart_efficiencyTrend)
+[COVERED] string energy.chart.efficiencyTrend.aria -> EnergyPage.kt:573 ChartContainer accessibleDescription (translation_energy_chart_efficiencyTrend_aria; NEW key)
+[COVERED] string energy.chart.energy              -> EnergyPage.kt:544 EnergyCostDaily energy series label (translation_energy_chart_energy; NEW key)
+[COVERED] string energy.chart.energyCostDaily     -> EnergyPage.kt:535 (translation_energy_chart_energyCostDaily)
+[COVERED] string energy.chart.energyCostDaily.aria -> EnergyPage.kt:536 ChartContainer accessibleDescription (translation_energy_chart_energyCostDaily_aria; NEW key)
+[COVERED] string energy.chart.energyKwh           -> EnergyPage.kt:631 ChargingByTime energy series label (translation_energy_chart_energyKwh)
+[COVERED] string energy.chart.noEfficiencyData    -> EnergyPage.kt:575 EfficiencyTrend emptyMessage (translation_energy_chart_noEfficiencyData)
+[COVERED] string energy.chart.noEnergyData        -> EnergyPage.kt:538 EnergyCostDaily emptyMessage (translation_energy_chart_noEnergyData)
+[COVERED] string energy.chart.sessions            -> EnergyPage.kt:638 ChargingByTime count series label (translation_energy_chart_sessions)
+[COVERED] string energy.cost_decimal.evCost       -> EnergyPage.kt:501 CostComparisonCard (translation_energy_cost_decimal_evCost; NEW key)
+[COVERED] string energy.cost_decimal.gasEquivalent -> EnergyPage.kt:506 CostComparisonCard (translation_energy_cost_decimal_gasEquivalent; NEW key)
+[COVERED] string energy.cost_decimal.less         -> EnergyPage.kt:516 CostComparisonCard percent chip (translation_energy_cost_decimal_less; NEW key)
+[COVERED] string energy.cost_decimal.periodTotal  -> EnergyPage.kt:469 CostComparisonRow card-A label %1$s=days (translation_energy_cost_decimal_periodTotal; NEW key)
+[COVERED] string energy.cost_decimal.projectedAnnual -> EnergyPage.kt:476 CostComparisonRow card-B label (translation_energy_cost_decimal_projectedAnnual; NEW key)
+[COVERED] string energy.cost_decimal.saving       -> EnergyPage.kt:512 CostComparisonCard saving line (translation_energy_cost_decimal_saving; NEW key)
+[COVERED] string energy.empty.hero                -> EnergyPage.kt:285 HeroGaugesPanel empty-hero message (translation_energy_empty_hero; NEW key)
+[COVERED] string energy.gauge.co2Saved            -> EnergyPage.kt:319 (translation_energy_gauge_co2Saved)
+[COVERED] string energy.gauge.efficiency          -> EnergyPage.kt:306 (translation_energy_gauge_efficiency)
+[COVERED] string energy.gauge.energyUsed          -> EnergyPage.kt:298 (translation_energy_gauge_energyUsed)
+[COVERED] string energy.gauge.totalCost           -> EnergyPage.kt:327 (translation_energy_gauge_totalCost)
+[COVERED] string energy.lifetime.energyUsed       -> EnergyPage.kt:420 (translation_energy_lifetime_energyUsed)
+[COVERED] string energy.lifetime.energyUsedDesc   -> EnergyPage.kt:424 (translation_energy_lifetime_energyUsedDesc)
+[COVERED] string energy.lifetime.periodEnergy     -> EnergyPage.kt:431 label %1$s=days (translation_energy_lifetime_periodEnergy)
+[COVERED] string energy.lifetime.periodEnergyDesc -> EnergyPage.kt:434 (translation_energy_lifetime_periodEnergyDesc)
+[COVERED] string energy.lifetime.title            -> EnergyPage.kt:415 (translation_energy_lifetime_title)
+[COVERED] string energy.metric.costPerDist        -> EnergyPage.kt:351 label %1$s=distanceLabel (translation_energy_metric_costPerDist)
+[COVERED] string energy.metric.costPerKwh         -> EnergyPage.kt:356 (translation_energy_metric_costPerKwh)
+[COVERED] string energy.metric.monthlyEst         -> EnergyPage.kt:375 (translation_energy_metric_monthlyEst)
+[COVERED] string energy.metric.sessions           -> EnergyPage.kt:368 (translation_energy_metric_sessions)
+[COVERED] string energy.metric.totalDistance      -> EnergyPage.kt:363 (translation_energy_metric_totalDistance)
+[COVERED] string energy.metric.yearlyEst          -> EnergyPage.kt:380 (translation_energy_metric_yearlyEst)
+[COVERED] string energy.pageSubtitle              -> EnergyPage.kt:215 EnergyChrome subtitle (translation_energy_pageSubtitle)
+[COVERED] string energy.pageTitle                 -> EnergyPage.kt:213 EnergyChrome PageTitle (translation_energy_pageTitle)
+[COVERED] string energy.sessions.empty            -> EnergyPage.kt:770 RecentSessions EmptyState (translation_energy_sessions_empty)
+[COVERED] string energy.sessions.title            -> EnergyPage.kt:762 RecentSessions SectionHeader (translation_energy_sessions_title)
+[COVERED] string energy.table.battery             -> EnergyPage.kt:794 DataTable column header (translation_energy_table_battery)
+[COVERED] string energy.table.cost_decimal        -> EnergyPage.kt:809 DataTable column header (translation_energy_table_cost_decimal; NEW key)
+[COVERED] string energy.table.date                -> EnergyPage.kt:784 DataTable column header (translation_energy_table_date)
+[COVERED] string energy.table.energy              -> EnergyPage.kt:789 DataTable column header (translation_energy_table_energy)
+[COVERED] string energy.table.perKwh              -> EnergyPage.kt:814 DataTable column header (translation_energy_table_perKwh)
+[COVERED] string energy.table.power               -> EnergyPage.kt:799 DataTable column header (translation_energy_table_power)
+[COVERED] string energy.table.type                -> EnergyPage.kt:804 DataTable column header (translation_energy_table_type)
+[COVERED] string energy.timeOfDay.afternoon       -> EnergyPage.kt:616 (translation_energy_timeOfDay_afternoon)
+[COVERED] string energy.timeOfDay.evening         -> EnergyPage.kt:617 (translation_energy_timeOfDay_evening)
+[COVERED] string energy.timeOfDay.morning         -> EnergyPage.kt:615 (translation_energy_timeOfDay_morning)
+[COVERED] string energy.timeOfDay.night           -> EnergyPage.kt:614 (translation_energy_timeOfDay_night)
+[COVERED] string energy.tip.offPeak               -> EnergyPage.kt:650 ChargingTip off-peak (translation_energy_tip_offPeak)
+[COVERED] string energy.tip.solar                 -> EnergyPage.kt:651 ChargingTip solar (translation_energy_tip_solar)
+[COVERED] string energy.title                     -> EnergyPage.kt:212 EnergyChrome eyebrow (translation_energy_title; web tab title)
+
+PARITY_COVERED=81
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 3 reads bound as StateFlow via EnergyPageViewModel -> energyPageSourceOf(): EnergyStore.energyStats(id,30) (web useEnergyStats; PRIMARY),
+               page-local HttpChargingRepository.sessionsPaginated(id,100,0,start,end) (web useChargingSessionsPaginated; typed List<ChargingSession>),
+               VehiclesStore.chargingTelemetryLatest(id) (web useChargingTelemetryLatest). Scope = SelectedVehicleStore (web useSelectedVehicle);
+               units/currency = SettingsStore.settings() (web useUnits/useFormatting). No HTTP in the view; no DataContainer edit needed.
+charts       : 4 RadialGauge + 4 ChartContainer + ComboChart + AreaChartWrapper + BarChartWrapper from the A3 components.charts library (Vico);
+               the charger-type pie is a Compose-Canvas donut+legend authored in the page (A3 ships no pie wrapper) — Compose-native, never a webview = 12.
+si/units     : SI read off the wire; energy Wh via convertEnergyFromSI(prefs.fromWh), distance m via convertDistanceFromSI(prefs.fromMeters), power W via
+               convertPowerFromSI(prefs.fromWatts), efficiency Wh/m->Wh/km|Wh/mi via prefs.toEfficiencyDisplay — all at the display boundary only. CO2 kg + $
+               rendered verbatim (web parity). Every web derivation formula reproduced (cost/m, cost/kWh, 30-day monthly/yearly projection, gas-equivalent,
+               both efficiency-gauge scalings) in the framework-free EnergyDerived (JVM-tested by testDebugUnitTest).
+states       : energy-stats is the PRIMARY gate (loading/error/success). The body renders on every non-loading/non-error state so no section is hidden
+               (web behaviour). The empty state is the honest empty hero (web hasNoEnergyData: no sessions AND no stats signal) plus each chart's ChartStatus.Empty
+               and the recent-sessions EmptyState — never a page-level blank, never a grid of zeros.
+a11y/theme   : charts carry accessibleDescription (the web aria-labels); the bar/combo/area expose the screen-reader data table via ChartContainer; the donut legend
+               is TalkBack-readable; each gauge has a merged contentDescription; SectionHeader rows carry a semantics contentDescription; icons decorative
+               (contentDescription=null); all color via MaterialTheme.colorScheme + chart ChartPalette (A2 tokens) — dynamic color + dark theme; typography via the
+               role components (PageTitle/PanelTitle/BodyText/Caption/MetricValue/MetricLabel). Compose-native (no webview).
+nav          : Destinations 'energy' -> /energy pre-existing (Destinations.kt L78, count unchanged); host wired via PageHosts.register("energy"); deep link
+               auto-registered. TeslaSyncApplication.onCreate() widened with EnergyPageHost.register() only.
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin   -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:compileDebugKotlin                                              -> BUILD SUCCESSFUL in 4m 30s
+   $ ./gradlew :android:assembleDebug :android:lintDebug :android:testDebugUnitTest --continue  -> BUILD SUCCESSFUL in 12m 59s
+       (one --continue invocation runs all three; Gradle reports SUCCESSFUL only when assembleDebug AND lintDebug AND testDebugUnitTest each succeed)
+parity       : PARITY_COVERED(81) == PARITY_REQUIRED(81)
+[PASS] all android triad gates green; parity 81/81; android ledger row page:battery/Energy status=done.
+EXIT=0
+STATUS=DONE
