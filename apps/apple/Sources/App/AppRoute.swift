@@ -27,7 +27,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, chargingHeatmap, powershare, trips, energy, energyFlow, driving
     case efficiency, tripPlanner
-    case analytics, maps, quickStats
+    case analytics, maps, locations, quickStats
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
@@ -132,6 +132,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .yearReview: "sparkles"
         case .mileage: "gauge.with.dots.needle.bottom.50percent"
         case .maps: "mappin.and.ellipse"
+        case .locations: "mappin.circle.fill"
         case .vehicleSystems: "gearshape.2.fill"
         case .automations: "wand.and.stars"
         case .automationsList: "checklist"
@@ -181,7 +182,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .dashboard, .glance, .quickStats, .explore, .search: .overview
         case .vehicles, .charging, .chargingHeatmap, .powershare, .trips, .driving, .efficiency, .vehicleSystems,
-             .maps, .tripPlanner: .vehicle
+             .maps, .locations, .tripPlanner: .vehicle
         case .energy: .energy
         case .batteryHealth, .batteryCells, .batteryDegradation: .energy
         case .energyFlow: .energy
