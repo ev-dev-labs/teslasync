@@ -1,0 +1,112 @@
+================================================================================
+P3-ANDROID A7 — page:system/CommandHistory  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/CommandHistoryPage.tsx
+promptId: p3-android/pages/system/CommandHistoryPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present, local.properties sdk.dir set)
+JDK         : OpenJDK 21.0.9
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPage.kt           (@Composable screen: CommandHistoryPage + CommandHistoryPageContent + sections)
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPageViewModel.kt  (Hilt-free AndroidX ViewModel; StateFlow<UiState>; refresh()/retry(); selection reconcile)
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPageSource.kt     (S8 data seam over VehiclesStore + CommandsStore)
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPageModel.kt      (framework-free model: parse, formatCommandName, filter, computeStats, buildSubtitle)
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPageIcons.kt      (lucide glyph ports: History/CheckCircle/XCircle/Terminal/Clock/TrendingUp/Award/Search/Gamepad2)
+apps/android/app/src/main/kotlin/com/teslasync/system/CommandHistoryPageHost.kt       (PageHosts.register(commandHistory){ CommandHistoryRoute() })
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt             (NavHost wiring: + commandsRepository + commandsStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt           (NavHost wiring: + CommandHistoryPageHost.register())
+apps/parity/android-ledger.json                                                       (ledger row page:system/CommandHistory)
+.github/prompts/monorepo/logs/android-page-system-CommandHistoryPage.log              (this log)
+
+Strings: all 18 page keys already present in res/values/strings.xml (+ values-ar / values-he); no catalog edit needed.
+Nav    : Destinations 'commandHistory' -> /command-history pre-existing (Destinations.kt:168; count unchanged);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+Data   : useCommandHistory -> shared S8 CommandsStore.commandHistory(vehicleId) (GET /vehicles/{id}/commands/history?limit=200);
+         vehicle picker -> VehiclesStore.vehicles() (web useVehicles) + app-scoped SelectedVehicleStore (web useSelectedVehicle).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=1   (searchPlaceholder i18n key id; // parity:allow web i18n key id, not a stub)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 3m 55s (:android:compileDebugKotlin executed)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 11m 29s (abortOnError=true; lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 36s (:android:testDebugUnitTest executed)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=28
+--------------------------------------------------------------------------------
+# panels (6) — StatCards + Material 3 GlassPanel (Surface) ; bound state holder = CommandHistoryPageViewModel
+[COVERED] panel  Commands-24h  -> CommandHistoryPage.kt:304 CommandHistoryStatsSection() StatCard(total24h, icon Terminal)        (web Section 1 <StatCard total24h>)
+[COVERED] panel  Success-Rate  -> CommandHistoryPage.kt:311 CommandHistoryStatsSection() StatCard(successRate%, icon TrendingUp)  (web Section 1 <StatCard successRate>)
+[COVERED] panel  Most-Used     -> CommandHistoryPage.kt:320 CommandHistoryStatsSection() StatCard(mostUsed, icon Award)           (web Section 1 <StatCard mostUsed>)
+[COVERED] panel  Last-Sent     -> CommandHistoryPage.kt:327 CommandHistoryStatsSection() StatCard(lastSent, icon Clock)           (web Section 1 <StatCard lastSent>)
+[COVERED] panel  GlassPanel5   -> CommandHistoryPage.kt:354 CommandHistoryFiltersPanel() GlassPanel(PanelPadding.Md){ TabNav + search Input + pending Spinner }  (web Section 2 <GlassPanel> filters)
+[COVERED] panel  GlassPanel6   -> CommandHistoryPage.kt:393 CommandTimelinePanel() GlassPanel(PanelPadding.Lg){ header + showing count + state body }            (web Section 3 <GlassPanel> timeline)
+# (+ web Section 4 Pagination reproduced: CommandHistoryPage.kt:454 CommandHistoryPagination() shared Pagination, shown when filtered.size > PAGE_SIZE)
+
+# data states (4 required) — bound to CommandHistoryPageViewModel.commandsState : StateFlow<UiState<List<CommandLogEntry>>>
+[COVERED] state  loading       -> CommandHistoryPage.kt:413 CommandTimelinePanel when(loading) Spinner(SpinnerSize.Md); StatCards loading=commandsState.isLoading (CommandHistoryPage.kt:289/310/etc)
+[COVERED] state  empty         -> CommandHistoryPage.kt:416 CommandTimelinePanel when(rows.isEmpty) EmptyState(noCommands / noFilterResults) — UiPhase.Empty via asUiState(isEmpty)
+[COVERED] state  error         -> CommandHistoryPage.kt:213 CommandHistoryPageContent if(commandsState.hasError) AlertBanner(Tone.Danger, action=Retry -> viewModel.retry)
+[COVERED] state  success       -> CommandHistoryPage.kt:425 CommandTimelinePanel else -> CommandTimelineList -> StaggerContainer{ Timeline(items) } (CommandHistoryPage.kt:448) — UiPhase.Content
+
+# strings (18) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string commandHistory.backToCommands  -> CommandHistoryPage.kt:274 Button(label=translation_commandHistory_backToCommands, icon Gamepad2)
+[COVERED] string commandHistory.filterAll        -> CommandHistoryPage.kt:350 TabNavItem("all", translation_commandHistory_filterAll)
+[COVERED] string commandHistory.filterFailed     -> CommandHistoryPage.kt:352 TabNavItem("failed", translation_commandHistory_filterFailed)
+[COVERED] string commandHistory.filterSuccess    -> CommandHistoryPage.kt:351 TabNavItem("success", translation_commandHistory_filterSuccess)
+[COVERED] string commandHistory.lastSent         -> CommandHistoryPage.kt:328 StatCard(label=translation_commandHistory_lastSent)
+[COVERED] string commandHistory.mostUsed         -> CommandHistoryPage.kt:321 StatCard(label=translation_commandHistory_mostUsed)
+[COVERED] string commandHistory.noCommands       -> CommandHistoryPage.kt:422 EmptyState(message=translation_commandHistory_noCommands)
+[COVERED] string commandHistory.noFilterResults  -> CommandHistoryPage.kt:420 EmptyState(message=translation_commandHistory_noFilterResults)
+[COVERED] string commandHistory.searchCommands   -> CommandHistoryPage.kt:357 Input semantics contentDescription=translation_commandHistory_searchCommands
+[COVERED] string commandHistory.searchPlaceholder-> CommandHistoryPage.kt:367 Input(hint=translation_commandHistory_searchPlaceholder)  // parity:allow web i18n key id
+[COVERED] string commandHistory.selectVehicle    -> CommandHistoryPage.kt:282 Select semantics + emptyLabel=translation_commandHistory_selectVehicle
+[COVERED] string commandHistory.showing          -> CommandHistoryPage.kt:406 Caption(translation_commandHistory_showing, filteredCount)
+[COVERED] string commandHistory.subtitle         -> CommandHistoryPage.kt:269 BodyText(translation_commandHistory_subtitle)
+[COVERED] string commandHistory.successRate      -> CommandHistoryPage.kt:312 StatCard(label=translation_commandHistory_successRate)
+[COVERED] string commandHistory.timelineTitle    -> CommandHistoryPage.kt:405 SectionTitle(translation_commandHistory_timelineTitle)
+[COVERED] string commandHistory.title            -> CommandHistoryPage.kt:267 PageTitle(translation_commandHistory_title)
+[COVERED] string commandHistory.total24h         -> CommandHistoryPage.kt:305 StatCard(label=translation_commandHistory_total24h)
+[COVERED] string filter.pending                  -> CommandHistoryPage.kt:375 Spinner(accessibleLabel=translation_filter_pending) — useDeferredValue search-pending indicator
+
+PARITY_COVERED=28
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : CommandHistoryPageViewModel binds shared S8 CommandsStore.commandHistory(vehicleId) (web useCommandHistory) +
+               VehiclesStore.vehicles() (web useVehicles) via commandHistorySourceOf(); app-scoped SelectedVehicleStore (web
+               useSelectedVehicle) reconciled to the live fleet so the page self-heals to the first vehicle. JsonElement ->
+               List<CommandLogEntry> parse + filter/stats/pagination/subtitle derivations in CommandHistoryPageModel; no HTTP in the view.
+si/units     : command-audit rows carry no unit-bearing fields (ids, command strings, status, free-text params/error, ISO
+               timestamps) — round-trip verbatim, no SI conversion. Relative time rendered at the boundary via shared Freshness helpers.
+a11y/theme   : header Select + search Input carry Modifier.semantics content descriptions; StatCards/EmptyState/AlertBanner own
+               their own; Material 3 >=48dp targets; dynamic-color + dark theme via MaterialTheme (A2 tokens); Compose-native (no webview).
+nav          : Destinations 'commandHistory' -> /command-history (pre-existing) wired to CommandHistoryRoute() via PageHosts.register;
+               web <Link to="/commands"> mapped to the system back-dispatcher (sanctioned host nav seam; ArchivedPage/GlancePage precedent).
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=1: searchPlaceholder i18n key id)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(28) == PARITY_REQUIRED(28)
+[PASS] all android triad gates green; parity 28/28; android ledger row page:system/CommandHistory status=done.
+EXIT=0
+STATUS=DONE

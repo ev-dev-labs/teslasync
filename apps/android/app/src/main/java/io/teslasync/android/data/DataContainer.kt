@@ -61,6 +61,8 @@ import io.teslasync.shared.core.data.repo.HttpImpersonationRepository
 import io.teslasync.shared.core.presentation.impersonation.ImpersonationStore
 import io.teslasync.shared.core.data.repo.HttpDrivingRepository
 import io.teslasync.shared.core.presentation.driving.DrivingStore
+import io.teslasync.shared.core.data.repo.HttpCommandsRepository
+import io.teslasync.shared.core.presentation.commands.CommandsStore
 
 /**
  * Manual DI graph for the Android data layer (ADR-013), the analogue of the auth `AuthContainer`. It
@@ -221,6 +223,8 @@ class DataContainer(
      * complete) the A7 OnboardingPage standalone surface binds to.
      */
     val onboardingStore = OnboardingStore(onboardingRepository, scope)
+    private val commandsRepository = HttpCommandsRepository(api, cacheStore, clock)
+    val commandsStore = CommandsStore(commandsRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

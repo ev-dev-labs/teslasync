@@ -110,6 +110,7 @@ import io.teslasync.android.settings.twofactor.TwoFactorAuthPageHost
 import io.teslasync.android.settings.page.SettingsPageHost
 import io.teslasync.android.sharing.sharingtrips.SharingTripsPageHost
 import io.teslasync.android.system.ChatbotPageHost
+import io.teslasync.android.system.commandhistory.CommandHistoryPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -280,6 +281,7 @@ class TeslaSyncApplication : Application() {
         TwoFactorAuthPageHost.register()
         SharingTripsPageHost.register()
         ChatbotPageHost.register()
+        CommandHistoryPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
