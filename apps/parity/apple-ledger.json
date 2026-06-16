@@ -1135,6 +1135,24 @@
       "requiredCount": 79,
       "promptId": "p4-apple/P7/page:charging/ChargingList",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-ChargingListPage.log"
+    },
+    {
+      "unitId": "page:charging/TeslaChargingSessionsMap",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 7,
+      "requiredCount": 7,
+      "promptId": "p4-apple/P7/page:charging/TeslaChargingSessionsMap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-TeslaChargingSessionsMap.log"
+    },
+    {
+      "unitId": "page:charging/TeslaChargingSessionsMap",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 7,
+      "requiredCount": 7,
+      "promptId": "p4-apple/P7/page:charging/TeslaChargingSessionsMap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-TeslaChargingSessionsMap.log"
     }
   ]
 }
