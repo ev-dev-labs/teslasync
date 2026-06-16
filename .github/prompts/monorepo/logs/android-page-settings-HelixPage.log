@@ -1,0 +1,54 @@
+=== p3-android - A7 - page:settings/Helix - gate evidence ===
+timestamp=2026-06-15T12:04:29.9090384-07:00
+note: settings.gradle.kts maps app sources to gradle path :android (prompt template says :app)
+PLACEHOLDER_EXIT=0
+BUILD_EXIT=0
+LINT_EXIT=0
+TEST_EXIT=0
+
+=== gate task results ===
+placeholder: PLACEHOLDER_COUNT=0 (apps/android/app/src/main/kotlin/com/teslasync/settings, -Language kotlin)
+assembleDebug: BUILD SUCCESSFUL  (:android:assembleDebug)
+lintDebug:     BUILD SUCCESSFUL  (:android:lintDebug, abortOnError=true -> zero lint errors)
+testDebugUnitTest: BUILD SUCCESSFUL  (:android:testDebugUnitTest)
+toolchain: Android SDK present (platforms 34/35/36, build-tools 34/35/36); JBR via Android Studio -> gate runnable, NOT blocked.
+
+=== artifact ===
+Parity unit : page:settings/Helix  (web /integrations/helix)
+Web source  : web/src/features/settings/pages/HelixPage.tsx  (<PageContainer ...><AISettings/></PageContainer>)
+Files (apps/android/app/src/main/kotlin/com/teslasync/settings/):
+  - HelixPage.kt          @Composable HelixPage / HelixPageScreen  (shared PageContainer wrapping AISettings feature view)
+  - HelixPageViewModel.kt HelixPageViewModel : BaseFeedViewModel  (settings: StateFlow<UiState<JsonElement>>)
+  - HelixPageSource.kt    HelixPageSource / helixPageSource(SettingsStore)  (S8 useSettings seam)
+  - HelixPageModel.kt     HelixPageRegistration (ROUTE_ID/WEB_PATH/SLUG)
+  - HelixPageHost.kt      HelixRoute / HelixPageHost.register()  -> PageHosts("integrationsHelix")
+Nav         : Destinations.kt already maps integrationsHelix -> /integrations/helix; host registered in TeslaSyncApplication.kt
+Strings     : res/values/helix_strings.xml (app-owned, like ai_settings_strings.xml; strings.xml is auto-generated)
+Embedded    : io.teslasync.android.featureviews.aisettings.AISettings  (= web <AISettings/>; separate P3 unit)
+
+=== PARITY ===
+PARITY_REQUIRED=5
+[x] state  - loading  : HelixPage.kt HelixPageScreen -> PageContainer(loading = settingsState.isLoading);
+                        settingsState <- HelixPageViewModel.settings: StateFlow<UiState<JsonElement>>
+                        (HelixPageViewModel.kt) projecting helixPageSource(settingsStore).settings() via
+                        BaseFeedViewModel.asUiState; UiState.isLoading (UiState.kt) -> PageContainer Loading
+                        spinner (PageContainer.kt classifyPageBody). Web: const { isLoading } = useSettings().
+[x] state  - success  : HelixPage.kt HelixPage -> when not loading, PageContainer renders content slot =
+                        AISettings(viewModel = aiSettingsViewModel); bound to HelixPageViewModel.settings
+                        (Content phase) + the embedded AISettingsViewModel. Web: <PageContainer><AISettings/>.
+[x] string - helix.breadcrumb.integrations : HelixPage.kt HelixPageScreen breadcrumbLabels["integrations"] =
+                        stringResource(R.string.translation_helix_breadcrumb_integrations);
+                        res/values/helix_strings.xml translation_helix_breadcrumb_integrations = "Integrations".
+[x] string - helix.page.subtitle : HelixPage.kt HelixPageScreen subtitle =
+                        stringResource(R.string.translation_helix_page_subtitle);
+                        res/values/helix_strings.xml translation_helix_page_subtitle.
+[x] string - helix.page.title : HelixPage.kt HelixPageScreen title (and breadcrumbLabels["helix"]) =
+                        stringResource(R.string.translation_helix_page_title);
+                        res/values/helix_strings.xml translation_helix_page_title = "Helix".
+PARITY_COVERED=5
+
+note: all three R.string.translation_helix_* references resolved at :android:compileDebugKotlin (build green),
+      proving the strings exist and are wired; lint (abortOnError) reported no issues for the new surface.
+
+EXIT=0
+STATUS=DONE

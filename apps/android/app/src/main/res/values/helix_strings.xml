@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HelixPage i18n strings (P3/A7 page:settings/Helix; app-owned, exactly like ai_settings_strings.xml — NOT
+  part of the auto-generated translation_* catalog in strings.xml, which carries a "do not edit by hand"
+  banner). The web HelixPage (web/src/features/settings/pages/HelixPage.tsx) resolves helix.page.title /
+  helix.page.subtitle / helix.breadcrumb.integrations through `t(key, inlineDefault)` with INLINE defaults, so
+  the i18n generator (which only emits keys present in a locale source) never produced translation_helix_*
+  entries. They live here so the native HelixPage resolves every visible literal through the R.string facade
+  (P1/S10, ADR-014) — zero hardcoded text — while leaving the machine-authored strings.xml untouched.
+  MissingTranslation lint is disabled (app/build.gradle.kts), so these base-locale entries need no per-locale
+  duplicates. Key names mirror the web keys verbatim (dots → underscores), as the parity gate requires.
+-->
+<resources>
+    <string name="translation_helix_page_title">Helix</string>
+    <string name="translation_helix_page_subtitle">Optional AI integration. Off by default — nothing runs until you opt in here.</string>
+    <string name="translation_helix_breadcrumb_integrations">Integrations</string>
+</resources>
