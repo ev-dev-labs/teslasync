@@ -135,6 +135,7 @@ import io.teslasync.android.telemetry.signalsworkspace.SignalsWorkspacePageHost
 import io.teslasync.android.vehiclesystems.mediaplayer.MediaPlayerPageHost
 import io.teslasync.android.watch.watchface.WatchFacePageHost
 import io.teslasync.android.vehicles.digitaltwin.DigitalTwinPageHost
+import io.teslasync.android.admin.backuprestore.BackupRestorePageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -340,6 +341,7 @@ class TeslaSyncApplication : Application() {
         DigitalTwinPageHost.register()
         // Register the native watch-face wearable screen for the /watch standalone route (P3/A7). Idempotent.
         WatchFacePageHost.register()
+        BackupRestorePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
