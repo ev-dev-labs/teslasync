@@ -1,0 +1,128 @@
+P3-ANDROID A7 - page:system/DBHealth - native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/system/pages/DBHealthPage.tsx  (route /db-health)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/system/ (DBHealthPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.adminStore (S8) -> AdminStore.asDBHealthSource();
+             TeslaSyncApplication -> DBHealthPageHost.register("dbHealth"); destination row already in Destinations.kt
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/);
+the prompt snippet's ':app:' is the same module. Default daemon heap (org.gradle.jvmargs=-Xmx4g) used as-is;
+the module compiles + assembles + lints + tests within it.
+
+DATA SOURCES (3) - each bound through DBHealthPageViewModel into one StateFlow<UiState<DBHealthData>> (P1/S8):
+  useConnectionPool  GET /dev-tools/runtime-info       -> AdminStore.connectionPool()  (sidebar pool panel)
+  useDBStats         GET /dev-tools/db-stats           -> AdminStore.dbStats()         (phase spine: cards/chart/table)
+  useMigrations      GET /dev-tools/migration-status   -> AdminStore.migrations()      (sidebar migration panel)
+  db-stats is the page-phase spine; migrations + connection-pool fold in best-effort, each carrying its own
+  loading/empty/error sub-state (SourcePhase) so a still-loading or failed sidebar read never blanks the page.
+  Raw verbatim server JSON parsed off-device in DBHealthPageModel.kt (snake_case, tolerant of camelCase aliases);
+  values are byte counts / row counts / a migration version / pool gauges - none unit-bearing, so no SI conversion
+  (S5); byte + locale-number formatting applied at the render boundary.
+
+=== GATE ===
+$ check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=4
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 2m 44s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 14m 14s
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 48s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=55
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/system/ (DBHealthPage.kt screen,
+DBHealthPageViewModel.kt, DBHealthPageModel.kt, DBHealthPageSource.kt, DBHealthPageHost.kt, DBHealthPageIcons.kt)
+
+[COVERED] panel  Total-DB-Size                       -> DBHealthPage.kt:SummaryCards() StatCard(dbHealth.totalSize)
+[COVERED] panel  Tables                              -> DBHealthPage.kt:SummaryCards() StatCard(dbHealth.tables)
+[COVERED] panel  Large-Tables-100MB                  -> DBHealthPage.kt:SummaryCards() StatCard(dbHealth.largeTables)
+[COVERED] panel  Migration-Version                   -> DBHealthPage.kt:SummaryCards() StatCard(dbHealth.migration)
+[COVERED] panel  Table-Sizes-Top-15                  -> DBHealthPage.kt:TableSizesChart() ChartContainer(dbHealth.chartTitle)
+[COVERED] panel  GlassPanel6                         -> DBHealthPage.kt:TablesPanel() GlassPanel (tables list + sort)
+[COVERED] panel  GlassPanel7                         -> DBHealthPage.kt:MigrationPanel() GlassPanel (migration status)
+[COVERED] panel  GlassPanel8                         -> DBHealthPage.kt:ConnectionPoolPanel() GlassPanel (connection pool)
+[COVERED] chart  ChartContainer                      -> DBHealthPage.kt:TableSizesChart() ChartContainer(status/accessibleDescription/dataTable)
+[COVERED] chart  BarChart                            -> DBHealthPage.kt:TableSizesChart() BarChartWrapper(ChartSeriesKind.Bar, A3 Vico wrapper)
+[COVERED] state  loading data state                  -> DBHealthPage.kt:DBHealthLoadingState() (UiPhase.Loading -> Spinner); per-source Skeleton in MigrationPanel/ConnectionPoolPanel
+[COVERED] state  empty data state                    -> DBHealthPage.kt:DBHealthEmptyState() (UiPhase.Empty -> EmptyState); per-source EmptyState noMigrationData/noPoolData/noTables
+[COVERED] state  error data state                    -> DBHealthPage.kt:DBHealthErrorState() (UiPhase.Error -> AlertBanner + Retry); per-source PanelInlineError()
+[COVERED] state  success data state                  -> DBHealthPage.kt:DBHealthContent() (UiPhase.Content)
+[COVERED] string dbHealth.autoRefresh                -> DBHealthPage.kt:DBHealthHeader()
+[COVERED] string dbHealth.chartTitle                 -> DBHealthPage.kt:TableSizesChart()
+[COVERED] string dbHealth.chartTitle.aria            -> DBHealthPage.kt:TableSizesChart() (ChartContainer accessibleDescription)
+[COVERED] string dbHealth.clean                      -> DBHealthPage.kt:MigrationContent()
+[COVERED] string dbHealth.col.rows                   -> DBHealthPage.kt:TableSizesChart() (accessible data-table header)
+[COVERED] string dbHealth.col.table                  -> DBHealthPage.kt:TableSizesChart() (accessible data-table header)
+[COVERED] string dbHealth.currentVersion             -> DBHealthPage.kt:MigrationContent()
+[COVERED] string dbHealth.dirty                      -> DBHealthPage.kt:MigrationContent()
+[COVERED] string dbHealth.error                      -> DBHealthPage.kt:DBHealthErrorState()/PanelInlineError()/offline banner
+[COVERED] string dbHealth.largeTables                -> DBHealthPage.kt:SummaryCards()
+[COVERED] string dbHealth.migration                  -> DBHealthPage.kt:SummaryCards()
+[COVERED] string dbHealth.migrationTitle             -> DBHealthPage.kt:MigrationPanel()
+[COVERED] string dbHealth.noMigrationData            -> DBHealthPage.kt:MigrationPanel()/MigrationContent() (SourcePhase.Empty)
+[COVERED] string dbHealth.noMigrations               -> DBHealthPage.kt:RecentMigrations() (nested empty)
+[COVERED] string dbHealth.noPoolData                 -> DBHealthPage.kt:ConnectionPoolPanel()/PoolContent() (SourcePhase.Empty)
+[COVERED] string dbHealth.noTables                   -> DBHealthPage.kt:TablesTable() emptyText / DBHealthEmptyState / TableSizesChart emptyMessage
+[COVERED] string dbHealth.pending                    -> DBHealthPage.kt:MigrationContent()
+[COVERED] string dbHealth.pool.idle                  -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.pool.inUse                 -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.pool.maxOpen               -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.pool.open                  -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.pool.waitCount             -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.pool.waitDuration          -> DBHealthPage.kt:PoolContent()
+[COVERED] string dbHealth.poolTitle                  -> DBHealthPage.kt:ConnectionPoolPanel()
+[COVERED] string dbHealth.poolUsage                  -> DBHealthPage.kt:PoolContent() (MetricBar label)
+[COVERED] string dbHealth.recentMigrations           -> DBHealthPage.kt:RecentMigrations()
+[COVERED] string dbHealth.rows                       -> DBHealthPage.kt:TableSizesChart() (BarChart series label)
+[COVERED] string dbHealth.sort.name                  -> DBHealthPage.kt:SortControls()
+[COVERED] string dbHealth.sort.rows                  -> DBHealthPage.kt:SortControls()
+[COVERED] string dbHealth.sort.size                  -> DBHealthPage.kt:SortControls()
+[COVERED] string dbHealth.status                     -> DBHealthPage.kt:MigrationContent()
+[COVERED] string dbHealth.subtitle                   -> DBHealthPage.kt:DBHealthHeader()
+[COVERED] string dbHealth.table.indexes              -> DBHealthPage.kt:TablesTable()
+[COVERED] string dbHealth.table.lastVacuum           -> DBHealthPage.kt:TablesTable()
+[COVERED] string dbHealth.table.name                 -> DBHealthPage.kt:TablesTable()
+[COVERED] string dbHealth.table.rows                 -> DBHealthPage.kt:TablesTable()
+[COVERED] string dbHealth.table.size                 -> DBHealthPage.kt:TablesTable()
+[COVERED] string dbHealth.tables                     -> DBHealthPage.kt:SummaryCards()
+[COVERED] string dbHealth.tablesTitle                -> DBHealthPage.kt:TablesPanel()
+[COVERED] string dbHealth.title                      -> DBHealthPage.kt:DBHealthHeader()
+[COVERED] string dbHealth.totalSize                  -> DBHealthPage.kt:SummaryCards()
+
+PARITY_COVERED=55
+
+=== SUMMARY ===
+data sources : DBHealthPageViewModel combines 3 shared S8 cache-then-network feeds
+               (AdminStore.dbStats / migrations / connectionPool) into StateFlow<UiState<DBHealthData>>;
+               /dev-tools/db-stats is the phase spine, migrations + connection-pool fold in best-effort with their
+               own SourcePhase (loading/empty/error/content); no HTTP in the view (DBHealthPageSource seam).
+nav          : Destinations 'dbHealth' -> /db-health (pre-existing row) wired to DBHealthRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost. TeslaSyncApplication.onCreate ->
+               DBHealthPageHost.register().
+panels       : 8/8 - 4 StatCards (Total-DB-Size/Tables/Large-Tables/Migration-Version), Table-Sizes-Top-15
+               ChartContainer+BarChart, GlassPanel6 sortable Tables DataTable (size/rows/name sort buttons,
+               5 columns), GlassPanel7 Migration-Status, GlassPanel8 Connection-Pool (6 gauges + usage MetricBar).
+charts       : ChartContainer chrome + BarChartWrapper (A3 Vico-native, ChartSeriesKind.Bar) - no webview clone.
+states       : loading / empty / error / success via UiPhase dispatch in DBHealthPageContent; additionally each of
+               the 3 data sources renders its own loading (Skeleton) / empty (EmptyState) / error (PanelInlineError)
+               / content sub-state - no region ever blank (ADR-011).
+i18n         : all 41 visible dbHealth.* strings resolve from res/values/strings.xml translation_dbHealth_* keys
+               (38 pre-existing reused, 3 added: chartTitle.aria/noMigrationData/noPoolData across values/-ar/-he);
+               the Retry affordance reuses the catalog's translation_queryError_retry; zero hardcoded literals.
+units        : none unit-bearing (bytes/counts/version/pool gauges) - no SI conversion; byte + locale formatting at
+               the render boundary (formatBytes mirrors web; NumberFormat integer instance).
+a11y         : page heading semantics, ChartContainer accessibleDescription + expandable data-table fallback,
+               Material 3 dynamic/dark theme + >=48dp targets via shared components.
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=4 are pre-existing parity:allow markers in sibling system files).
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(55) == PARITY_REQUIRED(55)
+[PASS] all android triad gates green; parity 55/55; android ledger row page:system/DBHealth status=done.
+
+EXIT=0
+STATUS=DONE

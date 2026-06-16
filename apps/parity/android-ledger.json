@@ -288,6 +288,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-CommandsPage.log"
   },
   {
+    "unitId": "page:system/DBHealth",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 55,
+    "requiredCount": 55,
+    "promptId": "p3-android/pages/system/DBHealthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DBHealthPage.log"
+  },
+  {
     "unitId": "page:system/Diagnostic",
     "platform": "android",
     "status": "done",

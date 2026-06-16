@@ -112,6 +112,7 @@ import io.teslasync.android.system.ChatbotPageHost
 import io.teslasync.android.system.commandhistory.CommandHistoryPageHost
 import io.teslasync.android.system.dataexport.DataExportPageHost
 import io.teslasync.android.system.datarepair.DataRepairPageHost
+import io.teslasync.android.system.dbhealth.DBHealthPageHost
 import io.teslasync.android.system.help.HelpPageHost
 import io.teslasync.android.system.roadmap.RoadmapPageHost
 import io.teslasync.android.system.incidenttimeline.IncidentTimelinePageHost
@@ -303,6 +304,8 @@ class TeslaSyncApplication : Application() {
         IncidentTimelinePageHost.register()
         ScheduledExportsPanelPageHost.register()
         SystemStatusPageHost.register()
+        // Register the native DB-health system screen for the /db-health route (P3/A7). Idempotent.
+        DBHealthPageHost.register()
         StateMachineDebuggerPageHost.register()
         LiveSignalMonitorPageHost.register()
         SignalExplorerPageHost.register()
