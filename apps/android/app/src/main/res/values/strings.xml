@@ -6413,8 +6413,12 @@
   <string name="translation_tco_aiNarration_noVehicleHint">Pick a vehicle above to enable Helix.</string>
   <string name="translation_tco_aiNarration_title">Explain my total cost of ownership</string>
   <string name="translation_tco_costKm">Cost/km</string>
+  <string name="translation_common_unit_gallon">gal</string>
+  <string name="translation_common_unit_liter">L</string>
   <string name="translation_tco_costPerKm">Cost per Kilometer</string>
+  <string name="translation_tco_costPerKm_aria">Cost per kilometer bar chart comparing EV electricity to gas</string>
   <string name="translation_tco_cumulativeSavings">Cumulative Savings Over Time</string>
+  <string name="translation_tco_cumulativeSavings_aria">Cumulative EV-vs-gas savings area chart over time</string>
   <string name="translation_tco_electricityVsGas">Electricity vs gasoline</string>
   <string name="translation_tco_equivGasCost">Equiv. Gas Cost</string>
   <string name="translation_tco_evCost">EV Cost</string>
@@ -6425,6 +6429,7 @@
   <string name="translation_tco_iceGas">ICE (Gas)</string>
   <string name="translation_tco_maintenanceSavings">Maintenance Savings (Est.)</string>
   <string name="translation_tco_monthlyEvVsGas">Monthly EV vs Gas Cost</string>
+  <string name="translation_tco_monthlyEvVsGas_aria">Monthly EV vs gas cost comparison bar chart</string>
   <string name="translation_tco_monthlySavings">Monthly Savings</string>
   <string name="translation_tco_noData">No data available. Start charging to see your cost analysis.</string>
   <string name="translation_tco_noMonthlyData">No monthly data available yet</string>

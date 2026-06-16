@@ -58,6 +58,7 @@ import io.teslasync.android.analytics.periodcompare.PeriodComparePageHost
 import io.teslasync.android.analytics.mileage.MileagePageHost
 import io.teslasync.android.analytics.timeline.TimelinePageHost
 import io.teslasync.android.analytics.weeklydigest.WeeklyDigestPageHost
+import io.teslasync.android.analytics.truecost.TrueCostPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -179,6 +180,7 @@ class TeslaSyncApplication : Application() {
         MileagePageHost.register()
         TimelinePageHost.register()
         WeeklyDigestPageHost.register()
+        TrueCostPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

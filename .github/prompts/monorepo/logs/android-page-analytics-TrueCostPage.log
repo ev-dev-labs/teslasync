@@ -1,0 +1,180 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/TrueCost  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/TrueCostPage.tsx
+promptId: p3-android/pages/analytics/TrueCostPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : 21 (Android Studio jbr — JAVA_HOME=C:\Program Files\Android\Android Studio\jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching the sibling admin/LifetimeStats logs. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPage.kt           (@Composable screen: TrueCostPage + TrueCostPageContent + chrome + 9 panels + 3 charts)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<CostBreakdown>> + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPageSource.kt     (S8 data seam over AnalyticsStore.costBreakdown + SettingsStore + SelectedVehicleStore)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPageModel.kt      (framework-free: parseCostBreakdown(JsonElement), TrueCostDisplayPrefs SI/currency/energy/distance formatters, Resource.mapData, registration)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPageIcons.kt      (4 authored lucide glyphs Fuel/TrendingUp/DollarSign/Leaf + Zap re-exported from DataDisplayGlyphs.Bolt)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TrueCostPageHost.kt       (PageHosts.register(trueCost){ TrueCostRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt        (NavHost wiring: + import + TrueCostPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                   (+5 keys: translation_common_unit_gallon/liter, translation_tco_costPerKm_aria/cumulativeSavings_aria/monthlyEvVsGas_aria)
+apps/parity/android-ledger.json                                                     (ledger row page:analytics/TrueCost, 51/51)
+.github/prompts/monorepo/logs/android-page-analytics-TrueCostPage.log              (this log)
+
+Strings: 27 page keys already present as translation_tco_* (generated from the shared i18n catalog); the remaining 5
+         inline-default keys (web `t(key, default)`) added to res/values/strings.xml (the prompt's allowed string
+         catalog) verbatim from the web defaults — common.unit.gallon="gal", common.unit.liter="L",
+         tco.costPerKm.aria / tco.cumulativeSavings.aria / tco.monthlyEvVsGas.aria. Default-locale only (Android falls
+         back to values/ for every locale); lint MissingTranslation is not an error here (matches nav_strings.xml).
+Nav    : Destinations 'trueCost' -> /tco pre-existing (Destinations.kt L92, count unchanged); deep link /analytics/tco
+         pre-mapped (RouteTable.kt L33). Host wired via PageHosts.register(trueCost); nav label nav_true_cost pre-exists.
+Data   : single source useCostBreakdown -> AnalyticsStore.costBreakdown(vehicleId) (GET /analytics/tco), scope =
+         SelectedVehicleStore (web useSelectedVehicle); + SettingsStore.settings() (web useUnits/useFormatting/
+         useSettings). JsonElement->CostBreakdown decode in TrueCostPageModel.parseCostBreakdown; no HTTP in the view.
+         Web `enabled: !!vehicleId` reproduced: a null/non-positive selection short-circuits to an empty envelope
+         (TrueCostPageViewModel.costFeed JsonNull) -> UiPhase.Empty (the web `noData` panel).
+Scope  : the web page also mounts <AITCONarration> — a SEPARATE parity unit (com/teslasync/shared-surfaces/
+         AITCONarration, its own ledger row + log) NOT enumerated in this unit's manifest record (data sources =
+         {useCostBreakdown}; panels exclude it). Out of this unit's allowed files; intentionally not mounted here
+         (documented, not silent drift).
+
+--------------------------------------------------------------------------------
+COLOR / SI / A11Y NOTES
+--------------------------------------------------------------------------------
+colors : EV/electric -> TeslaTokens.status.info (#00f0ff dark), gas/ICE -> status.danger (#ef4444),
+         savings -> status.success (#10b981) — the design-token analogues of the web neon hexes (ADR-005); the
+         single "Cost/km" bar series uses ChartPalette.categorical[0] (paletteColor(0)) and the cyan/red split is
+         carried by the two pill cards, mirroring the web single `<Bar name="Cost/km">` + colored summary cards.
+si     : SI read off the wire; converted ONLY at the display boundary — energy via formatEnergy(total_wh, UnitPref)
+         (web useUnits().formatEnergy), distance via convertDistanceFromSI(total_km*1000, unit) (web), currency via
+         the user's settings symbol/precision/locale (web useFormatting). No miles/mph/kWh stored or computed; the
+         backend-derived per-km rates rendered verbatim (web parity).
+a11y   : panel/hero icons decorative (contentDescription=null); each chart carries accessibleDescription = its web
+         aria string (chart-a11y:no-table parity — no data table, value announced by the description); the CostPill
+         carries a "<label> <value>" contentDescription; all color via MaterialTheme.colorScheme + TeslaTokens.status
+         (A2 tokens) => dynamic color + dark theme; typography via the role components (no raw text styles). Compose-
+         native only (no webview).
+
+=== PARITY ===
+PARITY_REQUIRED=51
+--------------------------------------------------------------------------------
+# panels (9) — each a Material 3 GlassPanel/ChartContainer(GlassPanel) ; bound state = TrueCostPageViewModel.state : StateFlow<UiState<CostBreakdown>>
+[COVERED] panel  GlassPanel1                  -> TrueCostPage.kt:283 HeroCardsGrid()->HeroCard(accent=Info L285, Zap, label totalEvCost L288, value currency(total_charging_cost), sub energy(total_wh)+sessions)  (web hero Zap GlassPanel glow=cyan)
+[COVERED] panel  GlassPanel2                  -> TrueCostPage.kt:296 HeroCard(accent=Danger L297, Fuel, label equivGasCost L300, value currency(equivalent_gas_cost), sub "@ {gas_price}/{gasUnit} · {mpg} MPG")  (web hero Fuel)
+[COVERED] panel  GlassPanel3                  -> TrueCostPage.kt:309 HeroCard(accent=Success L310, Leaf, label totalSavings L313, value currency(total_savings), sub overMonths(months_of_ownership))  (web hero Leaf glow=green)
+[COVERED] panel  GlassPanel4                  -> TrueCostPage.kt:318 HeroCard(accent=Success L319, TrendingUp, label monthlySavings L322, value currency(monthly_savings), sub plusMaintenance)  (web hero TrendingUp glow=green)
+[COVERED] panel  Cumulative-Savings-Over-Time -> TrueCostPage.kt:357 CumulativeSavingsChart() ChartContainer(L373)+AreaChartWrapper(L381) of cumulative_savings over months | ChartStatus.Empty(noMonthlyData) when monthly_breakdown empty
+[COVERED] panel  Cost-per-Kilometer           -> TrueCostPage.kt:395 CostPerKmChart() ChartContainer(L415)+BarChartWrapper(L423) Cost/km over [EV,ICE] + 2 CostPill cards (perKmEv cyan / perKmGas red)
+[COVERED] panel  Monthly-EV-vs-Gas-Cost       -> TrueCostPage.kt:477 MonthlyEvVsGasChart() ChartContainer(L501)+BarChartWrapper(L509) ev_cost vs equiv_gas_cost per month | ChartStatus.Empty(noMonthlyData) when empty
+[COVERED] panel  GlassPanel8                  -> TrueCostPage.kt:523 SavingsBreakdownPanel() GlassPanel{ DollarSign + savingsBreakdown + 3 SavingsTile fuel/maintenance/totalEst (distance · first_date → last_date) }
+[COVERED] panel  GlassPanel9                  -> TrueCostPage.kt:242 TrueCostEmptyPanel() GlassPanel{ EmptyState(icon DollarSign, message tco.noData) }  (web `<GlassPanel className="p-8"><EmptyState/></GlassPanel>`)
+
+# charts (6) — native A3 chart wrappers (Vico), never a webview
+[COVERED] chart  ChartContainer  -> TrueCostPage.kt:373 CumulativeSavingsChart ChartContainer(title cumulativeSavings, accessibleDescription cumulativeSavings.aria, height 280dp, emptyMessage noMonthlyData)
+[COVERED] chart  AreaChart       -> TrueCostPage.kt:381 AreaChartWrapper(series cumulative_savings ChartSeriesKind.Area color status.success, xLabels months, yValueFormatter currency(_,0))
+[COVERED] chart  ChartContainer  -> TrueCostPage.kt:415 CostPerKmChart ChartContainer(title costPerKm, accessibleDescription costPerKm.aria, height 224dp)
+[COVERED] chart  BarChart        -> TrueCostPage.kt:423 BarChartWrapper(series "cost" label tco.costKm ChartSeriesKind.Bar color paletteColor(0), xLabels [evElectric,iceGas], yValueFormatter currency(_,3))
+[COVERED] chart  ChartContainer  -> TrueCostPage.kt:501 MonthlyEvVsGasChart ChartContainer(title monthlyEvVsGas, accessibleDescription monthlyEvVsGas.aria, height 224dp, emptyMessage noMonthlyData)
+[COVERED] chart  BarChart        -> TrueCostPage.kt:509 BarChartWrapper(series ev_cost(status.info)+equiv_gas_cost(status.danger) ChartSeriesKind.Bar, xLabels months, yValueFormatter currency(_,0))
+
+# data states (4 required) — bound to TrueCostPageViewModel.state : StateFlow<UiState<CostBreakdown>>
+[COVERED] state  loading         -> TrueCostPage.kt:177 state.isLoading -> TrueCostLoading() (L218 PageLoader spinner) ; UiState.loading() from BaseFeedViewModel.asUiState on a first load with no cache
+[COVERED] state  empty           -> TrueCostPage.kt:179 state.isEmpty -> TrueCostEmptyPanel() (L242 GlassPanel9, tco.noData) ; reachable via CostBreakdown.hasData -> UiPhase.Empty (Model L122) AND no-vehicle JsonNull short-circuit (ViewModel.costFeed L85); per-chart empty sub-state (noMonthlyData) at L379/507
+[COVERED] state  error           -> TrueCostPage.kt:178 state.isError -> TrueCostError() (L227 ErrorDisplay + Retry, onRetry=viewModel::retry) ; ResourceUiState maps Resource.Error(no cache) -> UiPhase.Error
+[COVERED] state  success         -> TrueCostPage.kt:180 else -> TrueCostBody(tco=state.data) (L262) renders the 4 heroes + 3 charts + breakdown from the decoded CostBreakdown ; cache/refresh/stale/offline tier surfaced via DataFreshness chip (TrueCostChrome L207)
+
+# strings (32) — every visible literal via stringResource(R.string.translation_{tco,common_unit}_*); web key names preserved
+[COVERED] string common.unit.gallon           -> TrueCostPage.kt:279 HeroCardsGrid gas-unit label (translation_common_unit_gallon)
+[COVERED] string common.unit.liter            -> TrueCostPage.kt:277 HeroCardsGrid gas-unit label (translation_common_unit_liter)
+[COVERED] string tco.costKm                    -> TrueCostPage.kt:409 CostPerKmChart series label (translation_tco_costKm)
+[COVERED] string tco.costPerKm                 -> TrueCostPage.kt:417 ChartContainer title (translation_tco_costPerKm)
+[COVERED] string tco.costPerKm.aria            -> TrueCostPage.kt:418 ChartContainer accessibleDescription (translation_tco_costPerKm_aria)
+[COVERED] string tco.cumulativeSavings         -> TrueCostPage.kt:367,375 series label + ChartContainer title (translation_tco_cumulativeSavings)
+[COVERED] string tco.cumulativeSavings.aria    -> TrueCostPage.kt:376 ChartContainer accessibleDescription (translation_tco_cumulativeSavings_aria)
+[COVERED] string tco.electricityVsGas          -> TrueCostPage.kt:540 SavingsTile sublabel (translation_tco_electricityVsGas)
+[COVERED] string tco.equivGasCost              -> TrueCostPage.kt:300 HeroCard label (translation_tco_equivGasCost)
+[COVERED] string tco.evCost                    -> TrueCostPage.kt:488 MonthlyEvVsGas series label (translation_tco_evCost)
+[COVERED] string tco.evElectric                -> TrueCostPage.kt:401 CostPerKm xLabel (translation_tco_evElectric)
+[COVERED] string tco.fuelSavings               -> TrueCostPage.kt:538 SavingsTile label (translation_tco_fuelSavings)
+[COVERED] string tco.gasEquiv                  -> TrueCostPage.kt:495 MonthlyEvVsGas series label (translation_tco_gasEquiv)
+[COVERED] string tco.iceGas                    -> TrueCostPage.kt:402 CostPerKm xLabel (translation_tco_iceGas)
+[COVERED] string tco.maintenanceSavings        -> TrueCostPage.kt:543 SavingsTile label (translation_tco_maintenanceSavings)
+[COVERED] string tco.monthlyEvVsGas            -> TrueCostPage.kt:503 ChartContainer title (translation_tco_monthlyEvVsGas)
+[COVERED] string tco.monthlyEvVsGas.aria       -> TrueCostPage.kt:504 ChartContainer accessibleDescription (translation_tco_monthlyEvVsGas_aria)
+[COVERED] string tco.monthlySavings            -> TrueCostPage.kt:322 HeroCard label (translation_tco_monthlySavings)
+[COVERED] string tco.noData                    -> TrueCostPage.kt:247 TrueCostEmptyPanel message (translation_tco_noData)
+[COVERED] string tco.noMonthlyData             -> TrueCostPage.kt:379,386,507,514 chart empty messages (translation_tco_noMonthlyData)
+[COVERED] string tco.noOilChanges              -> TrueCostPage.kt:545 SavingsTile sublabel (translation_tco_noOilChanges)
+[COVERED] string tco.overMonths                -> TrueCostPage.kt:315 HeroCard sublabel, arg months_of_ownership (translation_tco_overMonths)
+[COVERED] string tco.perKmEv                   -> TrueCostPage.kt:434 CostPill label (translation_tco_perKmEv)
+[COVERED] string tco.perKmGas                  -> TrueCostPage.kt:440 CostPill label (translation_tco_perKmGas)
+[COVERED] string tco.plusMaintenance           -> TrueCostPage.kt:324 HeroCard sublabel (translation_tco_plusMaintenance)
+[COVERED] string tco.savingsBreakdown          -> TrueCostPage.kt:534 SavingsBreakdownPanel SectionTitle (translation_tco_savingsBreakdown)
+[COVERED] string tco.sessions                  -> TrueCostPage.kt:293 HeroCard sublabel (translation_tco_sessions)
+[COVERED] string tco.subtitle                  -> TrueCostPage.kt:197 TrueCostChrome subtitle (translation_tco_subtitle)
+[COVERED] string tco.title                     -> TrueCostPage.kt:195 TrueCostChrome PageTitle (translation_tco_title)
+[COVERED] string tco.totalEstSavings           -> TrueCostPage.kt:548 SavingsTile label (translation_tco_totalEstSavings)
+[COVERED] string tco.totalEvCost               -> TrueCostPage.kt:288 HeroCard label (translation_tco_totalEvCost)
+[COVERED] string tco.totalSavings              -> TrueCostPage.kt:313 HeroCard label (translation_tco_totalSavings)
+
+PARITY_COVERED=51
+
+--------------------------------------------------------------------------------
+=== GATE ===
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+> Task :android:compileDebugKotlin
+> Task :android:assembleDebug
+BUILD SUCCESSFUL
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+> Task :android:lintReportDebug  (Wrote HTML report to app/build/reports/lint-results-debug.html)
+> Task :android:lintDebug
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+> Task :android:testDebugUnitTest
+BUILD SUCCESSFUL
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : TrueCostPageViewModel binds shared S8 AnalyticsStore.costBreakdown(vehicleId) (web useCostBreakdown) scoped to
+               SelectedVehicleStore (web useSelectedVehicle), + SettingsStore.settings() (web useUnits/useFormatting/useSettings)
+               via trueCostPageSourceOf(); JsonElement->CostBreakdown decode in TrueCostPageModel.parseCostBreakdown; no HTTP in
+               the view. Vehicle scope switcher = shared VehicleSelect surface in the page chrome (web <VehicleSelect/>).
+charts/maps  : 3 ChartContainer-framed wrappers (1 AreaChartWrapper + 2 BarChartWrapper, A3 native Vico wrappers); 0 maps; no webview.
+si/units     : SI read off the wire; converted only at the display boundary (formatEnergy / convertDistanceFromSI / currency by the
+               user's settings symbol+precision+locale). No miles/mph/kWh stored or computed.
+a11y/theme   : decorative icons (contentDescription=null); charts carry their web aria as accessibleDescription; CostPill carries a
+               TalkBack content description; color via MaterialTheme.colorScheme + TeslaTokens.status (A2 tokens) => dynamic color +
+               dark theme; typography via role components. Compose-native (no webview).
+nav          : Destinations 'trueCost' -> /tco (pre-existing) wired to TrueCostRoute() via PageHosts.register; deep link
+               /analytics/tco pre-mapped in RouteTable; registered once in TeslaSyncApplication.onCreate (idempotent).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(51) == PARITY_REQUIRED(51)
+[PASS] all android triad gates green; parity 51/51; android ledger row page:analytics/TrueCost status=done.
+EXIT=0
+STATUS=DONE
