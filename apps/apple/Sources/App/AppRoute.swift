@@ -26,7 +26,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, chargingHeatmap, powershare, trips, energy, energyFlow, driving
-    case analytics, maps
+    case analytics, maps, quickStats
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
@@ -44,6 +44,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// The canonical URL path segment (kebab-cased).
     public var pathSegment: String {
         switch self {
+        case .quickStats: "quick-stats"
         case .vehicleSystems: "vehicle-systems"
         case .chargingHeatmap: "charging-heatmap"
         case .automationsList: "automations-list"
@@ -102,6 +103,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .dashboard: "square.grid.2x2.fill"
         case .glance: "eye.fill"
+        case .quickStats: "chart.bar.xaxis"
         case .vehicles: "car.2.fill"
         case .charging: "bolt.fill"
         case .chargingHeatmap: "rectangle.grid.3x2.fill"
@@ -173,7 +175,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     public var group: AppRouteGroup {
         switch self {
-        case .dashboard, .glance, .explore, .search: .overview
+        case .dashboard, .glance, .quickStats, .explore, .search: .overview
         case .vehicles, .charging, .chargingHeatmap, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
         case .batteryHealth, .batteryCells, .batteryDegradation: .energy
