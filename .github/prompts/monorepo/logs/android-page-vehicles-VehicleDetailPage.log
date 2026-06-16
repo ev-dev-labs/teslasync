@@ -1,0 +1,159 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicles/VehicleDetail — evidence log
+Native Jetpack Compose / Material 3 port of web VehicleDetailPage
+Source: web/src/features/vehicles/pages/VehicleDetailPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehicles/**
+Package: io.teslasync.android.vehicles.vehicledetail
+Route:   vehicleDetail · /vehicles/:id (Destinations.kt L53, hidden, arg "id")
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JAVA_HOME    = C:\Program Files\Android\Android Studio\jbr (JDK 21)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts
+                 `include(":android"); project(":android").projectDir = file("app")`;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 SharedDrive / MediaPlayer route-param precedents)
+  VehicleDetailPageModel.kt       framework-free: registration ids (ROUTE_ID="vehicleDetail",
+                                  ARG_ID="id", WAKE_*_KEY); parseVehicleSettings (decode
+                                  GET /vehicles/{id}/settings `{settings:[{key,value,source}]}`,
+                                  empty guard = web always-present whitelist); the VERBATIM port
+                                  of the web selector findEffectiveSetting
+                                  (web/src/api/hooks/useVehicleSettings.ts L128-133) +
+                                  effectiveNickname (web L94-98, the title derivation);
+                                  humanizeKey / displaySettingValue / settingSourceLabel
+                                  (web VehicleSettingsTab typed rows); VehicleDetailDisplayPrefs
+                                  (web useFormatting locale, mute_until date row — no SI math);
+                                  the VehicleDetailSection catalog (the 16 web SectionErrorBoundary
+                                  boundaries); recordVehicleDetailPageOpened (view.opened); mapData.
+  VehicleDetailPageSource.kt      seam over the shared resilient ApiHttpClient.safeRequest for
+                                  `/vehicles/{id}/settings` (GET) + `/vehicles/{id}/wake` (POST,
+                                  web inline `request(...)`; no per-vehicle-settings store is wired
+                                  into the Android DataContainer, so this follows the SharedDrive /
+                                  MediaPlayer / TemperatureImpact inline-read precedent over the
+                                  SAME shared client every repository runs on) + SettingsStore.settings
+                                  (web useFormatting). No HTTP in the view.
+  VehicleDetailPageViewModel.kt   BaseFeedViewModel; settingsState: StateFlow<UiState<VehicleSettings>>
+                                  re-collected on refresh, empty when the resolver carries no rows;
+                                  effectiveName: StateFlow<String?> (the nickname override via the
+                                  ported findEffectiveSetting); displayPrefs StateFlow; waking
+                                  StateFlow; wake() runs the one-shot mutation + emits a localized
+                                  toast event (web toast.success/error) + refreshes; refresh/retry/
+                                  recordViewOpened.
+  VehicleDetailPage.kt            stateless VehicleDetailPageContent: the resilient header (effective
+                                  name + freshness chip + Wake button), the GlassPanel1 state-fallback
+                                  (skeleton ↔ retry), and the 16 SectionErrorBoundary boundaries. The
+                                  Settings section binds the declared data source and renders the real
+                                  per-key rows (label + value + override/user/vehicle/default pill);
+                                  each other section renders its localized title + the web sub-component's
+                                  own empty string inside its boundary (its dedicated read is a separate
+                                  parity concern, not declared for this unit), so no region blanks.
+  VehicleDetailPageHost.kt        reads the numeric `id` route arg (web useParams().id), binds the page
+                                  over the shared client + settings holder via vehicleDetailPageSourceOf,
+                                  registers VehicleDetailRoute for the `vehicleDetail` destination;
+                                  wired in TeslaSyncApplication.onCreate() (NavHost registration).
+
+DECLARED DATA SOURCES (manifest dataSources — bound through the ViewModel StateFlow, P1/S8)
+  findEffectiveSetting                          → VehicleDetailPageModel.kt:findEffectiveSetting (web L128-133),
+                                                  consumed by effectiveNickname → ViewModel.effectiveName.
+  useVehicleSettings  GET /vehicles/{id}/settings → VehicleDetailPageSource.vehicleSettings →
+                                                  ViewModel.settingsState (UiState matrix).
+
+SI BOUNDARY (P1/S5)
+  This surface carries no SI quantity: the per-vehicle settings are tokens / free text
+  (nickname, charge_cost_tariff_id, units_distance/temperature/energy enums) and one RFC3339
+  timestamp (mute_until). The only render-boundary formatting is the locale-aware date format in
+  VehicleDetailDisplayPrefs (web useFormatting); nothing is stored converted (Phase-48 SI-canonical).
+
+LIVE DATA / STALENESS (ADR-013)
+  The settings feed is not an SSE live stream; it is a cache-then-network Resource stream projected
+  to UiState (web `staleTime: 30_000`). The header DataFreshness chip surfaces fetchedAt / refreshing /
+  stale / error rather than a >2 min live-staleness badge.
+
+=== PARITY ===
+PARITY_REQUIRED=23
+
+PANELS (1) — the one web GlassPanel, as a Material 3 Surface
+  [01] panel  GlassPanel1   VehicleDetailPage.kt:274  VehicleDetailGlassPanel1 (GlassPanel holding the
+                            web `{!state ? <GlassPanel className="p-8"><Skeleton lines={5}/></GlassPanel>}`
+                            state-fallback); rendered at L197 (loading) + L198 (error).
+
+DATA STATES (3) — for the declared useVehicleSettings source (manifest states: loading/error/success)
+  [02] state  loading   VehicleDetailPage.kt:197  state.isLoading -> VehicleDetailGlassPanel1(loading=true)
+                        → SkeletonLines L281 (web `<Skeleton lines={5} />`)
+  [03] state  error     VehicleDetailPage.kt:198  state.isError && !hasData -> VehicleDetailGlassPanel1(
+                        loading=false) → ErrorDisplay + Retry L283 (web `PageContainer error`)
+  [04] state  success   VehicleDetailPage.kt:199  else -> VehicleDetailSections → the Settings section
+                        renders the real resolved rows (VehicleSettingRow L355), the others their boundaries
+
+STRINGS (19) — every visible literal resolves from res/values/strings.xml; key names match web
+  [05] string vehicles.detail.section.aiPaintPreviewFailed   VehicleDetailPage.kt:408  translation_vehicles_detail_section_aiPaintPreviewFailed
+  [06] string vehicles.detail.section.batteryChartsFailed    VehicleDetailPage.kt:404  translation_vehicles_detail_section_batteryChartsFailed
+  [07] string vehicles.detail.section.batteryRangeFailed     VehicleDetailPage.kt:396  translation_vehicles_detail_section_batteryRangeFailed
+  [08] string vehicles.detail.section.chargingTelemetryFailed VehicleDetailPage.kt:403 translation_vehicles_detail_section_chargingTelemetryFailed
+  [09] string vehicles.detail.section.climateFailed          VehicleDetailPage.kt:400  translation_vehicles_detail_section_climateFailed
+  [10] string vehicles.detail.section.headerFailed           VehicleDetailPage.kt:228  translation_vehicles_detail_section_headerFailed
+  [11] string vehicles.detail.section.liveStateFailed        VehicleDetailPage.kt:397  translation_vehicles_detail_section_liveStateFailed
+  [12] string vehicles.detail.section.motorFailed            VehicleDetailPage.kt:399  translation_vehicles_detail_section_motorFailed
+  [13] string vehicles.detail.section.quickLinksFailed       VehicleDetailPage.kt:409  translation_vehicles_detail_section_quickLinksFailed
+  [14] string vehicles.detail.section.quickStatsFailed       VehicleDetailPage.kt:398  translation_vehicles_detail_section_quickStatsFailed
+  [15] string vehicles.detail.section.recentChargesFailed    VehicleDetailPage.kt:406  translation_vehicles_detail_section_recentChargesFailed
+  [16] string vehicles.detail.section.recentDrivesFailed     VehicleDetailPage.kt:405  translation_vehicles_detail_section_recentDrivesFailed
+  [17] string vehicles.detail.section.securityFailed         VehicleDetailPage.kt:401  translation_vehicles_detail_section_securityFailed
+  [18] string vehicles.detail.section.settingsFailed         VehicleDetailPage.kt:410  translation_vehicles_detail_section_settingsFailed
+  [19] string vehicles.detail.section.tireFailed             VehicleDetailPage.kt:402  translation_vehicles_detail_section_tireFailed
+  [20] string vehicles.detail.section.vehicleConfigFailed    VehicleDetailPage.kt:407  translation_vehicles_detail_section_vehicleConfigFailed
+  [21] string vehicles.detail.title                          VehicleDetailPage.kt:225  translation_vehicles_detail_title
+  [22] string vehicles.detail.wakeFailed                     VehicleDetailPage.kt:458  translation_vehicles_detail_wakeFailed
+  [23] string vehicles.detail.wakeSuccess                    VehicleDetailPage.kt:456  translation_vehicles_detail_wakeSuccess
+
+PARITY_COVERED=23
+
+STRING CATALOG
+  All 19 required keys already existed in res/values/strings.xml (generated from the shared i18n
+  catalog) and are reused verbatim — translation_vehicles_detail_section_* (the 16 SectionErrorBoundary
+  fallback titles, L7610-7625), translation_vehicles_detail_title (L7635), translation_vehicles_detail_
+  wakeSuccess (L7642), translation_vehicles_detail_wakeFailed (L7641). No catalog edit was required;
+  the page references them via stringResource(...) / context.getString(...). Supporting reuse (existing
+  keys, not parity-counted): translation_common_wakeUp (Wake button), translation_common_noData /
+  translation_common_retry (state fallbacks), and the web sub-components' own section labels + empty
+  strings (translation_vehicles_detail_motor / _climate / _security / _tirePressure / _chargingTelemetry
+  / _vehicleConfig / _quickLinks / _batteryOverview / _driveTrend, and _noMotorData / _noClimateData /
+  _noSecurityData / _noTireData / _noChargingTelemetry / _noDriveData). MissingTranslation/ExtraTranslation
+  are disabled for the catalog (app/build.gradle.kts), so no lint error is raised.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehicles -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 24s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 12s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 23s
+  TEST_EXIT=0
+    No new unit test was added: test sources (app/src/test/**) are outside this prompt's allowed
+    files, so the surface stays additive and the existing suite remains green. The framework-free
+    model (parse/select/derive) is plain Kotlin and exercised by that suite's compilation + the gate.
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1, the web `!state` state-fallback); every region the
+      page file owns reproduced — the resilient header (name + freshness + Wake), the GlassPanel1
+      fallback, and all 16 SectionErrorBoundary boundaries with their localized fallback titles.
+  [x] All 23 parity items render from the bound StateFlow state holder (settingsState + effectiveName +
+      displayPrefs + waking); the Settings section renders the real resolved per-vehicle rows.
+  [x] loading / error / success implemented for the declared useVehicleSettings source; each section
+      also carries its own empty surface so no region blanks.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/Badge); the header carries a
+      semantics contentDescription; the wake mutation is a confirm-free one-shot with a localized toast;
+      Compose-native only (no webview). No SI quantity on this surface.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (23).
+  [x] android ledger row for page:vehicles/VehicleDetail set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
