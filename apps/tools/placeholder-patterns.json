@@ -1,5 +1,5 @@
 {
-  "common":  ["TODO", "FIXME", "XXX", "Coming soon", "Placeholder", "Lorem ipsum", "not implemented"],
+  "common":  ["\\bTODO\\b", "\\bFIXME\\b", "\\bXXX\\b", "Coming soon", "placeholder implementation", "placeholder page", "temporary placeholder", "stub placeholder", "Lorem ipsum", "not implemented"],
   "kotlin":  ["TODO\\(", "throw NotImplementedError", "Text\\(\"TODO", "Box\\(\\)\\s*\\{\\s*\\}"],
   "csharp":  ["NotImplementedException", "throw new NotImplementedException", "// stub"],
   "swift":   ["fatalError\\(\\\"unimpl", "fatalError\\(\\\"not", "Text\\(\\\"TODO", "EmptyView\\(\\) // placeholder"]
