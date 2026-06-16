@@ -119,6 +119,7 @@ struct TeslaSyncApp: App {
         // `/statistics` — so the primary tab + `/analytics` deep link render the Fleet Analytics page.
         registry = AnalyticsRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = TimelineRouteRegistration.registry(base: registry)
+        registry = YearReviewRouteRegistration.registry(base: registry, onExit: { selection = .analytics })
         registry = LifetimeStatsRouteRegistration.registry(base: registry)
         registry = MileageRouteRegistration.registry(base: registry)
         registry = TrueCostRouteRegistration.registry(base: registry)
