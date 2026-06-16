@@ -1,0 +1,114 @@
+================================================================================
+P3-ANDROID A7 — page:system/MyActivity  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/MyActivityPage.tsx
+promptId: p3-android/pages/system/MyActivityPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present; Gradle resolves
+              the SDK from the environment — local.properties absent, not required).
+JDK         : Android Studio jbr — java on PATH (JAVA_HOME=C:\Program Files\Android\Android Studio\jbr).
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build (settings.gradle.kts includeBuild("../shared"), ADR-004).
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPage.kt          (@Composable screen: MyActivityPage + MyActivityPageContent + header/body/state sections)
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<List<UserActivityEntry>>> + committed range; setRange()/refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPageSource.kt    (S8 data seam over the shared UserStore: myRecentActivity(params) feed)
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPageModel.kt     (framework-free model: registration, defaultActivityRange (web 30-day default), activityParamsFor, isFeatureDisabled/isUnauthenticated guards, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPageIcons.kt     (ShieldCheck / User / Warning glyphs — web lucide icons securityCheck=ShieldCheck / user=User / warning=AlertTriangle)
+apps/android/app/src/main/kotlin/com/teslasync/system/MyActivityPageHost.kt      (PageHosts.register(myActivity){ MyActivityRoute() } + DeepLinkRouter onOpenEntity seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt       (host wiring: + import + MyActivityPageHost.register())
+apps/parity/android-ledger.json                                                  (ledger row page:system/MyActivity 12/12 status=done)
+.github/prompts/monorepo/logs/android-page-system-MyActivityPage.log             (this log)
+
+Data   : MyActivityPageViewModel binds the shared S8 UserStore.myRecentActivity(params) (web useMyRecentActivity) via
+         myActivityPageSourceOf(); the activity feed drives the page phase through asUiState. The committed date range
+         (MyActivityPageViewModel.range, seeded from the web 30-day default `today-29 … today`) is the page's one piece of
+         interaction state; combine(range, refreshTrigger) ▸ flatMapLatest ▸ source.myRecentActivity(activityParamsFor(range))
+         re-reads on a range change (a new params cache key — web query re-keying) or on retry (web refetch). No HTTP in the view.
+Adapt  : the web page's two configuration failures are reproduced 1:1 off the read's HTTP status, which the Android
+         Resource→UiState mapping already carries as UiState.httpStatus: 503 ⇒ "Activity feed disabled" (web apiError.status===503),
+         401 ⇒ "Identity required" (web apiError.status===401), any other failure ⇒ the error+Retry state. The error body uses the
+         localized error.serverError.message in place of the web's raw apiError.message (an un-localizable technical string) —
+         the only documented copy adaptation (Honesty Covenant #9); title/icon/retry remain web-faithful.
+Feed   : the audit list delegates to the shared RecentActivityFeed surface (its own A3 parity unit), whose loading skeleton /
+         empty / content states ARE the page's three declared data states. The shared-core UserActivityEntry rows are projected to
+         the feed's render shape (MyActivityPage.toFeedEntry), dropping the ip / user_agent PII columns the feed never renders.
+Range  : the web `actions={<RangePicker align="end" />}` is reproduced with the shared A3 RangePicker surface in the header row
+         (DriveScorePage precedent) — beyond the 12 required parity items, included so the page is not scope-narrowed.
+Nav    : feed-row click-through (web <Link to={entityHref(...)}>) routes through the ambient LocalDeepLinkRouter — the sanctioned
+         page-host navigation seam (no LocalNavController is exposed to hosts; InboxPage / AlertRulesPage precedent): a tapped
+         route like /vehicles/3 becomes a teslasync://app/vehicles/3 deep link the navigation shell consumes.
+Strings: all 8 page keys already present in res/values/strings.xml (generated by apps/shared/i18n) — no string-catalog edit
+         needed; every literal resolves via stringResource(R.string.translation_activity_myActivity_* / translation_common_retry).
+Route  : Destinations 'myActivity' -> /me/activity pre-existing (Destinations.kt:172, NavGroup.System; count unchanged);
+         host wired via PageHosts.register in TeslaSyncApplication.onCreate (idempotent), mirroring the sibling system hosts.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=4   # pre-existing sibling files' legitimate `// parity:allow` opt-outs; none from this surface
+  PLACEHOLDER_COUNT=0     # this surface authored with "empty-state"/"feature-disabled"/"render shape" wording (no TODO/FIXME/placeholder/stub)
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 3m 43s  (compileDebugKotlin clean — first pass, no errors)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 13m 10s (0 errors; HTML report app/build/reports/lint-results-debug.html)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 53s  (compileDebugUnitTestKotlin clean; suite green)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=12
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (tonal Surface) ; bound state holder = MyActivityPageViewModel.uiState
+[COVERED] panel  GlassPanel1 -> MyActivityPage.kt:159 MyActivityPageContent -> FadeIn{ GlassPanel(PanelPadding.Md){ MyActivityBody(...) } }  (web `<FadeIn><GlassPanel className="space-y-4 p-4">`)
+
+# data states (3 required) — bound to MyActivityPageViewModel.uiState : StateFlow<UiState<List<UserActivityEntry>>> (drawn by the shared RecentActivityFeed surface)
+[COVERED] state  loading -> MyActivityPage.kt:218 RecentActivityFeed(isLoading = state.isLoading) -> shared feed skeleton ; asUiState -> UiState.loading() (first load, no cache)  (web PageContainer loading={isLoading})
+[COVERED] state  empty   -> MyActivityPage.kt:218 RecentActivityFeed(entries = []) -> shared feed EmptyState (activity.myActivity.empty) ; UiPhase.Empty via asUiState(isEmpty = { it.isEmpty() })  (web `entries.length === 0`)
+[COVERED] state  success -> MyActivityPage.kt:218 RecentActivityFeed(entries = rows) -> shared feed Timeline ; UiPhase.Content  (web `<RecentActivityFeed entries={entries} />`)
+
+# strings (8) — every visible literal via stringResource(R.string.translation_activity_myActivity_* / translation_common_retry); web key names preserved
+[COVERED] string activity.myActivity.disabled.description   -> MyActivityPage.kt:286 (resolve) -> :235 MyActivityDisabled EmptyState(message=strings.disabledDescription)  (web disabled.description)
+[COVERED] string activity.myActivity.disabled.title         -> MyActivityPage.kt:285 (resolve) -> :234 MyActivityDisabled EmptyState(title=strings.disabledTitle)  (web disabled.title)
+[COVERED] string activity.myActivity.error.title            -> MyActivityPage.kt:289 (resolve) -> :266 MyActivityError EmptyState(title=strings.errorTitle)  (web error.title)
+[COVERED] string activity.myActivity.subtitle               -> MyActivityPage.kt:284 (resolve) -> :188 MyActivityHeader BodyText(strings.subtitle)  (web PageContainer subtitle)
+[COVERED] string activity.myActivity.title                  -> MyActivityPage.kt:283 (resolve) -> :187 PageTitle(strings.title) ; :126 semantics paneTitle (web usePageTitle)
+[COVERED] string activity.myActivity.unauthorized.description -> MyActivityPage.kt:288 (resolve) -> :249 MyActivityUnauthorized EmptyState(message=strings.unauthorizedDescription)  (web unauthorized.description)
+[COVERED] string activity.myActivity.unauthorized.title     -> MyActivityPage.kt:287 (resolve) -> :248 MyActivityUnauthorized EmptyState(title=strings.unauthorizedTitle)  (web unauthorized.title)
+[COVERED] string common.retry                               -> MyActivityPage.kt:291 (resolve) -> :268 MyActivityError EmptyStateAction(label=strings.retry, onClick=onRetry)  (web common.retry retry action)
+
+PARITY_COVERED=12
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : MyActivityPageViewModel binds shared S8 UserStore.myRecentActivity(params) (web useMyRecentActivity) via
+               myActivityPageSourceOf(); the committed date range drives the params cache key; retry bumps the refresh trigger
+               (web refetch). No HTTP in the view.
+si/units     : no telemetry-unit-bearing field on this surface (audit-log identity + ISO timestamps); the feed's relative/absolute
+               time faces format at the display boundary (the shared RecentActivityFeed surface), device zone/locale injected —
+               never stored/computed non-SI.
+a11y/theme   : shared components supply semantics content descriptions; the page carries semantics paneTitle (web usePageTitle); the
+               three EmptyState surfaces + the RangePicker + the RecentActivityFeed timeline use MaterialTheme (A2 tokens) for
+               dynamic-color + dark theme; >=48dp targets; Compose-native (no webview).
+nav          : Destinations 'myActivity' -> /me/activity (pre-existing, Destinations.kt:172) wired to MyActivityRoute() via
+               PageHosts.register; feed click-through via LocalDeepLinkRouter; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(12) == PARITY_REQUIRED(12)
+[PASS] all android triad gates green; parity 12/12; android ledger row page:system/MyActivity status=done.
+EXIT=0
+STATUS=DONE

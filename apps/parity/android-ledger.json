@@ -315,6 +315,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-TeslaAccountPage.log"
   },
   {
+    "unitId": "page:system/MyActivity",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "p3-android/pages/system/MyActivityPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-MyActivityPage.log"
+  },
+  {
     "unitId": "page:telemetry/SignalGapDetector",
     "platform": "android",
     "status": "done",

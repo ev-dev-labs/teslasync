@@ -33,6 +33,7 @@ import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
 import io.teslasync.android.system.commands.CommandsPageHost
 import io.teslasync.android.system.diagnostic.DiagnosticPageHost
+import io.teslasync.android.system.myactivity.MyActivityPageHost
 import io.teslasync.android.system.search.SearchPageHost
 import io.teslasync.android.system.teslaaccount.TeslaAccountPageHost
 import io.teslasync.android.telemetry.signalgapdetector.SignalGapDetectorPageHost
@@ -222,6 +223,8 @@ class TeslaSyncApplication : Application() {
         SearchPageHost.register()
         // Register the native Tesla-account profile screen for the /tesla-account route (P3/A7). Idempotent.
         TeslaAccountPageHost.register()
+        // Register the native per-user activity-feed screen for the /me/activity route (P3/A7). Idempotent.
+        MyActivityPageHost.register()
         // Register the native signal-gap-detector telemetry screen for the /signal-gaps route (P3/A7). Idempotent.
         SignalGapDetectorPageHost.register()
         // Register the native signal-log-viewer telemetry screen for the /signal-log route (P3/A7). Idempotent.
