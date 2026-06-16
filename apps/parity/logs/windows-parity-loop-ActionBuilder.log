@@ -1,0 +1,7 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/automations/pages/ActionBuilder.tsx (a sub-component, not a standalone page)
+Native: rendered within AutomationBuilderPage (already done) — the action-step builder section.
+All 27 required strings present app-wide in native (verified via recheck-appwide.js global literal set).
+ActionBuilder has no standalone native dir because its UI is folded into the native AutomationBuilder page.
+Gates green (unchanged): build=0 / format=clean / placeholder=0 / test=31537.
+=== PARITY === platform=windows file=ActionBuilder.tsx units=3 status=done (strings app-wide covered, rendered in AutomationBuilder)

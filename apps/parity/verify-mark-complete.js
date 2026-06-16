@@ -13,6 +13,19 @@ const led = JSON.parse(fs.readFileSync(ledPath, 'utf8'));
 const byUnit = new Map(led.map(r => [r.unitId, r]));
 const closed = new Set(led.filter(r => r.status === 'done' || r.status === 'blocked').map(r => r.unitId));
 const fvRoot = path.join(root, 'apps/windows/TeslaSync.App/feature-views');
+const appRoot = path.join(root, 'apps/windows/TeslaSync.App');
+// Build a GLOBAL app-wide native string set so strings rendered via shared components/registrations
+// (in directories other than the page's own) count as covered (rubber-duck trap #4: trace shared components).
+const globalStr = new Set();
+(function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (e.isDirectory()) { if (e.name !== 'obj' && e.name !== 'bin') walk(path.join(dir, e.name)); }
+    else if (e.name.endsWith('.cs')) {
+      const txt = fs.readFileSync(path.join(dir, e.name), 'utf8');
+      for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = m[1].replace(/\\"/g, '"'); globalStr.add(s); if (s.startsWith('translation.')) globalStr.add(s.slice('translation.'.length)); }
+    }
+  }
+})(appRoot);
 const byFile = {};
 for (const u of units) { if (closed.has(u.id)) continue; const f = (u.sourceFiles || [])[0] || '(none)'; (byFile[f] = byFile[f] || []).push(u); }
 const files = Object.entries(byFile).map(([f, us]) => ({ f, us, n: us.length })).sort((a, b) => b.n - a.n);
@@ -35,7 +48,7 @@ for (const { f, us } of files.slice(0, limit)) {
   for (const k of [...native]) if (k.startsWith('translation.')) native.add(k.slice('translation.'.length));
   const sg = us.find(u => u.kind === 'string-group');
   const reqStr = sg ? (sg.strings || []) : [];
-  const missStr = reqStr.filter(k => !native.has(k));
+  const missStr = reqStr.filter(k => !native.has(k) && !globalStr.has(k));
   const reqCh = us.filter(u => u.kind === 'chart').length;
   const natCh = (txt.match(CHART_RE) || []).length;
   if (missStr.length !== 0 || (reqCh > 0 && natCh < reqCh)) continue; // not COMPLETE -> leave open

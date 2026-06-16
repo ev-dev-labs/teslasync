@@ -14452,5 +14452,86 @@
     "requiredCount": 2,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaRegionPage.log"
+  },
+  {
+    "unitId": "api:notifications/AuditLog#useAuditLogs",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AuditLogPage.log"
+  },
+  {
+    "unitId": "page:notifications/AuditLog",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AuditLogPage.log"
+  },
+  {
+    "unitId": "panel:notifications/AuditLog#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AuditLogPage.log"
+  },
+  {
+    "unitId": "string-group:notifications/AuditLog",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AuditLogPage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaFeatureFlags",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaFeatureFlagsPage.log"
+  },
+  {
+    "unitId": "string-group:admin/TeslaFeatureFlags",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaFeatureFlagsPage.log"
+  },
+  {
+    "unitId": "page:automations/ActionBuilder",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ActionBuilder.log"
+  },
+  {
+    "unitId": "panel:automations/ActionBuilder#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ActionBuilder.log"
+  },
+  {
+    "unitId": "string-group:automations/ActionBuilder",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 27,
+    "requiredCount": 27,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ActionBuilder.log"
   }
 ]
