@@ -121,6 +121,7 @@ import io.teslasync.android.system.systemstatus.SystemStatusPageHost
 import io.teslasync.android.system.statemachinedebugger.StateMachineDebuggerPageHost
 import io.teslasync.android.telemetry.livesignalmonitor.LiveSignalMonitorPageHost
 import io.teslasync.android.telemetry.signalexplorer.SignalExplorerPageHost
+import io.teslasync.android.telemetry.mqttinspector.MQTTInspectorPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -302,6 +303,7 @@ class TeslaSyncApplication : Application() {
         StateMachineDebuggerPageHost.register()
         LiveSignalMonitorPageHost.register()
         SignalExplorerPageHost.register()
+        MQTTInspectorPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
