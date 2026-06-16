@@ -1,0 +1,131 @@
+================================================================================
+ P3-ANDROID · A7 · page:onboarding/Onboarding
+ Native Jetpack Compose / Material 3 port of web OnboardingPage
+ web src : web/src/features/onboarding/pages/OnboardingPage.tsx
+ output  : apps/android/app/src/main/kotlin/com/teslasync/onboarding/
+ prompt  : p3-android/pages/onboarding/OnboardingPage
+================================================================================
+
+ENVIRONMENT
+  Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+  Gradle      : 8.14.5 (wrapper)
+  Module path : :android  (sources under app/; settings.gradle.kts maps :android -> app)
+  Note        : the README gate names :app:* ; this repo's single module is :android:*
+                (settings.gradle.kts: "its Gradle path is :android"). Tasks run as :android:*.
+
+--------------------------------------------------------------------------------
+ FILES
+--------------------------------------------------------------------------------
+ created (apps/android/app/src/main/kotlin/com/teslasync/onboarding/):
+   OnboardingPageModel.kt      registration + nav targets + steps builder + diagnostics (pure)
+   OnboardingPageSource.kt     OnboardingPageSource seam + OnboardingStore.asOnboardingPageSource()
+   OnboardingPageViewModel.kt  BaseFeedViewModel; status UiState + refresh/retry/recordViewOpened
+   OnboardingPageIcons.kt      stroked glyphs: Sparkles, RefreshCw, ArrowRight, BookOpen, ExternalLink, SkipForward
+   OnboardingPage.kt           stateful + stateless content (header, GlassPanel1, Stepper, footer, help links)
+   OnboardingPageHost.kt       PageHosts.register("onboarding") -> OnboardingRoute()
+ created (apps/android/app/src/test/java/io/teslasync/android/onboarding/):
+   OnboardingPageModelTest.kt      (9 tests)
+   OnboardingPageViewModelTest.kt  (8 tests)
+ modified (NavHost registration / DI seam):
+   io/teslasync/android/data/DataContainer.kt        + onboardingStore (A7 widening seam)
+   io/teslasync/android/TeslaSyncApplication.kt       + OnboardingPageHost.register()
+ reused (no edit):
+   res/values{,-ar,-he}/strings.xml                  all 25 onboarding.* keys already present
+   io.teslasync.android.featureviews.stepper.Stepper  shared native Stepper (renderCta per-step CTA)
+   io.teslasync.shared.core.presentation.onboarding.OnboardingStore  shared S8 holder
+   navigation/Destinations.kt                         standalone("onboarding","/onboarding",Public) already present
+
+--------------------------------------------------------------------------------
+ GATE  (android triad: placeholder + build + lint + test)
+--------------------------------------------------------------------------------
+ $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/onboarding -Language kotlin
+   PLACEHOLDER_ALLOWED=0
+   PLACEHOLDER_COUNT=0
+ PLACEHOLDER_EXIT=0
+
+ $ ./gradlew :android:assembleDebug   --console=plain
+   BUILD SUCCESSFUL in 1m 25s
+ BUILD_EXIT=0
+
+ $ ./gradlew :android:lintDebug       --console=plain
+   Wrote HTML report to app/build/reports/lint-results-debug.html
+   BUILD SUCCESSFUL in 9m 34s
+ LINT_EXIT=0
+
+ $ ./gradlew :android:testDebugUnitTest --console=plain
+   BUILD SUCCESSFUL in 1m 06s
+ TEST_EXIT=0
+
+ unit tests (this surface) — app/build/test-results/testDebugUnitTest/
+   TEST-io.teslasync.android.onboarding.OnboardingPageModelTest.xml      tests=9 failures=0 errors=0 skipped=0
+   TEST-io.teslasync.android.onboarding.OnboardingPageViewModelTest.xml  tests=8 failures=0 errors=0 skipped=0
+   full suite green (DataContainer + TeslaSyncApplication edits regression-checked, incl. RouteTableTest).
+
+--------------------------------------------------------------------------------
+ ADR / parity notes
+--------------------------------------------------------------------------------
+ - ADR-002/006: stateless OnboardingPageScreen (OnboardingPageContent) + OnboardingPageViewModel (S8); no
+   business logic in composables — the steps useMemo + footer branch live in the framework-free model.
+ - ADR-004: binds the shared KMP OnboardingStore (GET /onboarding/status) via OnboardingPageSource; no HTTP
+   in the view. Gate fields are non-unit-bearing -> no SI conversion (ADR-005 boundary N/A).
+ - ADR-011: no placeholders/stubs (placeholder gate = 0).
+ - ADR-013: cache-then-network UiState (loading/content/stale/offline/error); the gate carries pessimistic
+   defaults so the checklist never blanks (web "assume not complete on failure").
+ - ADR-014: every visible literal via stringResource(R.string.translation_onboarding_*) (25/25 verified).
+ - ADR-015: TalkBack pane title (paneTitle = welcome), link role semantics, skip-hint Tooltip, Material 3
+   theme/colorScheme tokens (light/dark/dynamic), >= 48dp button targets.
+ - Navigation seam: no LocalNavController is exposed to page hosts (GlancePage/ArchivedPage precedent).
+   In-app routes open via the registered deep-link scheme (teslasync://app/tesla-account, LocalUriHandler);
+   "Continue/Skip" leave the standalone surface via the system back-dispatcher; docs open in the browser.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=28
+Each item below has binding evidence (file :: symbol).
+File key: P  = apps/android/app/src/main/kotlin/com/teslasync/onboarding/OnboardingPage.kt
+          M  = apps/android/app/src/main/kotlin/com/teslasync/onboarding/OnboardingPageModel.kt
+--------------------------------------------------------------------------------
+[x] panel  - GlassPanel1                  P :: OnboardingPanel  (GlassPanel { intro + Stepper + divider + footer + help })
+[x] state  - loading data state           P :: OnboardingPageContent (state.isLoading -> OnboardingLoading{ Spinner })
+[x] state  - success data state           P :: OnboardingPageContent (else -> FadeIn{ OnboardingPanel(status) })
+[x] string - onboarding.checkAgain        P :: OnboardingFooter   -> R.string.translation_onboarding_checkAgain
+[x] string - onboarding.continue          P :: OnboardingFooter   -> R.string.translation_onboarding_continue
+[x] string - onboarding.footer.account    P :: OnboardingHelpFooter-> R.string.translation_onboarding_footer_account
+[x] string - onboarding.footer.docs       P :: OnboardingHelpFooter-> R.string.translation_onboarding_footer_docs
+[x] string - onboarding.footer.help       P :: OnboardingHelpFooter-> R.string.translation_onboarding_footer_help
+[x] string - onboarding.footer.or         P :: OnboardingHelpFooter-> R.string.translation_onboarding_footer_or
+[x] string - onboarding.intro.desc        P :: OnboardingIntro     -> R.string.translation_onboarding_intro_desc
+[x] string - onboarding.intro.title       P :: OnboardingIntro     -> R.string.translation_onboarding_intro_title
+[x] string - onboarding.pageTitle         P :: OnboardingLoading    -> R.string.translation_onboarding_pageTitle
+[x] string - onboarding.polling           P :: OnboardingFooter     -> R.string.translation_onboarding_polling
+[x] string - onboarding.ready             P :: OnboardingFooter     -> R.string.translation_onboarding_ready
+[x] string - onboarding.skip              P :: OnboardingFooter     -> R.string.translation_onboarding_skip
+[x] string - onboarding.skipHint          P :: OnboardingFooter (Tooltip) -> R.string.translation_onboarding_skipHint
+[x] string - onboarding.subtitle          P :: OnboardingHeader     -> R.string.translation_onboarding_subtitle
+[x] string - onboarding.telemetry.desc    P :: OnboardingStepper labels -> R.string.translation_onboarding_telemetry_desc
+[x] string - onboarding.telemetry.docs    P :: OnboardingStepper labels -> R.string.translation_onboarding_telemetry_docs
+[x] string - onboarding.telemetry.title   P :: OnboardingStepper labels -> R.string.translation_onboarding_telemetry_title
+[x] string - onboarding.tesla.cta         P :: OnboardingStepper labels -> R.string.translation_onboarding_tesla_cta
+[x] string - onboarding.tesla.desc        P :: OnboardingStepper labels -> R.string.translation_onboarding_tesla_desc
+[x] string - onboarding.tesla.title       P :: OnboardingStepper labels -> R.string.translation_onboarding_tesla_title
+[x] string - onboarding.vehicle.checking  P :: OnboardingStepper labels -> R.string.translation_onboarding_vehicle_checking
+[x] string - onboarding.vehicle.cta       P :: OnboardingStepper labels -> R.string.translation_onboarding_vehicle_cta
+[x] string - onboarding.vehicle.desc      P :: OnboardingStepper labels -> R.string.translation_onboarding_vehicle_desc
+[x] string - onboarding.vehicle.title     P :: OnboardingStepper labels -> R.string.translation_onboarding_vehicle_title
+[x] string - onboarding.welcome           P :: OnboardingHeader + paneTitle -> R.string.translation_onboarding_welcome
+--------------------------------------------------------------------------------
+PARITY_COVERED=28
+=== /PARITY ===
+
+ step builder (web steps useMemo) mirrored in M :: onboardingSteps():
+   tesla     done=teslaConnected  cta.to=/tesla-account            (primary "Connect Tesla account")
+   vehicle   done=vehicleCount>0  cta(no to/href, disabled=isFetching, label=Checking…/Refresh) (refresh)
+   telemetry done=dataFlowing     cta.href=/docs/fleet-telemetry-setup (outline "Setup guide" + external-link)
+ renderCta branch (web renderCta) in P :: OnboardingStepCtaButton (to -> primary nav / href -> doc link / else -> refresh).
+ footer (web): isComplete ? ready : polling ; Check again always ; Skip while incomplete ; Continue when complete.
+
+ledger: apps/parity/android-ledger.json  page:onboarding/Onboarding status=done coveredCount=28 requiredCount=28
+
+EXIT=0
+STATUS=DONE
