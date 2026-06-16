@@ -22,6 +22,7 @@ public enum AppRouteParser {
         "/location": .maps,
         "/navigation": .maps,
         "/alerts": .notifications,
+        "/notifications/audit": .notificationsAudit,
         "/automations/list": .automationsList,
         "/signals": .telemetry,
         "/devtools": .admin,
