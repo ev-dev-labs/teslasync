@@ -138,6 +138,12 @@ class DataContainer(
     val selectedVehicleStore = SelectedVehicleStore()
 
     /**
+     * Shared Analytics read-model state holder (web `useAnalytics` port) — the memoized, multi-observer
+     * cache-then-network mileage + fleet-analytics feeds (mileage stats, daily, monthly, …) the A7
+     * analytics surfaces (MileagePage, …) bind to.
+     */
+
+    /**
      * Shared Admin/operational control-plane state holder (web `useAdmin` port) — the memoized, multi-observer
      * raw-JSON feeds (`/api-logs`, `/api-logs/stats`, `/system/health`, …) every A7 admin surface binds to.
      */

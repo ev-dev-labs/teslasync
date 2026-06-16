@@ -81,7 +81,9 @@
   <string name="translation_Disabled">Disabled</string>
   <string name="translation_Discard">Discard</string>
   <string name="translation_Disconnected">Disconnected</string>
+  <string name="translation_Daily_Distance">Daily Distance</string>
   <string name="translation_Distance">Distance</string>
+  <string name="translation_Distance_per_Drive">Distance per Drive</string>
   <string name="translation_Domain">Domain</string>
   <string name="translation_Done">Done</string>
   <string name="translation_Download">Download</string>
@@ -171,6 +173,7 @@
   <string name="translation_Mode">Mode</string>
   <string name="translation_Moderate">Moderate</string>
   <string name="translation_Month">Month</string>
+  <string name="translation_Monthly_Summary">Monthly Summary</string>
   <string name="translation_More">More</string>
   <string name="translation_Motor">Motor</string>
   <string name="translation_Mqtt">Mqtt</string>
@@ -180,6 +183,7 @@
   <string name="translation_Never">Never</string>
   <string name="translation_Next">Next</string>
   <string name="translation_No">No</string>
+  <string name="translation_No_Entries">No Entries</string>
   <string name="translation_No_stats_available">No stats available</string>
   <string name="translation_Nominal">Nominal</string>
   <string name="translation_None">None</string>
@@ -188,6 +192,7 @@
   <string name="translation_Notifications">Notifications</string>
   <string name="translation_Now">Now</string>
   <string name="translation_Odometer">Odometer</string>
+  <string name="translation_Odometer_Over_Time">Odometer Over Time</string>
   <string name="translation_Off">Off</string>
   <string name="translation_Ok">Ok</string>
   <string name="translation_On">On</string>

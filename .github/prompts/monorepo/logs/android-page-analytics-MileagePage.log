@@ -1,0 +1,107 @@
+P3-ANDROID A7 — page:analytics/Mileage — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/analytics/pages/MileagePage.tsx  (route /mileage)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/analytics/ (MileagePage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.analyticsStore (S8 AnalyticsStore over HttpAnalyticsRepository), TeslaSyncApplication -> MileagePageHost.register("mileage")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+GATE PATH NOTE: the app module's Gradle path is ':android' (apps/android/settings.gradle.kts maps
+':android' -> app/, and its own comment states "every P3/A* prompt gate addresses ':android:'"). The
+prompt snippet's ':app:' is a template placeholder for the same single module; ':app' does not exist in
+the project, so the triad was run as ':android:assembleDebug / :android:lintDebug / :android:testDebugUnitTest'
+per the p3-android README gate contract.
+
+STRINGS NOTE (honesty): the platform string catalog (res/values*/strings.xml) is generated from the web
+i18n source by apps/shared/i18n/generators/gen-i18n.ts, but that generated output is ALREADY ~194 keys
+behind the web source on this branch (pre-existing drift, unrelated to this page — confirmed via
+`gen-i18n.ts --check` = DRIFT before any edit). Regenerating would have produced a large, unrelated diff
+across android/apple/windows. The five bare-literal keys this page needs that the catalog lacked
+(translation_Daily_Distance, translation_Distance_per_Drive, translation_Monthly_Summary,
+translation_No_Entries, translation_Odometer_Over_Time) were therefore added directly to the android
+catalog (res/values, res/values-ar, res/values-he — the prompt's allowed string-catalog file), matching
+the generator's androidName() slug rule (translation.<key> with non [A-Za-z0-9_] -> '_'). The other 11
+required strings already existed in the catalog.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL
+BUILD_EXIT=0
+# ./gradlew :android:lintDebug
+BUILD SUCCESSFUL
+LINT_EXIT=0
+# ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL
+TEST_EXIT=0
+# unit test: io.teslasync.android.analytics.mileage.MileageProjectionTest  tests=15 failures=0 errors=0 skipped=0
+# ktlint (not a triad gate; verified clean for this page): :android:ktlintMainSourceSetCheck/ktlintTestSourceSetCheck -> 0 violations in com/teslasync/analytics/**
+# detekt (not a triad gate; verified clean for this page): :android:detekt -> 0 violations in com/teslasync/analytics/**
+
+=== PARITY ===
+PARITY_REQUIRED=29
+data sources bound through MileagePageViewModel (StateFlow<UiState<MileageData>>) over the shared S8
+AnalyticsStore (useMileageStats/useDailyMileage/useMonthlyMileage) + VehiclesStore (active-vehicle
+resolution = web useSelectedVehicle). Decode + SI->display projection live in the framework-free
+MileagePageModel.kt (parseMileageStats/parseDailyMileage/parseMonthlyMileage, MileageProjection.project).
+
+# panels (7) — Material 3 Card/Surface (MetricCard / GlassPanel)
+[COVERED] panel  Total-Distance    -> MileagePage.kt:MileageMetrics() MetricCard <- MileageProjection.metrics()[0] (label=translation_mileage_totalDistance, icon=Gauge, accent=primary)
+[COVERED] panel  Total-Drives      -> MileagePage.kt:MileageMetrics() MetricCard <- MileageProjection.metrics()[1] (label=translation_mileage_totalDrives, icon=TrendingUp, accent=status.success)
+[COVERED] panel  Daily-Avg-30d     -> MileagePage.kt:MileageMetrics() MetricCard <- MileageProjection.metrics()[2] (label=translation_mileage_dailyAvg, icon=Calendar, accent=tertiary)
+[COVERED] panel  Annual-Projection -> MileagePage.kt:MileageMetrics() MetricCard <- MileageProjection.metrics()[3] (label=translation_mileage_annualProjection, icon=BarChart3, accent=primary)
+[COVERED] panel  GlassPanel5       -> MileagePage.kt:OdometerPanel() GlassPanel(PanelPadding.Md) — Odometer Over Time
+[COVERED] panel  GlassPanel6       -> MileagePage.kt:DailyDistancePanel() GlassPanel(PanelPadding.Md) — Daily Distance
+[COVERED] panel  GlassPanel7       -> MileagePage.kt:MonthlySummaryPanel() GlassPanel(PanelPadding.Md) — Monthly Summary DataTable
+
+# charts (2) — A3 native Vico wrappers (@/components/charts), never a webview
+[COVERED] chart  AreaChart -> MileagePage.kt:OdometerPanel() AreaChartWrapper(series=ChartSeries(kind=ChartSeriesKind.Area)) data=MileageDisplay.odometer
+[COVERED] chart  BarChart  -> MileagePage.kt:DailyDistancePanel() BarChartWrapper(series=ChartSeries(kind=ChartSeriesKind.Bar)) data=MileageDisplay.daily
+
+# data states (4) — for every data source (loading -> empty -> error -> success)
+[COVERED] state  loading -> MileagePage.kt:MileageLoading() Spinner(SpinnerSize.Lg) when state.isLoading (UiPhase.Loading from MileagePageViewModel.combineResources stats-spine, no cache)
+[COVERED] state  empty   -> MileagePage.kt:MileagePageContent() EmptyState(translation_No_Entries) on no-vehicle (UiPhase.Empty via MileageData.isEmpty) + per-panel EmptyState in OdometerPanel/DailyDistancePanel + DataTable(emptyText) in MonthlySummaryPanel
+[COVERED] state  error   -> MileagePage.kt:MileagePageContent() AlertBanner(Tone.Danger, action=retry) when state.hasError; MileagePageViewModel.combineResources maps Resource.Error(no cache)->UiPhase.Error, retry=viewModel::retry
+[COVERED] state  success -> MileagePage.kt:MileagePageContent() else-branch renders MileageProjection.project(MileageData) -> metrics + charts + table (UiPhase.Content)
+
+# strings (16) — every visible literal via res/values strings.xml; key names match web
+[COVERED] string Daily Distance            -> MileagePage.kt:DailyDistancePanel() PanelTitle(strings.dailyDistance)=R.string.translation_Daily_Distance
+[COVERED] string Distance                  -> MileagePage.kt:MonthlySummaryPanel() distance column header + MileageProjection.dailySeriesLabel = R.string.translation_Distance
+[COVERED] string Distance per Drive        -> MileagePage.kt:MonthlySummaryPanel() distancePerDrive column header = R.string.translation_Distance_per_Drive
+[COVERED] string Drives                    -> MileagePage.kt:MonthlySummaryPanel() drives column header = R.string.translation_Drives
+[COVERED] string Month                     -> MileagePage.kt:MonthlySummaryPanel() month column header = R.string.translation_Month
+[COVERED] string Monthly Summary           -> MileagePage.kt:MonthlySummaryPanel() PanelTitle = R.string.translation_Monthly_Summary
+[COVERED] string No Entries                -> MileagePage.kt EmptyState + OdometerPanel/DailyDistancePanel EmptyState + DataTable emptyText = R.string.translation_No_Entries
+[COVERED] string Odometer                  -> MileagePage.kt:OdometerPanel() series label via MileageProjection.odometerSeriesLabel = R.string.translation_Odometer
+[COVERED] string Odometer Over Time        -> MileagePage.kt:OdometerPanel() PanelTitle = R.string.translation_Odometer_Over_Time
+[COVERED] string error.loadFailed          -> MileagePage.kt:MileagePageContent() AlertBanner message = R.string.translation_error_loadFailed
+[COVERED] string mileage.annualProjection  -> MileagePage.kt:MileageMetrics() metric label = R.string.translation_mileage_annualProjection
+[COVERED] string mileage.dailyAvg          -> MileagePage.kt:MileageMetrics() metric label = R.string.translation_mileage_dailyAvg
+[COVERED] string mileage.subtitle          -> MileagePage.kt:MileageHeader() BodyText = R.string.translation_mileage_subtitle
+[COVERED] string mileage.title             -> MileagePage.kt:MileageHeader() PageTitle = R.string.translation_mileage_title
+[COVERED] string mileage.totalDistance     -> MileagePage.kt:MileageMetrics() metric label = R.string.translation_mileage_totalDistance
+[COVERED] string mileage.totalDrives       -> MileagePage.kt:MileageMetrics() metric label = R.string.translation_mileage_totalDrives
+
+PARITY_COVERED=29
+
+=== SUMMARY ===
+data sources : MileagePageViewModel resolves the active vehicle (SelectedVehicleStore + VehiclesStore =
+               web useSelectedVehicle / default-to-first) then combines the shared S8 AnalyticsStore feeds
+               mileageStats(id) [spine] + dailyMileage(id,90) + monthlyMileage(id) into one
+               StateFlow<UiState<MileageData>> (collectAsStateWithLifecycle). No HTTP in the view.
+units        : SI on the wire; converted only at the render boundary via the live UnitFormatter (useUnits)
+               + convertDistanceFromSI in MileageProjection (Phase-48 SI-canonical).
+a11y/theme   : Modifier.semantics contentDescription on both charts + loading; metric accents from
+               MaterialTheme.colorScheme / TeslaTokens.status (dynamic color + dark theme); Material 3 only,
+               no webview.
+nav          : Destinations 'mileage' -> /mileage (pre-existing) wired to MileageRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+tests        : MileageProjectionTest (15) — decode of all 3 feeds, km->display (km + mi), 4 metrics,
+               null-odometer filtering, daily bars, per-drive monthly rows, empty/no-vehicle gates, date label.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(29) == PARITY_REQUIRED(29)
+[PASS] all android triad gates green; parity 29/29; android ledger row page:analytics/Mileage status=done.
+EXIT=0
+STATUS=DONE
