@@ -113,6 +113,23 @@ public sealed class ChartGeometryTests
     }
 
     [Fact]
+    public void BarRects_SinglePoint_CapsBarWidth()
+    {
+        // A single data point must not render as a giant block spanning the plot (recharts maxBarSize parity).
+        var bars = new[]
+        {
+            new ChartSeries("a", [new ChartPoint(0, 1)]) { Kind = ChartSeriesKind.Bar },
+        };
+        var plot = ChartGeometry.PlotArea(800, 100, new EdgeInsets(0, 0, 0, 0));
+        var x = ChartGeometry.BuildXScale(bars, plot);
+        var y = ChartGeometry.BuildYScale(bars, plot);
+        var rects = ChartGeometry.BarRects(bars, 0, x, y);
+        Assert.Single(rects);
+        // Without the cap this single bar would be ~0.7 * 800 = 560px wide; the cap holds it to 64px.
+        Assert.True(rects[0].Width <= 64, $"bar width {rects[0].Width} should be capped at 64");
+    }
+
+    [Fact]
     public void GaugeFraction_ClampsToUnit()
     {
         Assert.Equal(0.5, ChartGeometry.GaugeFraction(50, 100), 6);

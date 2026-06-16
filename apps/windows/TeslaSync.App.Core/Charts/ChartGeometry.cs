@@ -169,6 +169,17 @@ public static class ChartGeometry
             : Math.Abs(x.RangeEnd - x.RangeStart);
         var bandWidth = Math.Max(1, slotWidth * slotRatio);
         var barWidth = bandWidth / groups;
+
+        // Cap the per-bar width so a single or sparse category does not render as a giant block spanning the
+        // whole plot (web recharts maxBarSize parity); recompute the band from the capped bar so grouped
+        // series stay centred on their category.
+        const double maxBarWidth = 64;
+        if (barWidth > maxBarWidth)
+        {
+            barWidth = maxBarWidth;
+            bandWidth = barWidth * groups;
+        }
+
         var baseline = y.Map(0);
 
         var rects = new List<RectD>(series.Points.Count);
