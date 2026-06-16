@@ -1,0 +1,141 @@
+P3-ANDROID A7 — page:system/DataExport — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/system/pages/DataExportPage.tsx  (route /data-export)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/system/ (DataExportPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.exportsStore (S8 ExportsStore) + vehiclesStore (S8 VehiclesStore);
+             TeslaSyncApplication -> DataExportPageHost.register("dataExport")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/);
+the prompt snippet's ':app:' is the same module — the README gate contract addresses ':android:'.
+
+STRINGS NOTE (honesty): res/values*/strings.xml is an allowed file for this prompt. The 59 web keys
+already present (dataExport.* + the bare natural keys) were reused; the 11 bare natural keys the web
+renders via i18next key-fallback (All Vehicles, By Count, Export Started[/ Msg], Export Failed[/ Msg],
+Total Exports, Total Size, Most Exported, Last Export, Start Export) were added to values/strings.xml
+verbatim (value == key, matching the generator's existing fallback convention e.g. Vehicle_Data_Desc).
+The wizard option labels the web pulls from EXPORT_TYPES/FORMATS/DATE_PRESETS/STATUS_CONFIG
+(dataExport.types.*/formats.*/presets.*/status.*) were also added so zero literals are hardcoded in
+Kotlin. MissingTranslation/ExtraTranslation are disabled in the app lint config, so values/ alone is
+sufficient; no i18n drift task is wired into the gate.
+
+=== GATE ===
+PS> ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+PS> ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 2m 12s
+BUILD_EXIT=0
+PS> ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 10m 47s
+LINT_EXIT=0
+PS> ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL  (DataExportPageModelTest: tests=10 failures=0 errors=0 skipped=0)
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=75
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/system/ (DataExportPage.kt screen,
+DataExportPageViewModel.kt, DataExportPageModel.kt, DataExportPageIcons.kt)
+
+# panels (12) — Material 3 GlassPanel(Surface) / StatCard
+[COVERED] panel  GlassPanel1   -> DataExportPage.kt:AccountExportPanel() GlassPanel(PanelAccent.Info) "Download my data" (useCreateAccountExport)
+[COVERED] panel  GlassPanel2   -> DataExportPage.kt:ExportWizard() GlassPanel(PanelAccent.Info) "New Export" 4-step wizard
+[COVERED] panel  GlassPanel3   -> DataExportPage.kt:FormatInfoCard() CSV preview GlassPanel(PanelAccent.Info)
+[COVERED] panel  GlassPanel4   -> DataExportPage.kt:FormatInfoCard() JSON preview GlassPanel(PanelAccent.Primary)
+[COVERED] panel  Total-Exports -> DataExportPage.kt:StatsRow() StatCard(label=translation_Total_Exports, icon=Package)
+[COVERED] panel  Total-Size    -> DataExportPage.kt:StatsRow() StatCard(label=translation_Total_Size, icon=HardDrive, formatBytes)
+[COVERED] panel  Most-Exported -> DataExportPage.kt:StatsRow() StatCard(label=translation_Most_Exported, sublabel=By Count)
+[COVERED] panel  Last-Export   -> DataExportPage.kt:StatsRow() StatCard(label=translation_Last_Export, icon=Clock, relativeTime)
+[COVERED] panel  GlassPanel9   -> DataExportPage.kt:DataOverviewCard() GlassPanel "Data Overview"
+[COVERED] panel  GlassPanel10  -> DataExportPage.kt:ColumnPickerSection() GlassPanel(PanelPadding.Md) "STEP 2½ — Columns" (useExportColumns)
+[COVERED] panel  GlassPanel11  -> DataExportPage.kt:ExportHistoryPanel() GlassPanel(PanelPadding.None) "Export History"
+[COVERED] panel  GlassPanel12  -> DataExportPage.kt:ScheduledFeaturePanel() GlassPanel "Scheduled exports"
+
+# data states (4) — bound to DataExportPageViewModel.state: StateFlow<UiState<DataExportData>>
+[COVERED] state  loading  -> DataExportPage.kt:DataExportPageContent() state.isLoading -> Spinner(SpinnerSize.Lg)
+[COVERED] state  empty    -> DataExportPage.kt:ExportHistoryPanel() jobs.isEmpty -> EmptyState; DataOverviewCard() -> translation_dataExport_unavailable; VM asUiState(isEmpty={it.isEmpty})
+[COVERED] state  error    -> DataExportPage.kt:DataExportPageContent() state.isError -> AlertBanner+Retry; DataExportBody() offline AlertBanner; VM combineResources -> Resource.Error
+[COVERED] state  success  -> DataExportPage.kt:DataExportBody() content branch; VM state UiState.Content
+
+# strings (59) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string All Vehicles                     -> DataExportPage.kt:ExportWizard() wizardVehicleOptions all-label (translation_All_Vehicles)
+[COVERED] string By Count                         -> DataExportPage.kt:StatsRow() Most-Exported StatCard sublabel
+[COVERED] string Download                         -> DataExportPage.kt:JobRow() download Button
+[COVERED] string Duration                         -> DataExportPage.kt:JobRow() JobField label
+[COVERED] string End                              -> DataExportPage.kt:CustomDateRange() Input label
+[COVERED] string Export Failed                    -> DataExportPage.kt:resolveToastMessage() failure toast title
+[COVERED] string Export Failed Msg                -> DataExportPage.kt:resolveToastMessage() failure toast body
+[COVERED] string Export Started                   -> DataExportPage.kt:resolveToastMessage() success toast title
+[COVERED] string Export Started Msg               -> DataExportPage.kt:resolveToastMessage() success toast body
+[COVERED] string Format                           -> DataExportPage.kt:JobRow() format Badge semantics contentDescription
+[COVERED] string Last Export                      -> DataExportPage.kt:StatsRow() StatCard label
+[COVERED] string Most Exported                    -> DataExportPage.kt:StatsRow() StatCard label
+[COVERED] string Records                          -> DataExportPage.kt:JobRow() JobField label
+[COVERED] string Size                             -> DataExportPage.kt:JobRow() JobField label
+[COVERED] string Start                            -> DataExportPage.kt:CustomDateRange() Input label
+[COVERED] string Start Export                      -> DataExportPage.kt:ExportWizard() submit Button
+[COVERED] string Status                           -> DataExportPage.kt:JobRow() status Badge semantics contentDescription
+[COVERED] string Time                             -> DataExportPage.kt:JobRow() JobField label
+[COVERED] string Total Exports                    -> DataExportPage.kt:StatsRow() StatCard label
+[COVERED] string Total Size                       -> DataExportPage.kt:StatsRow() StatCard label
+[COVERED] string Type                             -> DataExportPage.kt:JobRow() type Badge semantics contentDescription
+[COVERED] string Vehicle                          -> DataExportPage.kt:JobRow() JobField label
+[COVERED] string dataExport.account.allVehicles   -> DataExportPage.kt:AccountExportPanel() accountVehicleOptions all-label
+[COVERED] string dataExport.account.endDate       -> DataExportPage.kt:AccountExportPanel() end Input label
+[COVERED] string dataExport.account.start         -> DataExportPage.kt:AccountExportPanel() start Button
+[COVERED] string dataExport.account.startDate     -> DataExportPage.kt:AccountExportPanel() start Input label
+[COVERED] string dataExport.account.subtitle      -> DataExportPage.kt:AccountExportPanel() BodyText
+[COVERED] string dataExport.account.title         -> DataExportPage.kt:AccountExportPanel() SectionTitle
+[COVERED] string dataExport.account.vehicle       -> DataExportPage.kt:AccountExportPanel() Select label
+[COVERED] string dataExport.account.warning       -> DataExportPage.kt:AccountExportPanel() HelperText
+[COVERED] string dataExport.active                -> DataExportPage.kt:ExportHistoryPanel() active Badge
+[COVERED] string dataExport.allVehicles           -> DataExportPage.kt:ExportWizard() vehicle Select emptyLabel
+[COVERED] string dataExport.chargingSessions      -> DataExportPage.kt:DataOverviewCard() OverviewRow label
+[COVERED] string dataExport.columns.alwaysIncluded-> DataExportPage.kt:ColumnPickerSection() Required Badge
+[COVERED] string dataExport.columns.clear         -> DataExportPage.kt:ColumnPickerSection() Clear Button
+[COVERED] string dataExport.columns.helperText    -> DataExportPage.kt:ColumnPickerSection() HelperText
+[COVERED] string dataExport.columns.selectAll     -> DataExportPage.kt:ColumnPickerSection() Select-all Button
+[COVERED] string dataExport.columns.title         -> DataExportPage.kt:ColumnPickerSection() WizardStep title
+[COVERED] string dataExport.csvDesc               -> DataExportPage.kt:FormatInfoCards() CSV card body
+[COVERED] string dataExport.csvPreview            -> DataExportPage.kt:FormatInfoCards() CSV card title
+[COVERED] string dataExport.customRange           -> DataExportPage.kt:ExportWizard() custom-range Button
+[COVERED] string dataExport.dataOverview          -> DataExportPage.kt:DataOverviewCard() PanelTitle
+[COVERED] string dataExport.drives                -> DataExportPage.kt:DataOverviewCard() OverviewRow label
+[COVERED] string dataExport.exportHistory         -> DataExportPage.kt:ExportHistoryPanel() PanelTitle
+[COVERED] string dataExport.jsonDesc              -> DataExportPage.kt:FormatInfoCards() JSON card body
+[COVERED] string dataExport.jsonPreview           -> DataExportPage.kt:FormatInfoCards() JSON card title
+[COVERED] string dataExport.noExports             -> DataExportPage.kt:ExportHistoryPanel() EmptyState title
+[COVERED] string dataExport.noExportsMessage      -> DataExportPage.kt:ExportHistoryPanel() EmptyState message
+[COVERED] string dataExport.noJobs                -> DataExportPage.kt:ExportHistoryPanel() defensive empty Caption (web DataTable emptyMessage)
+[COVERED] string dataExport.refresh               -> DataExportPage.kt:DataExportHeader() + ExportHistoryPanel() refresh Buttons
+[COVERED] string dataExport.scheduled.feature     -> DataExportPage.kt:ScheduledFeaturePanel() PanelTitle
+[COVERED] string dataExport.subtitle              -> DataExportPage.kt:DataExportHeader() BodyText
+[COVERED] string dataExport.title                 -> DataExportPage.kt:DataExportHeader() PageTitle
+[COVERED] string dataExport.unavailable           -> DataExportPage.kt:DataOverviewCard() no-data HelperText
+[COVERED] string dataExport.wizard.step1          -> DataExportPage.kt:ExportWizard() WizardStep title (type selector)
+[COVERED] string dataExport.wizard.step2          -> DataExportPage.kt:ExportWizard() WizardStep title (format selector)
+[COVERED] string dataExport.wizard.step3          -> DataExportPage.kt:ExportWizard() WizardStep title (vehicle select)
+[COVERED] string dataExport.wizard.step4          -> DataExportPage.kt:ExportWizard() WizardStep title (date range)
+[COVERED] string dataExport.wizardTitle           -> DataExportPage.kt:ExportWizard() SectionTitle
+
+PARITY_COVERED=75
+
+=== SUMMARY ===
+data sources : DataExportPageViewModel binds shared S8 ExportsStore (exportJobs / exportColumns(type) /
+               createExport / createAccountExport) + VehiclesStore (vehicles) via bindDataExportSource();
+               no HTTP in the view. useCreateAccountExport -> ExportsStore.createAccountExport;
+               useExportColumns -> ExportsStore.exportColumns(catalogTypeFor(type)).
+nav          : Destinations 'dataExport' -> /data-export (pre-existing) wired to DataExportRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+units (S5)   : file sizes stay raw bytes in the model; formatBytes()/relativeTime() format only at the
+               composable boundary. No non-SI value is stored or computed.
+a11y         : type cards use Modifier.selectable(Role.RadioButton); job badges carry semantics
+               contentDescription "<header>: <value>"; ≥48dp targets via Material components; dynamic
+               color + dark theme inherited from MaterialTheme (A2 tokens).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(75) == PARITY_REQUIRED(75)
+[PASS] all android triad gates green; parity 75/75; android ledger row page:system/DataExport status=done.
+EXIT=0
+STATUS=DONE

@@ -16,6 +16,7 @@ import io.teslasync.shared.core.data.repo.HttpAnalyticsRepository
 import io.teslasync.shared.core.data.repo.HttpAutomationsRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpEnergyRepository
+import io.teslasync.shared.core.data.repo.HttpExportsRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
 import io.teslasync.shared.core.data.repo.HttpIngestXRayRepository
 import io.teslasync.shared.core.data.repo.HttpOnboardingRepository
@@ -32,6 +33,7 @@ import io.teslasync.shared.core.presentation.analytics.AnalyticsStore
 import io.teslasync.shared.core.presentation.automations.AutomationsStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.energy.EnergyStore
+import io.teslasync.shared.core.presentation.exports.ExportsStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
 import io.teslasync.shared.core.presentation.ingestxray.IngestXRayStore
 import io.teslasync.shared.core.presentation.onboarding.OnboardingStore
@@ -102,6 +104,7 @@ class DataContainer(
     private val analyticsRepository = HttpAnalyticsRepository(api, cacheStore, clock)
     private val automationsRepository = HttpAutomationsRepository(api, cacheStore, clock)
     private val energyRepository = HttpEnergyRepository(api, cacheStore, clock)
+    private val exportsRepository = HttpExportsRepository(api, cacheStore, clock)
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
     private val pinnedRepository = HttpPinnedRepository(api, cacheStore, clock)
@@ -136,6 +139,13 @@ class DataContainer(
      * feeds (`/analytics/battery-health`, …) the A7 StatisticsPage analytics surface binds to for its battery panel.
      */
     val energyStore = EnergyStore(energyRepository, scope)
+
+    /**
+     * Shared Exports control-plane state holder (web `useExports` port) — the memoized, multi-observer
+     * `/export/jobs` + `/exports/columns` feeds and the `/export/jobs` + `/export/jobs/account` create
+     * mutations the A7 DataExportPage system surface binds to.
+     */
+    val exportsStore = ExportsStore(exportsRepository, scope)
 
     /** Shared Dashboard domain state holder (web `useDashboard` port). */
     val dashboardStore = DashboardStore(dashboardRepository, scope)
