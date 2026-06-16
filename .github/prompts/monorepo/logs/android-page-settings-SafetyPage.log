@@ -1,0 +1,50 @@
+=== p3-android | A7 | page:settings/Safety - Compose / Material 3 ===
+timestamp=2026-06-15 12:40:12Z
+web_source=web/src/features/settings/pages/SafetyPage.tsx  web_route=/settings/safety
+output_dir=apps/android/app/src/main/kotlin/com/teslasync/settings  package=io.teslasync.android.settings.safety
+gradle_module=:android  (settings.gradle.kts maps include :android -> projectDir app; rootProject teslasync-android)
+NOTE: prompt gate template addresses :app:; this repo single app module Gradle path is :android per settings.gradle.kts.
+
+--- files (created) ---
+apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPageModel.kt
+apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPageViewModel.kt
+apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt
+apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPageHost.kt
+apps/android/app/src/test/java/com/teslasync/settings/SafetyPageModelTest.kt
+--- files (edited) ---
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt  (import + SafetyPageHost.register())
+apps/android/app/src/main/res/values/strings.xml  (+translation_common_suspended)
+apps/android/app/src/main/res/values-ar/strings.xml  (+translation_common_suspended)
+apps/android/app/src/main/res/values-he/strings.xml  (+translation_common_suspended)
+apps/parity/android-ledger.json  (+page:settings/Safety row, 8/8 done)
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD_EXIT=0
+LINT_EXIT=0
+TEST_EXIT=0
+--- gate end ---
+
+=== PARITY ===
+PARITY_REQUIRED=8
+[x] panel - GlassPanel1 :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: fun SafetySettingsListing + GlassPanel(
+[x] state - success data state :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPageViewModel.kt :: StateFlow<UiState<SafetySettings>> + UiPhase.Content
+[x] string - safetySettings.listing.changeHint :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_listing_changeHint
+[x] string - safetySettings.listing.docsLink :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_listing_docsLink
+[x] string - safetySettings.listing.subtitle :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_listing_subtitle
+[x] string - safetySettings.listing.title :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_listing_title
+[x] string - safetySettings.pageSubtitle :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_pageSubtitle
+[x] string - safetySettings.pageTitle :: apps/android/app/src/main/kotlin/com/teslasync/settings/SafetyPage.kt :: translation_safetySettings_pageTitle
+PARITY_COVERED=8
+
+--- beyond-required fidelity (web parity, not gate-counted) ---
+rows=7  all 14 row title/description keys bound (translation_safetySettings_rows_*_title/_description) in SafetyPage.kt safetySettingTitleRes/safetySettingDescriptionRes
+value-localization: On/Off=translation_common_on/off, Active=translation_common_active, Suspended=translation_common_suspended (rememberSafetyRowValueText)
+ai-panel: web <AISafetySettingExplainer/> embedded verbatim via shared surface (renders nothing in AI-off mode, ADR-015)
+nav: SafetyPageHost.register() wired in TeslaSyncApplication.onCreate for destination settingsSafety (/settings/safety)
+a11y: listing title semantics{heading()}; each row merged semantics contentDescription; Material3 >=48dp Button targets; TeslaSyncTheme dark/dynamic
+units: none unit-bearing (booleans/HH:MM/enum strings) - no SI conversion at this layer
+tests: SafetyPageModelTest (9 @Test) - defaults, fromDocument null/non-object/live/partial, listing order, docs anchors, row value projection, registration
+
+EXIT=0
+STATUS=DONE
