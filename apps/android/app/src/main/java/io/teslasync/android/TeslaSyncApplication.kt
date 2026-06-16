@@ -15,6 +15,7 @@ import io.teslasync.android.analytics.statistics.StatisticsPageHost
 import io.teslasync.android.analytics.yearreview.YearReviewPageHost
 import io.teslasync.android.auth.AuthContainer
 import io.teslasync.android.battery.batteryhealth.BatteryHealthPageHost
+import io.teslasync.android.vehiclesystems.maintenance.MaintenancePageHost
 import io.teslasync.android.battery.energyproducts.EnergyProductsPageHost
 import io.teslasync.android.charging.chargingcurve.ChargingCurvePageHost
 import io.teslasync.android.charging.costanalysis.CostAnalysisPageHost
@@ -200,6 +201,8 @@ class TeslaSyncApplication : Application() {
         YearReviewPageHost.register()
         // Register the native battery-health screen for the /battery route (P3/A7). Idempotent.
         BatteryHealthPageHost.register()
+        // Register the native maintenance screen for the /maintenance route (P3-ANDROID A7). Idempotent.
+        MaintenancePageHost.register()
         // Register the native energy-products screen for the /energy-products route (P3/A7). Idempotent.
         EnergyProductsPageHost.register()
         // Register the native charging-curve screen for the /charging-curve route (P3/A7). Idempotent.

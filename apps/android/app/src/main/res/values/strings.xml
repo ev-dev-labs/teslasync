@@ -9655,4 +9655,27 @@
   <string name="translation_climate_farFromTarget">Far from target</string>
   <string name="translation_climate_dogMode">Dog Mode</string>
   <string name="translation_climate_campMode">Camp Mode</string>
+  <!-- P3-ANDROID A7 — vehicle-systems/Maintenance parity strings (web keys verbatim). -->
+  <string name="translation_All_Categories">All Categories</string>
+  <string name="translation_Annual_Est_">Annual Est.</string>
+  <string name="translation_Avg___Service">Avg / Service</string>
+  <string name="translation_Due_Soon">Due Soon</string>
+  <string name="translation_EV_maintenance_is_typically_40_60__cheaper_than_a_comparable_gas_vehicle_">EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.</string>
+  <string name="translation_Estimated_Annual_Cost">Estimated Annual Cost</string>
+  <string name="translation_No_cost_data_available_yet__Log_service_records_to_see_cost_estimates_">No cost data available yet. Log service records to see cost estimates.</string>
+  <string name="translation_No_items_match_the_selected_category__Try_a_different_filter_">No items match the selected category. Try a different filter.</string>
+  <string name="translation_No_maintenance_items">No maintenance items</string>
+  <string name="translation_No_maintenance_items_found_for_this_vehicle_">No maintenance items found for this vehicle.</string>
+  <string name="translation_No_service_records_found_">No service records found.</string>
+  <string name="translation_No_service_records_logged_yet_">No service records logged yet.</string>
+  <string name="translation_No_upcoming_service_projections_available_">No upcoming service projections available.</string>
+  <string name="translation_Schedule_Maintenance">Schedule Maintenance</string>
+  <string name="translation_Service_Projections">Service Projections</string>
+  <string name="translation_Service_Records">Service Records</string>
+  <string name="translation_Service_schedule__records__and_upcoming_maintenance">Service schedule, records, and upcoming maintenance</string>
+  <string name="translation_Total_Items">Total Items</string>
+  <string name="translation_Total_Spent">Total Spent</string>
+  <!-- Sort-toolbar option labels the web resolves via t('Category') / t('Due Date'); not in the parity-30 but rendered for fidelity. -->
+  <string name="translation_Category">Category</string>
+  <string name="translation_Due_Date">Due Date</string>
 </resources>

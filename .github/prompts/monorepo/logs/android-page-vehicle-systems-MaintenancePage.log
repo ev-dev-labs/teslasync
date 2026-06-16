@@ -1,0 +1,170 @@
+================================================================================
+P3-ANDROID A7 — page:vehicle-systems/Maintenance  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+promptId: p3-android/pages/vehicle-systems/MaintenancePage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio JBR (JAVA_HOME=C:\Program Files\Android\Android Studio\jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L35-48).
+SDK present => gate executed (not BLOCKED). local.properties written with sdk.dir for the wrapper.
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePage.kt          (@Composable screen: MaintenancePage + MaintenancePageContent + the 11 panels, the 4 data states, the responsive grids, a11y semantics)
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePageViewModel.kt (AndroidX ViewModel over BaseFeedViewModel; StateFlow<UiState<List<MaintenanceItem>>> + StateFlow<UiState<List<ServiceRecord>>> + displayPrefs + toolbar filter state; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePageSource.kt    (S8 data seam over SettingsStore + SelectedVehicleStore; page-local MaintenanceRepository : CachingRepository<JsonElement> for /maintenance + /maintenance/records)
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePageModel.kt      (framework-free: MaintenanceItem/ServiceRecord decoders, computeProgress/statusFromPct/summarize/costStatsOf/projectionsOf/sortItems derivations, MaintenanceDisplayPrefs currency/date formatters, the folded view structs, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePageIcons.kt       (5 authored lucide glyphs: ListChecks/CalendarPlus/ArrowUpDown/DollarSign/TrendingUp + 8 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/MaintenancePageHost.kt        (PageHosts.register("maintenance") wiring over LocalDataContainer; MaintenanceRoute composable)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                 (NavHost registration: import + MaintenancePageHost.register() in onCreate, alongside the sibling A7 hosts)
+apps/android/app/src/main/res/values/strings.xml                                            (21 added <string> entries: the 19 parity strings missing from the catalog + 2 sort-label strings for fidelity; 11 of the 30 parity strings already existed and are reused)
+apps/parity/android-ledger.json                                                             (ledger row page:vehicle-systems/Maintenance, status done, 45/45)
+
+--------------------------------------------------------------------------------
+ARCHITECTURE / APPROACH (ADR-002/004/005/006/011/013/014/015)
+--------------------------------------------------------------------------------
+- Stateless MaintenancePageContent rendered inside the shared PageContainer chrome; stateful MaintenancePage binds the
+  view-model and collects itemsState/recordsState/displayPrefs/filter via collectAsStateWithLifecycle (ADR-002).
+- The two feeds are projected onto the lifecycle-aware UiState surface (BaseFeedViewModel.asUiState), scoped to the
+  global active vehicle (SelectedVehicleStore) exactly as the web queries are `enabled: vehicleId !== null`. Each panel
+  renders its own loading/empty/error/content surface, so no section is ever hidden (ADR-011).
+- All decode/derivation logic is framework-free in MaintenancePageModel.kt (off-device-testable Kotlin). The composable
+  is a thin render layer; values fold through MaintenanceDisplayPrefs at the display boundary only.
+- Design tokens only (MaterialTheme + TeslaTokens.status / TeslaTokens.chart); no hardcoded colors/typography (ADR-005).
+- Every visible literal resolves from res/values/strings.xml via stringResource (ADR-014); a11y content descriptions on
+  the summary/cost cards + category chip; >=48dp targets via Material 3 components; dark/dynamic theme inherited (ADR-015).
+
+--------------------------------------------------------------------------------
+MANIFEST / DATA-SOURCE RECONCILIATION (honest disclosure — covenant 9)
+--------------------------------------------------------------------------------
+The parity-manifest record for page:vehicle-systems/Maintenance declares NO API data sources ("renders from navigation
+args / local state"), yet the web source fetches request('/maintenance') (items) and request('/maintenance/records')
+(records), gated on the selected vehicle. The manifest's data-source detector did not resolve these because the web page
+calls the raw request() client (not a named useX hook) AND `/maintenance` is not a registered backend route in
+internal/api/router.go (a 404 channel the web renders gracefully). To honor full panel/state/string parity WITHOUT
+fabricating data (covenants 3/4/5), this port follows the established sibling precedent (TripDetailPageSource, whose
+comment states the backend "registers no such route, so in practice a 404 — the same channel the web renders
+gracefully"): a page-local CachingRepository<JsonElement> over the SAME shared resilient ApiHttpClient + offline
+CacheStore reads both endpoints, so loading -> empty/error/success transitions are authentic. CacheDomain.VehicleSystems
+partitions the cache. Mileage is rendered verbatim with the localized "mi" label (the web surface applies NO SI
+conversion on this page); only currency + dates pass through the user's preferences (web useFormatting). This is the
+faithful port, not a shortcut.
+
+Out-of-scope (correctly excluded, not scope narrowing): the web <AIPredictiveMaintenance> card is a SEPARATE parity unit
+(component:ai/AIPredictiveMaintenance, already shipped as an Android shared surface), is gated behind withAiFeature
+(renders null when AI mode is off — the default), and lives outside this surface's allowed-files root. It is not one of
+the 45 required parity items.
+
+--------------------------------------------------------------------------------
+STRINGS (res/values/strings.xml; web keys verbatim via the gen-i18n androidName transform)
+--------------------------------------------------------------------------------
+Reused 11 pre-existing catalog entries (verified value == web default):
+  translation_Completed=Completed  translation_Cost=Cost  translation_Date=Date  translation_Description=Description
+  translation_Due=Due  translation_Maintenance=Maintenance  translation_Mileage=Mileage  translation_Overdue=Overdue
+  translation_Provider=Provider  translation_error_loadFailed="Failed to load data"  translation_mi=mi
+Added 19 missing parity strings (All Categories, Annual Est., Avg / Service, Due Soon, the EV-savings note,
+  Estimated Annual Cost, the 7 empty-state messages, Schedule Maintenance, Service Projections, Service Records,
+  the subtitle, Total Items, Total Spent).
+Added 2 fidelity strings for the sort dropdown the web resolves via t('Category')/t('Due Date') (not in the parity-30):
+  translation_Category=Category  translation_Due_Date=Due Date. (translation_Good/Status/Name already existed.)
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=45   (11 panels + 4 states + 30 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1           -> MaintenancePage.kt:410 MaintenanceItemCard (web MaintenanceItemCard GlassPanel: category chip + status Badge + name + description + MetricBar progress + gauge/clock footer; grid L367 ItemsSection)
+[COVERED] panel  Total-Items           -> MaintenancePage.kt:252 SummarySection MetricCard (summary.total, ListChecks glyph, chart.regen accent, translation_Total_Items L253)
+[COVERED] panel  Due-Soon              -> MaintenancePage.kt:258 SummarySection MetricCard (summary.soon, Clock glyph, status.warning accent, translation_Due_Soon L259)
+[COVERED] panel  Overdue               -> MaintenancePage.kt:264 SummarySection MetricCard (summary.overdue, AlertTriangle glyph, status.danger accent, translation_Overdue L265)
+[COVERED] panel  Completed             -> MaintenancePage.kt:270 SummarySection MetricCard (summary.completed, CheckCircle glyph, status.success accent, translation_Completed L271)
+[COVERED] panel  GlassPanel6           -> MaintenancePage.kt:510 CostPanel GlassPanel (DollarSign header translation_Estimated_Annual_Cost L516; 3 cost cards + EV-savings InlineCallout; empty L536)
+[COVERED] panel  Total-Spent           -> MaintenancePage.kt:525 CostPanel CostCard (costView.totalSpent, translation_Total_Spent)
+[COVERED] panel  Annual-Est            -> MaintenancePage.kt:526 CostPanel CostCard (costView.annualEst incl. /yr suffix, translation_Annual_Est_)
+[COVERED] panel  Avg-Service           -> MaintenancePage.kt:527 CostPanel CostCard (costView.avgService, translation_Avg___Service)
+[COVERED] panel  GlassPanel10          -> MaintenancePage.kt:559 ProjectionsPanel GlassPanel (TrendingUp header translation_Service_Projections L566; ranked projection rows; empty L576)
+[COVERED] panel  GlassPanel11          -> MaintenancePage.kt:607 RecordsSection GlassPanel (PanelTitle translation_Service_Records L612; sortable DataTable L632 ServiceRecordsTable; skeleton/empty L621)
+[COVERED] state  loading               -> MaintenancePage.kt:180 PageContainer loading=itemsState.isLoading (first-load spinner) + StatSkeleton/Skeleton in SummarySection L246 / ItemsSection L376 / CostPanel L520 / ProjectionsPanel L570 / RecordsSection L618
+[COVERED] state  empty                 -> MaintenancePage.kt:383 ItemsSection EmptyState + CostPanel L536 + ProjectionsPanel L576 + RecordsSection L621 + DataTable emptyText L666 (every data source has an empty surface; sections never hidden)
+[COVERED] state  error                 -> MaintenancePage.kt:185 AlertBanner tone=Danger shown when itemsState.hasError || recordsState.hasError (translation_error_loadFailed L186); onRetry wired to viewModel.retry
+[COVERED] state  success               -> MaintenancePage.kt:157 MaintenancePageContent renders the folded items/records (summary counts, item cards, cost stats, projections, records table) when the feeds resolve to content
+[COVERED] string All Categories        -> MaintenancePage.kt:310 translation_All_Categories (category Select option)
+[COVERED] string Annual Est.           -> MaintenancePage.kt:526 translation_Annual_Est_ (cost card)
+[COVERED] string Avg / Service         -> MaintenancePage.kt:527 translation_Avg___Service (cost card)
+[COVERED] string Completed             -> MaintenancePage.kt:271 translation_Completed (summary card) + :781 statusLabel badge
+[COVERED] string Cost                  -> MaintenancePage.kt:653 translation_Cost (records table column header)
+[COVERED] string Date                  -> MaintenancePage.kt:644 translation_Date (records table column header)
+[COVERED] string Description           -> MaintenancePage.kt:647 translation_Description (records table column header)
+[COVERED] string Due                   -> MaintenancePage.kt:452 translation_Due (item-card "Due: ..." readout)
+[COVERED] string Due Soon              -> MaintenancePage.kt:259 translation_Due_Soon (summary card) + :779 statusLabel badge
+[COVERED] string EV maintenance ...    -> MaintenancePage.kt:530 translation_EV_maintenance_is_typically_40_60__cheaper_than_a_comparable_gas_vehicle_ (cost InlineCallout)
+[COVERED] string Estimated Annual Cost -> MaintenancePage.kt:516 translation_Estimated_Annual_Cost (cost panel header)
+[COVERED] string Maintenance           -> MaintenancePage.kt:178 translation_Maintenance (PageContainer title)
+[COVERED] string Mileage               -> MaintenancePage.kt:650 translation_Mileage (records table column header)
+[COVERED] string No cost data ...      -> MaintenancePage.kt:537 translation_No_cost_data_available_yet__Log_service_records_to_see_cost_estimates_ (cost empty state)
+[COVERED] string No items match ...    -> MaintenancePage.kt:388 translation_No_items_match_the_selected_category__Try_a_different_filter_ (items empty, filtered)
+[COVERED] string No maintenance items  -> MaintenancePage.kt:385 translation_No_maintenance_items (items empty-state title)
+[COVERED] string No maintenance ... veh-> MaintenancePage.kt:390 translation_No_maintenance_items_found_for_this_vehicle_ (items empty, unfiltered)
+[COVERED] string No service records f. -> MaintenancePage.kt:666 translation_No_service_records_found_ (DataTable emptyText)
+[COVERED] string No service records l. -> MaintenancePage.kt:623 translation_No_service_records_logged_yet_ (records empty state)
+[COVERED] string No upcoming service.. -> MaintenancePage.kt:577 translation_No_upcoming_service_projections_available_ (projections empty state)
+[COVERED] string Overdue               -> MaintenancePage.kt:265 translation_Overdue (summary card) + :780 statusLabel badge
+[COVERED] string Provider              -> MaintenancePage.kt:656 translation_Provider (records table column header)
+[COVERED] string Schedule Maintenance  -> MaintenancePage.kt:339 translation_Schedule_Maintenance (toolbar Button)
+[COVERED] string Service Projections   -> MaintenancePage.kt:566 translation_Service_Projections (projections panel header)
+[COVERED] string Service Records       -> MaintenancePage.kt:612 translation_Service_Records (records panel title)
+[COVERED] string Service schedule ...  -> MaintenancePage.kt:179 translation_Service_schedule__records__and_upcoming_maintenance (PageContainer subtitle)
+[COVERED] string Total Items           -> MaintenancePage.kt:253 translation_Total_Items (summary card)
+[COVERED] string Total Spent           -> MaintenancePage.kt:525 translation_Total_Spent (cost card)
+[COVERED] string error.loadFailed      -> MaintenancePage.kt:186 translation_error_loadFailed (error AlertBanner; web default "Failed to load data")
+[COVERED] string mi                    -> MaintenancePage.kt:441/455 item-card mileage + :594 projection mileage + :651 records mileage (translation_mi)
+--------------------------------------------------------------------------------
+PARITY_COVERED=45
+================================================================================
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — :android: module path
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug   --console=plain
+  BUILD SUCCESSFUL in 2m 36s
+  BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug       --console=plain
+  BUILD SUCCESSFUL in 12m 35s   (lintConfig lint.xml; abortOnError=true; no errors from the new surface)
+  LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+  BUILD SUCCESSFUL in 1m 42s
+  TEST_EXIT=0
+
+Notes: compileDebugKotlin is clean for the new files (the only warnings in the build are pre-existing
+LocalClipboardManager deprecations in unrelated sibling pages and three pre-existing generated-catalog
+StringFormatInvalid notices on battery_cells/battery_tip/rateLimitStatus — none from this surface's strings).
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY_REQUIRED=45  PARITY_COVERED=45  (==)
+PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0
+android ledger row page:vehicle-systems/Maintenance => status done, 45/45 covered.
+
+EXIT=0
+STATUS=DONE
