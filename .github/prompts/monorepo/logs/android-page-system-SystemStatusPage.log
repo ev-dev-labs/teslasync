@@ -1,0 +1,142 @@
+P3-ANDROID A7 - page:system/SystemStatus - native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/system/pages/SystemStatusPage.tsx  (route /system-status)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/system/ (SystemStatusPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.adminStore + settingsStore + vehiclesStore (S8) + page-local NotificationsStore;
+             TeslaSyncApplication -> SystemStatusPageHost.register("systemStatus")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/);
+the prompt snippet's ':app:' is the same module. Kotlin daemon heap raised to 6g via
+-Pkotlin.daemon.jvmargs (CLI only, no file edits) to give the large module headroom.
+
+DATA SOURCES (7) - each bound through SystemStatusPageViewModel as StateFlow<UiState<SystemStatusData>> (P1/S8):
+  useSystemHealth       GET /system/health        -> AdminStore.systemHealth()          (phase spine)
+  useMaintenanceState   GET /admin/maintenance    -> AdminStore.maintenanceState()
+  useBackupRuns         GET /backup/runs          -> AdminStore.backupRuns()
+  useBackupConfigs      GET /backup/configs       -> AdminStore.backupConfigs()
+  useAuthStatus         GET /auth/status          -> SettingsStore.authStatus()
+  useNotificationStats  GET /notifications/stats  -> NotificationsStore.notificationStats() (page-local holder)
+  useVehicles           GET /vehicles             -> VehiclesStore.vehicles()
+
+=== GATE ===
+$ check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 2m 22s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 16m 43s
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 26s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=82
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/system/ (SystemStatusPage.kt screen, SystemStatusPageViewModel.kt, SystemStatusPageModel.kt, SystemStatusPageSource.kt, SystemStatusPageHost.kt, SystemStatusPageIcons.kt)
+
+[COVERED] panel  GlassPanel1                                                -> SystemStatusPage.kt:SectionCard() GlassPanel (HealthSummaryPanel/ServicesPanel/DatabasePanel/...)
+[COVERED] state  loading data state                                         -> SystemStatusPage.kt:SystemStatusLoadingState() (UiPhase.Loading -> Spinner)
+[COVERED] state  empty data state                                           -> SystemStatusPage.kt:SystemStatusEmptyState() (UiPhase.Empty -> EmptyState)
+[COVERED] state  error data state                                           -> SystemStatusPage.kt:SystemStatusErrorState() (UiPhase.Error -> AlertBanner + retry)
+[COVERED] state  success data state                                         -> SystemStatusPage.kt:SystemStatusContent() (UiPhase.Content)
+[COVERED] string At-a-glance health for your TeslaSync instance             -> SystemStatusPage.kt:SystemStatusHeader()
+[COVERED] string Background workers                                         -> SystemStatusPage.kt:WorkersPanel()
+[COVERED] string Backups                                                    -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string CPU %, memory bytes, and disk usage need a new /system/res -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Channels                                                   -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Configure a schedule or run one now                        -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Configured schedules                                       -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Configured - no successful run yet                         -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Connect                                                    -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Connect your Tesla account to fetch vehicle data           -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Current: v{{current}}                                      -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string Database                                                   -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Database & connections                                     -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Failed                                                     -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Failures (recent)                                          -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Health                                                     -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Last backup is {{days}} days old                           -> SystemStatusPage.kt:BackupRecencyLine()
+[COVERED] string Last backup: today                                         -> SystemStatusPage.kt:BackupRecencyLine()
+[COVERED] string Last backup: {{days}}d ago                                 -> SystemStatusPage.kt:BackupRecencyLine()
+[COVERED] string Last successful                                            -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Last successful size                                       -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Latency                                                    -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Maintenance mode is active                                 -> SystemStatusPage.kt:MaintenanceBanner()
+[COVERED] string Manage                                                     -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Manage backups                                             -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Needs your attention                                       -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string No backups recorded                                        -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string No data                                                    -> SystemStatusPage.kt:SystemStatusEmptyState()
+[COVERED] string No errors recorded recently.                               -> SystemStatusPage.kt:RecentErrorsPanel()
+[COVERED] string Not configured                                             -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Notifications                                              -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Notifications & audit                                      -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Open DB Health                                             -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Open Live Monitor                                          -> SystemStatusPage.kt:ServicesPanel()
+[COVERED] string Open Notifications                                         -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Open Tesla API logs                                        -> SystemStatusPage.kt:TeslaApiUsagePanel()
+[COVERED] string Open error logs                                            -> SystemStatusPage.kt:RecentErrorsPanel()
+[COVERED] string Pending                                                    -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Pool acquired                                              -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Pool idle                                                  -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Re-authenticate                                            -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Recent errors                                              -> SystemStatusPage.kt:RecentErrorsPanel()
+[COVERED] string Refresh                                                    -> SystemStatusPage.kt:SystemStatusHeader()
+[COVERED] string Refresh (R)                                                -> SystemStatusPage.kt:SystemStatusHeader()
+[COVERED] string Refresh to avoid disruption                                -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Release notes                                              -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string Review polling cadence or vehicle subscriptions            -> SystemStatusPage.kt:TelemetryPanel()
+[COVERED] string Run a backup or check the schedule                         -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Run health check                                           -> SystemStatusPage.kt:SystemStatusErrorState()
+[COVERED] string Sent (lifetime)                                            -> SystemStatusPage.kt:NotificationsPanel()
+[COVERED] string Services                                                   -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Services & components                                      -> SystemStatusPage.kt:ServicesPanel()
+[COVERED] string Set up backups                                             -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Sign in again to resume Tesla-backed features              -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Stable Status API for your own dashboards                  -> SystemStatusPage.kt:StatusApiPanel()
+[COVERED] string Storage used                                               -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string System Status                                              -> SystemStatusPage.kt:SystemStatusHeader()
+[COVERED] string System info                                                -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string System is in operator-set maintenance mode                 -> SystemStatusPage.kt:MaintenanceBanner()
+[COVERED] string Tables                                                     -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Telemetry                                                  -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Telemetry pipeline                                         -> SystemStatusPage.kt:TelemetryPanel()
+[COVERED] string Tesla API estimated cost {{cost}} exceeds {{credit}} month -> SystemStatusPage.kt:TeslaApiUsagePanel()
+[COVERED] string Tesla API usage                                            -> SystemStatusPage.kt:TeslaApiUsagePanel()
+[COVERED] string Tesla account not connected                                -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Tesla auth                                                 -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string Tesla token expired                                        -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Tesla token expires in {{days}} day(s)                     -> SystemStatusPage.kt:TeslaAuthPanel()
+[COVERED] string Today reflects the current status. Day-level historical da -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string Total rows                                                 -> SystemStatusPage.kt:DatabasePanel()
+[COVERED] string Total runs                                                 -> SystemStatusPage.kt:BackupsPanel()
+[COVERED] string Update available - v{{version}}                            -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string Version, build, runtime                                    -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string Workers                                                    -> SystemStatusPage.kt:HealthSummaryPanel()
+[COVERED] string {{cost}} of {{credit}} estimated this period               -> SystemStatusPage.kt:TeslaApiUsagePanel()
+[COVERED] string {{count}} since {{uptime}} ago                             -> SystemStatusPage.kt:SystemInfoPanel()
+[COVERED] string {{down}} of {{total}} workers unhealthy                    -> SystemStatusPage.kt:WorkersPanel()
+
+PARITY_COVERED=82
+
+=== SUMMARY ===
+data sources : SystemStatusPageViewModel combines 7 shared S8 cache-then-network feeds
+               (AdminStore.systemHealth/maintenanceState/backupRuns/backupConfigs + SettingsStore.authStatus
+               + NotificationsStore.notificationStats + VehiclesStore.vehicles) into StateFlow<UiState<SystemStatusData>>;
+               /system/health is the phase spine, the other six fold in best-effort; no HTTP in the view.
+nav          : Destinations 'systemStatus' -> /system-status (pre-existing row) wired to SystemStatusRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost. TeslaSyncApplication.onCreate ->
+               SystemStatusPageHost.register().
+states       : loading / empty / error / success all rendered via UiPhase dispatch in SystemStatusPageContent.
+i18n         : all 77 visible strings resolve from res/values/strings.xml translation_* keys (69 added, 8 reused);
+               key names mirror the web translation namespace; zero hardcoded literals.
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=1 is the pre-existing SearchPage parity:allow marker).
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(82) == PARITY_REQUIRED(82)
+[PASS] all android triad gates green; parity 82/82; android ledger row page:system/SystemStatus status=done.
+
+EXIT=0
+STATUS=DONE
