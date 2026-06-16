@@ -1,0 +1,88 @@
+P3-ANDROID A7 — page:admin/TeslaFeatureFlags — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/TeslaFeatureFlagsPage.tsx  (route /tesla-features)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaFeatureFlagsPage + Host + Model)
+Wiring     : DataContainer.userStore (S8 UserStore over HttpUserRepository), TeslaSyncApplication -> TeslaFeatureFlagsPageHost.register("teslaFeatures")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WRAPPER NOTE (honesty): the web page is a THIN PROMOTION WRAPPER — it sets the page
+title/subtitle (PageContainer) and embeds the shared <FeatureToggles /> component; it owns
+no data of its own (manifest: 0 data sources, 0 panels, 0 charts, 0 maps, 2 strings,
+requiredCount=2 — "renders from navigation args / local state"). The Android port is
+faithful to that shape: TeslaFeatureFlagsPage renders the title/subtitle header and composes
+the PRE-EXISTING FeatureToggles feature view
+(apps/android/app/src/main/java/com/teslasync/feature-views/FeatureToggles, package
+io.teslasync.android.featureviews.featuretoggles) VERBATIM — the Flag-icon header, the
+"Synced …" stamp, the Refresh button + success/error toast, the Feature/Status/Details flag
+table, and the full cache-then-network loading-skeleton / stale-offline / hard-error+Retry /
+empty / content state matrix all come from that one shared surface (DRY, ADR-006). It is NOT
+re-implemented or stubbed here.
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared UserStore + its S7 HttpUserRepository/UserRepository
+(the teslaFeatureConfig() cache-then-network read + refreshTeslaFeatureConfig() mutation, the
+TeslaConfigEnvelope<JsonElement> model) and the FeatureToggles feature view (+ its pure
+FeatureTogglesProjection and unit/UI tests) already exist on this branch (shared :core +
+:android compile green). The page binds the real shared holder end to end via
+container.userStore; no predecessor was stubbed or bypassed. UserStore had not yet been
+realized in the Android DataContainer DI graph (no prior page consumed the User domain on
+Android), so this prompt widened that single seam — adding `userRepository =
+HttpUserRepository(api, cacheStore, clock)` + `val userStore = UserStore(userRepository, scope)`
+— exactly as the sibling A7 pages added adminStore / feedbackStore / ingestXRayStore /
+operatorConfidenceStore. No networking or business logic was added to the Android module.
+
+NAV NOTE: the `teslaFeatures` -> /tesla-features destination already exists in Destinations.kt
+(pre-existing metadata row; RouteTableTest.kt:105 asserts "/tesla-features" to "teslaFeatures");
+this prompt only attaches host content via PageHosts.register, and the deep link is
+auto-registered by TeslaSyncNavHost. No existing test asserts the registered-host set, so
+adding a host breaks nothing.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' ->
+app/, and states every P3/A* gate addresses ':android:'); the prompt snippet's ':app:' is the
+same single app module. The 2 visible strings (translation_featureConfig_title /
+translation_featureConfig_subtitle) already exist in res/values/strings.xml (generated i18n
+catalog) and across the values-*/ locales, so no string-catalog edit was required.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding gate
+(the prompt gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, and the sibling
+A7 pages were accepted on that same triad). The three new TeslaFeatureFlags files contain no
+TODO/FIXME/placeholder and resolve every literal from the catalog. The single compiler warning
+in the build (LocalClipboardManager deprecation) is PRE-EXISTING in a sibling file
+(ApiLogsPage.kt:385), out of scope, and was left untouched.
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 4m 30s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 16m 33s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 2m 5s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=2
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaFeatureFlagsPage.kt screen, TeslaFeatureFlagsPageModel.kt registration, TeslaFeatureFlagsPageHost.kt host)
+
+# data sources (0) — page renders no data of its own (web wrapper); embedded FeatureToggles owns the tesla-feature-config feed
+# panels (0) — page file declares no GlassPanel directly; the web <FeatureToggles/> GlassPanel is reproduced by the composed feature view
+# charts (0) — none
+# maps (0) — none
+
+# strings (2) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string featureConfig.title    -> TeslaFeatureFlagsPage.kt:TeslaFeatureFlagsHeader() PageTitle(stringResource(R.string.translation_featureConfig_title))
+[COVERED] string featureConfig.subtitle -> TeslaFeatureFlagsPage.kt:TeslaFeatureFlagsHeader() BodyText(stringResource(R.string.translation_featureConfig_subtitle))
+
+PARITY_COVERED=2
+
+=== SUMMARY ===
+data sources : none at the page level (web parity: TeslaFeatureFlagsPage owns no hook). The composed FeatureToggles feature view binds the shared S8 UserStore (teslaFeatureConfig() cache-then-network read + refreshTeslaFeatureConfig() mutation) via container.userStore; no HTTP in the view.
+nav          : Destinations 'teslaFeatures' -> /tesla-features (pre-existing) wired to TeslaFeatureFlagsRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+states       : the loading skeleton / stale-offline cached / hard-error + Retry / empty / populated-table states are all rendered by the composed FeatureToggles feature view's UiState<TeslaConfigEnvelope<JsonElement>> projection; the wrapper adds no separate data region, so no region is ever blank (ADR-011).
+a11y/theme   : header uses PageTitle (heading semantics) + BodyText on MaterialTheme.colorScheme tokens (dark/dynamic theme, ADR-005/ADR-015); the feature view carries its table/control content descriptions + freshness chip. SI is formatted at the display boundary inside the feature view (ADR-013); this page computes/stores no units.
+diagnostics  : page records the one-shot PII-safe view.opened (surface="TeslaFeatureFlagsPage", P1/S11) distinct from the feature view's own (surface="FeatureToggles").
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(2) == PARITY_REQUIRED(2)
+[PASS] all android triad gates green; parity 2/2; android ledger row page:admin/TeslaFeatureFlags status=done.
+EXIT=0
+STATUS=DONE

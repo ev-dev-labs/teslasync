@@ -48,6 +48,7 @@ import io.teslasync.android.admin.rbac.RbacMatrixPageHost
 import io.teslasync.android.admin.redissignals.RedisSignalViewerPageHost
 import io.teslasync.android.admin.secretrotation.SecretRotationPageHost
 import io.teslasync.android.admin.securityaccess.SecurityAccessPageHost
+import io.teslasync.android.admin.teslafeatures.TeslaFeatureFlagsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -159,6 +160,7 @@ class TeslaSyncApplication : Application() {
         RedisSignalViewerPageHost.register()
         SecretRotationPageHost.register()
         SecurityAccessPageHost.register()
+        TeslaFeatureFlagsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
