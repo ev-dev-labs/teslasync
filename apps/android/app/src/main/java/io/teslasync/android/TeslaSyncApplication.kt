@@ -103,6 +103,7 @@ import io.teslasync.android.notifications.quiethours.QuietHoursPageHost
 import io.teslasync.android.onboarding.OnboardingPageHost
 import io.teslasync.android.poweruser.dashboards.DashboardsPageHost
 import io.teslasync.android.poweruser.grafanapanel.GrafanaPanelPageHost
+import io.teslasync.android.settings.sessions.ActiveSessionsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -267,6 +268,7 @@ class TeslaSyncApplication : Application() {
         OnboardingPageHost.register()
         DashboardsPageHost.register()
         GrafanaPanelPageHost.register()
+        ActiveSessionsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

@@ -1,0 +1,192 @@
+================================================================================
+P3-ANDROID A7 — page:settings/ActiveSessions
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/settings/pages/ActiveSessionsPage.tsx
+================================================================================
+
+Artifact     : page:settings/ActiveSessions
+Web route    : /account/sessions
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/settings/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; the prompt's
+               literal `:app:` is a placeholder — settings.gradle.kts states the
+               module path is `:android` and "every P3/A* prompt gate addresses
+               `:android:`"; gate run with :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+ActiveSessionsPage.tsx is a thin promotion wrapper: it sets a PageContainer
+(title, subtitle, copyLink) and embeds <ActiveSessionsSection /> verbatim, so the
+active browser/device-session list (per-row "Sign out" + a footer "Sign out all
+other devices", both step-up-gated upstream by RequireSudo) lives at
+/account/sessions with a real page title instead of being a <section id="security">
+block inside the Settings page. The page itself declares no data of its own (the
+parity manifest records zero dataSources, zero panels, and exactly two strings —
+requiredCount=2: account.sessions.title + account.sessions.subtitle); the embedded
+ActiveSessionsSection owns the list query (useSessions — the open-mode vs
+forward-auth union), the two revoke mutations (useRevokeSession /
+useRevokeAllOtherSessions), the per-row user-agent->device heuristic, both confirm
+dialogs, and the empty / loading / error branches.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 ActiveSessionsSection feature-view already exists
+(io.teslasync.android.featureviews.activesessionssection.ActiveSessionsSection)
+and owns every session data state for its cache-then-network feed: the loading
+spinner inside the panel chrome, the AUTH_MODE_OPEN amber advisory, the
+forward-auth DataTable (device / IP / signed-in / last-seen) with the "This device"
+badge, the per-row "Sign out" ghost button + the footer "Sign out all other
+devices" button, both no-silence ConfirmDialogs, the DataTable empty branch, the
+hard-error + retry surface, and the freshness/stale-offline auto-refresh. This page
+is its host: it sets the PageContainer-equivalent header and embeds the feature
+view — never re-implementing it (DRY, ADR-006). This mirrors the sibling
+notifications/ChannelsPage (a 2-string wrapper that embeds NotificationChannelsView)
+and notifications/ArchivedPage (embeds InboxBody).
+
+The page binds the feed to the cross-platform P1/S8 shared state holder
+io.teslasync.shared.core.presentation.sessions.SessionsStore (the KMP port of the
+web useSessions domain) over the shared S7 HttpSessionRepository, so the 30s
+staleTime, the 501 AUTH_MODE_OPEN open-mode normalisation, and the
+invalidate-on-revoke rule come from the shared layer unchanged (ADR-004) — no HTTP
+is re-implemented in the Android module.
+
+New files (package io.teslasync.android.settings.sessions):
+  - ActiveSessionsPageModel.kt   Registration(ROUTE_ID accountSessions, WEB_PATH
+                                 /account/sessions, SLUG ActiveSessionsPage) +
+                                 recordActiveSessionsPageOpened (the one PII-safe
+                                 view.opened diagnostic, P1/S11) + the pure adapter
+                                 from the shared-core ActiveSessionsResponse
+                                 (Open | Session) to the feature view's
+                                 ActiveSessionsData, the freshness-preserving
+                                 Resource.mapData, and the forward-auth empty guard.
+                                 No Compose / no HTTP — off-device testable.
+  - ActiveSessionsPageSource.kt  The narrow data seam: sessionsStore(scope) builds
+                                 the shared SessionsStore over the supplied scope;
+                                 activeSessionsPageSourceOf(repository) is the
+                                 production binding over HttpSessionRepository
+                                 (real adapter <-> test fake over a fake
+                                 SessionRepository).
+  - ActiveSessionsPageViewModel.kt  BaseFeedViewModel (P1/S8 consumer): projects
+                                 store.sessions -> UiState<ActiveSessionsData> via
+                                 asUiState(isEmpty = session-with-no-rows); exposes
+                                 revokingId / revokingAll StateFlows and the
+                                 revoke(id) / revokeAllOthers() / refresh()
+                                 orchestration (each mutation tracks its in-flight
+                                 id, logs failures without leaking device content,
+                                 and lets the store refresh the feed on success).
+  - ActiveSessionsPage.kt        Stateful entry ActiveSessionsPage(source, logger):
+                                 records view.opened, builds the view-model via
+                                 viewModel(key=SLUG, factory=...), collects the feed
+                                 + the two in-flight flags; stateless
+                                 ActiveSessionsPageContent (verticalScroll Column:
+                                 header + ActiveSessionsSection) + the header
+                                 (PageTitle + subtitle BodyText + copy-link
+                                 IconButton writing WEB_PATH to the clipboard).
+  - ActiveSessionsPageHost.kt    ActiveSessionsRoute() resolves LocalDataContainer,
+                                 builds the source over HttpSessionRepository(api,
+                                 cacheStore); ActiveSessionsPageHost.register() ->
+                                 PageHosts.register("accountSessions"). Idempotent.
+
+Edits (registration + string catalog + ledger only — within allowed files):
+  - TeslaSyncApplication.kt  import + ActiveSessionsPageHost.register() at process
+                             start (after WebhooksPageHost.register()). The
+                             `accountSessions` -> `/account/sessions` destination
+                             already exists in Destinations.kt (metadata-only); this
+                             attaches real content to it.
+  - res/values/strings.xml (+ values-ar, values-he)  2 keys
+                             translation_settings_account_sessions_{title,subtitle}
+                             inserted in generator sort position (the dot-path
+                             `settings.account.sessions.*` sorts before
+                             `settings.advanced.*`, so the pair lands immediately
+                             before translation_settings_advanced_restoreConfirms_
+                             description). No tokens / no chars needing escaping;
+                             ar/he carry the English fallback (the catalog ships
+                             every locale as English fallback, build.gradle.kts lint
+                             disables MissingTranslation/ExtraTranslation). copy-link
+                             reuses the existing translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:settings/ActiveSessions row (done, 2/2).
+
+Notes (honest disclosure — no silent drift):
+  - i18n catalog generator: res/values*/strings.xml is AUTO-GENERATED by
+    apps/shared/i18n/generators/gen-i18n.ts. The COMMITTED catalog is ALREADY
+    DRIFTED from the current web/src/i18n/en.json before this change: every
+    committed key carries a `translation_` prefix (e.g.
+    translation_settingsSessions_title), but the current en.json has NO top-level
+    `translation` wrapper, so a fresh gen run would emit un-prefixed names — i.e.
+    the committed catalog was generated from an older wrapped en.json and is stale
+    (none of the existing keys round-trip to the current en.json; verified
+    programmatically). The web ActiveSessionsPage carries account.sessions.title /
+    .subtitle only as inline t(key, default) FALLBACKS (no en.json key today), so
+    there is no en.json source row to mirror. Editing en.json is also outside this
+    artifact's allowed files. The two Android keys were therefore named + placed to
+    match the committed catalog's own convention exactly: prefix `translation_` +
+    the dot-path `settings.account.sessions.{title,subtitle}` underscored
+    (androidName transform), inserted in the generator's sorted position. A future
+    full gen-i18n run that re-introduces these keys at the en.json source re-emits
+    the same names (no conflict). The section's own keys
+    (translation_settingsSessions_*) already exist and were not touched.
+  - SI: no session field is unit-bearing (id, user-agent, IP, ISO stamps, current
+    flag) — no SI conversion; timestamp localization is the feature view's render
+    boundary (S5).
+  - States: ActiveSessionsSection renders loading / open-mode advisory / content /
+    empty(no rows) / hard-error+retry / stale-offline for its bound feed (the page
+    drives the feed through the shared SessionsStore + asUiState projection).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept
+    (account.sessions.title/subtitle -> translation_settings_account_sessions_*).
+  - a11y: PageTitle heading + copy-link IconButton contentDescription; the feature
+    view supplies the row revoke aria-label, the device badge, the confirm dialogs,
+    and dynamic/dark theme (ADR-015).
+  - Layout: the feature view composes as a non-lazy Column, so it nests safely
+    inside the page's outer verticalScroll container.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/settings -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 5m 15s   (initial)
+BUILD SUCCESSFUL in 39s      (re-run after the string sort-position fix)
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 10m 39s  (initial)
+BUILD SUCCESSFUL in 11m 19s  (re-run after the string sort-position fix)
+LINT_EXIT=0  (abortOnError=true -> zero lint errors)
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 09s   (initial)
+BUILD SUCCESSFUL in 57s      (re-run after the string sort-position fix)
+TEST_EXIT=0
+
+(The only compile warning on the new files is the LocalClipboardManager
+ deprecation, identical to the shipped sibling notifications/WebhooksPage.kt /
+ ChannelsPage.kt / ArchivedPage.kt copy-link affordance — accepted precedent, not
+ an error; lintDebug is green with warningsAsErrors=false.)
+
+=== PARITY ===
+PARITY_REQUIRED=2
+
+[1] string : account.sessions.title
+    EVIDENCE: R.string.translation_settings_account_sessions_title rendered by
+              PageTitle(...) in ActiveSessionsPageHeader
+              (ActiveSessionsPage.kt, fun ActiveSessionsPageHeader); value
+              "Active sessions" in res/values/strings.xml. COVERED.
+
+[2] string : account.sessions.subtitle
+    EVIDENCE: R.string.translation_settings_account_sessions_subtitle rendered by
+              BodyText(...) in ActiveSessionsPageHeader
+              (ActiveSessionsPage.kt, fun ActiveSessionsPageHeader); value
+              "Devices currently signed in to TeslaSync. Revoke individual sessions
+              or sign out everywhere else." in res/values/strings.xml. COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
