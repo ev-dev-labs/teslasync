@@ -1,0 +1,125 @@
+================================================================================
+P3-ANDROID · A7 · page:diagnostics/AnomalyDashboard — evidence log
+Native Jetpack Compose / Material 3 port of web AnomalyDashboardPage
+Source: web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/diagnostics/**
+Package: io.teslasync.android.diagnostics.anomalydashboard
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 Statistics / LifetimeStats analytics precedents)
+  AnomalyDashboardPageModel.kt      framework-free: registration ids, AnomalyEntry/
+                                    AnomalyHealthCategory/AnomalySignalFrequency/AnomalyReport,
+                                    parseAnomalyReport + parseAnomalies + parseHealthCategories
+                                    (web optional reads), computeSignalFrequency (web
+                                    `signalFrequency` useMemo, top-10 desc), typeLabel,
+                                    parseDetectedAtMillis, view.opened diagnostic, mapData.
+  AnomalyDashboardPageSource.kt     seam over AnomaliesRepository.anomalies (web useAnomalies,
+                                    days=7) + SelectedVehicleStore; anomalyDashboardPageSourceOf.
+  AnomalyDashboardPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<AnomalyReport>>
+                                    gated on the active vehicle (web `enabled: vehicleId !== null`);
+                                    refresh/retry/recordViewOpened.
+  AnomalyDashboardPageIcons.kt      re-exports Shield/AlertTriangle/Battery/Bolt(=Zap)/Car/
+                                    ChevronRight from the shared catalogs; authors Activity/
+                                    Thermometer/Wind as 24x24 stroked vectors.
+  AnomalyDashboardPage.kt           stateful entry + stateless content; chrome (title/subtitle/
+                                    freshness/VehicleSelect); loading/error/empty/success; the
+                                    7 panels + the frequency bar chart.
+  AnomalyDashboardPageHost.kt       AnomalyDashboardRoute + AnomalyDashboardPageHost.register()
+                                    for the `anomalyDetection` /anomaly-detection destination
+                                    (Destinations.kt L130).
+  TeslaSyncApplication.kt           register() wired into onCreate (NavHost registration).
+  res/values{,-ar,-he}/strings.xml  ALL 15 `translation_anomaly_*` keys already present in the
+                                    generated catalog → no string edits required.
+
+DATA SOURCE (bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useAnomalies → AnomalyDashboardPageViewModel.state (StateFlow<UiState<AnomalyReport>>)
+      ← AnomalyDashboardPageSource.anomalies
+      ← io.teslasync.shared.core.data.repo.AnomaliesRepository.anomalies
+        (HttpAnomaliesRepository over the shared resilient client + offline cache; SI verbatim,
+         cache-then-network, ADR-013 — the same domain the shared-core AnomaliesStore wraps).
+  Scope: io.teslasync.android.data.SelectedVehicleStore (web useSelectedVehicle).
+  Anomaly value / baseline / z_score are raw dimensionless signal readings rendered verbatim
+  (web fmtNumber); there is no SI→display unit conversion on this surface.
+
+=== PARITY ===
+PARITY_REQUIRED=27
+  [1]  panel  Signals-Monitored      AnomalyDashboardPage.kt:270 SummaryStatsGrid StatCard(monitored) label L272
+  [2]  panel  Anomalies-7d           AnomalyDashboardPage.kt:276 SummaryStatsGrid StatCard(last7d) label L278
+  [3]  panel  Anomalies-24h          AnomalyDashboardPage.kt:284 SummaryStatsGrid StatCard(last24h) label L286
+  [4]  panel  Health-Categories      AnomalyDashboardPage.kt:290 SummaryStatsGrid StatCard(categories) label L292
+  [5]  panel  GlassPanel5            AnomalyDashboardPage.kt:304 HealthSummaryPanel GlassPanel + HealthCategoryTile / noHealth
+  [6]  panel  GlassPanel6            AnomalyDashboardPage.kt:360 TimelinePanel GlassPanel + TimelineRow / noAnomalies
+  [7]  panel  GlassPanel7            AnomalyDashboardPage.kt:453 FrequencyPanel ChartContainer / noFrequency
+  [8]  chart  BarChart               AnomalyDashboardPage.kt:476 BarChartWrapper (series count, xLabels signals) in FrequencyPanel
+  [9]  state  loading                AnomalyDashboardPage.kt:184 state.isLoading -> AnomalyLoading() (PageLoader L225)
+  [10] state  empty                  AnomalyDashboardPage.kt:186 state.isEmpty -> AnomalyEmpty() (EmptyState L245) + per-panel empties L321/L382/L462
+  [11] state  error                  AnomalyDashboardPage.kt:185 state.isError -> AnomalyError() (ErrorDisplay + retry L234)
+  [12] state  success                AnomalyDashboardPage.kt:187 else -> AnomalyBody(report) (the 7 panels)
+  [13] string anomaly.baseline       AnomalyDashboardPage.kt:433 R.string.translation_anomaly_baseline
+  [14] string anomaly.categories     AnomalyDashboardPage.kt:292 R.string.translation_anomaly_categories
+  [15] string anomaly.count          AnomalyDashboardPage.kt:455 R.string.translation_anomaly_count
+  [16] string anomaly.frequency      AnomalyDashboardPage.kt:456 R.string.translation_anomaly_frequency
+  [17] string anomaly.healthSummary  AnomalyDashboardPage.kt:306 R.string.translation_anomaly_healthSummary
+  [18] string anomaly.last24h        AnomalyDashboardPage.kt:286 R.string.translation_anomaly_last24h
+  [19] string anomaly.last7d         AnomalyDashboardPage.kt:278 R.string.translation_anomaly_last7d
+  [20] string anomaly.monitored      AnomalyDashboardPage.kt:272 R.string.translation_anomaly_monitored
+  [21] string anomaly.noAnomalies    AnomalyDashboardPage.kt:382 R.string.translation_anomaly_noAnomalies
+  [22] string anomaly.noFrequency    AnomalyDashboardPage.kt:462 R.string.translation_anomaly_noFrequency
+  [23] string anomaly.noHealth       AnomalyDashboardPage.kt:321 R.string.translation_anomaly_noHealth
+  [24] string anomaly.subtitle       AnomalyDashboardPage.kt:204 R.string.translation_anomaly_subtitle
+  [25] string anomaly.timeline       AnomalyDashboardPage.kt:372 R.string.translation_anomaly_timeline
+  [26] string anomaly.title          AnomalyDashboardPage.kt:202 R.string.translation_anomaly_title
+  [27] string anomaly.value          AnomalyDashboardPage.kt:429 R.string.translation_anomaly_value
+PARITY_COVERED=27
+
+EXTRA WEB-PARITY (beyond the manifest's 27-item contract; no scope narrowing)
+  HealthCategoryTile (AnomalyDashboardPage.kt:328) reproduces the web health-summary grid:
+    the per-category glyph (web HEALTH_ICONS — battery→Battery, tires→Car, motors→Zap=Bolt,
+    hvac→Wind, charging→Activity, default→Shield), the capitalized category name, the raw status
+    SeverityBadge, and the status-toned panel accent (web severityVariant/statusBg).
+  TimelineRow (AnomalyDashboardPage.kt:391) reproduces each web timeline row: the severity badge,
+    the signal name, the detector-type chip (web typeLabel — z_score→Statistical/range→Range/
+    trend→Trend), the `Nσ` z-score chip (web `z_score > 0`), the message, the value/baseline meta,
+    the relative detected-at time, and the trailing ChevronRight.
+  The summary stat cards use the shared data-display StatCard with the web lucide icons (Activity/
+    AlertTriangle/Shield/Thermometer). SI stays SI; the dimensionless readings render verbatim.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/diagnostics -Language kotlin
+    PLACEHOLDER_ALLOWED=2  (Int.toDouble "toDo" substring false positives, marked // parity:allow)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 3m 13s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (lint-results-debug.html written, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL
+  TEST_EXIT=0
+
+  Note on :android:detekt — the module-wide detekt task reports 25 PRE-EXISTING weighted issues
+  across already-merged A7 surfaces (admin/analytics/automations/battery/charging:
+  ReturnCount/UnusedPrivateProperty/UnusedParameter/MaxLineLength). This AnomalyDashboard surface
+  contributes ZERO detekt issues (verified: no com/teslasync/diagnostics/** entries in the detekt
+  output). detekt is not part of the per-page A7 gate (the sibling ChargingCurve A7 log runs
+  placeholder + assembleDebug + lintDebug + testDebugUnitTest), and the pre-existing failures are
+  out of this artifact's allowed-files scope.
+
+ACCEPTANCE
+  [x] Every named panel implemented (4 summary stat cards + System-Health grid + Timeline + Frequency chart).
+  [x] All 27 parity items render from the bound StateFlow state holder.
+  [x] loading / empty / error / success implemented for the data source; per-panel empties never hide a section.
+  [x] All visible strings sourced from strings.xml; zero hardcoded label literals; key names match web.
+  [x] Compose-native only (no webview); raw signal readings rendered verbatim; dark/dynamic theme via MaterialTheme.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (27).
+  [x] android ledger row for page:diagnostics/AnomalyDashboard set covered (27/27, done).
+
+EXIT=0
+STATUS=DONE
