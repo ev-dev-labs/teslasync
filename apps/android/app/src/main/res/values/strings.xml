@@ -6693,8 +6693,10 @@
   <string name="translation_tesla_charging_subtitle">Supercharger &amp; DC fast charging billing records from Tesla</string>
   <string name="translation_tesla_charging_title">Tesla Charging History</string>
   <string name="translation_tesla_sessions_allVehicles">All Vehicles</string>
+  <string name="translation_tesla_sessions_businessNote">Fleet charging session data is only available for Tesla business accounts. Personal accounts will receive a 403 error when syncing.</string>
   <string name="translation_tesla_sessions_businessOnly">Business account required</string>
   <string name="translation_tesla_sessions_col_cost">Cost</string>
+  <string name="translation_tesla_sessions_col_cost_decimal">Cost</string>
   <string name="translation_tesla_sessions_col_date">Date</string>
   <string name="translation_tesla_sessions_col_duration">Duration</string>
   <string name="translation_tesla_sessions_col_energy">Energy (kWh)</string>
@@ -6710,6 +6712,7 @@
   <string name="translation_tesla_sessions_mapLabel">Charging sessions map</string>
   <string name="translation_tesla_sessions_markerLabel">%1$s charging session</string>
   <string name="translation_tesla_sessions_monthlyCost">Monthly Charging Cost</string>
+  <string name="translation_tesla_sessions_monthlyCost_aria">Monthly Tesla charging cost bar chart</string>
   <string name="translation_tesla_sessions_noChartData">No cost data yet. Click \"Refresh from Tesla\" to sync.</string>
   <string name="translation_tesla_sessions_noData">No fleet charging sessions yet. Click \"Refresh from Tesla\" to import data.</string>
   <string name="translation_tesla_sessions_noMapData">No location data available yet.</string>
@@ -6717,6 +6720,7 @@
   <string name="translation_tesla_sessions_refreshing">Syncing...</string>
   <string name="translation_tesla_sessions_stats_avgCost">Avg Cost/kWh</string>
   <string name="translation_tesla_sessions_stats_cost">Total Cost</string>
+  <string name="translation_tesla_sessions_stats_cost_decimal">Total Cost</string>
   <string name="translation_tesla_sessions_stats_energy">Total Energy</string>
   <string name="translation_tesla_sessions_stats_peakPower">Peak Power</string>
   <string name="translation_tesla_sessions_stats_sessions">Total Sessions</string>

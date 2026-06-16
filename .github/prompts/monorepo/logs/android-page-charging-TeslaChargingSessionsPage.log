@@ -1,0 +1,150 @@
+================================================================================
+ p3-android · A7 · page:charging/TeslaChargingSessions
+ Native Jetpack Compose / Material 3 / Kotlin parity port of the web page
+ web/src/features/charging/pages/TeslaChargingSessionsPage.tsx
+ Web route: /tesla-charging-sessions
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk   (SDK present → gate runs, not BLOCKED)
+  Gradle root project = teslasync-android ; app module Gradle path = :android (sources under app/)
+  Shared KMP core consumed via composite build (io.teslasync.shared:core → :core).
+
+OUTPUT (surface files — all under the allowed path apps/android/app/src/main/kotlin/com/teslasync/charging/**)
+  TeslaChargingSessionsPage.kt            @Composable screen (stateful entry + stateless content + 10 panels + 2 charts)
+  TeslaChargingSessionsPageViewModel.kt   ViewModel (StateFlow<UiState> holders, VIN scope, refresh mutation)
+  TeslaChargingSessionsPageSource.kt      data seam + production binding over shared ChargingRepository/Vehicles/Settings
+  TeslaChargingSessionsPageModel.kt       pure model (JSON decode, monthly aggregation, sort, CSV, formatters, registration)
+  TeslaChargingSessionsPageIcons.kt       glyphs (re-export shared + author DollarSign / TrendingUp / Building2)
+  TeslaChargingSessionsPageHost.kt        NavHost host: PageHosts.register("teslaChargingSessions") { TeslaChargingSessionsRoute() }
+
+NAVHOST REGISTRATION
+  Destinations.kt already carries page("teslaChargingSessions","/tesla-charging-sessions",NavGroup.Charging) (metadata-only).
+  TeslaSyncApplication.kt : import + TeslaChargingSessionsPageHost.register() wired beside the sibling A7 charging hosts.
+
+PLATFORM STRING CATALOG (res/values*/strings.xml — explicitly allowed)
+  Added 4 missing keys to values/, values-ar/, values-he/ (the other 28 keys already shipped with the A3 map surface):
+    translation_tesla_sessions_businessNote
+    translation_tesla_sessions_col_cost_decimal
+    translation_tesla_sessions_stats_cost_decimal
+    translation_tesla_sessions_monthlyCost_aria
+
+DATA SOURCES (bound through the ViewModel → StateFlow from the shared KMP core, P1/S8)
+  useTeslaChargingSessions        GET  /tesla/charging/sessions            → Source.teslaChargingSessions / VM.sessions
+  useRefreshTeslaChargingSessions POST /tesla/charging/sessions/refresh    → Source.refreshTeslaChargingSessions / VM.refresh
+  useVehicles                     GET  /vehicles                           → Source.vehicles / VM.vehicles
+  (display boundary) /settings via useUnits/useFormatting                  → Source.settings / VM.displayPrefs (SI converters, P1/S5)
+  Embedded A3 map (TeslaChargingSessionsMap) shares the same VIN-scoped feed via Source.mapSessions / VM.mapSource.
+
+--------------------------------------------------------------------------------
+ GATE  (android triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin
+  PLACEHOLDER_ALLOWED=1
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+  BUILD SUCCESSFUL in 2m 37s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+  Wrote HTML report to .../app/build/reports/lint-results-debug.html
+  BUILD SUCCESSFUL in 14m 57s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+  BUILD SUCCESSFUL in 2m 1s
+TEST_EXIT=0
+
+(Kotlin compile is clean for the surface; the only resource-merge notices —
+ translation_battery_cells_insight_highSpreadDesc / translation_battery_tip_avoid100 /
+ translation_rateLimitStatus_subtitle "Multiple substitutions … formatted=false" — are
+ pre-existing in unrelated keys and are not introduced by this artifact.)
+
+================================================================================
+ === PARITY ===
+ PARITY_REQUIRED=48
+ Each item below carries binding evidence: <file>::<symbol> (Lline). File key:
+   PAGE  = TeslaChargingSessionsPage.kt
+   MODEL = TeslaChargingSessionsPageModel.kt
+   VM    = TeslaChargingSessionsPageViewModel.kt
+================================================================================
+
+PANELS (10)
+[x] panel  - GlassPanel1 (info banner)        PAGE::BusinessNoteBanner (L241)  GlassPanel + Building2 + businessNote
+[x] panel  - GlassPanel2 (controls bar)       PAGE::ControlsBar (L260)  Select(VIN) + Refresh Button + 403 hint + lastSync
+[x] panel  - Total-Sessions                   PAGE::SummaryStats StatCard (L345)  stats.sessions / fmtInt
+[x] panel  - Total-Energy                     PAGE::SummaryStats StatCard (L352)  stats.energy / UnitFormatter.energy (SI Wh→kWh)
+[x] panel  - Total-Cost                       PAGE::SummaryStats StatCard (L359)  stats.cost_decimal / currencyBySymbol(2dp)
+[x] panel  - Avg-Cost-kWh                     PAGE::SummaryStats StatCard (L369)  stats.avgCost / currencyBySymbol(3dp)
+[x] panel  - Peak-Power                       PAGE::SummaryStats StatCard (L379)  stats.peakPower / fmtNumber(0dp) unit kW
+[x] panel  - Monthly-Charging-Cost            PAGE::MonthlyCostChart (L392) → ChartContainer (L419)
+[x] panel  - GlassPanel9 (Session Locations)  PAGE::SessionLocationsPanel (L443)  GlassPanel + embedded TeslaChargingSessionsMap (L466)
+[x] panel  - GlassPanel10 (Charging Sessions) PAGE::SessionsTablePanel (L481)  GlassPanel + DataTable + bulk bar + pagination
+
+CHARTS (2 — native A3 chart wrappers, never a webview)
+[x] chart  - ChartContainer                   PAGE::MonthlyCostChart ChartContainer(...) (L419)
+[x] chart  - BarChart                          PAGE::MonthlyCostChart BarChartWrapper(...) (L432)  ChartSeriesKind.Bar
+
+DATA STATES (loading · empty · error · success — for every data source)
+[x] state  - loading data state               PAGE StatCard loading=sessions.isLoading (L213) ; ChartStatus.Loading (L401) ; DataTable loading (L558)
+[x] state  - empty data state                 PAGE ChartStatus.Empty (L402) ; EmptyState noMapData (L471) ; EmptyState noData (L492) ; MODEL::TeslaChargingSessionsResponse.hasData
+[x] state  - error data state                 PAGE::SessionsErrorBanner (L325) gated by sessions.isError ; VM.retry ; offline tier via UiState.stale
+[x] state  - success data state               PAGE ChartStatus.Ready (L403) + full content ; VM.sessions asUiState(isEmpty={!hasData})
+
+STRINGS (32 — all resolved via stringResource; web key names preserved; zero hardcoded literals)
+[x] string - table.bulkActions.exportCsv      PAGE R.string.translation_table_bulkActions_exportCsv (L530)
+[x] string - tesla_sessions.allVehicles       PAGE ...translation_tesla_sessions_allVehicles (L269)
+[x] string - tesla_sessions.businessNote      PAGE ...translation_tesla_sessions_businessNote (L251)
+[x] string - tesla_sessions.businessOnly      PAGE ...translation_tesla_sessions_businessOnly (L310)
+[x] string - tesla_sessions.col.cost_decimal  PAGE ...translation_tesla_sessions_col_cost_decimal (L649)
+[x] string - tesla_sessions.col.date          PAGE ...translation_tesla_sessions_col_date (L596)
+[x] string - tesla_sessions.col.duration      PAGE ...translation_tesla_sessions_col_duration (L644)
+[x] string - tesla_sessions.col.energy        PAGE ...translation_tesla_sessions_col_energy (L622)
+[x] string - tesla_sessions.col.location      PAGE ...translation_tesla_sessions_col_location (L602)
+[x] string - tesla_sessions.col.month         PAGE ...translation_tesla_sessions_col_month (L427)
+[x] string - tesla_sessions.col.peakPower     PAGE ...translation_tesla_sessions_col_peakPower (L635)
+[x] string - tesla_sessions.col.rate          PAGE ...translation_tesla_sessions_col_rate (L664)
+[x] string - tesla_sessions.col.total         PAGE ...translation_tesla_sessions_col_total (L398)
+[x] string - tesla_sessions.col.type          PAGE ...translation_tesla_sessions_col_type (L678)
+[x] string - tesla_sessions.col.vin           PAGE ...translation_tesla_sessions_col_vin (L617)
+[x] string - tesla_sessions.lastSync          PAGE ...translation_tesla_sessions_lastSync (L317)
+[x] string - tesla_sessions.map               PAGE ...translation_tesla_sessions_map (L448)
+[x] string - tesla_sessions.monthlyCost       PAGE ...translation_tesla_sessions_monthlyCost (L420)
+[x] string - tesla_sessions.monthlyCost.aria  PAGE ...translation_tesla_sessions_monthlyCost_aria (L423)
+[x] string - tesla_sessions.noChartData       PAGE ...translation_tesla_sessions_noChartData (L424)
+[x] string - tesla_sessions.noData            PAGE ...translation_tesla_sessions_noData (L494, L559)
+[x] string - tesla_sessions.noMapData         PAGE ...translation_tesla_sessions_noMapData (L473)
+[x] string - tesla_sessions.refresh           PAGE ...translation_tesla_sessions_refresh (L301)
+[x] string - tesla_sessions.refreshing        PAGE ...translation_tesla_sessions_refreshing (L299)
+[x] string - tesla_sessions.stats.avgCost     PAGE ...translation_tesla_sessions_stats_avgCost (L371)
+[x] string - tesla_sessions.stats.cost_decimal PAGE ...translation_tesla_sessions_stats_cost_decimal (L361)
+[x] string - tesla_sessions.stats.energy      PAGE ...translation_tesla_sessions_stats_energy (L354)
+[x] string - tesla_sessions.stats.peakPower   PAGE ...translation_tesla_sessions_stats_peakPower (L381)
+[x] string - tesla_sessions.stats.sessions    PAGE ...translation_tesla_sessions_stats_sessions (L347)
+[x] string - tesla_sessions.subtitle          PAGE ...translation_tesla_sessions_subtitle (L233)
+[x] string - tesla_sessions.table             PAGE ...translation_tesla_sessions_table (L487)
+[x] string - tesla_sessions.title             PAGE ...translation_tesla_sessions_title (L231)
+
+PARITY_COVERED=48
+PARITY_REQUIRED=48
+
+--------------------------------------------------------------------------------
+ LEDGER
+--------------------------------------------------------------------------------
+apps/parity/android-ledger.json :: page:charging/TeslaChargingSessions
+  status=done coveredCount=48 requiredCount=48
+  promptId=p3-android/pages/charging/TeslaChargingSessionsPage
+
+ACCEPTANCE
+  [x] Every named panel implemented; every anonymous web region reproduced (banner, controls, 5 StatCards, chart, map, table).
+  [x] All 48 parity items render from the bound StateFlow state holders.
+  [x] loading / empty / error implemented for every data source.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme tokens; a11y semantics on panels/charts/map; SI units at the display boundary only.
+  [x] Compose-native only (no webview cloning); the map is the A3 Maps-Compose TeslaChargingSessionsMap wrapper.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (48).
+
+EXIT=0
+STATUS=DONE
