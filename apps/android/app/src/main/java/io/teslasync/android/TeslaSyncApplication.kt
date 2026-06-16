@@ -59,6 +59,7 @@ import io.teslasync.android.analytics.mileage.MileagePageHost
 import io.teslasync.android.analytics.timeline.TimelinePageHost
 import io.teslasync.android.analytics.weeklydigest.WeeklyDigestPageHost
 import io.teslasync.android.analytics.truecost.TrueCostPageHost
+import io.teslasync.android.automations.activityfeed.AutomationActivityFeedPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -181,6 +182,7 @@ class TeslaSyncApplication : Application() {
         TimelinePageHost.register()
         WeeklyDigestPageHost.register()
         TrueCostPageHost.register()
+        AutomationActivityFeedPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

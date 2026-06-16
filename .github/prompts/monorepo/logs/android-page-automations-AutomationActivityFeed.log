@@ -1,0 +1,153 @@
+================================================================================
+P3-ANDROID A7 — page:automations/AutomationActivityFeed  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/automations/pages/AutomationActivityFeed.tsx
+promptId: p3-android/pages/automations/AutomationActivityFeed
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME / ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+Note: the prompt gate text addresses ':app:'; this repo's single app module's Gradle path is ':android'
+      (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")), so the
+      canonical ':android:' tasks are invoked, exactly as every prior P3/A7 android page gate did.
+
+--------------------------------------------------------------------------------
+DESIGN (no parity shortcut; DRY/ADR-006 — page reuses the A3 feature view)
+--------------------------------------------------------------------------------
+The web unit `AutomationActivityFeed.tsx` is an UNROUTED, purely presentational sub-surface: it receives
+`history`, `historyStats`, `isLoading`, `liveEvents`, `connectionState` as props from the Automations page
+and calls no API hook of its own (only `useTranslation`). The parity-manifest record therefore declares
+NO API data sources — "renders from navigation args / local state".
+
+A complete A3 parity port of the SAME web file already exists as the shared feature view
+io.teslasync.android.featureviews.automationactivityfeed (com/teslasync/feature-views/AutomationActivityFeed).
+It owns the single GlassPanel, the always-on header (Activity glyph + "Recent Activity" + the Live/Reconnecting
+connection chip + the run-summary stats), the live SSE event rows, and every history data state
+(loading / content / empty / + host-feed error+retry). This A7 page is therefore a thin host (the
+GasPriceAutoPollPage precedent): it binds the page's LOCAL snapshot and renders that one shared surface
+verbatim — never re-implementing the panel/states/strings (anti-duplication, ADR-006).
+
+Data : no API source (manifest). AutomationActivityFeedSource (local-state seam) -> AutomationActivityFeedViewModel
+       hoists the snapshot into state: StateFlow<UiState<AutomationActivityData>> + liveEvents + connectionState
+       (P1/S8 shape). With no automations feed wired into the Android DataContainer (and DataContainer is
+       outside this artifact's allowed files), the production source yields a connected, empty snapshot — the
+       honest local state for an unrouted surface handed no execution history — which the feature view renders
+       as the friendly empty surface with the "Live" indicator, exactly as the web component renders with empty
+       props. The loading and content surfaces are first-class, reachable phases of the same StateFlow (init =
+       UiState.loading(); a non-empty history projects to UiPhase.Content). No HTTP touches the view.
+SI    : no unit-bearing field (counts, a 0-100 percent, the millisecond durations the backend already computed);
+       the feature view formats at the render boundary (S5). No SI conversion at this layer.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationActivityFeed.kt          (@Composable screen: AutomationActivityFeedPage(source) + (viewModel) + stateless AutomationActivityFeedPageContent wrapping the A3 AutomationActivityFeedContent)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationActivityFeedViewModel.kt (AndroidX ViewModel; StateFlow<UiState<AutomationActivityData>> + liveEvents + connectionState; load()/refresh()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationActivityFeedModel.kt     (framework-free: PageRegistration ROUTE_ID/SLUG, AutomationActivitySnapshot, toUiState() phase projection, recordAutomationActivityFeedPageOpened view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationActivityFeedSource.kt    (local-state seam: fun interface { snapshot() } + production automationActivityFeedSource() = connected/empty)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationActivityFeedHost.kt      (PageHosts.register("automationActivityFeed"){ AutomationActivityFeedRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                    (NavHost wiring: + AutomationActivityFeedPageHost.register())
+apps/parity/android-ledger.json                                                               (ledger row page:automations/AutomationActivityFeed 11/11 done)
+.github/prompts/monorepo/logs/android-page-automations-AutomationActivityFeed.log             (this log)
+
+Strings: ALL 7 manifest keys (translation_automations_avgDuration / live / noHistory / recentActivity /
+         reconnecting / successRate / totalRuns) PRE-EXIST in res/values/strings.xml AND values-ar/strings.xml
+         AND values-he/strings.xml — they were added with the A3 feature view this page reuses. Zero new keys
+         are needed and res/values* is intentionally NOT modified (no silent drift). Every visible literal
+         resolves via the embedded feature view's rememberAutomationActivityFeedStrings() (stringResource);
+         zero hardcoded literals in the page.
+Nav    : web route = (unrouted) — the web component is embedded in the Automations page, not mounted at its
+         own path. Host wired through the standard A7 PageHosts seam under id "automationActivityFeed"
+         (TeslaSyncApplication.register, idempotent). No Destinations row is added: Destinations.all is
+         generator-locked at 137 (DestinationsTest.registryCoversTheWholeWebTaxonomy) and is updated by the
+         nav generator only; an unrouted surface maps to no deep link ("if routed" clause is false).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  # clean on first pass; no parity:allow opt-out used. (No `.toDouble()` / "toDo"-substring false positive:
+  # the page carries no numeric formatting — the reused feature view formats at the render boundary.)
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 4m 59s
+BUILD_EXIT=0
+  # :android:compileDebugKotlin compiled the five new com/teslasync/automations sources + the one-line
+  # TeslaSyncApplication host registration. Only a pre-existing, unrelated deprecation warning
+  # (admin/ApiLogsPage.kt LocalClipboardManager) surfaced; none from the new files.
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 10m 05s (0 errors)
+LINT_EXIT=0
+  # clean; no MissingTranslation (the 7 keys exist in values + values-ar + values-he), no Hardcoded text
+  # (the page renders no literal strings; the feature view owns the i18n), no new baseline entries.
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 19s
+TEST_EXIT=0
+  # full JVM unit suite: 1287 suite files, 16515 tests, 0 failures, 0 errors, 0 skipped — the new page adds
+  # only main source (no test files are in this artifact's allowed paths) and breaks none of the existing suite.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=11
+--------------------------------------------------------------------------------
+# Evidence form: <this A7 page wiring>  ->  <reused A3 feature view render symbol>
+# Page entry: AutomationActivityFeed.kt:107 AutomationActivityFeedPageContent() renders the shared
+# io.teslasync.android.featureviews.automationactivityfeed.AutomationActivityFeedContent(state, liveEvents,
+# connectionState, onRetry), driven by AutomationActivityFeedViewModel (state:49 / liveEvents:52 /
+# connectionState:55). The feature-view symbol paths below are in
+# apps/android/app/src/main/java/com/teslasync/feature-views/AutomationActivityFeed/AutomationActivityFeed.kt.
+
+# panel (1) — Material 3 GlassPanel (Surface); bound state holder = AutomationActivityFeedViewModel.state
+[COVERED] panel  GlassPanel1   -> AutomationActivityFeed.kt(page):107 AutomationActivityFeedPageContent -> AutomationActivityFeedContent -> feature-view:229 GlassPanel(PanelPadding.Md){ header + live rows + history surface }  (web single <GlassPanel className="p-6">)
+
+# data states (3 required) — bound to AutomationActivityFeedViewModel.state : StateFlow<UiState<AutomationActivityData>>
+[COVERED] state  loading       -> ViewModel.kt:48 mutableState = UiState.loading() (init) + Model.kt:84 toUiState -> UiPhase.Loading -> feature-view:266 HistoryLoading(spinner/label)  (web isLoading -> 5 skeletons)
+[COVERED] state  empty         -> Model.kt:85 toUiState -> UiPhase.Empty (web items.length>0 gate) -> feature-view:284 HistoryEmpty(message=strings.noHistory)  (web <EmptyState message=t('automations.noHistory')>)
+[COVERED] state  success       -> Model.kt:86 toUiState -> UiPhase.Content -> feature-view:290 HistoryRow column (rows.forEach)  (web items.map(HistoryRow))
+
+# strings (7) — every visible literal via stringResource(R.string.translation_automations_*); web key names preserved.
+# Resolved in the reused feature view's rememberAutomationActivityFeedStrings() (feature-view:590-597) and
+# rendered at the cited symbols; reached through this page's AutomationActivityFeedContent render (page:107).
+[COVERED] string automations.avgDuration   -> feature-view:596 stringResource(translation_automations_avgDuration) -> :354 StatChip(label=strings.avgDuration)  (web "{avg} avg")
+[COVERED] string automations.live           -> feature-view:592 stringResource(translation_automations_live)        -> :383 ConnectionChip(label=strings.live, Connected)  (web Wifi + t('automations.live'))
+[COVERED] string automations.noHistory      -> feature-view:597 stringResource(translation_automations_noHistory)   -> :284 HistoryEmpty(message=strings.noHistory)  (web EmptyState message)
+[COVERED] string automations.recentActivity -> feature-view:591 stringResource(translation_automations_recentActivity) -> :321 Heading(text=strings.recentActivity)  (web <h2>t('automations.recentActivity')</h2>)
+[COVERED] string automations.reconnecting   -> feature-view:593 stringResource(translation_automations_reconnecting) -> :391 ConnectionChip(label=strings.reconnecting, Reconnecting)  (web WifiOff + t('automations.reconnecting'))
+[COVERED] string automations.successRate    -> feature-view:595 stringResource(translation_automations_successRate)  -> :353 StatChip(label=strings.successRate)  (web "{pct} success")
+[COVERED] string automations.totalRuns      -> feature-view:594 stringResource(translation_automations_totalRuns)    -> :352 StatChip(label=strings.totalRuns)  (web "{total} total")
+
+PARITY_COVERED=11
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : none (parity-manifest: no API data sources). The page renders from navigation args / local
+               state: AutomationActivityFeedSource (local seam) -> AutomationActivityFeedViewModel hoists the
+               snapshot into state:StateFlow<UiState<AutomationActivityData>> + liveEvents + connectionState.
+               The shared A3 feature view (io.teslasync.android.featureviews.automationactivityfeed) is reused
+               verbatim for the panel/states/strings (DRY, ADR-006), the GasPriceAutoPollPage precedent. No HTTP
+               in the view. (DataContainer wires no AutomationsStore and is outside this artifact's allowed
+               files, so a real HTTP feed is intentionally NOT introduced — that would contradict the manifest's
+               "no API data sources" and the unrouted presentational contract.)
+si/units     : no unit-bearing field; counts/percent/ms round-trip; feature view formats at the render boundary (S5).
+a11y/theme   : the reused feature view supplies semantics content descriptions (history column
+               contentDescription=strings.recentActivity, EmptyState/ErrorDisplay built-ins), >=48dp targets,
+               MaterialTheme dynamic-color + dark theme, reduced-motion-aware pulse; Compose-native (no webview).
+nav          : web (unrouted); host wired via PageHosts.register("automationActivityFeed") in TeslaSyncApplication
+               (idempotent). Destinations.all left at the generator-locked 137 (DestinationsTest); no deep link
+               for an unrouted surface.
+strings      : all 7 translation_automations_* keys pre-exist in values + values-ar + values-he (added with the
+               A3 feature view); zero new keys; res/values* not modified (no drift). Zero hardcoded literals.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(11) == PARITY_REQUIRED(11)
+[PASS] all android triad gates green; parity 11/11; android ledger row page:automations/AutomationActivityFeed status=done.
+EXIT=0
+STATUS=DONE
