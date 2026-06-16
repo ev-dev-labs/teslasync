@@ -1,0 +1,185 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicle-systems/GuardMode — evidence log
+Native Jetpack Compose / Material 3 port of web GuardModePage
+Source: web/src/features/vehicle-systems/pages/GuardModePage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/**
+Package: io.teslasync.android.vehiclesystems
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; platforms 34/35/36)
+  JDK          = OpenJDK 21.0.9 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+  First page in the vehicle-systems group (the dir/package did not exist before this artifact).
+
+ARCHITECTURE (mirrors the A7 LocationsPage / DrivesList precedents)
+  GuardModePageModel.kt      framework-free: registration ids (ROUTE_ID="guardMode" ≙ Destinations.kt
+                             L108 page("guardMode","/guard-mode",NavGroup.VehicleSystems)); GuardSensitivity
+                             values (web SENSITIVITY_OPTIONS); guardEventTone (web EVENT_BADGE_VARIANT,
+                             lookup-with-fallback→Info); guardEventIcon (web EventRow icon ladder); the verbatim
+                             ports of the web derived chain — guardArmed, unacknowledgedCount, latestGuardEvent,
+                             guardTriggered, effectiveSensitivity/HomeGeofenceId/AutoPanic (web `x || config || default`),
+                             homeGeofenceFor, guardHasLocation (web hasLocation), eventTrailPositions (web eventPositions);
+                             recordGuardModePageOpened (view.opened). No Compose / no Android / no HTTP.
+  GuardModePageIcons.kt      the lucide glyphs the web page uses (ShieldCheck/ShieldAlert/ShieldOff/Siren/MapPin/
+                             Clock/Lock/Unlock/Eye/AlertTriangle/CheckCircle/Car/Info), authored as 24×24 stroked
+                             ImageVectors — the MapOverviewPageIcons precedent (no material-icons-extended dep).
+  GuardModePageSource.kt     seam over the shared S7 GuardRepository (web useGuardConfig / useGuardEvents /
+                             useSetGuardConfig / useGuardPanic / useAcknowledgeGuardEvent), VehiclesRepository
+                             (web useVehicles / useVehicleState), LocationRepository.geofences (web useGeofences),
+                             + SelectedVehicleStore (web useSelectedVehicle). The events envelope is unwrapped to a
+                             plain list via the shared guardEventsOf (web safeArray(data?.events)).
+  GuardModePageViewModel.kt  BaseFeedViewModel; configState/eventsState/vehicleStateState/geofencesState/vehiclesState
+                             as StateFlow<UiState<…>>, each re-collected on vehicle/refresh and gated on the active
+                             vehicle (web enabled: vehicleId > 0 → terminal empty when none); vehicle-state polling on
+                             the web refetchInterval cadence (5 s armed / 30 s idle); GuardInteraction snapshot
+                             (settings overrides + panic dialog + mutation-pending flags); toggleGuard/saveSettings/
+                             panic/acknowledge with the web invalidation rules (set-config → config+events; panic/ack →
+                             events); refresh/retry/recordViewOpened. No HTTP in the view.
+  GuardModePage.kt           stateless GuardModePageContent + the six Material 3 GlassPanels + the live map (A3
+                             TeslaMap + VehicleMarker + Circle + Polyline + MapLayerSwitcher) + the panic ConfirmDialog
+                             + the triggered AlertBanner. Each panel owns its loading/empty/error/success surface.
+  GuardModePageHost.kt       registers GuardModeRoute for the `guardMode` destination (Destinations.kt L108,
+                             /guard-mode); wired in TeslaSyncApplication.onCreate() (NavHost registration). Builds
+                             page-local HttpGuardRepository + HttpVehiclesRepository + HttpLocationRepository over the
+                             shared client + offline cache (the DI graph wires no GuardStore yet), as the sibling
+                             LocationsPage host does.
+
+SI BOUNDARY (P1/S5)
+  No unit-suffixed field is read raw. The only SI-bearing value the page draws is the geofence radius (metres on the
+  wire); it is handed verbatim to the SI-native Google Maps `Circle(radius = geofence.radius /* metres */)`, which
+  consumes metres directly — no conversion, no non-SI storage. Guard config/events are ids/enums/timestamps (not unit
+  bearing). Coordinates are WGS-84 degrees. Timestamps are formatted at the render boundary only (formatGuardTimestamp).
+
+LIVE DATA / STALENESS (ADR-013)
+  The web page treats vehicle state as a polled live source (useVehicleState refetchInterval 5 s armed / 30 s idle);
+  there is no SSE source on this page. The Android port reproduces the poll via a viewModelScope ticker that bumps a
+  lifecycle-aware (WhileSubscribed) re-fetch, and surfaces freshness honestly with a DataFreshness chip in the page
+  header AND the Live-Map panel header bound to the vehicle-state feed's fetchedAt / refreshing / stale / error — so a
+  reading older than its TTL (incl. the >2 min offline case) is shown as stale + retry rather than presented as live.
+
+EVENT-LABEL / SENSITIVITY i18n (web hardcoded EVENT_LABELS + SENSITIVITY_OPTIONS)
+  The web hardcodes the event-type display labels (emoji + name) and the sensitivity option labels as in-file
+  constants. To honour the "zero hardcoded literals" rule rather than transplant English literals, both were lifted
+  into res/values/strings.xml as extra translation_guard_event* / translation_guard_sensitivity* keys and resolved by
+  the stable token (guardEventLabel / sensitivityLabel), keeping the web lookup-with-fallback (an unmapped event token
+  renders verbatim — web `EVENT_LABELS[t] ?? t`). These extra keys have no web i18n counterpart (the web has none);
+  the 38 manifest-required keys are unaffected.
+
+=== PARITY ===
+PARITY_REQUIRED=54
+
+PANELS (6) — each a Material 3 GlassPanel; the six web GlassPanels reproduced 1:1
+  [01] panel  GlassPanel1  GuardModePage.kt:366  GuardTogglePanel — arm/disarm card (shield glyph in a tinted circle,
+                            state title, Toggle(enableGuard), pending caption; accent ring Success/Danger)
+  [02] panel  GlassPanel2  GuardModePage.kt:422  GuardStatusPanel — armed-since / lock / sentry / unack-events rows
+  [03] panel  GlassPanel3  GuardModePage.kt:484  GuardPanicPanel — siren + emergency + PANIC button + description
+  [04] panel  GlassPanel4  GuardModePage.kt:518  GuardSettingsPanel — home-geofence + sensitivity + auto-panic + save
+  [05] panel  GlassPanel5  GuardModePage.kt:567  GuardLiveMapPanel — header + freshness + 400dp map / states
+  [06] panel  GlassPanel6  GuardModePage.kt:707  GuardEventTimelinePanel — unack badge + per-event GlassPanel rows
+
+MAPS (6) — the A3 Maps-Compose / GoogleMap wrappers, never a webview (web Leaflet MapContainer/TileLayer/Marker/Circle/Popup/Polyline)
+  [07] map  MapContainer  GuardModePage.kt:646  TeslaMap(...) in GuardLiveMap (the GoogleMap surface = web <MapContainer>)
+  [08] map  MapTileLayer  GuardModePage.kt:673  style=MapStyleId.Dark + MapLayerSwitcher(...) (the base-map raster +
+                          layer control = web <MapTileLayer style="dark">)
+  [09] map  Marker        GuardModePage.kt:663  VehicleMarker(MapMarker(point=vehiclePoint,…)) (web <Marker icon={vehicleIcon()}>)
+  [10] map  Circle        GuardModePage.kt:685  GuardHomeGeofenceCircle → Circle(center, radius=geofence.radius, …) (web <Circle>)
+  [11] map  Popup         GuardModePage.kt:669  the marker info window — title = vehicle name, snippet =
+                          guardCoordinateLabel(lat,lng) (the Maps-Compose analogue of the Leaflet <Popup> opened on tap)
+  [12] map  Polyline      GuardModePage.kt:697  GuardEventTrail → Polyline(points,…) (web <Polyline> event trail;
+                          rendered when eventTrailPositions yields >1 point, mirroring the web `positions.length > 1`)
+
+DATA STATES (4) — implemented for every bound source (vehicleState shown; events/config/geofences carry their own)
+  [13] state  loading  GuardModePage.kt:594  vehicleStateState.isLoading → Skeleton (map); :732 eventsState.isLoading → Skeleton
+  [14] state  empty    GuardModePage.kt:616  no-location EmptyState(noLocation); :743 no-events EmptyState(noEvents);
+                       config/events disabled-vehicle terminal empty (GuardModePageViewModel — web enabled: vehicleId>0)
+  [15] state  error    GuardModePage.kt:597  vehicleState error → ErrorDisplay+retry; :735 events error → ErrorDisplay+retry
+  [16] state  success  GuardModePage.kt:629  guardHasLocation → GuardLiveMap; :750 events list → GuardEventRow per event
+
+STRINGS (38) — every visible literal resolves from res/values/strings.xml; key names match web (guard.* ≙ translation_guard_*)
+  [17] string guard.acknowledge          GuardModePage.kt:801  translation_guard_acknowledge
+  [18] string guard.acknowledgedBy       GuardModePage.kt:795  translation_guard_acknowledgedBy        (added)
+  [19] string guard.alertTriggered       GuardModePage.kt:357  translation_guard_alertTriggered
+  [20] string guard.armed                GuardModePage.kt:822  translation_guard_armed
+  [21] string guard.armedSince           GuardModePage.kt:434  translation_guard_armedSince (%1$s)
+  [22] string guard.autoPanic            GuardModePage.kt:551  translation_guard_autoPanic
+  [23] string guard.autoPanicHelp        GuardModePage.kt:553  translation_guard_autoPanicHelp
+  [24] string guard.disarmed             GuardModePage.kt:823  translation_guard_disarmed
+  [25] string guard.emergency            GuardModePage.kt:496  translation_guard_emergency
+  [26] string guard.enableGuard          GuardModePage.kt:410  translation_guard_enableGuard
+  [27] string guard.eventTimeline        GuardModePage.kt:722  translation_guard_eventTimeline
+  [28] string guard.homeGeofence         GuardModePage.kt:536  translation_guard_homeGeofence
+  [29] string guard.homeGeofenceHelp     GuardModePage.kt:537  translation_guard_homeGeofenceHelp
+  [30] string guard.liveMap              GuardModePage.kt:582  translation_guard_liveMap
+  [31] string guard.locked               GuardModePage.kt:442  translation_guard_locked
+  [32] string guard.noEvents             GuardModePage.kt:460  translation_guard_noEvents
+  [33] string guard.noGeofence           GuardModePage.kt:529  translation_guard_noGeofence
+  [34] string guard.noLocation           GuardModePage.kt:617  translation_guard_noLocation
+  [35] string guard.notArmed             GuardModePage.kt:436  translation_guard_notArmed
+  [36] string guard.panicButton          GuardModePage.kt:502  translation_guard_panicButton
+  [37] string guard.panicConfirmLabel    GuardModePage.kt:306  translation_guard_panicConfirmLabel
+  [38] string guard.panicConfirmMessage  GuardModePage.kt:305  translation_guard_panicConfirmMessage   (added)
+  [39] string guard.panicConfirmTitle    GuardModePage.kt:304  translation_guard_panicConfirmTitle
+  [40] string guard.panicDesc            GuardModePage.kt:510  translation_guard_panicDesc
+  [41] string guard.panicking            GuardModePage.kt:500  translation_guard_panicking
+  [42] string guard.saveSettings         GuardModePage.kt:556  translation_guard_saveSettings
+  [43] string guard.sensitivity          GuardModePage.kt:545  translation_guard_sensitivity
+  [44] string guard.sentryOff            GuardModePage.kt:452  translation_guard_sentryOff
+  [45] string guard.sentryOn             GuardModePage.kt:450  translation_guard_sentryOn
+  [46] string guard.settings             GuardModePage.kt:526  translation_guard_settings
+  [47] string guard.status               GuardModePage.kt:430  translation_guard_status
+  [48] string guard.subtitle             GuardModePage.kt:333  translation_guard_subtitle
+  [49] string guard.title                GuardModePage.kt:223  translation_guard_title
+  [50] string guard.triggered            GuardModePage.kt:821  translation_guard_triggered
+  [51] string guard.unack                GuardModePage.kt:725  translation_guard_unack
+  [52] string guard.unackEvents          GuardModePage.kt:458  translation_guard_unackEvents (%1$s)
+  [53] string guard.unlocked             GuardModePage.kt:444  translation_guard_unlocked
+  [54] string guard.updating             GuardModePage.kt:340  translation_guard_updating
+
+PARITY_COVERED=54
+
+STRING CATALOG
+  36 of the 38 manifest-required guard.* keys already existed in res/values/strings.xml; the 2 missing
+  (translation_guard_acknowledgedBy, translation_guard_panicConfirmMessage) were added with their verbatim web default
+  text. 12 extra keys (9 translation_guard_event* + 3 translation_guard_sensitivity*) were added to i18n the web's
+  hardcoded EVENT_LABELS / SENSITIVITY_OPTIONS constants (see EVENT-LABEL note above). All 14 additions went into the
+  default res/values/strings.xml; the ar/he locale files runtime-fall-back to the default (MissingTranslation lint is
+  disabled — app/build.gradle.kts — exactly as the sibling LocationsPage add did). `res/values*/strings.xml` is an
+  allowed file. These extra keys are not in the shared i18n catalog (apps/shared/i18n — outside this artifact's allowed
+  files); the web renders the same labels from in-file constants.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 3m 21s (compileDebugKotlin clean; only pre-existing
+                                          deprecation warnings elsewhere; zero warnings in the new files)
+  BUILD_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 27s
+  TEST_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 58s (lint-results-debug.html written,
+                                          abortOnError=true, no errors)
+  LINT_EXIT=0
+  GATE_EXIT=0 — all four gates green.
+
+ACCEPTANCE
+  [x] Every named panel implemented (the six GlassPanels: guard toggle, status, panic, settings, live map, event
+      timeline); every anonymous region reproduced (the header vehicle picker + freshness chip, the triggered alert
+      banner, the panic confirmation dialog, the per-event row card + ack button).
+  [x] All 54 parity items render from the bound StateFlow holders (config/events/vehicleState/geofences/vehicles +
+      interaction), folded by the framework-free model.
+  [x] loading / empty / error / success implemented for the vehicle-state and events sources; config + geofences carry
+      graceful per-control fallbacks (the select keeps its no-fence option; no region ever blanks).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; the 38 manifest keys match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/Toggle/Select/VehicleSelect); EmptyState +
+      map carry semantics content descriptions, the root carries paneTitle (a11y); SI radius drawn verbatim;
+      Compose-native maps (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (54).
+  [x] android ledger row for page:vehicle-systems/GuardMode set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
