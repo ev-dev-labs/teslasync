@@ -1,0 +1,170 @@
+================================================================================
+P3-ANDROID A7 — page:battery/EnergyFlow  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/EnergyFlowPage.tsx
+promptId: p3-android/pages/battery/EnergyFlowPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr; JAVA_HOME set)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPage.kt           (@Composable screen: EnergyFlowPage + EnergyFlowPageContent + 22 panels + the area/bar/gauge charts + chrome)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<EnergyStats>> + StateFlow<UiState<EnergyFlow>> + displayPrefs + selectedDays; refresh()/retry()/selectDays()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPageSource.kt     (S8 data seam over EnergyStore + SettingsStore + SelectedVehicleStore; NO page-local repo needed — EnergyStore already exposes energyStats + energyFlow)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPageModel.kt      (framework-free: parseEnergyStats/parseEnergyFlow decoders, EnergyFlowDisplayPrefs SI converters, EfficiencyTier ladder, sortDailyRows, formatDayShort, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPageIcons.kt      (6 authored lucide glyphs Plug/Thermometer/Cpu/Leaf/TrendingUp/Calendar + 8 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/battery/EnergyFlowPageHost.kt       (PageHosts.register(energyFlow){ EnergyFlowRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt          (NavHost wiring: + import + EnergyFlowPageHost.register())
+apps/android/app/src/main/res/values/strings.xml (+ values-ar / values-he)          (added 54 energyFlow keys: the 44 parity literals + 6 range presets + timeRange + 3 chart aria)
+apps/parity/android-ledger.json                                                      (ledger row page:battery/EnergyFlow, 74/74, status=done)
+.github/prompts/monorepo/logs/android-page-battery-EnergyFlowPage.log               (this log)
+
+DataContainer.kt was NOT modified: the shared EnergyStore already exposes both reads (energyStats + energyFlow) and the
+container already exposes energyStore / settingsStore / selectedVehicleStore — so no DI seam widening was required
+(unlike the sibling StatisticsPage, which needed a page-local /analytics/period-stats repository).
+
+--------------------------------------------------------------------------------
+DATA SOURCES (each bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useEnergyFlow   GET /vehicles/{id}/energy/flow          -> EnergyStore.energyFlow(id)            (web useEnergyFlow; the real-time Section-1 diagram feed)
+energy-stats    GET /vehicles/{id}/energy?days=N        -> EnergyStore.energyStats(id, days)     (web `useQuery(['energy-stats'])` ≈ useEnergyStats; PRIMARY: drives the page loading/empty/error/success + the summary cards, charts and history table)
+scope/settings  SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits). No HTTP in the view.
+decode          : JsonElement -> typed models in EnergyFlowPageModel.parseEnergyStats / parseEnergyFlow ; the view only resolves i18n + draws.
+nav             : Destinations 'energyFlow' -> /energy-flow pre-existing (Destinations.kt L82, count unchanged); host wired via PageHosts.register("energyFlow");
+                  deep link auto-registered by TeslaSyncNavHost.
+range picker    : web RangePicker(presetsOnly) reproduced as RangePicker (EnergyFlowPage.kt:243) over a Select; Today/7d/30d/90d + Month/Year-to-date (java.time.LocalDate) ▸ ViewModel.selectDays(days).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=74   (22 panels + 4 charts + 4 states + 44 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1        -> EnergyFlowPage.kt:316 FlowDiagramPanel outer GlassPanel (L320; the energy-flow diagram, header L327 translation_energyFlow_diagram + chargeState Badge L332)
+[COVERED] panel  GlassPanel2        -> EnergyFlowPage.kt:347 FlowNodePanel(Grid) (def L415, GlassPanel L422, accent=Success; Plug icon + translation_energyFlow_grid L351)
+[COVERED] panel  GlassPanel3        -> EnergyFlowPage.kt:360 BatteryNodePanel (def L436, GlassPanel L441, accent=Info; Battery icon + RadialGauge + remaining kWh)
+[COVERED] panel  GlassPanel4        -> EnergyFlowPage.kt:367 MotorNodePanel (def L466, GlassPanel L467; Car + translation_energyFlow_motor L479 + noLiveData L480)
+[COVERED] panel  GlassPanel5        -> EnergyFlowPage.kt:374 FlowAuxPanel(DC Power) (def L518, GlassPanel L526; Bolt + dcPower L378 + kW value)
+[COVERED] panel  GlassPanel6        -> EnergyFlowPage.kt:382 FlowAuxPanel(AC Power) (Activity + acPower L386 + kW value)
+[COVERED] panel  GlassPanel7        -> EnergyFlowPage.kt:393 FlowAuxPanel(HVAC) (Thermometer + hvac L397 + N/A)
+[COVERED] panel  GlassPanel8        -> EnergyFlowPage.kt:401 FlowAuxPanel(Accessories) (Cpu + accessories L405 + N/A)
+[COVERED] panel  Total-Energy       -> EnergyFlowPage.kt:550 SummaryMetricsGrid MetricCard (formatEnergy total_energy_used_wh, translation_energyFlow_totalEnergy L552)
+[COVERED] panel  Total-Charged      -> EnergyFlowPage.kt:557 MetricCard (formatEnergy total_energy_charged_wh, translation_energyFlow_totalCharged L559)
+[COVERED] panel  Distance           -> EnergyFlowPage.kt:566 MetricCard (formatDistance total_distance_m, translation_energyFlow_distance L568, subtitle distanceLabel)
+[COVERED] panel  Efficiency         -> EnergyFlowPage.kt:574 MetricCard (efficiencyDisplay avg_efficiency_wh_per_m, translation_energyFlow_efficiency L576, subtitle efficiencyUnit)
+[COVERED] panel  CO-Saved           -> EnergyFlowPage.kt:584 MetricCard (fmtNumber co2_saved_kg,1 + kg, translation_energyFlow_co2Saved L586)
+[COVERED] panel  Period             -> EnergyFlowPage.kt:592 MetricCard (period_days + days, translation_energyFlow_period L594)
+[COVERED] panel  GlassPanel15       -> EnergyFlowPage.kt:608 DailyEnergyUsagePanel ▸ ChartPanel GlassPanel (header dailyEnergyUsage L616, AreaChart)
+[COVERED] panel  GlassPanel16       -> EnergyFlowPage.kt:655 DailyDistancePanel ▸ ChartPanel GlassPanel (header dailyDistance L663, BarChart)
+[COVERED] panel  GlassPanel17       -> EnergyFlowPage.kt:688 DailyEfficiencyPanel ▸ ChartPanel GlassPanel (header dailyEfficiency L696, BarChart)
+[COVERED] panel  GlassPanel18       -> EnergyFlowPage.kt:723 EfficiencyMetricsPanel GlassPanel (L728; header translation_energyFlow_efficiencyMetrics L732)
+[COVERED] panel  GlassPanel19       -> EnergyFlowPage.kt:736 EfficiencyMetricTile(efficiency) (def L763, GlassPanel L770; efficiencyUnit value + tier Badge)
+[COVERED] panel  GlassPanel20       -> EnergyFlowPage.kt:743 EfficiencyMetricTile(CO₂) (co2Saved L745 value + kgCo2 Badge L748)
+[COVERED] panel  GlassPanel21       -> EnergyFlowPage.kt:750 EfficiencyMetricTile(Avg Energy/Day) (avgEnergyDay L752 value + perDay Badge L755)
+[COVERED] panel  GlassPanel22       -> EnergyFlowPage.kt:807 DailyHistoryPanel GlassPanel (L811; header dailyEnergyHistory L815, DataTable)
+[COVERED] chart  RadialGauge        -> EnergyFlowPage.kt:448 BatteryNodePanel RadialGauge(value=soc,max=100,unit=%) (A3 components.charts.RadialGauge; battery node)
+[COVERED] chart  AreaChart          -> EnergyFlowPage.kt:621 DailyEnergyUsagePanel AreaChartWrapper(energy kWh series, day xLabels) (A3 components.charts.AreaChartWrapper, Vico)
+[COVERED] chart  BarChart           -> EnergyFlowPage.kt:668 DailyDistancePanel BarChartWrapper(display-distance series, day xLabels) (A3 components.charts.BarChartWrapper, Vico)
+[COVERED] chart  BarChart           -> EnergyFlowPage.kt:701 DailyEfficiencyPanel BarChartWrapper(efficiency series over positive-eff rows, day xLabels) (A3 components.charts.BarChartWrapper, Vico)
+[COVERED] state  loading            -> EnergyFlowPage.kt:193 EnergyFlowPageContent state.isLoading -> EnergyFlowLoading()=PageLoader (def L267)
+[COVERED] state  empty              -> EnergyFlowPage.kt:195 state.isEmpty -> EnergyFlowNoData()=EmptyState (def L287, noData/noDataMessage L289-290); per-chart empties noDailyEnergy/noDailyDistance/noEfficiency + table noEnergyHistory
+[COVERED] state  error              -> EnergyFlowPage.kt:194 state.isError -> EnergyFlowError()=ErrorDisplay+Retry (def L276)
+[COVERED] state  success            -> EnergyFlowPage.kt:196 else -> EnergyFlowBody(...) (def L297) draws the 22 panels from the bound StateFlows
+[COVERED] string AC Power                                    -> EnergyFlowPage.kt:386 (translation_energyFlow_acPower)
+[COVERED] string Accessories                                 -> EnergyFlowPage.kt:405 (translation_energyFlow_accessories)
+[COVERED] string Avg Energy/Day                              -> EnergyFlowPage.kt:752 (translation_energyFlow_avgEnergyDay)
+[COVERED] string Battery                                     -> EnergyFlowPage.kt:451 (translation_energyFlow_battery)
+[COVERED] string CO2 Saved                                   -> EnergyFlowPage.kt:586,745 (translation_energyFlow_co2Saved)
+[COVERED] string Charging                                    -> EnergyFlowPage.kt:355 (translation_energyFlow_charging)
+[COVERED] string DC Power                                    -> EnergyFlowPage.kt:378 (translation_energyFlow_dcPower)
+[COVERED] string Daily Distance                              -> EnergyFlowPage.kt:663 (translation_energyFlow_dailyDistance)
+[COVERED] string Daily Efficiency                            -> EnergyFlowPage.kt:696 (translation_energyFlow_dailyEfficiency)
+[COVERED] string Daily Energy History                        -> EnergyFlowPage.kt:815 (translation_energyFlow_dailyEnergyHistory)
+[COVERED] string Daily Energy Usage                          -> EnergyFlowPage.kt:616 (translation_energyFlow_dailyEnergyUsage)
+[COVERED] string Date                                        -> EnergyFlowPage.kt:845 (translation_energyFlow_date)
+[COVERED] string Distance                                    -> EnergyFlowPage.kt:568,673,856 (translation_energyFlow_distance)
+[COVERED] string Driving                                     -> EnergyFlowPage.kt:362 (translation_energyFlow_driving)
+[COVERED] string Efficiency                                  -> EnergyFlowPage.kt:576 (translation_energyFlow_efficiency)
+[COVERED] string Efficiency Metrics                          -> EnergyFlowPage.kt:732 (translation_energyFlow_efficiencyMetrics)
+[COVERED] string Energy                                      -> EnergyFlowPage.kt:626,850 (translation_energyFlow_energy)
+[COVERED] string Energy Flow                                 -> EnergyFlowPage.kt:220 (translation_energyFlow_title; PageTitle)
+[COVERED] string Energy Flow Diagram                         -> EnergyFlowPage.kt:328 (translation_energyFlow_diagram)
+[COVERED] string Excellent                                   -> EnergyFlowPage.kt:798 (translation_energyFlow_excellent)
+[COVERED] string Good                                        -> EnergyFlowPage.kt:799 (translation_energyFlow_good)
+[COVERED] string Grid                                        -> EnergyFlowPage.kt:351 (translation_energyFlow_grid)
+[COVERED] string HVAC                                        -> EnergyFlowPage.kt:397 (translation_energyFlow_hvac)
+[COVERED] string High                                        -> EnergyFlowPage.kt:800 (translation_energyFlow_high)
+[COVERED] string Motor                                       -> EnergyFlowPage.kt:479 (translation_energyFlow_motor)
+[COVERED] string N/A                                         -> EnergyFlowPage.kt:363,398,406 (translation_energyFlow_na)
+[COVERED] string No Data                                     -> EnergyFlowPage.kt:290,797 (translation_energyFlow_noData)
+[COVERED] string No daily distance data available.           -> EnergyFlowPage.kt:666 (translation_energyFlow_noDailyDistance)
+[COVERED] string No daily energy data available.             -> EnergyFlowPage.kt:619 (translation_energyFlow_noDailyEnergy)
+[COVERED] string No efficiency data available.               -> EnergyFlowPage.kt:699 (translation_energyFlow_noEfficiency)
+[COVERED] string No energy flow data available for this …    -> EnergyFlowPage.kt:289 (translation_energyFlow_noDataMessage)
+[COVERED] string No energy history records available.        -> EnergyFlowPage.kt:820 (translation_energyFlow_noEnergyHistory)
+[COVERED] string No energy records found.                    -> EnergyFlowPage.kt:833 (translation_energyFlow_noEnergyRecords; DataTable emptyText)
+[COVERED] string No live data                                -> EnergyFlowPage.kt:480 (translation_energyFlow_noLiveData)
+[COVERED] string Period                                      -> EnergyFlowPage.kt:594 (translation_energyFlow_period)
+[COVERED] string Power distribution and energy analysis      -> EnergyFlowPage.kt:222 (translation_energyFlow_subtitle)
+[COVERED] string Total Charged                               -> EnergyFlowPage.kt:559 (translation_energyFlow_totalCharged)
+[COVERED] string Total Energy                                -> EnergyFlowPage.kt:552 (translation_energyFlow_totalEnergy)
+[COVERED] string days                                        -> EnergyFlowPage.kt:598 (translation_energyFlow_days)
+[COVERED] string kW                                          -> EnergyFlowPage.kt:356,379,387 (translation_energyFlow_kw)
+[COVERED] string kWh                                         -> EnergyFlowPage.kt:458 (translation_energyFlow_kwh)
+[COVERED] string kg                                          -> EnergyFlowPage.kt:590 (translation_energyFlow_kg)
+[COVERED] string kg CO2                                      -> EnergyFlowPage.kt:748 (translation_energyFlow_kgCo2)
+[COVERED] string per day                                     -> EnergyFlowPage.kt:755 (translation_energyFlow_perDay)
+
+PARITY_COVERED=74
+
+(All 54 keys live in res/values/strings.xml AND res/values-ar/strings.xml AND res/values-he/strings.xml — the 44 parity
+literals above + 6 range presets [rangeToday/range7d/range30d/range90d/rangeMtd/rangeYtd] + timeRange + 3 chart aria
+[dailyEnergyUsage_aria/dailyDistance_aria/dailyEfficiency_aria]. No hardcoded user-visible literals; the only raw text
+is the dynamic charge-state Badge value, which is API data, not a static UI literal.)
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 2 reads bound as StateFlow via EnergyFlowPageViewModel -> energyFlowPageSourceOf(): EnergyStore.energyFlow (web useEnergyFlow,
+               real-time Section-1 diagram) + EnergyStore.energyStats(id, days) (web energy-stats useQuery, PRIMARY ▸ summary cards + charts +
+               history table). Scope = SelectedVehicleStore (web useSelectedVehicle); units = SettingsStore.settings() (web useUnits). No HTTP in the view.
+charts       : RadialGauge (SoC) + AreaChartWrapper (daily energy kWh) + 2x BarChartWrapper (daily distance, daily efficiency) — all from the A3
+               components.charts library (Vico / Compose canvas), never a webview.
+si/units     : SI read off the wire; total_distance_m via convertDistanceFromSI at the display boundary (prefs.distanceDisplay/formatDistance),
+               energy Wh->kWh via convertEnergyFromSI (prefs.energyDisplay/formatEnergy), efficiency Wh/m->Wh/km|Wh/mi via prefs.efficiencyDisplay
+               (web *1000 / *1609.344). No miles/mph/kWh stored or computed; the /energy/flow snapshot's pre-scaled kW/kWh/% are rendered verbatim,
+               mirroring the web page's raw fmtNumber reads (web parity).
+states       : energy-stats is the PRIMARY gate (loading/empty/error/success). The flow feed renders its own diagram-or-fallback surface (greyed-out
+               N/A nodes) so Section 1 is never hidden, and each chart/table shows its own empty-state (web per-section truthiness). Documented
+               divergence (Honesty #9): an absent / no-vehicle stats payload routes to the friendly No-Data surface via EnergyStats.hasData; a real
+               response (always period_days > 0) renders the full body.
+a11y/theme   : the three charts carry Modifier.semantics contentDescription (the web aria intent, translation_energyFlow_*_aria); the gauge has a
+               merged contentDescription (RadialGauge); icons decorative (contentDescription=null); ≥48dp Select targets; all color via
+               MaterialTheme.colorScheme + ChartPalette (paletteColor) + PanelAccent/TeslaTokens (A2 tokens) — dynamic color + dark theme; typography
+               via the role components (PageTitle/PanelTitle/BodyText/Caption/MetricLabel/MetricValue). Compose-native (no webview).
+nav          : Destinations 'energyFlow' -> /energy-flow pre-existing (Destinations.kt L82, count unchanged); host wired via PageHosts.register("energyFlow");
+               deep link auto-registered by TeslaSyncNavHost; EnergyFlowPageHost.register() added to TeslaSyncApplication. DataContainer unchanged
+               (EnergyStore already exposes energyStats + energyFlow; container already exposes energyStore/settingsStore/selectedVehicleStore).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin   -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 5m 44s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 9m 8s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 40s
+parity       : PARITY_COVERED(74) == PARITY_REQUIRED(74)
+[PASS] all android triad gates green; parity 74/74; android ledger row page:battery/EnergyFlow status=done.
+EXIT=0
+STATUS=DONE
