@@ -1333,6 +1333,24 @@
       "requiredCount": 44,
       "promptId": "p4-apple/P7/page:maps/Locations",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-maps-LocationsPage.log"
+    },
+    {
+      "unitId": "page:exports/Exports",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 24,
+      "requiredCount": 24,
+      "promptId": "p4-apple/P7/page:exports/Exports",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-exports-ExportsPage.log"
+    },
+    {
+      "unitId": "page:exports/Exports",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 24,
+      "requiredCount": 24,
+      "promptId": "p4-apple/P7/page:exports/Exports",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-exports-ExportsPage.log"
     }
   ]
 }

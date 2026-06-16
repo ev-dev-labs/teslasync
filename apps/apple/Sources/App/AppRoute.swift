@@ -30,7 +30,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case analytics, maps, locations, quickStats
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
-    case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
+    case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics, exports
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
     case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
@@ -139,6 +139,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .notifications: "bell.fill"
         case .telemetry: "dot.radiowaves.left.and.right"
         case .diagnostics: "stethoscope"
+        case .exports: "arrow.down.doc.fill"
         case .admin: "person.badge.key.fill"
         case .apiKeys: "key.fill"
         case .apiPlayground: "curlybraces"
@@ -192,7 +193,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .projectedRange: .energy
         case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
              .yearReview: .insights
-        case .automations, .automationsList, .notifications, .diagnostics, .sharing, .watch: .operations
+        case .automations, .automationsList, .notifications, .diagnostics, .sharing, .watch, .exports: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore,

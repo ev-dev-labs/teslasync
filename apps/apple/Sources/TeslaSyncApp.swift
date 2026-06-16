@@ -170,6 +170,7 @@ struct TeslaSyncApp: App {
         registry = BackupRestoreRouteRegistration.registry(base: registry)
         registry = AnomalyDashboardRouteRegistration.registry(base: registry)
         registry = ExploreRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
+        registry = ExportsRouteRegistration.registry(base: registry)
         return registry
     }
 
