@@ -1,0 +1,172 @@
+================================================================================
+P3-ANDROID · A7 · page:trips/TripList — evidence log
+Native Jetpack Compose / Material 3 port of web TripListPage
+Source: web/src/features/trips/pages/TripListPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/trips/**
+Package: io.teslasync.android.trips.triplist
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR, JAVA_HOME = C:\Program Files\Android\Android Studio\jbr)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / TripDetail precedents)
+  TripListPageModel.kt      framework-free: registration ids (trips / /trips / SLUG / PAGE_SIZE=50 /
+                            DEFAULT_RANGE_DAYS=365 / CHART_TOP_N=10); TripListInteraction (the page cursor);
+                            TripListDisplayPrefs (web useUnits + useFormatting — distance unit + formatEnergy,
+                            currency symbol, decimal precision, locale); deriveTripListData (the verbatim
+                            SI→display fold of the four summary values + the cost-per-100-units subtitle + the
+                            top-10 chart series + the per-row TripRow values, incl. the web whPerKm efficiency
+                            + KM_PER_MILE imperial lift); formatTripDate (web formatDate, FormatStyle.MEDIUM);
+                            formatTripDuration (web formatDuration, incl. the "In progress" null-end literal).
+  TripListPageSource.kt     seam over TripsRepository.trips(params) (web useTrips → GET /trips) +
+                            SelectedVehicleStore (web useSelectedVehicle, the optional vehicle_id filter) +
+                            SettingsStore.settings (web useUnits/useFormatting source).
+  TripListPageViewModel.kt  BaseFeedViewModel; tripsState: StateFlow<UiState<List<Trip>>> over the
+                            combine(vehicle, page, refresh) ▸ flatMapLatest(trips) ▸ asUiState feed; interaction
+                            (page) StateFlow; displayPrefs StateFlow; setPage / refresh / retry / recordViewOpened.
+  TripListPage.kt           stateful entry + stateless content; loading skeleton / empty / error-retry / success;
+                            the four summary MetricCards in a responsive 2/4-col grid; the ChartContainer +
+                            BarChart with CSV/JSON share export; the "All Trips" GlassPanel list of TripRows;
+                            pagination. SI converted only at the display boundary; Compose-native (no webview).
+  TripListPageHost.kt       TripListRoute() + TripListPageHost.register() for the `trips` / `/trips` destination
+                            (Destinations.kt L65; registered in TeslaSyncApplication.kt).
+
+DATA SOURCES (bound through the ViewModel's StateFlow over the KMP core, P1/S8)
+  useTrips → TripsRepository.trips(TripsParams(vehicle_id, limit, offset, start, end))  (GET /trips)  → tripsState
+  (web useSelectedVehicle)      → SelectedVehicleStore.selectedId → the optional vehicle_id filter
+  (web useUnits/useFormatting)  → SettingsStore.settings()        → displayPrefs
+
+NOTE — unlike the sibling DrivesList, the web trips query is NOT gated on a selected vehicle: it reads
+  /trips with an OPTIONAL vehicle_id (web `vehicle_id: vehicleId ?? undefined`), so the ViewModel queries
+  regardless and an absent/zero selection simply drops the filter (tripsQuery omits the key). The default
+  365-day [today-365d, today] range + the page cursor (limit/offset) reproduce the web hook params.
+
+SCOPE NOTE — the web page's PageContainer `actions` cluster (VehicleSelect, RangePicker, DataFreshnessAuto,
+  SavedViewMenu) and the PullToRefresh wrapper are separate component parity units, not part of this page's
+  manifest record (page:trips/TripList enumerates exactly the 7 panels + 2 charts + 3 states + 22 strings,
+  requiredCount 34). They are intentionally not stubbed here (ADR-011: no placeholders, no scope drift). The
+  query-freshness chip is still surfaced (header DataFreshness) and refresh()/retry() back the error surface.
+
+SI BOUNDARY (P1/S5)
+  The model stays SI end to end (meters, Wh, the raw RFC3339 date strings). Display conversion happens only at
+  the render boundary via TripListDisplayPrefs (convertDistanceFromSI + the shared formatEnergy + the
+  Wh/km→Wh/mi efficiency factor the web keeps because the shared units module ships no energy-per-distance
+  helper) and the ChartFormat-backed number/currency formatters. The CSV/JSON share export emits the SI columns
+  verbatim (distance_m, energy_wh). The cache stays SI (ADR-013); no non-SI value is stored or computed.
+
+=== PARITY ===
+PARITY_REQUIRED=34
+
+PANELS (7) — the four summary MetricCards + the chart container + the list panel + the trip row
+  [01] panel  Total-Distance         TripListPage.kt:318  MetricCard(label=translation_trips_stats_distance,
+                                                           value=data.distanceValue) via TripStatsGrid(L314)/MetricCard(L355)
+  [02] panel  Energy-Used            TripListPage.kt:325  MetricCard(label=translation_trips_stats_energy, value=data.energyValue)
+  [03] panel  Total-Cost            TripListPage.kt:332  MetricCard(label=translation_trips_stats_cost, value=data.costValue)
+  [04] panel  Total-Trips           TripListPage.kt:339  MetricCard(label=translation_trips_stats_total, value=tripCount)
+  [05] panel  Top-Trips-by-Distance TripListPage.kt:405  ChartContainer(title=translation_trips_chart_title) (TripTopChart L380)
+  [06] panel  GlassPanel6           TripListPage.kt:456  GlassPanel + SectionTitle(translation_trips_list_heading) (TripListPanel L452)
+  [07] panel  GlassPanel7           TripListPage.kt:486  GlassPanel (TripRow L478) — one trip row
+
+CHARTS (2) — the framing container + the horizontal bar chart
+  [08] chart  ChartContainer        TripListPage.kt:405  ChartContainer(...) (the A3 native chart chrome)
+  [09] chart  BarChart              TripListPage.kt:433  BarChartWrapper(series kind=ChartSeriesKind.Bar) (A3 Vico wrapper, no webview)
+
+DATA STATES (3) — for the useTrips source (loading / empty / success; the bound holder also carries error/stale/offline)
+  [10] state  loading   TripListPage.kt:192  state.isLoading → TripListLoading(L588): PageHeader/StatGrid/Chart/row skeletons
+  [11] state  empty     TripListPage.kt:460  EmptyState(message=translation_trips_list_empty); chart empty TripListPage.kt:407 (ChartStatus.Empty)
+  [12] state  success   TripListPage.kt:210  TripListLoaded(...) (the four cards + chart + list + pagination)
+
+STRINGS (22) — every visible literal resolves from res/values/strings.xml; key names match web
+  [13] string trips.chart.col.trip    TripListPage.kt:388  translation_trips_chart_col_trip
+  [14] string trips.chart.distance    TripListPage.kt:387  translation_trips_chart_distance
+  [15] string trips.chart.empty       TripListPage.kt:389  translation_trips_chart_empty
+  [16] string trips.chart.title       TripListPage.kt:406  translation_trips_chart_title
+  [17] string trips.chart.title.aria  TripListPage.kt:409  translation_trips_chart_title_aria  (ADDED — see STRING CATALOG)
+  [18] string trips.export.csv        TripListPage.kt:390  translation_trips_export_csv
+  [19] string trips.export.json       TripListPage.kt:391  translation_trips_export_json
+  [20] string trips.list.empty        TripListPage.kt:461  translation_trips_list_empty
+  [21] string trips.list.heading      TripListPage.kt:457  translation_trips_list_heading
+  [22] string trips.row.charges       TripListPage.kt:484  translation_trips_row_charges
+  [23] string trips.row.cost          TripListPage.kt:485  translation_trips_row_cost
+  [24] string trips.row.drives        TripListPage.kt:483  translation_trips_row_drives
+  [25] string trips.row.trip          TripListPage.kt:272  translation_trips_row_trip  (name fallback "Trip #id" + chart label)
+  [26] string trips.stats.cost        TripListPage.kt:332  translation_trips_stats_cost
+  [27] string trips.stats.distance    TripListPage.kt:318  translation_trips_stats_distance
+  [28] string trips.stats.driveCount  TripListPage.kt:327  translation_trips_stats_driveCount
+  [29] string trips.stats.energy      TripListPage.kt:325  translation_trips_stats_energy
+  [30] string trips.stats.total       TripListPage.kt:339  translation_trips_stats_total
+  [31] string trips.stats.totalDrives TripListPage.kt:341  translation_trips_stats_totalDrives
+  [32] string trips.stats.tripCount   TripListPage.kt:320  translation_trips_stats_tripCount
+  [33] string trips.subtitle          TripListPage.kt:231  translation_trips_subtitle
+  [34] string trips.title             TripListPage.kt:229  translation_trips_title
+
+PARITY_COVERED=34
+
+STRING CATALOG
+  21 of the 22 keys already existed in res/values/strings.xml (translation_trips_*, generated from the shared
+  i18n catalog with the verbatim web inline-default values). One key — translation_trips_chart_title_aria — was
+  absent from the web i18n source (the web only carries it as an inline `t(..., 'Top trips ranked by distance
+  horizontal bar chart')` default), so it was added to res/values/strings.xml (an allowed file; sorted after
+  translation_trips_chart_title) with the verbatim web default value. The default `values/` catalog is the only
+  string source touched: the build runs no i18n generation, and MissingTranslation/ExtraTranslation are disabled
+  (app/build.gradle.kts L114) because ar/he ship as full English fallback, so the ar/he mirrors are not required.
+  Unit symbols ("km"/"mi", "Wh/mi"/"Wh/km", currency symbol), the "Trip #id" / "Trip id" name fallbacks, and the
+  "In progress" duration label are reproduced verbatim from the web source, which likewise does not
+  internationalize them (no i18n key exists for them on the web or in the required string set) — the same
+  precedent the TripDetail port recorded.
+
+A11Y / THEME / UNITS (ADR-015)
+  - Each trailing TripRow metric carries a merged TalkBack content description ("<value> <caption>") via
+    clearAndSetSemantics (TripRowMetric); the ChartContainer body carries the aria description
+    (translation_trips_chart_title_aria) and exposes the accessible data table fallback for the opaque canvas.
+  - Colours/typography come from MaterialTheme (P1/S9 tokens) — dark + dynamic colour honoured; the only fixed
+    colours are the four per-card MetricCard accents (web `color="cyan|amber|green|purple"`), dynamic per-card
+    values, not static theme tokens, matching the sibling DrivesList trend-palette precedent. Touch targets use
+    the shared component sizing (Button/IconButton ≥48dp).
+  - The stat grid is responsive: 2 columns on a phone, 4 on a ≥840dp window (web grid-cols-2 / lg:grid-cols-4).
+  - SI values are converted only at the display boundary (TripListDisplayPrefs); the page is Compose-native —
+    the bar chart uses the A3 Vico BarChartWrapper (no webview). The web page has no map (0 maps).
+
+EXPORT (web exportAsCSV / exportAsJSON)
+  The chart action's CSV + JSON buttons are wired to a real share handler (rememberTripExport): it serialises the
+  loaded trips (CSV: the web id/name/start_date/end_date/distance_m/energy_wh/cost/drives/charges columns; JSON:
+  the full SI Trip records via kotlinx.serialization) and opens the system share sheet via Intent.ACTION_SEND —
+  the native analogue of the web browser download, no FileProvider/manifest wiring needed (the sibling
+  TelemetryErrorsPanel precedent). Not a stub (ADR-011).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/trips -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 46s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 13m 13s (lint-results-debug.html written; abortOnError true; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 27s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (Total-Distance / Energy-Used / Total-Cost / Total-Trips MetricCards, the
+      Top-Trips-by-Distance ChartContainer, the All-Trips GlassPanel6, the TripRow GlassPanel7); every region of
+      the web source reproduced (header title + subtitle + freshness chip, the 2/4-col stat grid, the chart with
+      CSV/JSON export, the paginated list, the chart + list empty states). The PageContainer actions cluster +
+      PullToRefresh are separate parity units and correctly out of scope.
+  [x] All 34 parity items render from the bound StateFlow state holder (tripsState + interaction + displayPrefs),
+      folded by the framework-free deriveTripListData.
+  [x] loading / empty / success implemented for the useTrips data source (plus the holder's error/stale/offline tiers).
+  [x] All visible strings sourced from strings.xml; key names match web; zero hardcoded UI copy (unit symbols +
+      the "Trip #id"/"In progress" fallbacks mirror the web's own non-internationalized literals).
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets; merged metric semantics + chart aria + accessible
+      data table (a11y); SI units honoured at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (34).
+  [x] android ledger row for page:trips/TripList set covered (apps/parity/android-ledger.json, 34/34 done).
+
+EXIT=0
+STATUS=DONE
