@@ -1,0 +1,122 @@
+================================================================================
+P3-ANDROID A7 — page:system/Roadmap  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/RoadmapPage.tsx
+promptId: p3-android/pages/system/RoadmapPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr 21.0.9 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED). Note: prompt's literal `:app:` is a template; this artifact's
+              settings.gradle.kts maps the single app module to Gradle path `:android` (every P3/A* gate addresses :android:).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/RoadmapPage.kt          (@Composable screen: RoadmapPage + RoadmapPageContent + progress bar + phase sections + cards)
+apps/android/app/src/main/kotlin/com/teslasync/system/RoadmapPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<RoadmapSnapshot>>; refresh()/retry(); recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/system/RoadmapPageModel.kt     (framework-free model: RoadmapPhase, RoadmapItemId, static roadmapCatalog, buildRoadmapSnapshot, registration, view.opened recorder)
+apps/android/app/src/main/kotlin/com/teslasync/system/RoadmapPageIcons.kt     (17 stroked glyphs: Rocket/CheckCircle/Clock/Star/Zap/Bell/Smartphone/Cloud/Brain/Plug/Shield/Map/BarChart3/Leaf/Globe/Wrench/Users — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/system/RoadmapPageHost.kt      (PageHosts.register(roadmap){ RoadmapRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt    (NavHost wiring: + RoadmapPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                              (+163 keys: roadmap phase labels + 17 item titles/descriptions + 125 feature bullets)
+apps/android/app/src/main/res/values-ar/strings.xml                           (+163 keys, English fallback — ar is a placeholder locale, status=placeholder)
+apps/android/app/src/main/res/values-he/strings.xml                           (+163 keys, English fallback — he is a placeholder locale, status=placeholder)
+apps/parity/android-ledger.json                                               (ledger row page:system/Roadmap 6/6)
+.github/prompts/monorepo/logs/android-page-system-RoadmapPage.log             (this log)
+
+Data   : the web page reads NO API — it renders an inline hardcoded `roadmapItems` array. This port mirrors that
+         exactly: RoadmapPageModel.kt declares the static `roadmapCatalog` (17 entries: 5 done, 1 current, 2 next,
+         9 future — verbatim from the web), and RoadmapPageViewModel projects buildRoadmapSnapshot(catalog) through
+         the shared cache-then-network Resource -> UiState pipeline (Resource.Success) so the stateless screen
+         renders the same loading/empty/success matrix every parity page uses. No HTTP, no store. refresh()/retry()
+         re-derive. buildRoadmapSnapshot reproduces the web's two derivations: the four-phase progress tally (web
+         maps over EVERY phase, including empties) and the per-phase card sections (web drops a phase whose
+         `items.length === 0`).
+Strings: the web page i18n surface is only roadmap.title + roadmap.subtitle (already generated into the catalog).
+         The phase labels are web `t('roadmap.phase.<p>', '<fallback>')` references whose keys are NOT in the web
+         en.json (they rely on the inline fallback), and the item titles/descriptions/feature bullets are HARDCODED
+         English literals in the web TSX (not i18n keys at all). To honor ADR-014 (zero hardcoded literals) the
+         native port externalizes EVERY visible literal into the platform string catalog under the web `roadmap.*`
+         namespace — 163 new keys added directly to res/values{,-ar,-he}/strings.xml. This follows the committed
+         sibling precedent (SharedDrivePage added translation_share_expired_* — t()-fallback keys not present in
+         web en.json — directly to the generated strings.xml). The two manifest-tracked keys (roadmap.title,
+         roadmap.subtitle) are reused verbatim; phase-label values ("Completed"/"In Progress"/"Up Next"/"Future")
+         match the web `t()` fallbacks. Documented here, not silent (Covenant #9). ar/he placeholder locales get the
+         same English text (their existing roadmap.title/subtitle are English fallback too). Every literal resolves
+         via stringResource(R.string.translation_*).
+Color  : the web assigns each phase a literal hex for its dot/label/icon/section-header but a separate Badge
+         `variant` (success/info/warning/danger for done/current/next/future). Material 3 forbids hardcoded colors
+         (ADR-005) and the token palette (TeslaTokens.status) exposes exactly those four semantic status colors, so
+         the port resolves ALL of a phase's coloring from the single status token matching its web Badge variant —
+         internally consistent per phase and dynamic-color/dark-theme aware (RoadmapPage.kt phaseColor/phaseVariant).
+Nav    : Destinations 'roadmap' -> /roadmap pre-existing (Destinations.kt:170; metadata-only count unchanged); host
+         wired via PageHosts.register(roadmap){ RoadmapRoute() }; deep link auto-registered by TeslaSyncNavHost.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 1m 19s
+  # first compile attempt addressed ':app:' -> project not found; re-targeted the documented ':android:' Gradle path.
+  # added missing import androidx.compose.foundation.layout.Box (progress-bar dot/connector). Re-run: clean.
+  # res-merge surfaced only PRE-EXISTING non-positional-format warnings (translation_battery_*, translation_rateLimitStatus_*);
+  # none are roadmap keys (the new roadmap strings carry no format substitutions). Warnings, not errors.
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 14m 27s (0 errors; HTML report written)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 2m 25s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=6
+--------------------------------------------------------------------------------
+# panels (2) — Material 3 GlassPanel (Surface) ; bound state holder = RoadmapPageViewModel.uiState : StateFlow<UiState<RoadmapSnapshot>>
+[COVERED] panel  GlassPanel1 -> RoadmapPage.kt:540 RoadmapProgressBar() -> GlassPanel(:542) four-phase progress bar (dot + label + count chip + connector, horizontalScroll); rendered at :513 FadeIn { RoadmapProgressBar(snapshot.tallies) }  (web `<GlassPanel className="p-4">` phase progress)
+[COVERED] panel  GlassPanel2 -> RoadmapPage.kt:632 RoadmapCard() -> GlassPanel(:637) per-entry card (icon badge + title + description + phase chip + feature bullets); rendered per phase at :595 RoadmapPhaseSection -> StaggerContainer/StaggerItem  (web `<GlassPanel className="p-5 h-full">` RoadmapCard)
+
+# data states (2 required) — bound to RoadmapPageViewModel.uiState (RoadmapPageViewModel.kt:47 feed.asUiState(isEmpty = { it.isEmpty }))
+[COVERED] state  empty   -> RoadmapPage.kt:511 (snapshot == null || snapshot.isEmpty) -> RoadmapEmpty() (:713 EmptyState common.noData) ; UiPhase.Empty via asUiState(isEmpty); model emptiness RoadmapPageModel.kt:158 RoadmapSnapshot.isEmpty (no card section)  (web renders an empty list; covenant: placeholder, never blank)
+[COVERED] state  success -> RoadmapPage.kt:513-515 else -> FadeIn { RoadmapProgressBar(tallies) } + snapshot.groups.forEach { RoadmapPhaseSection } ; UiPhase.Content ; RoadmapPageViewModel buildResource -> Resource.Success(buildRoadmapSnapshot(catalog))
+# (loading skeleton path also implemented at :510 -> RoadmapLoading() for state symmetry, though the static catalog resolves to Content/Empty synchronously and never spins)
+
+# strings (2) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string roadmap.subtitle -> RoadmapPage.kt:528 RoadmapHeader BodyText(translation_roadmap_subtitle)  (web PageContainer subtitle)
+[COVERED] string roadmap.title    -> RoadmapPage.kt:477 stringResource(translation_roadmap_title) -> :481 semantics paneTitle (web usePageTitle) ; also :526 PageTitle(translation_roadmap_title)
+
+PARITY_COVERED=6
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : none (web renders a hardcoded `roadmapItems` array, no API). RoadmapPageViewModel projects the static
+               RoadmapPageModel.roadmapCatalog (17 entries) through buildRoadmapSnapshot -> Resource.Success ->
+               UiState, so the screen renders the standard empty/success matrix from a bound StateFlow. No HTTP.
+panels       : GlassPanel1 (four-phase progress bar, all phases incl. empties) + GlassPanel2 (per-entry RoadmapCard:
+               phase-tinted icon badge, title, description, phase chip, and feature bullets keyed to the entry phase).
+               All 17 catalog entries across done/current/next/future are rendered (every web roadmapItems row).
+charts/maps  : none (web page has neither).
+si/units     : not applicable — the roadmap page renders no unit-bearing quantities (no metres/°C/m/s on this surface).
+a11y/theme   : root semantics paneTitle = roadmap.title; progress bar + each card carry contentDescription; phase
+               section headers marked semantics{heading()}; icons >=Lg with decorative null descriptions; all color
+               from MaterialTheme (A2 tokens) + TeslaTokens.status for dynamic-color + dark theme; >=48dp not needed
+               (no interactive targets); Compose-native, no webview.
+nav          : Destinations 'roadmap' -> /roadmap (pre-existing, Destinations.kt:170) wired to RoadmapRoute() via
+               PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(6) == PARITY_REQUIRED(6)
+[PASS] all android triad gates green; parity 6/6; android ledger row page:system/Roadmap status=done.
+EXIT=0
+STATUS=DONE
