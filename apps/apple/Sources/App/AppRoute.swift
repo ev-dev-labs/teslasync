@@ -27,7 +27,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, energyFlow, driving, analytics, maps
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
-         batteryDegradation, sleepEfficiency, tco, yearReview
+         batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
@@ -53,6 +53,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryDegradation: "battery-degradation"
         case .sleepEfficiency: "sleep-efficiency"
         case .energyFlow: "energy-flow"
+        case .energyProducts: "energy-products"
         case .powerUser: "power-user"
         case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
@@ -105,6 +106,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: "square.grid.3x3.fill"
         case .batteryDegradation: "chart.line.downtrend.xyaxis"
         case .sleepEfficiency: "moon.zzz.fill"
+        case .energyProducts: "powerplug.fill"
         case .driving: "speedometer"
         case .analytics: "chart.bar.fill"
         case .tco: "dollarsign.circle.fill"
@@ -167,6 +169,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryHealth, .batteryCells, .batteryDegradation: .energy
         case .energyFlow: .energy
         case .sleepEfficiency: .energy
+        case .energyProducts: .energy
         case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
              .yearReview: .insights
         case .automations, .automationsList, .notifications, .diagnostics, .sharing, .watch: .operations

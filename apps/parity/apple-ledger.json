@@ -1009,6 +1009,24 @@
       "requiredCount": 147,
       "promptId": "p4-apple/P7/page:battery/BatteryHealth",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-BatteryHealthPage.log"
+    },
+    {
+      "unitId": "page:battery/EnergyProducts",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 51,
+      "requiredCount": 51,
+      "promptId": "p4-apple/P7/page:battery/EnergyProducts",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyProductsPage.log"
+    },
+    {
+      "unitId": "page:battery/EnergyProducts",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 51,
+      "requiredCount": 51,
+      "promptId": "p4-apple/P7/page:battery/EnergyProducts",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyProductsPage.log"
     }
   ]
 }
