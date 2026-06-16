@@ -67,6 +67,7 @@ import io.teslasync.android.battery.batterycells.BatteryCellsPageHost
 import io.teslasync.android.battery.degradation.BatteryDegradationPageHost
 import io.teslasync.android.battery.energyflow.EnergyFlowPageHost
 import io.teslasync.android.battery.energy.EnergyPageHost
+import io.teslasync.android.battery.powerflow.PowerFlowDashboardPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -197,6 +198,7 @@ class TeslaSyncApplication : Application() {
         BatteryDegradationPageHost.register()
         EnergyFlowPageHost.register()
         EnergyPageHost.register()
+        PowerFlowDashboardPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

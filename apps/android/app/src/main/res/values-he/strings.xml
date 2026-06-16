@@ -5044,9 +5044,11 @@
   <string name="translation_powerFlow_noBatteryData">No battery data — refresh to fetch</string>
   <string name="translation_powerFlow_noFlowData">No power flow data yet</string>
   <string name="translation_powerFlow_powerOverTime">Power Over Time</string>
+  <string name="translation_powerFlow_powerOverTime_aria">Solar, battery, grid, and home power flow stacked area chart over time</string>
   <string name="translation_powerFlow_powerOverTimeDesc">Solar, battery, and grid power flow</string>
   <string name="translation_powerFlow_refresh">Refresh from Tesla</string>
   <string name="translation_powerFlow_socOverTime">Battery State of Charge</string>
+  <string name="translation_powerFlow_socOverTime_aria">Battery state of charge percentage over time line chart</string>
   <string name="translation_powerFlow_socOverTimeDesc">Battery percentage over time</string>
   <string name="translation_powerFlow_solar">Solar</string>
   <string name="translation_powerFlow_solarPower">Solar Production</string>

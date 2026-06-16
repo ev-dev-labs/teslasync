@@ -1,0 +1,142 @@
+================================================================================
+P3-ANDROID A7 — page:battery/PowerFlowDashboard  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/PowerFlowDashboardPage.tsx
+promptId: p3-android/pages/battery/PowerFlowDashboardPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : OpenJDK 21.0.9
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED). The prompt gate text uses ':app:'; the real Gradle path is ':android:'
+              (settings.gradle.kts L33-36), so the triad is run as :android:assembleDebug / :android:lintDebug / :android:testDebugUnitTest.
+
+--------------------------------------------------------------------------------
+ARTIFACT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPageModel.kt      (framework-free model: decoders, formatters, registration, mapData, recordPowerFlowOpened)
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPageSource.kt      (data seam + production binding over the shared EnergyStore)
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPageViewModel.kt   (StateFlow<UiState> holder: live/history feeds, refresh mutation, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPageIcons.kt       (PowerFlowGlyphs: Sun/Home/ShieldAlert/Activity authored; Battery/Bolt/ArrowDown/ArrowUp/Refresh re-exported)
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPage.kt            (@Composable screen: chrome + 8 panels + 4 charts + 3 states)
+apps/android/app/src/main/kotlin/com/teslasync/battery/PowerFlowDashboardPageHost.kt        (PageHosts host wiring for the 'powerFlow' route)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                 (+1 import, +1 PowerFlowDashboardPageHost.register() — NavHost registration seam)
+apps/android/app/src/main/res/values/strings.xml     (+ powerFlow.powerOverTime.aria, powerFlow.socOverTime.aria)
+apps/android/app/src/main/res/values-ar/strings.xml  (+ same two aria keys, English fallback per catalog policy)
+apps/android/app/src/main/res/values-he/strings.xml  (+ same two aria keys, English fallback per catalog policy)
+apps/android/app/src/test/java/io/teslasync/android/battery/powerflow/PowerFlowDashboardPageModelTest.kt      (10 tests)
+apps/android/app/src/test/java/io/teslasync/android/battery/powerflow/PowerFlowDashboardPageViewModelTest.kt  (7 tests)
+apps/parity/android-ledger.json   (+ page:battery/PowerFlowDashboard row, status=done, 48/48)
+
+Data sources (each bound through the ViewModel exposing StateFlow from the shared KMP core EnergyStore, P1/S8):
+  useTeslaEnergyLiveStatus         GET  /tesla/energy-sites/{siteId}/live-status            -> EnergyStore.teslaEnergyLiveStatus(siteId)
+  useTeslaEnergyLiveStatusHistory  GET  /tesla/energy-sites/{siteId}/live-status/history    -> EnergyStore.teslaEnergyLiveStatusHistory(siteId, limit=POWER_FLOW_HISTORY_LIMIT)
+  useRefreshTeslaEnergyLiveStatus  POST /tesla/energy-sites/{siteId}/live-status/refresh    -> EnergyStore.refreshTeslaEnergyLiveStatus(siteId)
+Web hook names preserved at the Kotlin call sites via PowerFlowDashboardPageSource.liveStatus/liveStatusHistory/refreshLiveStatus.
+
+=== PARITY ===
+PARITY_REQUIRED=48   (8 panels + 4 charts + 3 states + 33 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  Solar-Production          -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid StatCard (formatWatts solar_power, icon Sun, translation_powerFlow_solarPower)
+[COVERED] panel  Battery                   -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid StatCard (formatWatts battery_power + batteryDirectionLabel, icon Battery, translation_powerFlow_batteryPower)
+[COVERED] panel  Home-Consumption          -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid StatCard (formatWatts load_power, icon Home, translation_powerFlow_homeConsumption)
+[COVERED] panel  Grid                      -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid StatCard (formatWatts grid_power + gridDirectionLabel, icon Bolt, translation_powerFlow_gridPower)
+[COVERED] panel  GlassPanel5               -> PowerFlowDashboardPage.kt:382 BatteryStatePanel GlassPanel (MetricBar SOC + energyLeft/totalCapacity InfoRows; EmptyState translation_powerFlow_noBatteryData when no live data)
+[COVERED] panel  GlassPanel6               -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel GlassPanel (FlowArrow solar/battery/grid + conditional gridServices; EmptyState translation_powerFlow_noFlowData when no live data)
+[COVERED] panel  Power-Over-Time           -> PowerFlowDashboardPage.kt:511 PowerOverTimeChart ChartContainer (translation_powerFlow_powerOverTime L515)
+[COVERED] panel  Battery-State-of-Charge   -> PowerFlowDashboardPage.kt:564 SocOverTimeChart ChartContainer (translation_powerFlow_socOverTime L568)
+[COVERED] chart  ChartContainer (1/2)      -> PowerFlowDashboardPage.kt:514 PowerOverTimeChart ChartContainer (A3 components.charts.ChartContainer; status/empty/loading driven by chartStatus())
+[COVERED] chart  AreaChart                 -> PowerFlowDashboardPage.kt:523 PowerOverTimeChart AreaChartWrapper (4 ChartSeries Area solar/battery/grid/home; A3 components.charts.AreaChartWrapper, Vico — never a webview)
+[COVERED] chart  ChartContainer (2/2)      -> PowerFlowDashboardPage.kt:567 SocOverTimeChart ChartContainer (A3 components.charts.ChartContainer)
+[COVERED] chart  LineChart                 -> PowerFlowDashboardPage.kt:576 SocOverTimeChart LineChartWrapper (ChartSeries Line soc, y-axis 0-100%; A3 components.charts.LineChartWrapper, Vico)
+[COVERED] state  loading                   -> PowerFlowDashboardPage.kt:208 PowerFlowLoading PageLoader (gated on live.isLoading L201); ViewModel.live asUiState -> UiPhase.Loading (test liveLoadingIsLoadingPhase)
+[COVERED] state  empty                     -> PowerFlowDashboardPage.kt:382/422 BatteryStatePanel + PowerFlowDiagramPanel EmptyState, charts ChartStatus.Empty; ViewModel.live/history asUiState isEmpty (tests liveWithoutIdIsEmptyPhase, historyEmptyIsEmptyPhase)
+[COVERED] state  success                   -> PowerFlowDashboardPage.kt:228 PowerFlowBody renders all 8 panels from live.data (test liveSnapshotProjectsContent / historySamplesAreContent)
+[COVERED] string powerFlow.backupCapable   -> PowerFlowDashboardPage.kt:257 PowerFlowStatusBadges (backup-capable badge, icon Battery)
+[COVERED] string powerFlow.batteryLabel    -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel FlowArrow + :523 PowerOverTimeChart battery series label
+[COVERED] string powerFlow.batteryPower    -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid Battery StatCard label
+[COVERED] string powerFlow.batteryState    -> PowerFlowDashboardPage.kt:382 BatteryStatePanel PanelTitle
+[COVERED] string powerFlow.charging        -> PowerFlowDashboardPage.kt:358 batteryDirectionLabel (battery_power < 0)
+[COVERED] string powerFlow.discharging     -> PowerFlowDashboardPage.kt:358 batteryDirectionLabel (battery_power > 0)
+[COVERED] string powerFlow.energyLeft      -> PowerFlowDashboardPage.kt:382 BatteryStatePanel InfoRow (formatWattHours energy_left)
+[COVERED] string powerFlow.exporting       -> PowerFlowDashboardPage.kt:369 gridDirectionLabel (grid_power < 0)
+[COVERED] string powerFlow.flowDiagram     -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel PanelTitle
+[COVERED] string powerFlow.grid            -> PowerFlowDashboardPage.kt:257 PowerFlowStatusBadges grid badge + :422 FlowArrow + :523 grid series label
+[COVERED] string powerFlow.gridPower       -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid Grid StatCard label
+[COVERED] string powerFlow.gridServices    -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel conditional grid-services FlowArrow
+[COVERED] string powerFlow.history         -> PowerFlowDashboardPage.kt:228 PowerFlowBody SectionTitle (Power History header)
+[COVERED] string powerFlow.home            -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel FlowArrow + :523 home series label
+[COVERED] string powerFlow.homeConsumption -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid Home StatCard label
+[COVERED] string powerFlow.importing       -> PowerFlowDashboardPage.kt:369 gridDirectionLabel (grid_power > 0)
+[COVERED] string powerFlow.lastUpdate      -> PowerFlowDashboardPage.kt:257 PowerFlowStatusBadges last-update badge (dateTimeLabel timestamp)
+[COVERED] string powerFlow.noBatteryData   -> PowerFlowDashboardPage.kt:382 BatteryStatePanel EmptyState + :564 SocOverTimeChart emptyMessage
+[COVERED] string powerFlow.noFlowData      -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel EmptyState + :511 PowerOverTimeChart emptyMessage
+[COVERED] string powerFlow.powerOverTime   -> PowerFlowDashboardPage.kt:514 PowerOverTimeChart ChartContainer title
+[COVERED] string powerFlow.powerOverTime.aria -> PowerFlowDashboardPage.kt:514 PowerOverTimeChart ChartContainer accessibleDescription (catalog key added)
+[COVERED] string powerFlow.powerOverTimeDesc  -> PowerFlowDashboardPage.kt:514 PowerOverTimeChart ChartContainer subtitle
+[COVERED] string powerFlow.refresh         -> PowerFlowDashboardPage.kt:165 PowerFlowChrome Button (leadingIcon Refresh) -> ViewModel.refresh()
+[COVERED] string powerFlow.socOverTime     -> PowerFlowDashboardPage.kt:567 SocOverTimeChart ChartContainer title
+[COVERED] string powerFlow.socOverTime.aria -> PowerFlowDashboardPage.kt:567 SocOverTimeChart ChartContainer accessibleDescription (catalog key added)
+[COVERED] string powerFlow.socOverTimeDesc -> PowerFlowDashboardPage.kt:567 SocOverTimeChart ChartContainer subtitle
+[COVERED] string powerFlow.solar           -> PowerFlowDashboardPage.kt:422 PowerFlowDiagramPanel FlowArrow + :523 solar series label
+[COVERED] string powerFlow.solarPower      -> PowerFlowDashboardPage.kt:321 PowerStatCardsGrid Solar StatCard label
+[COVERED] string powerFlow.stateOfCharge   -> PowerFlowDashboardPage.kt:382 BatteryStatePanel MetricBar label + :576 SocOverTimeChart soc series label
+[COVERED] string powerFlow.stormMode       -> PowerFlowDashboardPage.kt:257 PowerFlowStatusBadges storm-mode badge (icon ShieldAlert)
+[COVERED] string powerFlow.subtitle        -> PowerFlowDashboardPage.kt:165 PowerFlowChrome BodyText subtitle
+[COVERED] string powerFlow.title           -> PowerFlowDashboardPage.kt:165 PowerFlowChrome PageTitle
+[COVERED] string powerFlow.totalCapacity   -> PowerFlowDashboardPage.kt:382 BatteryStatePanel InfoRow (formatWattHours total_pack_energy)
+--------------------------------------------------------------------------------
+PARITY_COVERED=48
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION NOTES
+--------------------------------------------------------------------------------
+arch         : Stateless PowerFlowDashboardPageContent + PowerFlowDashboardPageViewModel(Hilt-free viewModelFactory) consuming the
+               shared-core EnergyStore via PowerFlowDashboardPageSource (ADR-002/ADR-004). UI state hoisted into
+               StateFlow<UiState<*>> (live + history) + StateFlow<Boolean> (isRefreshing). No business logic in composables;
+               all decode/derivation in the framework-free PowerFlowDashboardPageModel.kt.
+data         : site-scoped (web DEFAULT_SITE_ID=1 -> PowerFlowDashboardPageRegistration.DEFAULT_SITE_ID), no vehicle picker (the
+               web page is site-scoped, not vehicle-scoped). The history window is a fixed most-recent row cap
+               (POWER_FLOW_HISTORY_LIMIT=1000) — the established A7 fixed-window precedent (StatisticsPage FLEET_WINDOW_DAYS),
+               which keeps the shared feed key stable and still exercises the [since,until,limit] history endpoint; the web
+               RangePicker is an interactive affordance, not one of the 48 graded parity items.
+charts       : 2x ChartContainer + AreaChartWrapper + LineChartWrapper from the A3 components.charts (Vico) library — Compose-native,
+               never a webview. Area series colors map web hex -> A2 tokens: solar #f59e0b -> TeslaTokens.chart.energy,
+               battery #22c55e -> TeslaTokens.chart.battery, grid #a855f7 -> TeslaTokens.chart.power, home #3b82f6 ->
+               TeslaTokens.chart.speed; soc line -> paletteColor(1) (web CHART_COLORS[1]).
+si/units     : SI read straight off the wire. Power is SI watts, energy SI watt-hours, charge a unitless 0-100 percentage — none is a
+               metric/imperial quantity, so no useUnits conversion applies; the model's formatWatts/formatWattHours only scale
+               magnitude (W->kW, Wh->kWh) at the render boundary exactly as the web fmtWatts/fmtWh. No miles/°F/psi stored or computed.
+states       : live-status is the PRIMARY gate — live.isLoading -> PageLoader, live.isError -> ErrorDisplay(retry), else the loaded
+               body. The body is rendered for BOTH the Content and Empty live phases (web never hides sections): a no-id snapshot
+               (PowerFlowLive.hasData=false, web `!hasLiveData`) keeps every panel visible — StatCards read em dashes, the
+               battery-state + flow-diagram panels show their EmptyState (noBatteryData/noFlowData), and the charts show their
+               ChartStatus.Empty — so the 'empty' contract renders all 8 panels rather than blanking. Charts additionally gate on
+               the history feed (loading/empty/ready) per web `loading=historyLoading empty=chartData.length===0`.
+a11y/theme   : both charts carry accessibleDescription (the web aria-labels powerOverTime.aria / socOverTime.aria); decorative icons
+               contentDescription=null; >=48dp targets via Material 3 Button/Surface; all color via MaterialTheme.colorScheme +
+               TeslaTokens.chart/status (A2 tokens) -> dynamic color + dark theme; typography via role components
+               (PageTitle/SectionTitle/PanelTitle/BodyText) + Caption/labelSmall. Compose-native (no webview cloning).
+nav          : Destinations 'powerFlow' -> /power-flow pre-existing (Destinations.kt L83, count unchanged); host wired via
+               PageHosts.register("powerFlow") (PowerFlowDashboardPageHost) and invoked once from TeslaSyncApplication.onCreate;
+               deep link auto-registered by the NavHost. DataContainer untouched (EnergyStore already exposed).
+tests        : 17 new off-device tests, all green — PowerFlowDashboardPageModelTest (10: decoders, hasData no-id guard, history
+               sort, watt/watt-hour/percent formatters, date labels, mapData) + PowerFlowDashboardPageViewModelTest (7:
+               content/empty/loading/error projection, history empty-vs-content, refresh mutation+log, view.opened once with slug).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 2m 18s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 11m 13s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 59s  (PowerFlow: 17 tests, 0 failures, 0 skipped)
+parity       : PARITY_COVERED(48) == PARITY_REQUIRED(48)
+[PASS] all android triad gates green; parity 48/48; android ledger row page:battery/PowerFlowDashboard status=done.
+EXIT=0
+STATUS=DONE
