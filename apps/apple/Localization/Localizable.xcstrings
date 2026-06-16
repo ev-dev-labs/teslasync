@@ -1,6 +1,1194 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "battery.bar.capacity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current Capacity"
+          }
+        }
+      }
+    },
+    "battery.bar.cycles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge Cycles"
+          }
+        }
+      }
+    },
+    "battery.bar.degradation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degradation"
+          }
+        }
+      }
+    },
+    "battery.chart.acdc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AC / DC Energy Breakdown"
+          }
+        }
+      }
+    },
+    "battery.chart.acdc.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AC versus DC energy share pie chart"
+          }
+        }
+      }
+    },
+    "battery.chart.actual" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Actual %"
+          }
+        }
+      }
+    },
+    "battery.chart.capacityTrend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity Trend & Prediction"
+          }
+        }
+      }
+    },
+    "battery.chart.capacityTrend.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery capacity trend with dashed projection line over time"
+          }
+        }
+      }
+    },
+    "battery.chart.chargeDist" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge Level Distribution"
+          }
+        }
+      }
+    },
+    "battery.chart.chargeDistSub" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent 100 sessions"
+          }
+        }
+      }
+    },
+    "battery.chart.chargeEnded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge Ended"
+          }
+        }
+      }
+    },
+    "battery.chart.chargeStarted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge Started"
+          }
+        }
+      }
+    },
+    "battery.chart.dashedProjected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashed = projected"
+          }
+        }
+      }
+    },
+    "battery.chart.noBreakdown" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No charging data for breakdown"
+          }
+        }
+      }
+    },
+    "battery.chart.noRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No range data yet"
+          }
+        }
+      }
+    },
+    "battery.chart.noSessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No charging session data yet"
+          }
+        }
+      }
+    },
+    "battery.chart.noTrend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough snapshots for trend analysis"
+          }
+        }
+      }
+    },
+    "battery.chart.predicted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Predicted %"
+          }
+        }
+      }
+    },
+    "battery.chart.range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range"
+          }
+        }
+      }
+    },
+    "battery.chart.rangeTrend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated Range Over Time"
+          }
+        }
+      }
+    },
+    "battery.chart.rangeTrend.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estimated battery range over time area chart"
+          }
+        }
+      }
+    },
+    "battery.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No battery health data available yet."
+          }
+        }
+      }
+    },
+    "battery.gauge.capacity" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity"
+          }
+        }
+      }
+    },
+    "battery.gauge.cycles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cycles"
+          }
+        }
+      }
+    },
+    "battery.gauge.degradation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degradation"
+          }
+        }
+      }
+    },
+    "battery.gauge.health" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health Score"
+          }
+        }
+      }
+    },
+    "battery.habit.avgEnd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg End Level"
+          }
+        }
+      }
+    },
+    "battery.habit.avgStart" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Start Level"
+          }
+        }
+      }
+    },
+    "battery.habit.home" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home Charges"
+          }
+        }
+      }
+    },
+    "battery.habit.supercharger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supercharger Sessions"
+          }
+        }
+      }
+    },
+    "battery.health.degraded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degraded"
+          }
+        }
+      }
+    },
+    "battery.health.excellent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excellent"
+          }
+        }
+      }
+    },
+    "battery.health.good" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good"
+          }
+        }
+      }
+    },
+    "battery.insight.concernDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery health dropped to {{soh}}/100 \u2014 consider service check."
+          }
+        }
+      }
+    },
+    "battery.insight.concernTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health Concern"
+          }
+        }
+      }
+    },
+    "battery.insight.deepDischargeDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{{count}} recent sessions started below 10%. Avoid deep discharges when possible."
+          }
+        }
+      }
+    },
+    "battery.insight.deepDischargeTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deep Discharges Detected"
+          }
+        }
+      }
+    },
+    "battery.insight.excellentDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery health is {{soh}}/100 \u2014 performing above average."
+          }
+        }
+      }
+    },
+    "battery.insight.excellentTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excellent Health"
+          }
+        }
+      }
+    },
+    "battery.insight.goodDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery health is {{soh}}/100 \u2014 normal degradation for age."
+          }
+        }
+      }
+    },
+    "battery.insight.goodHabitsDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most charges are slow/AC \u2014 ideal for battery longevity."
+          }
+        }
+      }
+    },
+    "battery.insight.goodHabitsTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good Charging Habits"
+          }
+        }
+      }
+    },
+    "battery.insight.goodTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Good Health"
+          }
+        }
+      }
+    },
+    "battery.insight.highFastChargeDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{{pct}} of sessions are fast-charging. Mix in slow charging for longevity."
+          }
+        }
+      }
+    },
+    "battery.insight.highFastChargeTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High Fast-Charge Usage"
+          }
+        }
+      }
+    },
+    "battery.insight.highSuperchargerDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{{count}} Supercharger sessions. Occasional slow charging helps battery health."
+          }
+        }
+      }
+    },
+    "battery.insight.highSuperchargerTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High Supercharger Usage"
+          }
+        }
+      }
+    },
+    "battery.insight.lowDegDesc" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "{{rate}}% per year \u2014 well below industry average of 3\u20135%."
+          }
+        }
+      }
+    },
+    "battery.insight.lowDegTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Low Degradation Rate"
+          }
+        }
+      }
+    },
+    "battery.insights.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough data for insights yet"
+          }
+        }
+      }
+    },
+    "battery.insights.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smart Insights"
+          }
+        }
+      }
+    },
+    "battery.links.cells" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery Cells"
+          }
+        }
+      }
+    },
+    "battery.links.degradation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degradation"
+          }
+        }
+      }
+    },
+    "battery.links.energyFlow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Energy Flow"
+          }
+        }
+      }
+    },
+    "battery.links.projectedRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Projected Range"
+          }
+        }
+      }
+    },
+    "battery.links.sleepEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep Efficiency"
+          }
+        }
+      }
+    },
+    "battery.links.vampireDrain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vampire Drain"
+          }
+        }
+      }
+    },
+    "battery.metric.age" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery Age"
+          }
+        }
+      }
+    },
+    "battery.metric.currentCap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Current Capacity"
+          }
+        }
+      }
+    },
+    "battery.metric.cycles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Cycles"
+          }
+        }
+      }
+    },
+    "battery.metric.degradation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degradation Rate"
+          }
+        }
+      }
+    },
+    "battery.metric.fullChargeComplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full Charge Complete"
+          }
+        }
+      }
+    },
+    "battery.metric.originalCap" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original Capacity"
+          }
+        }
+      }
+    },
+    "battery.metric.soh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "State of Health"
+          }
+        }
+      }
+    },
+    "battery.months" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "months"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.capNew" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity When New"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.capNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity Now"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.lost" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "lost"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.rangeNew" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range When New"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.rangeNow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Range Now"
+          }
+        }
+      }
+    },
+    "battery.newVsNow.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity & Range: New vs Now"
+          }
+        }
+      }
+    },
+    "battery.perYear" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "per year"
+          }
+        }
+      }
+    },
+    "battery.recommendations.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommendations"
+          }
+        }
+      }
+    },
+    "battery.section.acdcFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AC/DC energy breakdown failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.capacityRangeFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capacity & range comparison failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.chargeDistFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge level distribution failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.heroFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Health score panel failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.insightsFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smart insights failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.metricBarsFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Metric bars failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.quickLinksFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick links failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.recommendationsFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recommendations failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.summaryCardsFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summary metrics failed to load"
+          }
+        }
+      }
+    },
+    "battery.section.thermalFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thermal monitoring failed to load"
+          }
+        }
+      }
+    },
+    "battery.stats.acSessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AC Sessions"
+          }
+        }
+      }
+    },
+    "battery.stats.cycles" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charge Cycles"
+          }
+        }
+      }
+    },
+    "battery.stats.dcSessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DC / Supercharger"
+          }
+        }
+      }
+    },
+    "battery.stats.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No charging statistics yet"
+          }
+        }
+      }
+    },
+    "battery.stats.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Charging Statistics"
+          }
+        }
+      }
+    },
+    "battery.stats.totalEnergy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Energy Added"
+          }
+        }
+      }
+    },
+    "battery.stats.totalSessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Sessions"
+          }
+        }
+      }
+    },
+    "battery.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Degradation tracking, prediction, charging habits & longevity insights"
+          }
+        }
+      }
+    },
+    "battery.thermal.heater" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery Heater"
+          }
+        }
+      }
+    },
+    "battery.thermal.moduleNumber" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Module #{{n}}"
+          }
+        }
+      }
+    },
+    "battery.thermal.moduleTempMax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Module Temp (Max)"
+          }
+        }
+      }
+    },
+    "battery.thermal.moduleTempMin" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Module Temp (Min)"
+          }
+        }
+      }
+    },
+    "battery.thermal.tempSpread" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temperature Spread"
+          }
+        }
+      }
+    },
+    "battery.thermal.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thermal Monitoring"
+          }
+        }
+      }
+    },
+    "battery.tip.aboveAvg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your degradation rate is above average \u2014 review charging habits."
+          }
+        }
+      }
+    },
+    "battery.tip.avoid100" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avoid charging to 100% regularly \u2014 keep the limit at 80\u201390%."
+          }
+        }
+      }
+    },
+    "battery.tip.avoidDeep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try to avoid deep discharges below 20%."
+          }
+        }
+      }
+    },
+    "battery.tip.great" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your battery health looks great \u2014 keep up the good habits!"
+          }
+        }
+      }
+    },
+    "battery.tip.reduceFast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reduce fast charging frequency to slow degradation."
+          }
+        }
+      }
+    },
+    "battery.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery Health"
+          }
+        }
+      }
+    },
+    "battery.warrantyLimit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tesla warranty: 1,500 cycles / 70%"
+          }
+        }
+      }
+    },
+    "battery.warrantyNote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "warranty threshold"
+          }
+        }
+      }
+    },
+    "battery.yearsTo80" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Years to 80%"
+          }
+        }
+      }
+    },
+    "battery.yr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "yr"
+          }
+        }
+      }
+    },
+    "route.batteryHealth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery Health"
+          }
+        }
+      }
+    },
     "AC Power" : {
       "extractionState" : "manual",
       "localizations" : {

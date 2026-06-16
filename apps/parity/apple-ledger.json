@@ -991,6 +991,24 @@
       "requiredCount": 23,
       "promptId": "p4-apple/P7/page:automations/TriggerConfigurator",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log"
+    },
+    {
+      "unitId": "page:battery/BatteryHealth",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 147,
+      "requiredCount": 147,
+      "promptId": "p4-apple/P7/page:battery/BatteryHealth",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-BatteryHealthPage.log"
+    },
+    {
+      "unitId": "page:battery/BatteryHealth",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 147,
+      "requiredCount": 147,
+      "promptId": "p4-apple/P7/page:battery/BatteryHealth",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-BatteryHealthPage.log"
     }
   ]
 }

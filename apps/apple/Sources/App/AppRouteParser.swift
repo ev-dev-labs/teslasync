@@ -6,8 +6,8 @@ public enum AppRouteParser {
     /// Path → route redirects (web aliases like `/battery/health` → energy).
     static let aliases: [String: AppRoute] = [
         "/": .dashboard,
-        "/battery": .energy,
-        "/battery/health": .energy,
+        "/battery": .batteryHealth,
+        "/battery/health": .batteryHealth,
         "/charging/curves": .charging,
         "/performance": .driving,
         "/drive-score": .driving,

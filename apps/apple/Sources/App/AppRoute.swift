@@ -26,8 +26,8 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, energyFlow, driving, analytics, maps
-    case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation,
-         sleepEfficiency, tco, yearReview
+    case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
+         batteryDegradation, sleepEfficiency, tco, yearReview
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
@@ -48,6 +48,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .periodCompare: "period-compare"
         case .lifetimeStats: "lifetime-stats"
         case .yearReview: "year-review"
+        case .batteryHealth: "battery"
         case .batteryCells: "battery-cells"
         case .batteryDegradation: "battery-degradation"
         case .sleepEfficiency: "sleep-efficiency"
@@ -100,6 +101,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .trips: "map.fill"
         case .energy: "battery.100"
         case .energyFlow: "powerplug.fill"
+        case .batteryHealth: "heart.text.square.fill"
         case .batteryCells: "square.grid.3x3.fill"
         case .batteryDegradation: "chart.line.downtrend.xyaxis"
         case .sleepEfficiency: "moon.zzz.fill"
@@ -162,8 +164,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .dashboard, .glance, .explore, .search: .overview
         case .vehicles, .charging, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
+        case .batteryHealth, .batteryCells, .batteryDegradation: .energy
         case .energyFlow: .energy
-        case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
              .yearReview: .insights

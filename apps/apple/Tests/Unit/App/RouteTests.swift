@@ -22,7 +22,7 @@ import XCTest
     }
 
     func testAliasesRedirect() {
-        XCTAssertEqual(AppRouteParser.parse(path: "/battery/health"), .energy)
+        XCTAssertEqual(AppRouteParser.parse(path: "/battery/health"), .batteryHealth)
         XCTAssertEqual(AppRouteParser.parse(path: "/statistics"), .analytics)
         XCTAssertEqual(AppRouteParser.parse(path: "/"), .dashboard)
     }
