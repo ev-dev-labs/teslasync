@@ -1,6 +1,204 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "routeEfficiency.avg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "avg"
+          }
+        }
+      }
+    },
+    "routeEfficiency.avgEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg"
+          }
+        }
+      }
+    },
+    "routeEfficiency.avgLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg"
+          }
+        }
+      }
+    },
+    "routeEfficiency.best" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Best"
+          }
+        }
+      }
+    },
+    "routeEfficiency.bestEfficiency" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Best"
+          }
+        }
+      }
+    },
+    "routeEfficiency.bestLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Best Efficiency"
+          }
+        }
+      }
+    },
+    "routeEfficiency.col.route" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route"
+          }
+        }
+      }
+    },
+    "routeEfficiency.comparison" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route Efficiency Comparison"
+          }
+        }
+      }
+    },
+    "routeEfficiency.comparison.aria" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per-route best, average, and worst efficiency comparison bar chart"
+          }
+        }
+      }
+    },
+    "routeEfficiency.metrics" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route Metrics"
+          }
+        }
+      }
+    },
+    "routeEfficiency.mostDrivenLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Most Driven Route"
+          }
+        }
+      }
+    },
+    "routeEfficiency.routes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routes"
+          }
+        }
+      }
+    },
+    "routeEfficiency.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compare efficiency across your most-driven routes"
+          }
+        }
+      }
+    },
+    "routeEfficiency.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route Efficiency"
+          }
+        }
+      }
+    },
+    "routeEfficiency.totalTrips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Trips"
+          }
+        }
+      }
+    },
+    "routeEfficiency.trips" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "trips"
+          }
+        }
+      }
+    },
+    "routeEfficiency.worst" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worst"
+          }
+        }
+      }
+    },
+    "routeEfficiency.worstLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worst Efficiency"
+          }
+        }
+      }
+    },
     "explore.anchorCountAria" : {
       "extractionState" : "manual",
       "localizations" : {

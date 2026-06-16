@@ -1279,6 +1279,24 @@
       "requiredCount": 17,
       "promptId": "p4-apple/P7/page:explore/Explore",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-explore-ExplorePage.log"
+    },
+    {
+      "unitId": "page:driving/RouteEfficiency",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 29,
+      "requiredCount": 29,
+      "promptId": "p4-apple/P7/page:driving/RouteEfficiency",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-RouteEfficiencyPage.log"
+    },
+    {
+      "unitId": "page:driving/RouteEfficiency",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 29,
+      "requiredCount": 29,
+      "promptId": "p4-apple/P7/page:driving/RouteEfficiency",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-RouteEfficiencyPage.log"
     }
   ]
 }

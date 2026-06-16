@@ -257,6 +257,7 @@ final class TimelinePageModelTests: XCTestCase {
 }
 
 /// Pure-logic tests for the Timeline formatters + state mappings (no view layer).
+@MainActor
 final class TimelineFormatTests: XCTestCase {
     func testInteger() {
         XCTAssertEqual(TimelineFormat.integer(1240), "1,240")

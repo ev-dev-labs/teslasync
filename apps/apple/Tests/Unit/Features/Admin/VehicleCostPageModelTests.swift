@@ -26,7 +26,9 @@ import XCTest
 
     private struct StubError: Error {}
 
-    private static let zeroTotals = VehicleCostTotals(
+    // `nonisolated` so the nonisolated `StubSource` can reference it in a default value /
+    // outside the @MainActor class (pre-existing Swift 6 isolation break; VehicleCostTotals is Sendable).
+    nonisolated private static let zeroTotals = VehicleCostTotals(
         totalRows: 0,
         totalBytesEst: 0,
         totalRatePerMinute24h: 0,
@@ -153,7 +155,11 @@ import XCTest
         XCTAssertEqual(VehicleCostWindow.days30.days, 30)
         XCTAssertEqual(VehicleCostWindow.days90.days, 90)
         let now = Date(timeIntervalSince1970: 1_000_000)
-        XCTAssertEqual(VehicleCostWindow.days1.since(from: now), now.addingTimeInterval(-86400), accuracy: 0.001)
+        XCTAssertEqual(
+            VehicleCostWindow.days1.since(from: now).timeIntervalSince1970,
+            now.addingTimeInterval(-86400).timeIntervalSince1970,
+            accuracy: 0.001
+        )
         XCTAssertEqual(VehicleCostWindow.allCases.count, 4)
     }
 

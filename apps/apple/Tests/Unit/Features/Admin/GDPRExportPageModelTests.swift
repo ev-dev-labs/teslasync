@@ -23,7 +23,7 @@ import XCTest
 
     private struct StubError: Error {}
 
-    private static func artifact(
+    nonisolated private static func artifact(
         id: String = "abc",
         status: GDPRArtifactStatus = .complete,
         bytes: Int64? = 2048,

@@ -39,6 +39,7 @@ final class DriveDetailFormatTests: XCTestCase {
         XCTAssertNil(DriveDetailFormat.costPerDistance(energyWh: 1000, distanceM: 0, isMiles: false))
     }
 
+    @MainActor
     func testRouteRegistrationBuildsPage() {
         _ = DriveDetailRouteRegistration.make(driveID: 7)
         XCTAssertEqual(DriveDetailLink(driveID: 7).driveID, 7)

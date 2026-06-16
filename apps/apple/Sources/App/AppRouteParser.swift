@@ -12,6 +12,7 @@ public enum AppRouteParser {
         "/charging/vampire-drain": .vampireDrain,
         "/performance": .driving,
         "/drive-score": .driving,
+        "/route-efficiency": .driving,
         "/statistics": .analytics,
         "/analytics/tco": .tco,
         "/analytics/range": .projectedRange,

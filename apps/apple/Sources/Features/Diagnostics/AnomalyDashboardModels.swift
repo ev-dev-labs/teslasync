@@ -182,11 +182,14 @@ public struct AnomalyData: Hashable, Sendable {
         for anomaly in anomalies {
             counts[anomaly.signal, default: 0] += 1
         }
-        let ranked = counts
-            .map { AnomalySignalCount(signal: $0.key, count: $0.value) }
-            .sorted { lhs, rhs in
-                lhs.count == rhs.count ? lhs.signal < rhs.signal : lhs.count > rhs.count
-            }
+        // Split + annotated to keep the Swift type-checker within budget (the chained
+        // dictionary `.map { … }.sorted { … }` form times out under `-strict-concurrency`).
+        let mapped: [AnomalySignalCount] = counts.map { entry in
+            AnomalySignalCount(signal: entry.key, count: entry.value)
+        }
+        let ranked = mapped.sorted { lhs, rhs in
+            lhs.count == rhs.count ? lhs.signal < rhs.signal : lhs.count > rhs.count
+        }
         return Array(ranked.prefix(10))
     }
 }
