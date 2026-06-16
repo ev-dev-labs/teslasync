@@ -16,9 +16,15 @@ function walk(dir) {
     if (e.isDirectory()) { if (!/\\(obj|bin)$|\/(obj|bin)$/.test(path.join(dir, e.name)) && e.name !== 'obj' && e.name !== 'bin') walk(path.join(dir, e.name)); }
     else if (e.name.endsWith('.cs')) {
       const txt = fs.readFileSync(path.join(dir, e.name), 'utf8');
-      for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = m[1].replace(/\\"/g, '"'); global.add(s); if (s.startsWith('translation.')) global.add(s.slice('translation.'.length)); }
+      for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = decode(m[1]); global.add(s); if (s.startsWith('translation.')) global.add(s.slice('translation.'.length)); }
     }
   }
+}
+function decode(s) {
+  return s
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
 }
 walk(appRoot);
 console.log(`global native string literals: ${global.size}`);

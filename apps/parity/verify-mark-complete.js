@@ -22,10 +22,16 @@ const globalStr = new Set();
     if (e.isDirectory()) { if (e.name !== 'obj' && e.name !== 'bin') walk(path.join(dir, e.name)); }
     else if (e.name.endsWith('.cs')) {
       const txt = fs.readFileSync(path.join(dir, e.name), 'utf8');
-      for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = m[1].replace(/\\"/g, '"'); globalStr.add(s); if (s.startsWith('translation.')) globalStr.add(s.slice('translation.'.length)); }
+      for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = decodeLit(m[1]); globalStr.add(s); if (s.startsWith('translation.')) globalStr.add(s.slice('translation.'.length)); }
     }
   }
 })(appRoot);
+function decodeLit(s) {
+  return s
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\x([0-9a-fA-F]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
+}
 const byFile = {};
 for (const u of units) { if (closed.has(u.id)) continue; const f = (u.sourceFiles || [])[0] || '(none)'; (byFile[f] = byFile[f] || []).push(u); }
 const files = Object.entries(byFile).map(([f, us]) => ({ f, us, n: us.length })).sort((a, b) => b.n - a.n);
