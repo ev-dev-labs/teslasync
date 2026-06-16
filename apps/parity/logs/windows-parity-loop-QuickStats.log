@@ -1,0 +1,9 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/dashboard/pages/QuickStatsPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/QuickStatsPage/*
+Units: 9 (3 api, 5 panels, 1 string-group req=9). Verification-only; gates green.
+api: GET /vehicles (Source.cs:15), GET /vehicles/{vehicleID}/state (Source.cs:16), GET /analytics/fleet?days=30 (Source.cs:18).
+panels(5): GlassPanel1 vehicle panel (cs:44 _vehiclePanel), unit-Driven=Distance (cs:58), Drives (cs:59), kWh-Used (cs:60), Total-Cost (cs:61) metric tiles.
+string-group req=9: 9/9 present among 11 native keys (0 missing).
+Gates green: build=0 / format=clean / placeholder=0 / test=31537.
+=== PARITY === platform=windows file=QuickStatsPage.tsx units=9 status=done

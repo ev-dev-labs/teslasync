@@ -149,8 +149,8 @@
     "status": "done",
     "coveredCount": 18,
     "requiredCount": 18,
-    "promptId": "p2-windows/W7/windows-page-dashboard-QuickStatsPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-dashboard-QuickStatsPage.log"
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
   },
   {
     "unitId": "page:driving/TripPlanner",
@@ -1419,7 +1419,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
   },
   {
     "unitId": "route:/redis-signals",
@@ -2032,5 +2032,86 @@
     "requiredCount": 15,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "api:dashboard/QuickStats#useAnalyticsSummary",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "api:dashboard/QuickStats#useVehicleState",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "api:dashboard/QuickStats#useVehicles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "panel:dashboard/QuickStats#Drives",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "panel:dashboard/QuickStats#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "panel:dashboard/QuickStats#Total-Cost",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "panel:dashboard/QuickStats#kWh-Used",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "panel:dashboard/QuickStats#unit-Driven",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
+  },
+  {
+    "unitId": "string-group:dashboard/QuickStats",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-QuickStats.log"
   }
 ]
