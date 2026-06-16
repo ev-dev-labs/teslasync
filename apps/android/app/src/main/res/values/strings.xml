@@ -3639,6 +3639,7 @@
   <string name="translation_efficiency_costPerKm">Est. Cost/km</string>
   <string name="translation_efficiency_costPerKmLabel">Est. Cost/km</string>
   <string name="translation_efficiency_dailyTrend">Daily Efficiency (%1$s)</string>
+  <string name="translation_efficiency_dailyTrend_aria">Daily efficiency trend area chart</string>
   <string name="translation_efficiency_drives">Drives</string>
   <string name="translation_efficiency_drivesAnalyzed">Drives Analyzed</string>
   <string name="translation_efficiency_hours">h</string>
@@ -3653,13 +3654,16 @@
   <string name="translation_efficiency_regenRatioLabel">Regen Ratio</string>
   <string name="translation_efficiency_speed">Speed</string>
   <string name="translation_efficiency_speedDist">Efficiency by Speed Range</string>
+  <string name="translation_efficiency_speedDist_aria">Efficiency by speed-range bar chart</string>
   <string name="translation_efficiency_speedVsEfficiency">Speed vs Efficiency</string>
+  <string name="translation_efficiency_speedVsEfficiency_aria">Speed versus efficiency scatter plot</string>
   <string name="translation_efficiency_subtitle">Energy consumption and driving efficiency analysis</string>
   <string name="translation_efficiency_summary">Efficiency Summary</string>
   <string name="translation_efficiency_temp">Temp</string>
   <string name="translation_efficiency_tempEfficiency">Efficiency by Temperature Range</string>
   <string name="translation_efficiency_tempRange">Temp Range</string>
   <string name="translation_efficiency_tempVsEfficiency">Temperature vs Efficiency</string>
+  <string name="translation_efficiency_tempVsEfficiency_aria">Temperature versus efficiency scatter plot</string>
   <string name="translation_efficiency_title">Efficiency</string>
   <string name="translation_efficiency_topSpeed">Top Speed</string>
   <string name="translation_efficiency_total">Total</string>

@@ -84,6 +84,7 @@ import io.teslasync.android.driving.drivedetail.DriveDetailPageHost
 import io.teslasync.android.driving.drivescore.DriveScorePageHost
 import io.teslasync.android.driving.drivetrainhealth.DrivetrainHealthPageHost
 import io.teslasync.android.driving.drivingdynamics.DrivingDynamicsPageHost
+import io.teslasync.android.driving.efficiency.EfficiencyPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
