@@ -1479,11 +1479,17 @@ public sealed partial class ShellWindow : Window
     private NavigationViewItem CreateNavItem(RouteDefinition route)
     {
         var label = Localization.Title(route);
+        var icon = new FontIcon { Glyph = route.Glyph };
+        if (NavGroupBrush(route.Group) is { } iconBrush)
+        {
+            icon.Foreground = iconBrush;
+        }
+
         var item = new NavigationViewItem
         {
             Content = label,
             Tag = route.PathPattern,
-            Icon = new FontIcon { Glyph = route.Glyph },
+            Icon = icon,
         };
         AutomationProperties.SetName(item, label);
         _navItems[RouteRegistry.Normalize(route.PathPattern)] = item;
@@ -1494,15 +1500,57 @@ public sealed partial class ShellWindow : Window
     {
         var route = _viewModel.Registry.Resolve(path).Route;
         var label = route.IsCatchAll ? fallbackLabel : Localization.Title(route);
+        var icon = new FontIcon { Glyph = glyph };
+        if (NavGroupBrush(route.Group) is { } iconBrush)
+        {
+            icon.Foreground = iconBrush;
+        }
+
         var item = new NavigationViewItem
         {
             Content = label,
             Tag = path,
-            Icon = new FontIcon { Glyph = glyph },
+            Icon = icon,
         };
         AutomationProperties.SetName(item, label);
         return item;
     }
+
+    // Web parity (Layout.tsx per-group accent): each nav group's icon carries its section colour (dark-mode
+    // Tailwind *-300 shades) so the rail reads as colour-coded sections instead of flat monochrome glyphs.
+    private static SolidColorBrush? NavGroupBrush(RouteGroup group)
+    {
+        string? hex = group switch
+        {
+            RouteGroup.DashboardExplore => "#7DD3FC",            // sky-300 (web Home)
+            RouteGroup.Vehicles => "#67E8F9",                    // cyan-300
+            RouteGroup.Charging => "#6EE7B7",                    // emerald-300
+            RouteGroup.TripsDriving => "#C4B5FD",                // violet-300 (web Driving)
+            RouteGroup.BatteryEnergy => "#FCD34D",               // amber-300 (web Battery)
+            RouteGroup.Analytics => "#86EFAC",                   // green-300 (web Reports)
+            RouteGroup.MapsLocation => "#7DD3FC",                // sky-300
+            RouteGroup.VehicleSystems => "#FDA4AF",              // rose-300 (web Service)
+            RouteGroup.Automations => "#D8B4FE",                 // purple-300
+            RouteGroup.Notifications => "#FDBA74",               // orange-300
+            RouteGroup.TelemetrySignals => "#67E8F9",            // cyan-300
+            RouteGroup.Diagnostics => "#67E8F9",                 // cyan-300
+            RouteGroup.AdminDevTools => "#CBD5E1",               // slate-300
+            RouteGroup.PowerUser => "#F0ABFC",                   // fuchsia-300 (web Commands)
+            RouteGroup.SystemOps => "#93C5FD",                   // blue-300
+            RouteGroup.SettingsAccountIntegrations => "#CBD5E1", // slate-300 (web Settings)
+            RouteGroup.Sharing => "#F9A8D4",                     // pink-300 (web Integrations)
+            RouteGroup.Onboarding => "#7DD3FC",                  // sky-300
+            _ => null,                                            // None / Standalone -> default theme foreground
+        };
+
+        return hex is null ? null : new SolidColorBrush(NavHexColor(hex));
+    }
+
+    private static Windows.UI.Color NavHexColor(string hex) => Windows.UI.Color.FromArgb(
+        0xFF,
+        Convert.ToByte(hex.Substring(1, 2), 16),
+        Convert.ToByte(hex.Substring(3, 2), 16),
+        Convert.ToByte(hex.Substring(5, 2), 16));
 
     private void AddNavigationAccelerators()
     {
@@ -1646,7 +1694,10 @@ public sealed partial class ShellWindow : Window
         StatusText.Text = _viewModel.StatusText;
         RootNavigation.IsBackEnabled = _viewModel.CanGoBack;
         RootNavigation.IsPaneVisible = !_viewModel.IsStandalone;
-        HeaderTitle.Visibility = _viewModel.IsStandalone ? Visibility.Collapsed : Visibility.Visible;
+        // Web parity: the layout chrome shows only the breadcrumb trail; the page title + subtitle is owned by each
+        // page's own header (PageTitle + Subhead). The breadcrumb's trailing crumb already names the current page, so
+        // the chrome HeaderTitle is a redundant second title — keep it collapsed to avoid the duplicate-heading look.
+        HeaderTitle.Visibility = Visibility.Collapsed;
 
         Title = _viewModel.Title;
         try
