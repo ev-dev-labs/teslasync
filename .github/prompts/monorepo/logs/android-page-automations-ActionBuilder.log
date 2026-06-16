@@ -1,0 +1,141 @@
+P3-ANDROID A7 — page:automations/ActionBuilder — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/ActionBuilder.tsx  (route (unrouted) — controlled sub-component)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (ActionBuilderPage + ActionBuilderPageModel)
+Embeds     : io.teslasync.android.featureviews.actionbuilder.ActionBuilder (apps/android/app/src/main/java/com/teslasync/feature-views/ActionBuilder)
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WRAPPER NOTE (honesty): the web `ActionBuilder` is NOT a routed page — it is an UNROUTED,
+CONTROLLED sub-component of the automation editor. Its only hook is `useTranslation`; the
+action list + per-field edits flow through props (`actions`/`channels`/`onChange`), so it
+binds no data feed and does no async work (manifest: 0 data sources, 1 panel, 2 states,
+27 strings, requiredCount=30, route=(unrouted)). Faithful to the sibling A7 pages
+(TeslaRegionPage / GasPriceAutoPollPage), the Android port is a thin wrapper that embeds the
+PRE-EXISTING shared feature view io.teslasync.android.featureviews.actionbuilder.ActionBuilder
+VERBATIM (DRY, ADR-006): the vertical list of GlassPanel action cards — each with a 1-based
+index, an action-type Select, the kind-specific field set (command + JSON params, notify
+channel + message, set-setting key/type/value, call-automation target id) and a
+move-up / move-down / remove control column — followed by the ghost "Add Action" button, all
+come from that one shared surface. It is NOT re-implemented or stubbed here. Because the web
+source is a controlled component with no parent on a standalone screen, the page seeds the
+embedded editor with one representative action of each kind + two notify channels
+(ActionBuilderPageModel.actionBuilderSampleActions/Channels) so every panel, data state and
+string renders — the same role the web AutomationBuilder page plays when it embeds
+<ActionBuilder/>.
+
+PREDECESSOR NOTE (honesty): the shared ActionBuilder feature view (+ its pure
+ActionBuilderModel: ActionStepInput/ActionChannel/AutomationActionKind/SettingValueKind, the
+ACTION_TYPES/COMMAND_GROUPS option projections, the createDefaultAction/add/remove/move/replace
+list ops, the parseCommandParams JSON validator, the ActionBuilderText i18n fold + fallback,
+and its ActionBuilderViewModel) and its unit tests (ActionBuilderModelTest /
+ActionBuilderViewModelTest) already exist on this branch, committed at fc9ea2758 — shared :core
++ :android compile green. The page composes the real feature view end to end; no predecessor
+was stubbed or bypassed.
+
+NAV NOTE (honesty, no fabrication): the web source is UNROUTED (manifest route=(unrouted);
+ActionBuilder.tsx is imported by the AutomationBuilder editor, never mounted on its own URL),
+so there is NO web App.tsx route to mirror and Destinations.kt was NOT touched — fabricating a
+route would violate the generated-from-App.tsx contract and RouteTableTest (which enumerates
+every web path; ActionBuilder is intentionally absent). Consequently no PageHosts row is
+registered (PageHosts is keyed by destination id, and there is no destination). The page is a
+complete, hostable surface consumed by embedding, exactly as the web editor embeds the
+controlled component. The acceptance template's "add a composable(...) destination (if routed)"
+clause does not apply to an unrouted unit.
+
+STRING CATALOG NOTE (honesty, no silent drift): 26 of the 27 parity strings already resolve
+directly from res/values/strings.xml (translation_automations_builder_* +
+translation_common_true/false; generated i18n catalog mirrored from web/src/i18n/en.json). The
+27th, automations.builder.commandParamsObjectError, is NOT defined in the web i18n source
+either (web/src/i18n/{en,ar,he}.json: 0 hits) — the web renders it via the inline
+t('automations.builder.commandParamsObjectError', 'Params must be a JSON object.') fallback.
+The feature view reproduces that exact behaviour through ActionBuilderText.CommandParamsObjectError
++ resolveOptional (the native t(key, default)), so the rendered text is identical to web and NO
+Android-vs-web catalog drift is introduced. It is therefore correctly NOT added to the catalog;
+all 27 are i18n-keyed by their verbatim web key (no hardcoded UI literals).
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' ->
+app/); the prompt snippet's ':app:' is the same single app module. Baseline :android:assembleDebug
+was green before the change. Android SDK present (ANDROID_HOME set), JDK 21 — the gate is NOT
+BLOCKED.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding gate (the
+prompt gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, the same triad the
+sibling A7 pages were accepted on). The two new files (ActionBuilderPage.kt,
+ActionBuilderPageModel.kt) are written to the same ktlint/detekt-clean style as their siblings.
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 2m 26s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 17s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 17s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=30
+page wrapper evidence in apps/android/app/src/main/kotlin/com/teslasync/automations/
+(ActionBuilderPage.kt screen + ActionBuilderPageContent embed, ActionBuilderPageModel.kt
+registration + seed). The 30 parity items render through the embedded feature view
+io.teslasync.android.featureviews.actionbuilder.ActionBuilder
+(apps/android/app/src/main/java/com/teslasync/feature-views/ActionBuilder/ActionBuilder.kt
+renderer + ActionBuilderModel.kt i18n fold); the page seeds one action of each kind so all
+field sets + states are reachable.
+
+# data sources (0) — controlled component, no feed (web: only useTranslation; props in / onChange out)
+# charts (0) — none
+# maps (0) — none
+
+# panels (1)
+[COVERED] panel  GlassPanel1 -> ActionBuilder.kt:ActionCard() GlassPanel(padding = PanelPadding.Lg) — one card per seeded action; embedded by ActionBuilderPage.kt:ActionBuilderPageContent()
+
+# states (2) — the command-params JSON validation matrix (web ActionFields paramsError)
+[COVERED] state  error   -> ActionBuilder.kt:CommandFields() parseCommandParams → CommandParamsParse.NotObject ⇒ paramsError = strings.commandParamsObjectError; CommandParamsParse.Invalid ⇒ paramsError = strings.invalidJson (Textarea errorText)
+[COVERED] state  success -> ActionBuilder.kt:CommandFields() parseCommandParams → CommandParamsParse.Valid ⇒ onChange(action.copy(commandParams = parse.params)), paramsError = null (and Cleared ⇒ commandParams = null)
+
+# strings (27) — every literal via the i18n facade; verbatim web key preserved via ActionBuilderText; resolved from res/values/strings.xml (translation_*) or, for the one key web also leaves to its inline default, the identical t(key, default) fallback
+[COVERED] string automations.builder.actionType               -> ActionBuilderText.ActionType -> ActionBuilder.kt:ActionCard() Select(label = strings.actionType)
+[COVERED] string automations.builder.addAction                -> ActionBuilderText.AddAction -> ActionBuilder.kt:ActionBuilderContent() Button(label = strings.addAction)
+[COVERED] string automations.builder.channel                  -> ActionBuilderText.Channel -> ActionBuilder.kt:NotifyFields() Select(label = strings.channel)
+[COVERED] string automations.builder.command                  -> ActionBuilderText.Command -> ActionBuilder.kt:CommandFields() Select(label = strings.command)
+[COVERED] string automations.builder.commandParams            -> ActionBuilderText.CommandParams -> ActionBuilder.kt:CommandFields() Textarea(label = strings.commandParams)
+[COVERED] string automations.builder.commandParamsObjectError -> ActionBuilderText.CommandParamsObjectError -> ActionBuilder.kt:CommandFields() paramsError = strings.commandParamsObjectError
+[COVERED] string automations.builder.commandParamsPlaceholder -> ActionBuilderText.CommandParamsHint -> ActionBuilder.kt:CommandFields() Textarea(hint = strings.commandParamsHint)
+[COVERED] string automations.builder.invalidJson              -> ActionBuilderText.InvalidJson -> ActionBuilder.kt:CommandFields() paramsError = strings.invalidJson
+[COVERED] string automations.builder.moveDown                 -> ActionBuilderText.MoveDown -> ActionBuilder.kt:MoveRemoveColumn() IconButton(contentDescription = strings.moveDown)
+[COVERED] string automations.builder.moveUp                   -> ActionBuilderText.MoveUp -> ActionBuilder.kt:MoveRemoveColumn() IconButton(contentDescription = strings.moveUp)
+[COVERED] string automations.builder.noChannels               -> ActionBuilderText.NoChannels -> ActionBuilder.kt:NotifyFields() SelectOption("0", strings.noChannels)
+[COVERED] string automations.builder.notifyMessage            -> ActionBuilderText.NotifyMessage -> ActionBuilder.kt:NotifyFields() Textarea(label = strings.notifyMessage)
+[COVERED] string automations.builder.notifyPlaceholder        -> ActionBuilderText.NotifyHint -> ActionBuilder.kt:NotifyFields() Textarea(hint = strings.notifyHint)
+[COVERED] string automations.builder.removeAction             -> ActionBuilderText.RemoveAction -> ActionBuilder.kt:MoveRemoveColumn() IconButton(contentDescription = strings.removeAction)
+[COVERED] string automations.builder.selectCommand            -> ActionBuilderText.SelectCommand -> ActionBuilder.kt:CommandFields() SelectOption("", strings.selectCommand)
+[COVERED] string automations.builder.settingKey               -> ActionBuilderText.SettingKey -> ActionBuilder.kt:SetSettingFields() Input(label = strings.settingKey)
+[COVERED] string automations.builder.settingKeyPlaceholder    -> ActionBuilderText.SettingKeyHint -> ActionBuilder.kt:SetSettingFields() Input(hint = strings.settingKeyHint)
+[COVERED] string automations.builder.targetAutomationId       -> ActionBuilderText.TargetAutomationId -> ActionBuilder.kt:CallAutomationFields() Input(label = strings.targetAutomationId)
+[COVERED] string automations.builder.value                    -> ActionBuilderText.Value -> ActionBuilder.kt:SetSettingFields() Input/Select(label = strings.value)
+[COVERED] string automations.builder.valueBoolean             -> ActionBuilderText.ValueBoolean -> ActionBuilder.kt:SetSettingFields() SelectOption(SettingValueKind.Boolean.wireValue, strings.valueBoolean)
+[COVERED] string automations.builder.valueNumber              -> ActionBuilderText.ValueNumber -> ActionBuilder.kt:SetSettingFields() SelectOption(SettingValueKind.Number.wireValue, strings.valueNumber)
+[COVERED] string automations.builder.valueNumberPlaceholder   -> ActionBuilderText.ValueNumberHint -> ActionBuilder.kt:SetSettingFields() Input(hint = strings.valueNumberHint)
+[COVERED] string automations.builder.valueText                -> ActionBuilderText.ValueText -> ActionBuilder.kt:SetSettingFields() SelectOption(SettingValueKind.Text.wireValue, strings.valueText)
+[COVERED] string automations.builder.valueTextPlaceholder     -> ActionBuilderText.ValueTextHint -> ActionBuilder.kt:SetSettingFields() Input(hint = strings.valueTextHint)
+[COVERED] string automations.builder.valueType                -> ActionBuilderText.ValueType -> ActionBuilder.kt:SetSettingFields() Select(label = strings.valueType)
+[COVERED] string common.false                                 -> ActionBuilderText.False -> ActionBuilder.kt:SetSettingFields() SelectOption("false", strings.valueFalse)
+[COVERED] string common.true                                  -> ActionBuilderText.True -> ActionBuilder.kt:SetSettingFields() SelectOption("true", strings.valueTrue)
+
+PARITY_COVERED=30
+
+=== SUMMARY ===
+data sources : none (web parity: the controlled ActionBuilder binds no hook beyond useTranslation; actions/channels are props, edits flow through onChange). The page seeds the editor via ActionBuilderPageModel.actionBuilderSampleActions()/actionBuilderSampleChannels() — one Command (valid JSON params), Notify, SetSetting and CallAutomation — so every field set renders.
+nav          : web source is unrouted; Destinations.kt unchanged and no PageHosts row (no destination id). The page is a complete hostable surface consumed by embedding, mirroring the web editor's <ActionBuilder/> usage. RouteTableTest stays green (ActionBuilder is intentionally not in the web route table).
+panels       : the 1 manifest panel (GlassPanel1) is the per-action GlassPanel card from the embedded feature view (ActionCard); the page adds only a scrolling token-padded Column scaffold, no separate panel, so no region is ever blank (ADR-011).
+states       : the 2 declared data states (error / success) are the command-params JSON validation matrix in CommandFields — invalid/not-an-object ⇒ error text, valid object ⇒ commit + cleared error. Reachable from the seeded Command action.
+strings      : 27/27 via the i18n facade with verbatim web keys (ActionBuilderText). 26 resolve from res/values/strings.xml (translation_*); the 1 key web itself leaves to its inline default (commandParamsObjectError, absent from web/src/i18n) resolves via the identical t(key,'Params must be a JSON object.') fallback — same rendered text as web, no catalog drift. Zero hardcoded UI literals.
+a11y/theme   : layout on MaterialTheme/design tokens (Spacing) — no hardcoded color/typography (ADR-005); the feature view gives the icon-only move/remove controls explicit contentDescriptions and the Selects/Inputs/Textareas visible labels (TalkBack); Material enforces 48dp targets; dark + dynamic color via TeslaSyncTheme (ADR-015). No units are stored/computed (ADR-013).
+diagnostics  : page records the one-shot PII-safe view.opened (surface="ActionBuilderPage", P1/S11) distinct from the embedded feature view's own (surface="ActionBuilder"); only slugs are logged.
+placeholder  : PLACEHOLDER_COUNT=0 (apps/tools/check-placeholders.ps1 over the automations dir)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(30) == PARITY_REQUIRED(30)
+[PASS] all android triad gates green; parity 30/30; android ledger row page:automations/ActionBuilder status=done.
+EXIT=0
+STATUS=DONE
