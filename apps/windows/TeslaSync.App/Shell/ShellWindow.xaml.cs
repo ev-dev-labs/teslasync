@@ -1288,6 +1288,14 @@ public sealed partial class ShellWindow : Window
                 new FeatureViews.LiveSignalsTableSource(_data.Api, _data.Engine, _data.Options),
                 _data.Localizer));
 
+        // Helix (AI integration) — web /integrations/helix is PageContainer + AISettings. Wire the live
+        // AiSettingsSource so the page shows the real provider/key/model, the per-feature opt-in toggles and
+        // the usage/cost card instead of the empty default (which read as "just basic").
+        _viewModel.PageFactory.Register("Helix", () =>
+            new FeatureViews.Settings.HelixPage(
+                new FeatureViews.AiSettingsSource(_data.Api, _data.Engine, _data.Options),
+                _data.Localizer));
+
         // Settings hub — mount the full Appearance / General / Advanced settings surfaces (each backed by the
         // shared settings repository over the live data layer) so the Settings page is a complete settings
         // surface instead of a thin hub. The hub's navigation + tour-launcher wiring is preserved.
