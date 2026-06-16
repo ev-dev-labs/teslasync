@@ -1009,7 +1009,9 @@ public sealed partial class ShellWindow : Window
 
         _viewModel.PageFactory.Register("ClimateControl", () =>
             new FeatureViews.VehicleSystems.ClimateControlPage(
-                new FeatureViews.VehicleSystems.ClimateClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+                new FeatureViews.VehicleSystems.ClimateClientFeed(_data.Api, _data.PrimaryVehicleId),
+                _data.Localizer,
+                AppSettingsHost.Current.ToUnitPref()));
 
         _viewModel.PageFactory.Register("MediaPlayer", () =>
             new FeatureViews.VehicleSystems.MediaPlayerPage(
