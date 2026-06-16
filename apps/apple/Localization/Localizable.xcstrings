@@ -203606,6 +203606,28 @@
         }
       }
     },
+    "automations.builder.conflict" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potential Conflict"
+          }
+        }
+      }
+    },
+    "automations.conflicts.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conflicts"
+          }
+        }
+      }
+    },
     "automations.deleteTitle" : {
       "extractionState" : "manual",
       "localizations" : {
