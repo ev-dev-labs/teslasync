@@ -8657,4 +8657,31 @@
   <string name="translation_admin_secretRotation_kind_sessionJwk">Session JWK</string>
   <string name="translation_admin_secretRotation_kind_appSigningKey">App signing key</string>
   <string name="translation_admin_secretRotation_kind_authentikSecret">Authentik client secret</string>
+  <!-- BatteryDegradationPage (P3-ANDROID A7) parity literals — web t('…') keys the i18n source does not
+       carry as explicit entries (i18next returns the key as its own default on web). Names follow the
+       gen-i18n androidName() convention so a future canonical-source add regenerates identical names. -->
+  <string name="translation_Battery_Degradation">Battery Degradation</string>
+  <string name="translation_Health_trends__degradation_predictions__and_charging_habit_impact">Health trends, degradation predictions, and charging habit impact</string>
+  <string name="translation_Current_SOH">Current SOH</string>
+  <string name="translation_Estimated_Capacity">Estimated Capacity</string>
+  <string name="translation_Degradation_Rate">Degradation Rate</string>
+  <string name="translation_Battery_Age">Battery Age</string>
+  <string name="translation_Battery_Health">Battery Health</string>
+  <string name="translation_Original_Range">Original Range</string>
+  <string name="translation_Current_Range">Current Range</string>
+  <string name="translation_Battery_Health_Factors">Battery Health Factors</string>
+  <string name="translation_Charge_Habits">Charge Habits</string>
+  <string name="translation_Fast_Charge">Fast Charge</string>
+  <string name="translation_Full_Charge">Full Charge</string>
+  <string name="translation_Temperature_Exposure">Temperature Exposure</string>
+  <string name="translation_Lower_is_better_for_longevity">Lower is better for longevity</string>
+  <string name="translation_Cycle_Depth">Cycle Depth</string>
+  <string name="translation_Avg_DoD">Avg DoD</string>
+  <string name="translation_Degradation_History">Degradation History</string>
+  <string name="translation_SOH__">SOH %</string>
+  <string name="translation_No_degradation_records_found_">No degradation records found.</string>
+  <string name="translation_battery_degradation_trendTitle_aria">Battery health trend and 95% confidence projection chart</string>
+  <string name="translation___count___months">%1$s months</string>
+  <string name="translation___y___years">%1$s years</string>
+  <string name="translation___y__y___m__m">%1$sy %2$sm</string>
 </resources>

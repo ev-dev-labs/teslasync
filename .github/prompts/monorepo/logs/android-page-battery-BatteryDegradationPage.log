@@ -1,0 +1,145 @@
+P3-ANDROID A7 — page:battery/BatteryDegradation — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/battery/pages/BatteryDegradationPage.tsx  (route /battery-degradation)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/battery/ (BatteryDegradationPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.energyStore (S8 EnergyStore: batteryHealthAnalytics + batteryDegradation) + settingsStore + selectedVehicleStore;
+             TeslaSyncApplication -> BatteryDegradationPageHost.register() for the pre-existing Destinations id "batteryDegradation".
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module. Kotlin daemon heap raised to 6g via -Pkotlin.daemon.jvmargs (CLI only, no file
+edits) to avoid a compiler GC-overhead OOM on this large module — same precedent as the sibling A7 analytics logs.
+
+STRINGS NOTE (honesty — no silent drift): the namespaced battery.degradation.* keys were already materialized in the
+generated res/values/strings.xml; the 24 web LITERAL-key strings the page calls (t('Current SOH'), t('SOH %'),
+t('{{count}} months'), …) are NOT explicit entries in the canonical web i18n source (i18next returns the key itself as
+its runtime default on web), so they were ADDED to apps/android/app/src/main/res/values/strings.xml — the platform
+catalog this prompt's Allowed-files list explicitly permits. Resource names follow gen-i18n.ts androidName() so a
+future canonical-source add regenerates identical names. lint MissingTranslation is disabled for this module
+(build.gradle.kts), so ar/he fall back to default for these keys.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 1m 6s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 34s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=89
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/battery/ (BatteryDegradationPage.kt screen,
+BatteryDegradationPageViewModel.kt, BatteryDegradationPageModel.kt, BatteryDegradationPageIcons.kt)
+
+# panels (21) — Material 3 GlassPanel / MetricCard / RadialGauge / ChartContainer
+[COVERED] panel  Current-SOH             -> BatteryDegradationPage.kt:SummaryGrid() MetricCard(translation_Current_SOH, icon=Battery)
+[COVERED] panel  Estimated-Capacity      -> BatteryDegradationPage.kt:SummaryGrid() MetricCard(translation_Estimated_Capacity, icon=Bolt)
+[COVERED] panel  Degradation-Rate        -> BatteryDegradationPage.kt:SummaryGrid() MetricCard(translation_Degradation_Rate, icon=TrendingDown)
+[COVERED] panel  Battery-Age             -> BatteryDegradationPage.kt:SummaryGrid() MetricCard(translation_Battery_Age, value=batteryAgeLabel())
+[COVERED] panel  GlassPanel5             -> BatteryDegradationPage.kt:HealthGaugePanel() GlassPanel + RadialGauge + Badge(sohBandLabel)
+[COVERED] panel  GlassPanel6             -> BatteryDegradationPage.kt:PredictionPanel() PanelScaffold(translation_battery_degradation_prediction)
+[COVERED] panel  Degradation-Rate-2      -> BatteryDegradationPage.kt:PredictionContent() MetricCard(translation_battery_degradation_rate, absoluteSlope)
+[COVERED] panel  Stress-Level            -> BatteryDegradationPage.kt:PredictionContent() MetricCard(translation_battery_degradation_stress, stressColor)
+[COVERED] panel  Total-Cycles            -> BatteryDegradationPage.kt:PredictionContent() MetricCard(translation_battery_degradation_totalCycles)
+[COVERED] panel  Avg-Depth-of-Discharge  -> BatteryDegradationPage.kt:PredictionContent() MetricCard(translation_battery_degradation_avgDoD)
+[COVERED] panel  Health-Trend-Projection -> BatteryDegradationPage.kt:HealthTrendPanel() ChartContainer(translation_battery_degradation_trendTitle)
+[COVERED] panel  GlassPanel12            -> BatteryDegradationPage.kt:RangeLossPanel() PanelScaffold(rangeLoss) + AreaChartWrapper / EmptyState(noRange)
+[COVERED] panel  GlassPanel13            -> BatteryDegradationPage.kt:RiskFactorsPanel() PanelScaffold(riskFactors) / EmptyState(noRiskData)
+[COVERED] panel  GlassPanel14            -> BatteryDegradationPage.kt:RiskFactorCard() GlassPanel + MetricBar (per risk factor)
+[COVERED] panel  GlassPanel15            -> BatteryDegradationPage.kt:RecommendationsPanel() PanelScaffold(recommendations) / EmptyState(noRecommendations)
+[COVERED] panel  GlassPanel16            -> BatteryDegradationPage.kt:ChargingImpactPanel() PanelScaffold(chargingImpact) + AlertBanner(stressTone)
+[COVERED] panel  GlassPanel17            -> BatteryDegradationPage.kt:HealthFactorsPanel() PanelScaffold(translation_Battery_Health_Factors)
+[COVERED] panel  GlassPanel18            -> BatteryDegradationPage.kt:HealthFactorsPanel()->FactorPanel(translation_Charge_Habits)
+[COVERED] panel  GlassPanel19            -> BatteryDegradationPage.kt:HealthFactorsPanel()->FactorPanel(translation_Temperature_Exposure)
+[COVERED] panel  GlassPanel20            -> BatteryDegradationPage.kt:HealthFactorsPanel()->FactorPanel(translation_Cycle_Depth)
+[COVERED] panel  GlassPanel21            -> BatteryDegradationPage.kt:HistoryPanel() PanelScaffold(translation_Degradation_History) + DataTable / EmptyState(noHistory)
+
+# charts (4) — native A3 chart wrappers (Compose Canvas RadialGauge + Vico ChartContainer/Combo/Area), never a webview
+[COVERED] chart  RadialGauge    -> BatteryDegradationPage.kt:HealthGaugePanel() RadialGauge(value=currentSoh, max=100, color=sohColor)
+[COVERED] chart  ChartContainer -> BatteryDegradationPage.kt:HealthTrendPanel() ChartContainer(status, accessibleDescription=trendTitle.aria)
+[COVERED] chart  ComposedChart  -> BatteryDegradationPage.kt:HealthTrendPanel() ComboChart(series=confidence[Area]+health[Line]+projected[Line]); model projectionChart()
+[COVERED] chart  AreaChart      -> BatteryDegradationPage.kt:RangeLossPanel() AreaChartWrapper(series=original+current); model rangeLossData()
+
+# data states (4) — bound to BatteryDegradationPageViewModel.health + .degradation : StateFlow<UiState<…>>
+[COVERED] state  loading -> BatteryDegradationPage.kt:BatteryDegradationLoading() (health.isLoading) + SectionLoader() (degradation.isLoading) + ChartStatus.Loading
+[COVERED] state  empty   -> BatteryDegradationPage.kt: EmptyState(noRange/noRiskData/noRecommendations/noHistory) + PredictionNeedMore() + ChartStatus.Empty; VM asUiState(isEmpty=!hasData)
+[COVERED] state  error   -> BatteryDegradationPage.kt:BatteryDegradationError()+retry (health.isError) + SectionError() (degradation.isError) + ChartStatus.Error
+[COVERED] state  success -> BatteryDegradationPage.kt:BatteryDegradationBody() (health content); BatteryDegradationPageViewModel UiPhase.Content
+
+# strings (60) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string Avg DoD                                  -> translation_Avg_DoD  (HealthFactorsPanel FactorRow / cycle depth)
+[COVERED] string Battery Age                              -> translation_Battery_Age  (SummaryGrid)
+[COVERED] string Battery Degradation                      -> translation_Battery_Degradation  (BatteryDegradationChrome PageTitle)
+[COVERED] string Battery Health                           -> translation_Battery_Health  (HealthGaugePanel RadialGauge label)
+[COVERED] string Battery Health Factors                   -> translation_Battery_Health_Factors  (HealthFactorsPanel PanelScaffold)
+[COVERED] string Capacity                                 -> translation_Capacity  (HistoryPanel TableColumn capacity)
+[COVERED] string Charge Habits                            -> translation_Charge_Habits  (HealthFactorsPanel FactorPanel)
+[COVERED] string Current Range                            -> translation_Current_Range  (RangeLossPanel ChartSeries current)
+[COVERED] string Current SOH                              -> translation_Current_SOH  (SummaryGrid)
+[COVERED] string Cycle Depth                              -> translation_Cycle_Depth  (HealthFactorsPanel FactorPanel)
+[COVERED] string Date                                     -> translation_Date  (HistoryPanel TableColumn date)
+[COVERED] string Degradation History                      -> translation_Degradation_History  (HistoryPanel PanelScaffold)
+[COVERED] string Degradation Rate                         -> translation_Degradation_Rate  (SummaryGrid)
+[COVERED] string Degraded                                 -> translation_Degraded  (sohBandLabel)
+[COVERED] string Estimated Capacity                       -> translation_Estimated_Capacity  (SummaryGrid)
+[COVERED] string Excellent                                -> translation_Excellent  (sohBandLabel)
+[COVERED] string Fast Charge                              -> translation_Fast_Charge  (HealthFactorsPanel FactorRow)
+[COVERED] string Full Charge                              -> translation_Full_Charge  (HealthFactorsPanel FactorRow)
+[COVERED] string Good                                     -> translation_Good  (sohBandLabel)
+[COVERED] string Health trends, …charging habit impact    -> translation_Health_trends__degradation_predictions__and_charging_habit_impact  (BatteryDegradationChrome subtitle)
+[COVERED] string Lower is better for longevity            -> translation_Lower_is_better_for_longevity  (HealthFactorsPanel temperature exposure)
+[COVERED] string No degradation records found.            -> translation_No_degradation_records_found_  (HistoryPanel DataTable emptyText)
+[COVERED] string Odometer                                 -> translation_Odometer  (HistoryPanel TableColumn odometer)
+[COVERED] string Original Range                           -> translation_Original_Range  (RangeLossPanel ChartSeries original)
+[COVERED] string Range                                    -> translation_Range  (HistoryPanel TableColumn range)
+[COVERED] string SOH %                                    -> translation_SOH__  (HistoryPanel TableColumn soh)
+[COVERED] string Temperature Exposure                     -> translation_Temperature_Exposure  (HealthFactorsPanel FactorPanel)
+[COVERED] string battery.degradation.actualHealth         -> translation_battery_degradation_actualHealth  (HealthTrendPanel ChartSeries health)
+[COVERED] string battery.degradation.avgDoD               -> translation_battery_degradation_avgDoD  (PredictionContent MetricCard)
+[COVERED] string battery.degradation.chargingImpact       -> translation_battery_degradation_chargingImpact  (ChargingImpactPanel PanelScaffold)
+[COVERED] string battery.degradation.confidence           -> translation_battery_degradation_confidence  (HealthTrendPanel ChartSeries confidence)
+[COVERED] string battery.degradation.deepDischarges       -> translation_battery_degradation_deepDischarges  (ChargingImpactPanel buildImpactTitle)
+[COVERED] string battery.degradation.fastCharges          -> translation_battery_degradation_fastCharges  (ChargingImpactPanel buildImpactTitle)
+[COVERED] string battery.degradation.inApprox             -> translation_battery_degradation_inApprox  (PredictionContent buildPredictionSentence)
+[COVERED] string battery.degradation.needMore             -> translation_battery_degradation_needMore  (PredictionNeedMore + HealthTrendPanel emptyMessage)
+[COVERED] string battery.degradation.noHistory            -> translation_battery_degradation_noHistory  (HistoryPanel EmptyState)
+[COVERED] string battery.degradation.noRange              -> translation_battery_degradation_noRange  (RangeLossPanel EmptyState)
+[COVERED] string battery.degradation.noRecommendations    -> translation_battery_degradation_noRecommendations  (RecommendationsPanel EmptyState)
+[COVERED] string battery.degradation.noRiskData           -> translation_battery_degradation_noRiskData  (RiskFactorsPanel EmptyState)
+[COVERED] string battery.degradation.prediction           -> translation_battery_degradation_prediction  (PredictionPanel PanelScaffold)
+[COVERED] string battery.degradation.predictionDesc       -> translation_battery_degradation_predictionDesc  (PredictionContent buildPredictionSentence)
+[COVERED] string battery.degradation.projected            -> translation_battery_degradation_projected  (HealthTrendPanel ChartSeries projected)
+[COVERED] string battery.degradation.rangeLoss            -> translation_battery_degradation_rangeLoss  (RangeLossPanel PanelScaffold)
+[COVERED] string battery.degradation.rate                 -> translation_battery_degradation_rate  (PredictionContent MetricCard)
+[COVERED] string battery.degradation.recommendations      -> translation_battery_degradation_recommendations  (RecommendationsPanel PanelScaffold)
+[COVERED] string battery.degradation.riskFactors          -> translation_battery_degradation_riskFactors  (RiskFactorsPanel PanelScaffold)
+[COVERED] string battery.degradation.stress               -> translation_battery_degradation_stress  (PredictionContent MetricCard + ChargingImpactPanel fallback)
+[COVERED] string battery.degradation.stressHigh           -> translation_battery_degradation_stressHigh  (ChargingImpactPanel body)
+[COVERED] string battery.degradation.stressLabel          -> translation_battery_degradation_stressLabel  (ChargingImpactPanel buildImpactTitle)
+[COVERED] string battery.degradation.stressLow            -> translation_battery_degradation_stressLow  (ChargingImpactPanel body)
+[COVERED] string battery.degradation.stressMedium         -> translation_battery_degradation_stressMedium  (ChargingImpactPanel body)
+[COVERED] string battery.degradation.title                -> translation_battery_degradation_title  (BatteryDegradationPageContent semantics{paneTitle}; web usePageTitle)
+[COVERED] string battery.degradation.totalCycles          -> translation_battery_degradation_totalCycles  (PredictionContent MetricCard)
+[COVERED] string battery.degradation.trendTitle           -> translation_battery_degradation_trendTitle  (HealthTrendPanel ChartContainer title)
+[COVERED] string battery.degradation.trendTitle.aria      -> translation_battery_degradation_trendTitle_aria  (HealthTrendPanel ChartContainer accessibleDescription)
+[COVERED] string battery.degradation.warranty             -> translation_battery_degradation_warranty  (HealthTrendPanel warrantyNote Caption)
+[COVERED] string battery.degradation.years                -> translation_battery_degradation_years  (PredictionContent buildPredictionSentence)
+[COVERED] string {{count}} months                         -> translation___count___months  (batteryAgeLabel; %1$s format)
+[COVERED] string {{y}} years                              -> translation___y___years  (batteryAgeLabel; %1$s format)
+[COVERED] string {{y}}y {{m}}m                            -> translation___y__y___m__m  (batteryAgeLabel; %1$s %2$s format)
+
+PARITY_COVERED=89
+
+=== SUMMARY ===
+data sources : BatteryDegradationPageViewModel binds shared S8 EnergyStore.batteryHealthAnalytics(id) (primary, page
+               loading/error) + batteryDegradation(id) (secondary, per-section state) via batteryDegradationPageSourceOf();
+               display units from SettingsStore.settings() (UnitPreferences/convertDistanceFromSI/formatEnergy, SI->display
+               at the render boundary only). No HTTP in the view.
+nav          : Destinations 'batteryDegradation' -> /battery-degradation (pre-existing) wired to BatteryDegradationRoute()
+               via PageHosts.register; TeslaSyncApplication.onCreate() calls BatteryDegradationPageHost.register().
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module; final-code run)
+parity       : PARITY_COVERED(89) == PARITY_REQUIRED(89)
+[PASS] all android triad gates green; parity 89/89; android ledger row page:battery/BatteryDegradation status=done.
+EXIT=0
+STATUS=DONE
