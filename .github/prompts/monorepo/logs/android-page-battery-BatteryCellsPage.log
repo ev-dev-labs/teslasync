@@ -1,0 +1,211 @@
+================================================================================
+P3-ANDROID A7 — page:battery/BatteryCells  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/BatteryCellsPage.tsx
+promptId: p3-android/pages/battery/BatteryCellsPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio JBR (java on PATH: C:\Program Files\Android\Android Studio\jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L35-48).
+SDK present => gate executed (not BLOCKED). local.properties written with sdk.dir for the wrapper.
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPage.kt          (@Composable screen: BatteryCellsPage + BatteryCellsPageContent + 27 panels + the 4 cartesian charts + the spread-trend ChartContainer/AreaChart)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<BatteryCellData>> + displayPrefs; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPageSource.kt    (S8 data seam over SettingsStore + SelectedVehicleStore; page-local BatteryCellsExtrasRepository for /analytics/battery-cells)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPageModel.kt     (framework-free: parseBatteryCellData decoder, CellReading/HistoryPoint/HistogramBucket, cellDeviation/buildHistogram/insight derivations, BatteryCellsDisplayPrefs SI temp formatters, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPageIcons.kt     (7 authored lucide glyphs + 8 re-exported from shared catalogs)
+apps/android/app/src/main/kotlin/com/teslasync/battery/BatteryCellsPageHost.kt      (PageHosts.register(batteryCells){ BatteryCellsRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt          (NavHost wiring: + BatteryCellsPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                     (added 28 page literal keys + the battery.cells.chart.spreadTrend.aria key; the other ~40 battery.cells.* keys already present)
+apps/android/local.properties                                                        (sdk.dir for the Gradle wrapper; SDK present so gate runs)
+apps/parity/android-ledger.json                                                      (ledger row page:battery/BatteryCells, 110/110)
+.github/prompts/monorepo/logs/android-page-battery-BatteryCellsPage.log              (this log)
+
+nav: Destinations 'batteryCells' -> /battery-cells pre-existing (Destinations.kt L80, count unchanged); host wired via
+     PageHosts.register("batteryCells"); deep link auto-registered by TeslaSyncNavHost. android-page-ledger.json test
+     asset already carries page:battery/BatteryCells with the 4 states (unchanged).
+
+--------------------------------------------------------------------------------
+DATA SOURCE (bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+battery-cells (web bare useQuery, no named hook; no shared store method) GET /analytics/battery-cells [vehicle_id]
+              -> page-local BatteryCellsExtrasRepository.batteryCells(id) over the SAME shared ApiHttpClient + CacheStore +
+                 CachingRepository cache-then-network operator (CacheDomain.Analytics, ADR-013). PRIMARY feed: drives the
+                 page loading / empty / error / success. enabled: activeId != '' (web `enabled: activeId !== ''`).
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits). No HTTP in the view.
+decode         : JsonElement -> BatteryCellData in BatteryCellsPageModel.parseBatteryCellData ; the view only resolves i18n + draws.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=110   (27 panels + 6 charts + 4 states + 73 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1           -> BatteryCellsPage.kt:283 SummaryMetricsSection (6-card summary grid container, FadeIn body L249)
+[COVERED] panel  Total-Cells           -> BatteryCellsPage.kt:294 SummaryMetricsSection MetricCard (number total_cells, translation_Total_Cells)
+[COVERED] panel  Avg-Voltage           -> BatteryCellsPage.kt:302 SummaryMetricsSection MetricCard (avg_voltage,4 + V, translation_Avg_Voltage)
+[COVERED] panel  Min-Cell              -> BatteryCellsPage.kt:312 SummaryMetricsSection MetricCard (minCell #id voltage, translation_Min_Cell)
+[COVERED] panel  Max-Cell              -> BatteryCellsPage.kt:320 SummaryMetricsSection MetricCard (maxCell #id voltage, translation_Max_Cell)
+[COVERED] panel  Imbalance             -> BatteryCellsPage.kt:330 SummaryMetricsSection MetricCard (imbalance_mv,1 + mV, dynamic accent, translation_Imbalance)
+[COVERED] panel  Pack-Voltage          -> BatteryCellsPage.kt:338 SummaryMetricsSection MetricCard (pack_voltage,1 + V, translation_Pack_Voltage)
+[COVERED] panel  GlassPanel8           -> BatteryCellsPage.kt:394 CellHeatmap GlassPanel (deviation-colored cell grid + legend, web CellHeatmap; header translation_Cell_Voltage_Heatmap L363)
+[COVERED] panel  GlassPanel9           -> BatteryCellsPage.kt:378 HeatmapSection empty GlassPanel (EmptyState translation_No_cell_readings_available_ L381)
+[COVERED] panel  GlassPanel10          -> BatteryCellsPage.kt:469 CellVoltageBarChartSection GlassPanel (PanelTitle translation_Cell_Voltage_Bar_Chart L474)
+[COVERED] panel  GlassPanel11          -> BatteryCellsPage.kt:526 VoltageDistributionPanel GlassPanel (PanelTitle translation_Voltage_Distribution L532)
+[COVERED] panel  GlassPanel12          -> BatteryCellsPage.kt:564 ImbalanceTrendPanel GlassPanel (PanelTitle translation_Imbalance_Trend L569)
+[COVERED] panel  GlassPanel13          -> BatteryCellsPage.kt:607 CellVoltageOverTimeSection GlassPanel (PanelTitle translation_Cell_Voltage_Over_Time L612)
+[COVERED] panel  Voltage-Spread-Trend  -> BatteryCellsPage.kt:744 VoltageSpreadTrendSection ChartContainer (translation_battery_cells_chart_spreadTrend L751)
+[COVERED] panel  GlassPanel15          -> BatteryCellsPage.kt:662 CellDetailsSection GlassPanel (PanelTitle translation_Cell_Details L672 + count Badge L675)
+[COVERED] panel  Avg-Temperature       -> BatteryCellsPage.kt:792 TemperatureSummarySection MetricCard (formatTemperature avg_temperature, translation_battery_cells_temp_avg)
+[COVERED] panel  Min-Temperature       -> BatteryCellsPage.kt:800 TemperatureSummarySection MetricCard (formatTemperature min_temperature, translation_battery_cells_temp_min)
+[COVERED] panel  Max-Temperature       -> BatteryCellsPage.kt:810 TemperatureSummarySection MetricCard (formatTemperature max_temperature, translation_battery_cells_temp_max)
+[COVERED] panel  Temp-Spread           -> BatteryCellsPage.kt:818 TemperatureSummarySection MetricCard (temperatureSpread temp_spread, dynamic accent, translation_battery_cells_temp_spread)
+[COVERED] panel  GlassPanel20          -> BatteryCellsPage.kt:779 TemperatureSummarySection GlassPanel container (SectionHeader translation_battery_cells_temp_title L784; empty translation_battery_cells_temp_empty L827)
+[COVERED] panel  GlassPanel21          -> BatteryCellsPage.kt:838 HealthRecommendationsSection GlassPanel container (SectionHeader translation_battery_cells_recommendations L843; 3 insight panels / noInsights L853)
+[COVERED] panel  GlassPanel22          -> BatteryCellsPage.kt:973 SummaryStatsSection StatTile (total_cells, translation_battery_cells_stat_totalCells L976)
+[COVERED] panel  GlassPanel23          -> BatteryCellsPage.kt:979 SummaryStatsSection StatTile (pack_voltage + V, translation_battery_cells_stat_packVoltage L982)
+[COVERED] panel  GlassPanel24          -> BatteryCellsPage.kt:985 SummaryStatsSection StatTile (avg_voltage + V, translation_battery_cells_stat_avgVoltage L988)
+[COVERED] panel  GlassPanel25          -> BatteryCellsPage.kt:993 SummaryStatsSection StatTile (imbalance_mv + mV, translation_battery_cells_stat_voltageSpread L996)
+[COVERED] panel  GlassPanel26          -> BatteryCellsPage.kt:999 SummaryStatsSection StatTile (temperatureSpread, translation_battery_cells_stat_tempSpread L1002)
+[COVERED] panel  GlassPanel27          -> BatteryCellsPage.kt:1005 SummaryStatsSection StatTile (normalCount/total_cells, translation_battery_cells_stat_normalCells L1008)
+[COVERED] chart  BarChart#1            -> BatteryCellsPage.kt:483 CellVoltageBarChartSection BarChartWrapper (ChartSeries voltage = cells.voltage; avg/min/max reference caption L502-504)
+[COVERED] chart  BarChart#2            -> BatteryCellsPage.kt:541 VoltageDistributionPanel BarChartWrapper (ChartSeries count = buildHistogram buckets)
+[COVERED] chart  LineChart#3           -> BatteryCellsPage.kt:578 ImbalanceTrendPanel LineChartWrapper (ChartSeries imbalance = history.imbalance_mv; nominal/warning reference caption L596-597)
+[COVERED] chart  LineChart#4           -> BatteryCellsPage.kt:623 CellVoltageOverTimeSection LineChartWrapper (3 series min/avg/max = history voltages)
+[COVERED] chart  ChartContainer#5      -> BatteryCellsPage.kt:749 VoltageSpreadTrendSection ChartContainer (A3 chart frame; status Ready/Empty L753, accessibleDescription L752)
+[COVERED] chart  AreaChart#6           -> BatteryCellsPage.kt:757 VoltageSpreadTrendSection AreaChartWrapper (ChartSeries spread = history.spreadMv)
+[COVERED] state  loading               -> BatteryCellsPage.kt:199 BatteryCellsPageContent state.isLoading -> BatteryLoading():238 PageLoader (translation_common_loading)
+[COVERED] state  empty                 -> ViewModel asUiState(isEmpty={!hasData}) (BatteryCellsPageViewModel.kt:60) + per-section EmptyState (Heatmap L381, BarChart L478, Distribution L536, ImbalanceTrend L573, OverTime L616, CellDetails L683, SpreadTrend ChartStatus.Empty L753, Temp L827, NoInsights L853)
+[COVERED] state  error                 -> BatteryCellsPage.kt:200 BatteryCellsPageContent state.isError -> BatteryError():247 ErrorDisplay + retry (translation_error_loadFailed)
+[COVERED] state  success               -> BatteryCellsPage.kt:201 BatteryCellsPageContent else -> BatteryBody():258 (full panel set from decoded BatteryCellData)
+[COVERED] string Avg                                                  -> BatteryCellsPage.kt:502 translation_Avg (bar-chart reference caption)
+[COVERED] string Avg Voltage                                          -> BatteryCellsPage.kt:302 translation_Avg_Voltage (summary card + over-time series L621)
+[COVERED] string Bar View                                             -> BatteryCellsPage.kt:367 translation_Bar_View (heatmap toggle)
+[COVERED] string Battery Cells                                        -> BatteryCellsPage.kt:216 translation_Battery_Cells (PageTitle)
+[COVERED] string Cell                                                 -> BatteryCellsPage.kt:428 translation_Cell (heatmap tile contentDescription)
+[COVERED] string Cell #                                               -> BatteryCellsPage.kt:700 translation_Cell__ (cell-details header)
+[COVERED] string Cell Count                                           -> BatteryCellsPage.kt:540 translation_Cell_Count (histogram series name)
+[COVERED] string Cell Details                                         -> BatteryCellsPage.kt:672 translation_Cell_Details (section title)
+[COVERED] string Cell Voltage Bar Chart                               -> BatteryCellsPage.kt:474 translation_Cell_Voltage_Bar_Chart (panel title)
+[COVERED] string Cell Voltage Heatmap                                 -> BatteryCellsPage.kt:363 translation_Cell_Voltage_Heatmap (panel title)
+[COVERED] string Cell Voltage Over Time                               -> BatteryCellsPage.kt:612 translation_Cell_Voltage_Over_Time (panel title)
+[COVERED] string Cells                                                -> BatteryCellsPage.kt:557 translation_Cells (histogram y caption)
+[COVERED] string Cells colored by deviation from average             -> BatteryCellsPage.kt:402 translation_Cells_colored_by_deviation_from_average (heatmap subtitle)
+[COVERED] string Delta (mV)                                           -> BatteryCellsPage.kt:702 translation_Delta__mV_ (cell-details header)
+[COVERED] string Grid View                                            -> BatteryCellsPage.kt:369 translation_Grid_View (heatmap toggle)
+[COVERED] string Imbalance                                            -> BatteryCellsPage.kt:330 translation_Imbalance (summary card)
+[COVERED] string Imbalance (mV)                                       -> BatteryCellsPage.kt:577 translation_Imbalance__mV_ (imbalance-trend series name)
+[COVERED] string Imbalance Trend                                      -> BatteryCellsPage.kt:569 translation_Imbalance_Trend (panel title)
+[COVERED] string Individual cell voltage monitoring and analysis     -> BatteryCellsPage.kt:218 translation_Individual_cell_voltage_monitoring_and_analysis (subtitle)
+[COVERED] string Max                                                  -> BatteryCellsPage.kt:504 translation_Max (bar-chart reference caption)
+[COVERED] string Max Cell                                             -> BatteryCellsPage.kt:320 translation_Max_Cell (summary card)
+[COVERED] string Max Voltage                                          -> BatteryCellsPage.kt:622 translation_Max_Voltage (over-time series)
+[COVERED] string Min                                                  -> BatteryCellsPage.kt:503 translation_Min (bar-chart reference caption)
+[COVERED] string Min Cell                                             -> BatteryCellsPage.kt:312 translation_Min_Cell (summary card)
+[COVERED] string Min Voltage                                          -> BatteryCellsPage.kt:620 translation_Min_Voltage (over-time series)
+[COVERED] string No cell details available.                          -> BatteryCellsPage.kt:683 translation_No_cell_details_available_ (cell-details empty)
+[COVERED] string No cell readings available.                         -> BatteryCellsPage.kt:381 translation_No_cell_readings_available_ (heatmap/chart empties; also L478/L536/L573/L616)
+[COVERED] string Nominal                                             -> BatteryCellsPage.kt:448 translation_Nominal (heatmap legend; imbalance reference L596)
+[COVERED] string Pack Voltage                                         -> BatteryCellsPage.kt:338 translation_Pack_Voltage (summary card)
+[COVERED] string Significant Deviation                               -> BatteryCellsPage.kt:450 translation_Significant_Deviation (heatmap legend)
+[COVERED] string Slight Deviation                                    -> BatteryCellsPage.kt:449 translation_Slight_Deviation (heatmap legend)
+[COVERED] string Status                                               -> BatteryCellsPage.kt:703 translation_Status (cell-details header)
+[COVERED] string Total Cells                                          -> BatteryCellsPage.kt:294 translation_Total_Cells (summary card)
+[COVERED] string Voltage                                              -> BatteryCellsPage.kt:482 translation_Voltage (bar-chart series name)
+[COVERED] string Voltage (V)                                          -> BatteryCellsPage.kt:500 translation_Voltage__V_ (bar/over-time axis + cell-details header L701)
+[COVERED] string Voltage Distribution                                -> BatteryCellsPage.kt:532 translation_Voltage_Distribution (panel title)
+[COVERED] string Warning                                             -> BatteryCellsPage.kt:597 translation_Warning (imbalance reference caption)
+[COVERED] string battery.cells.chart.noSpreadTrend                   -> BatteryCellsPage.kt:754 translation_battery_cells_chart_noSpreadTrend (spread-trend empty)
+[COVERED] string battery.cells.chart.spreadTrend                     -> BatteryCellsPage.kt:751 translation_battery_cells_chart_spreadTrend (ChartContainer title)
+[COVERED] string battery.cells.chart.spreadTrend.aria                -> BatteryCellsPage.kt:752 translation_battery_cells_chart_spreadTrend_aria (ChartContainer accessibleDescription)
+[COVERED] string battery.cells.chart.voltageSpread                   -> BatteryCellsPage.kt:756 translation_battery_cells_chart_voltageSpread (area series name)
+[COVERED] string battery.cells.insight.balanced                      -> BatteryCellsPage.kt:882 translation_battery_cells_insight_balanced (spread insight)
+[COVERED] string battery.cells.insight.balancedDesc                  -> BatteryCellsPage.kt:883 translation_battery_cells_insight_balancedDesc
+[COVERED] string battery.cells.insight.criticalCells                 -> BatteryCellsPage.kt:928 translation_battery_cells_insight_criticalCells (cells insight)
+[COVERED] string battery.cells.insight.criticalCellsDesc             -> BatteryCellsPage.kt:930 translation_battery_cells_insight_criticalCellsDesc (count token)
+[COVERED] string battery.cells.insight.goodTemp                      -> BatteryCellsPage.kt:910 translation_battery_cells_insight_goodTemp (temp insight)
+[COVERED] string battery.cells.insight.goodTempDesc                  -> BatteryCellsPage.kt:911 translation_battery_cells_insight_goodTempDesc
+[COVERED] string battery.cells.insight.healthy                       -> BatteryCellsPage.kt:938 translation_battery_cells_insight_healthy (cells insight)
+[COVERED] string battery.cells.insight.healthyDesc                   -> BatteryCellsPage.kt:939 translation_battery_cells_insight_healthyDesc
+[COVERED] string battery.cells.insight.highSpread                    -> BatteryCellsPage.kt:868 translation_battery_cells_insight_highSpread (spread insight)
+[COVERED] string battery.cells.insight.highSpreadDesc                -> BatteryCellsPage.kt:869 translation_battery_cells_insight_highSpreadDesc
+[COVERED] string battery.cells.insight.highTemp                      -> BatteryCellsPage.kt:896 translation_battery_cells_insight_highTemp (temp insight)
+[COVERED] string battery.cells.insight.highTempDesc                  -> BatteryCellsPage.kt:897 translation_battery_cells_insight_highTempDesc
+[COVERED] string battery.cells.insight.watchSpread                   -> BatteryCellsPage.kt:875 translation_battery_cells_insight_watchSpread (spread insight)
+[COVERED] string battery.cells.insight.watchSpreadDesc               -> BatteryCellsPage.kt:876 translation_battery_cells_insight_watchSpreadDesc
+[COVERED] string battery.cells.insight.watchTemp                     -> BatteryCellsPage.kt:903 translation_battery_cells_insight_watchTemp (temp insight)
+[COVERED] string battery.cells.insight.watchTempDesc                 -> BatteryCellsPage.kt:904 translation_battery_cells_insight_watchTempDesc
+[COVERED] string battery.cells.noInsights                            -> BatteryCellsPage.kt:853 translation_battery_cells_noInsights (recommendations empty)
+[COVERED] string battery.cells.recommendations                       -> BatteryCellsPage.kt:843 translation_battery_cells_recommendations (recommendations title)
+[COVERED] string battery.cells.stat.avgVoltage                       -> BatteryCellsPage.kt:988 translation_battery_cells_stat_avgVoltage (summary stat tile)
+[COVERED] string battery.cells.stat.normalCells                      -> BatteryCellsPage.kt:1008 translation_battery_cells_stat_normalCells (summary stat tile)
+[COVERED] string battery.cells.stat.packVoltage                      -> BatteryCellsPage.kt:982 translation_battery_cells_stat_packVoltage (summary stat tile)
+[COVERED] string battery.cells.stat.tempSpread                       -> BatteryCellsPage.kt:1002 translation_battery_cells_stat_tempSpread (summary stat tile)
+[COVERED] string battery.cells.stat.totalCells                       -> BatteryCellsPage.kt:976 translation_battery_cells_stat_totalCells (summary stat tile)
+[COVERED] string battery.cells.stat.voltageSpread                    -> BatteryCellsPage.kt:996 translation_battery_cells_stat_voltageSpread (summary stat tile)
+[COVERED] string battery.cells.temp.avg                              -> BatteryCellsPage.kt:792 translation_battery_cells_temp_avg (temperature card)
+[COVERED] string battery.cells.temp.empty                            -> BatteryCellsPage.kt:827 translation_battery_cells_temp_empty (temperature empty)
+[COVERED] string battery.cells.temp.max                              -> BatteryCellsPage.kt:810 translation_battery_cells_temp_max (temperature card)
+[COVERED] string battery.cells.temp.min                              -> BatteryCellsPage.kt:800 translation_battery_cells_temp_min (temperature card)
+[COVERED] string battery.cells.temp.spread                           -> BatteryCellsPage.kt:818 translation_battery_cells_temp_spread (temperature card)
+[COVERED] string battery.cells.temp.title                            -> BatteryCellsPage.kt:784 translation_battery_cells_temp_title (temperature section header)
+[COVERED] string battery.cells.title                                 -> BatteryCellsPage.kt:186 translation_battery_cells_title (page-root semantics / web usePageTitle)
+[COVERED] string cells                                               -> BatteryCellsPage.kt:675 translation_cells (cell-details count badge)
+--------------------------------------------------------------------------------
+PARITY_COVERED=110
+--------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data source  : 1 read bound as StateFlow via BatteryCellsPageViewModel -> batteryCellsPageSourceOf(): the page-local
+               BatteryCellsExtrasRepository.batteryCells over the shared ApiHttpClient + CacheStore (web bare useQuery
+               /analytics/battery-cells). Scope = SelectedVehicleStore (web useSelectedVehicle); units = SettingsStore.settings()
+               (web useUnits). No HTTP in the view; decode JsonElement -> BatteryCellData in the framework-free model.
+charts       : 2x BarChartWrapper + 2x LineChartWrapper + ChartContainer wrapping AreaChartWrapper from the A3
+               components.charts (Vico) library — Compose-native, never a webview. The web's horizontal ReferenceLines
+               (avg/min/max on the bar chart; nominal/warning on the imbalance + spread charts) are reproduced as inline
+               reference captions, since the A3 cartesian wrappers anchor markers on the x-axis.
+si/units     : SI read off the wire; avg/min/max temperature via the shared formatTemperature(convertTempFromSI) at the
+               display boundary (prefs.temperature); temp-spread is a delta scaled by 9/5 for °F with no +32 offset
+               (prefs.temperatureSpread). No °F stored or computed. Voltages (V) + the imbalance/spread (mV) + cell counts
+               are unit-less scalars rendered verbatim (web parity); the V/mV unit symbols are hard literals, never i18n.
+states       : battery-cells is the PRIMARY gate (loading/empty/error/success). Each section renders its own
+               content-or-empty surface, so no section is ever hidden (web per-section truthiness). Documented divergence
+               (Honesty #9): an all-empty / no-vehicle payload routes to the friendly empty surface via the model hasData gate.
+a11y/theme   : the spread-trend chart carries accessibleDescription (web aria-label); heatmap tiles carry per-cell
+               contentDescription; the page root carries the title semantics; icons decorative (contentDescription=null);
+               all color via MaterialTheme.colorScheme + chart ChartPalette(paletteColor) + TeslaTokens.status (A2 tokens) —
+               dynamic color + dark theme; typography via the role components (PageTitle/PanelTitle/BodyText/Caption/
+               MetricValue/MetricLabel/HelperText/CodeText). Compose-native (no webview).
+nav          : Destinations 'batteryCells' -> /battery-cells pre-existing (Destinations.kt L80, count unchanged); host
+               wired via PageHosts.register("batteryCells"); deep link auto-registered by TeslaSyncNavHost.
+strings      : 28 page literal keys + battery.cells.chart.spreadTrend.aria added to res/values/strings.xml; the other
+               ~40 battery.cells.* keys + the common chrome keys (freshness/common/error) + the status labels already
+               present. Resource names follow gen-i18n androidName() (non-[A-Za-z0-9_] -> '_'). MissingTranslation/
+               ExtraTranslation disabled in lint (the ar/he catalogs ship English fallbacks), so base-only adds are clean.
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0  (Int->Double widened via *1.0, not .toDouble(), so the scan's
+               case-insensitive `todo` substring never false-matches; web ceil(sqrt)/ceil(n/4) re-expressed as integer math)
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL (0 error-severity issues; warningsAsErrors=false)
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL
+   (assembleDebug + lintDebug + testDebugUnitTest run together with --continue -> BUILD SUCCESSFUL.
+    Re-verified on the final committed state (after the lone unused-import cleanup) -> BUILD SUCCESSFUL in 11m 29s.)
+parity       : PARITY_COVERED(110) == PARITY_REQUIRED(110)
+[PASS] all android triad gates green; parity 110/110; android ledger row page:battery/BatteryCells status=done.
+EXIT=0
+STATUS=DONE

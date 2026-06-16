@@ -63,6 +63,7 @@ import io.teslasync.android.automations.activityfeed.AutomationActivityFeedPageH
 import io.teslasync.android.automations.list.AutomationListPageHost
 import io.teslasync.android.automations.builder.AutomationBuilderPageHost
 import io.teslasync.android.automations.AutomationsListPageHost
+import io.teslasync.android.battery.batterycells.BatteryCellsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -189,6 +190,7 @@ class TeslaSyncApplication : Application() {
         AutomationListPageHost.register()
         AutomationBuilderPageHost.register()
         AutomationsListPageHost.register()
+        BatteryCellsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
