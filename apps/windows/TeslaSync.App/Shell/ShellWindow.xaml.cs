@@ -1315,6 +1315,30 @@ public sealed partial class ShellWindow : Window
             page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
             return page;
         });
+
+        // Dashboard / Command Center — inject a curated set of self-contained, data-backed widgets (vehicle hero,
+        // fleet stats, battery, charge status, recent drives, analytics) so the dashboard shows real fleet data
+        // instead of only the onboarding hero. Each widget loads its own data through the shared data layer; the
+        // live auth source + sync gateway keep the connect/sync affordances honest.
+        _viewModel.PageFactory.Register("Dashboard", () =>
+        {
+            var widgets = new UIElement[]
+            {
+                DashboardWidgets.VehicleHeroCardWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.DashboardStatsWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.BatteryRadialGaugeWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.ChargeStatusWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.RecentDrivesWidget.Create(_data.Vehicles, _data.Api, _data.Engine, _data.Options, _data.Localizer),
+                DashboardWidgets.AnalyticsSummaryWidget.Create(_data.Api, _data.Engine, _data.Options, _data.Localizer),
+            };
+            var page = new FeatureViews.Dashboard.DashboardPage(
+                new FeatureViews.Dashboard.AuthStatusClientSource(_data.Api, _data.Engine, _data.Options),
+                new FeatureViews.Dashboard.VehicleSyncClientGateway(_data.Api),
+                _data.Localizer,
+                widgets);
+            page.NavigationRequested += (_, route) => NavigateTo(route);
+            return page;
+        });
     }
 
     /// <summary>The shell's navigation/state view-model (exposed for diagnostics and tests).</summary>

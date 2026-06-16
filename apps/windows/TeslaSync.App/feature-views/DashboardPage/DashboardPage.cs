@@ -105,6 +105,9 @@ public sealed partial class DashboardPage : UserControl, IDisposable
     private readonly TsQueryError _errorState = new();
     private readonly StackPanel _successPanel = new() { Spacing = 16 };
 
+    // Live data widgets injected by the shell (vehicle / battery / drives / charging), shown above the hero.
+    private readonly IReadOnlyList<UIElement> _liveWidgets;
+
     // GlassPanel1 — the welcome / sync onboarding hero (web EmptyOnboarding).
     private readonly TsGlassPanel _onboardingPanel = new() { Padding = new Thickness(32) };
     private readonly Heading _onboardingHeading = new() { HorizontalAlignment = HorizontalAlignment.Center };
@@ -129,12 +132,13 @@ public sealed partial class DashboardPage : UserControl, IDisposable
     /// <param name="authSource">The cache-then-network connected-account port (native <c>useAuthStatus</c>).</param>
     /// <param name="syncGateway">The one-shot vehicle-sync command port (native <c>useSyncVehicles</c>).</param>
     /// <param name="localizer">The i18n facade every label resolves through.</param>
-    public DashboardPage(IAuthStatusSource authSource, IVehicleSyncGateway syncGateway, ILocalizer localizer)
+    public DashboardPage(IAuthStatusSource authSource, IVehicleSyncGateway syncGateway, ILocalizer localizer, IReadOnlyList<UIElement>? liveWidgets = null)
     {
         ArgumentNullException.ThrowIfNull(authSource);
         ArgumentNullException.ThrowIfNull(syncGateway);
         ArgumentNullException.ThrowIfNull(localizer);
 
+        _liveWidgets = liveWidgets ?? System.Array.Empty<UIElement>();
         _viewModel = new DashboardPageViewModel(authSource, syncGateway, localizer);
         _localizer = localizer;
 
@@ -206,6 +210,11 @@ public sealed partial class DashboardPage : UserControl, IDisposable
         var body = new StackPanel { Spacing = 16 };
         body.Children.Add(_loadingPanel);
         body.Children.Add(_errorState);
+        if (_liveWidgets.Count > 0)
+        {
+            body.Children.Add(BuildLiveWidgetGrid(_liveWidgets));
+        }
+
         body.Children.Add(_successPanel);
 
         var stack = new StackPanel { Spacing = 16, Padding = new Thickness(24) };
@@ -225,6 +234,33 @@ public sealed partial class DashboardPage : UserControl, IDisposable
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollMode = ScrollMode.Disabled,
         };
+    }
+
+    // Lays the injected live-data widgets out in a responsive two-column grid above the onboarding hero.
+    private static Grid BuildLiveWidgetGrid(IReadOnlyList<UIElement> widgets)
+    {
+        var grid = new Grid { ColumnSpacing = 16, RowSpacing = 16 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        int rowCount = (widgets.Count + 1) / 2;
+        for (int r = 0; r < rowCount; r++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+
+        for (int i = 0; i < widgets.Count; i++)
+        {
+            if (widgets[i] is FrameworkElement element)
+            {
+                element.VerticalAlignment = VerticalAlignment.Top;
+                Grid.SetColumn(element, i % 2);
+                Grid.SetRow(element, i / 2);
+                grid.Children.Add(element);
+            }
+        }
+
+        return grid;
     }
 
     private Grid BuildHeader()
@@ -552,5 +588,10 @@ public sealed partial class DashboardPage : UserControl, IDisposable
         _disposed = true;
         _viewModel.PropertyChanged -= OnViewModelChanged;
         _viewModel.Dispose();
+
+        foreach (var widget in _liveWidgets)
+        {
+            (widget as IDisposable)?.Dispose();
+        }
     }
 }
