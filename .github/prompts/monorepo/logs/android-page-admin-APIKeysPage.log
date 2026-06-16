@@ -1,0 +1,71 @@
+P3-ANDROID A7 — page:admin/APIKeys (Compose / Material 3) — artifact log
+unit: page:admin/APIKeys   kind: page   web: web/src/features/admin/pages/APIKeysPage.tsx   route: /api-keys
+output: apps/android/app/src/main/kotlin/com/teslasync/admin/** (APIKeysPage.kt + Model/Icons/Source/ViewModel)
+note: the single app module's Gradle path is ':android' (settings.gradle.kts maps it to app/); the prompt's
+      ':app:*' is the generator placeholder. Gate run against ':android:*' — the real module path.
+prereq: P1/S2 generated client (io.teslasync.shared.core.api.generated) was absent in this worktree (the
+        apps/**/generated/ tree is git-ignored). Regenerated deterministically via
+        'npx tsx@4.22.4 apps/tools/codegen/gen-clients.ts' (wrote 10 Kotlin + 10 C# files) before the gate.
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD_EXIT=0
+LINT_EXIT=0
+TEST_EXIT=0
+host unit tests (admin surface): 13 run, 0 failures, 0 errors
+  - io.teslasync.android.admin.APIKeysPageModelTest      : 6 tests (projection parse / created-key / isExpired / permission map)
+  - io.teslasync.android.admin.APIKeysPageViewModelTest  : 7 tests (interaction transitions + create/revoke/delete mutations)
+full :android:testDebugUnitTest suite: BUILD SUCCESSFUL (no regressions).
+
+=== PARITY ===
+PARITY_REQUIRED=32
+data sources bound through ApiKeysPageViewModel.keys (StateFlow<UiState<List<ApiKey>>>) + mutations over
+ApiKeysSource (AdminStore.asApiKeysSource): useApiKeys=GET /api-keys, useCreateApiKey=POST /api-keys,
+useDeleteApiKey=DELETE /api-keys/{id}, useRevokeApiKey=POST /api-keys/{id}/revoke. Web hook names preserved
+at the Kotlin call sites: apiKeys()/createApiKey()/deleteApiKey()/revokeApiKey() (APIKeysPageSource.kt).
+
+[1]  panel  GlassPanel1               -> APIKeysPage.kt :: GeneratedKeyPanel (GlassPanel wrapping MaskedValue, one-time secret reveal)
+[2]  panel  GlassPanel2               -> APIKeysPage.kt :: ApiKeyRow (GlassPanel per issued-key row)
+[3]  state  loading                   -> APIKeysPage.kt :: KeysList (state.isLoading -> LoadingList(): 3x Skeleton)
+[4]  state  empty                     -> APIKeysPage.kt :: KeysList (state.isEmpty -> EmptyState icon=Key,title=No API keys)
+[5]  state  success                   -> APIKeysPage.kt :: KeysList (else -> StaggerContainer { ApiKeyRow }); +error -> ErrorDisplay+retry
+[6]  string API Key Created           -> R.string.translation_API_Key_Created            @ CreateKeyModal title (generatedKey != null)
+[7]  string API Keys                  -> R.string.translation_API_Keys                   @ PageHeader PageTitle
+[8]  string API key, click to reveal  -> R.string.translation_API_key__click_to_reveal   @ MaskedValue accessibleName/revealLabel
+[9]  string Admin                     -> R.string.translation_Admin (reused)             @ PermissionBadge + Select option
+[10] string Are you sure ... {{name}} -> R.string.translation_Are_you_sure_you_want_to_permanently_delete_the_key____name (%1\) @ DeleteDialog
+[11] string Cancel                    -> R.string.translation_Cancel (reused)            @ CreateKeyForm + DeleteDialog
+[12] string Copy                      -> R.string.translation_Copy (reused)              @ CopyButton copiedLabel
+[13] string Copy API key              -> R.string.translation_Copy_API_key               @ CopyButton copyLabel (a11y)
+[14] string Copy this key now - ...   -> R.string.translation_Copy_this_key_now___it_won_t_be_shown_again @ GeneratedKeyPanel HelperText
+[15] string Create Key                -> R.string.translation_Create_Key                 @ PageHeader Button
+[16] string Create an API key to ...  -> R.string.translation_Create_an_API_key_to_enable_programmatic_access_to_TeslaSync_data_and_controls @ EmptyState
+[17] string Created                   -> R.string.translation_Created (reused)           @ KeyMetadataRow
+[18] string Delete                    -> R.string.translation_Delete (reused)            @ ApiKeyRow delete IconButton + DeleteDialog confirm
+[19] string Delete API Key            -> R.string.translation_Delete_API_Key             @ DeleteDialog title
+[20] string Done                      -> R.string.translation_Done (reused)              @ GeneratedKeyPanel Button
+[21] string Expired                   -> R.string.translation_Expired (reused)           @ ApiKeyRow Badge(Danger)
+[22] string Generate Key              -> R.string.translation_Generate_Key               @ CreateKeyForm Button
+[23] string Last used                 -> R.string.translation_Last_used                  @ KeyMetadataRow (when lastUsedAt present)
+[24] string Manage programmatic ...   -> R.string.translation_Manage_programmatic_access_to_TeslaSync @ PageHeader HelperText (subtitle)
+[25] string My Application            -> R.string.translation_My_Application             @ Input hint (web placeholder)
+[26] string Name                      -> R.string.translation_Name (reused)              @ Input label
+[27] string New API Key               -> R.string.translation_New_API_Key                @ CreateKeyModal title (form face)
+[28] string No API keys               -> R.string.translation_No_API_keys                @ EmptyState title
+[29] string Permissions               -> R.string.translation_Permissions (reused)       @ Select label
+[30] string Read                      -> R.string.translation_Read (reused)              @ PermissionBadge + Select option
+[31] string Read-Write                -> R.string.translation_Read_Write (reused)        @ PermissionBadge + Select option
+[32] string Revoke                    -> R.string.translation_Revoke (reused)            @ ApiKeyRow revoke IconButton
+
+strings.xml: 15 new translation_* entries added to res/values/strings.xml (folded from the literal-English web
+i18n keys, values verbatim); 12 already present in the generated catalog and reused (Admin, Cancel, Copy,
+Created, Delete, Done, Expired, Name, Permissions, Read, Read-Write, Revoke). Error-state chrome reuses
+existing catalog keys (translation_common_close/retry, translation_error_loadFailed/serverError_message).
+PARITY_COVERED=32
+
+a11y: every IconButton/CopyButton/MaskedValue carries a contentDescription; PageTitle marked heading();
+      Material 3 enforces >= 48dp touch targets. Dark + dynamic color via MaterialTheme design tokens (A2).
+units: API keys are not unit-bearing; no SI conversion needed (raw JsonElement round-tripped by AdminRepository).
+Compose-native only (no webview).
+
+EXIT=0
+STATUS=DONE

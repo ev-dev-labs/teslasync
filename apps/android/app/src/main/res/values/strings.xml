@@ -8382,4 +8382,21 @@
   <string name="translation_powerSql_editor_clear">Clear</string>
   <string name="translation_powerSql_catalog_title">Curated schema catalog</string>
   <string name="translation_powerSql_catalog_intro">These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list.</string>
+  <!-- ── APIKeysPage (P3-ANDROID A7, page:admin/APIKeys). Literal-English web i18n keys folded to the
+       generated catalog name; values verbatim from web/src/features/admin/pages/APIKeysPage.tsx. ── -->
+  <string name="translation_API_Keys">API Keys</string>
+  <string name="translation_Manage_programmatic_access_to_TeslaSync">Manage programmatic access to TeslaSync</string>
+  <string name="translation_Create_Key">Create Key</string>
+  <string name="translation_API_Key_Created">API Key Created</string>
+  <string name="translation_New_API_Key">New API Key</string>
+  <string name="translation_Copy_this_key_now___it_won_t_be_shown_again">Copy this key now — it won\'t be shown again.</string>
+  <string name="translation_API_key__click_to_reveal">API key, click to reveal</string>
+  <string name="translation_Copy_API_key">Copy API key</string>
+  <string name="translation_My_Application">My Application</string>
+  <string name="translation_Generate_Key">Generate Key</string>
+  <string name="translation_No_API_keys">No API keys</string>
+  <string name="translation_Create_an_API_key_to_enable_programmatic_access_to_TeslaSync_data_and_controls">Create an API key to enable programmatic access to TeslaSync data and controls.</string>
+  <string name="translation_Last_used">Last used</string>
+  <string name="translation_Delete_API_Key">Delete API Key</string>
+  <string name="translation_Are_you_sure_you_want_to_permanently_delete_the_key____name">Are you sure you want to permanently delete the key \"%1$s\"?</string>
 </resources>
