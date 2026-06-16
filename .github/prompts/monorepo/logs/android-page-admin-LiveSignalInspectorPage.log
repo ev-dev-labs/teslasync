@@ -1,0 +1,88 @@
+P3-ANDROID A7 — page:admin/LiveSignalInspector — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/LiveSignalInspectorPage.tsx (+ components/live-signal-inspector/LiveSignalsTable.tsx)  (route /admin/live-signals)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (LiveSignalInspectorPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.vehiclesStore (S8 VehiclesStore) + DataContainer.telemetryStore (S8 TelemetryStore over HttpTelemetryRepository, added),
+             TeslaSyncApplication -> LiveSignalInspectorPageHost.register("adminLiveSignals")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+STRINGS NOTE (honesty): every admin.liveSignals.* key the surface renders was ALREADY present in the
+generated platform catalog (apps/android/app/src/main/res/values/strings.xml L531-546, generated from
+apps/shared/i18n/catalog/en.json). No strings.xml edit was required; the page resolves them verbatim via
+stringResource(R.string.translation_admin_liveSignals_*). The web key names are preserved 1:1.
+
+WIRING NOTE (honesty): this is the first A7 surface to read the Telemetry domain, so the shared S8
+TelemetryStore was registered in the manual DI graph (DataContainer.kt) exactly as ApiLogs added adminStore
+and Feedback added feedbackStore — the documented "single seam A7 page prompts widen (register their store +
+ViewModel)". No feature page was touched; the host was registered in TeslaSyncApplication alongside the
+sibling admin hosts.
+
+GATE PATH NOTE: Gradle project path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module. Kotlin daemon heap raised to 6g via '-Pkotlin.daemon.jvmargs=-Xmx6g'
+(single-quoted on PowerShell so the dotted -P arg is one token; CLI only, no file edits) — matching the
+ApiLogsPage precedent.
+
+POLL NOTE: the web 1 s refetchInterval (refetchIntervalInBackground:false) is a render-layer cadence, so the
+foreground poll is a LaunchedEffect(selection) in the screen that calls viewModel.refreshLive() every 1000 ms
+while a vehicle is selected + the screen is in composition; it cancels on navigation away (the native analogue
+of pausing in a background tab). The >2 min staleness is surfaced via the shared FreshnessIndicator fed by the
+live feed's fetchedAt (ADR-013).
+
+=== GATE ===
+PLACEHOLDER_EXIT=0   (check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin -> PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0)
+BUILD SUCCESSFUL in 5m 57s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 22s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 24s
+TEST_EXIT=0
+
+PLACEHOLDER_ALLOWED note: the single opt-out is the `hint = stringResource(R.string.translation_admin_liveSignals_filterPlaceholder)`
+line in LiveSignalInspectorPage.kt — the web string KEY is literally named `filterPlaceholder`, so the scanner's
+case-insensitive "Placeholder" pattern matches the resource id; marked `// parity:allow web string key literally named filterPlaceholder`.
+
+=== PARITY ===
+PARITY_REQUIRED=13
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (LiveSignalInspectorPage.kt screen, LiveSignalInspectorPageViewModel.kt, LiveSignalInspectorPageModel.kt)
+
+# panels (3) — Material 3 Surface (GlassPanel)
+[COVERED] panel  GlassPanel1   -> LiveSignalInspectorPage.kt:LiveSignalControlsPanel() GlassPanel(PanelPadding.Md) — vehicle picker Select (web GlassPanel @ L67)
+[COVERED] panel  GlassPanel2   -> LiveSignalInspectorPage.kt:NoVehiclePanel() GlassPanel(PanelPadding.Md) — no-vehicle EmptyState (web GlassPanel @ L88)
+[COVERED] panel  GlassPanel3   -> LiveSignalInspectorPage.kt:LiveSnapshotPanel() GlassPanel(PanelPadding.Md) — Activity header + filterable/sortable table (web GlassPanel @ L104)
+
+# data states (3) — bound to LiveSignalInspectorPageViewModel.signals: StateFlow<UiState<VehicleLiveSignalsResponse>> + .vehicles
+[COVERED] state  loading       -> LiveSignalInspectorPage.kt:SnapshotLoadingState() (signals.isLoading) Spinner(label=table.loading); vehicles feed via BaseFeedViewModel.asUiState
+[COVERED] state  empty         -> LiveSignalInspectorPage.kt:NoVehiclePanel() (selection==null) + SnapshotEmptyState() (rows empty); VM signals.asUiState(isEmpty={it.signals.isEmpty()})
+[COVERED] state  success       -> LiveSignalInspectorPage.kt:LiveSignalsTable() content branch (UiState.Content); model liveSignalRows()/filterRows()/sortRows()
+
+# strings (7) — every visible literal via stringResource(R.string.translation_admin_liveSignals_*); web key names preserved
+[COVERED] string admin.liveSignals.controls.selectVehicle -> LiveSignalInspectorPage.kt:LiveSignalControlsPanel() Select(emptyLabel) + "" option label
+[COVERED] string admin.liveSignals.controls.vehicleAria   -> LiveSignalInspectorPage.kt:LiveSignalControlsPanel() Column semantics{contentDescription}
+[COVERED] string admin.liveSignals.noVehicle.message      -> LiveSignalInspectorPage.kt:NoVehiclePanel() EmptyState(message)
+[COVERED] string admin.liveSignals.noVehicle.title        -> LiveSignalInspectorPage.kt:NoVehiclePanel() EmptyState(title) + GlassPanel semantics
+[COVERED] string admin.liveSignals.pageTitle              -> LiveSignalInspectorPage.kt:LiveSignalInspectorHeader() PageTitle
+[COVERED] string admin.liveSignals.panels.snapshot        -> LiveSignalInspectorPage.kt:LiveSnapshotPanel() PanelTitle + GlassPanel semantics
+[COVERED] string admin.liveSignals.subtitle               -> LiveSignalInspectorPage.kt:LiveSignalInspectorHeader() BodyText(onSurfaceVariant)
+
+PARITY_COVERED=13
+
+# additional fidelity (beyond the 13 required parity items — web LiveSignalsTable, not double-counted):
+#   error state          -> SnapshotErrorState() (signals.isError) ErrorText(error.loadFailed) + Retry(error.retry)
+#   table column strings  -> cols.name / cols.value / cols.timestamp (sortable headers), table.filtered, table.loading
+#   table empty strings   -> empty.title / empty.message (SnapshotEmptyState)
+#   filter strings        -> filterPlaceholder (Input hint, opt-out), filterAria (Input semantics)
+#   live freshness        -> FreshnessIndicator(signals.fetchedAt) header dot (ADR-013 staleness)
+
+=== SUMMARY ===
+data sources : LiveSignalInspectorPageViewModel binds shared S8 VehiclesStore.vehicles() (List<Vehicle>) +
+               TelemetryStore.vehicleLiveSignals(id) (VehicleLiveSignalsResponse) via liveSignalInspectorSource();
+               selection gates the live feed exactly like the web hook's `enabled: vehicleId !== null`. No HTTP in the view.
+nav          : Destinations 'adminLiveSignals' -> /admin/live-signals (pre-existing) wired to LiveSignalInspectorRoute()
+               via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+units        : raw signal key/value pairs are unit-agnostic; values round-trip verbatim (Phase-42 SI on disk). No SI conversion needed.
+a11y         : panels carry semantics{contentDescription}; Select + filter carry aria labels; FreshnessIndicator dot self-describes; dark/dynamic theme via MaterialTheme tokens only.
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=1)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(13) == PARITY_REQUIRED(13)
+[PASS] all android triad gates green; parity 13/13; android ledger row page:admin/LiveSignalInspector status=done.
+EXIT=0
+STATUS=DONE
