@@ -1,0 +1,172 @@
+================================================================================
+P3-ANDROID A7 — page:system/ScheduledExportsPanel — Jetpack Compose / Material 3 parity port
+Web source : web/src/features/system/pages/ScheduledExportsPanel.tsx
+Output dir : apps/android/app/src/main/kotlin/com/teslasync/system/
+Package    : io.teslasync.android.system.scheduledexports
+Prompt     : p3-android/pages/system/ScheduledExportsPanel
+================================================================================
+
+--- ENVIRONMENT ---
+JDK            : openjdk 21.0.9 (Android Studio jbr)
+Gradle wrapper : 8.14.5
+Kotlin         : 2.4.0
+Android SDK    : C:\Users\AtulM\AppData\Local\Android\Sdk (minSdk 26) — present, so the gate runs (not BLOCKED).
+Gradle project : root 'teslasync-android' → module ':android' (settings.gradle.kts maps app/ → :android).
+                 The prompt's gate template names ':app'; the actual module path is ':android', so the gate
+                 tasks are run as ':android:assembleDebug' / ':android:lintDebug' / ':android:testDebugUnitTest'
+                 (no ':app' project exists in this build). Task-name resolution only — same triad.
+
+--- FILES CREATED (allowed path apps/android/app/src/main/kotlin/com/teslasync/system/**) ---
+  ScheduledExportsPanel.kt      ScheduledExportsPanelPageRegistration (ROUTE_ID/SLUG) + the stateful page entries +
+                                the stateless content (GlassPanel1, header, inline create/edit form, the three data
+                                states, the schedule cards with the per-row Run-now/Enable-Disable/Edit/Delete
+                                actions + delete confirmation + the shared server-error toast). Every web table
+                                column header is surfaced as a field label so all 36 catalog strings resolve.
+  ScheduledExportsPanelHost.kt  ScheduledExportsPanelRoute() (builds the source over a page-local
+                                HttpExportsRepository from the container's resilient client + offline cache) +
+                                ScheduledExportsPanelPageHost.register() (PageHosts.register("ScheduledExportsPanel")).
+
+--- NAVHOST REGISTRATION (allowed: NavHost registration) ---
+  app/src/main/java/io/teslasync/android/navigation/TeslaSyncNavHost.kt
+      The web route is (unrouted): the panel is mounted inside the /data-export surface ⇒ no App.tsx route ⇒ no
+      Destinations row. Added the SCHEDULED_EXPORTS_PANEL_ROUTE const + an explicit standalone
+      composable("ScheduledExportsPanel") destination after the metadata-driven loop (next to the DiagnosticPage
+      destination), resolved through the PageHosts seam (NotFound fallback), keeping the nav module decoupled.
+  app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt
+      ScheduledExportsPanelPageHost.register() wired at process start (idempotent), next to DiagnosticPageHost.register().
+
+--- SHARED INFRA REUSED (not recreated) ---
+  KMP core (S7/S8) : ExportsStore / ExportsRepository already expose the full scheduled-export control plane —
+                     scheduledExports(): StateFlow<Resource<List<ScheduledExport>>>  (web useScheduledExports)
+                     createScheduledExport / updateScheduledExport / deleteScheduledExport / runScheduledExportNow
+                     (web useCreate… / useUpdate… / useDelete… / useRunScheduledExportNow). HttpExportsRepository
+                     is built page-local from container.api + container.cacheStore (the Commands/Diagnostic
+                     precedent; the Android DI graph wires no Exports store yet).
+  State holder     : io.teslasync.android.featureviews.scheduledexportspanel.ScheduledExportsPanelViewModel
+                     (P1/S8) — schedules: StateFlow<UiState<List<ScheduledExport>>>, runningNowId, toasts,
+                     refresh()/retry(), save()/toggle()/runScheduledExportNow()/delete(), recordViewOpened().
+                     Bound via .factory(source, logger). The page performs NO HTTP.
+  Pure model       : ScheduledExportForm + emptyScheduledExportForm / scheduledExportFormFrom /
+                     validateScheduledExportForm / deliveryNeedsTarget / typeFormatLabel / deliveryLabel /
+                     parseInstantMillis / scheduledRunStatus / ScheduledRunStatus / SCHEDULED_EXPORT_TYPES /
+                     SCHEDULED_EXPORT_FORMATS / SCHEDULED_DELIVERY_KINDS / ScheduledExportToast — reused verbatim
+                     from the shared featureviews.scheduledexportspanel model (web emptyInput/inputFromRow/submit/
+                     toggleEnabled/EXPORT_TYPES/FORMATS/DELIVERY_KINDS).
+  Components (A3)  : GlassPanel, Button, Input, Select, Badge, ConfirmDialog, EmptyState, Skeleton, ErrorDisplay,
+                     DataFreshness, ToastHost, FadeIn, SectionTitle/PanelTitle/HelperText/Caption/BodyText/CodeText,
+                     TeslaGlyphs — all via @/components category barrels (io.teslasync.android.components.*).
+  Strings          : all 36 translation_dataExport_scheduled_* already present in res/values/strings.xml +
+                     values-ar + values-he (generated catalog) — no strings.xml edit needed.
+  Display          : SI converters N/A — no field is unit-bearing (cron strings, delivery kinds, ISO stamps).
+                     Live SSE / staleness N/A — the schedules feed is cache-then-network, not a live stream; its
+                     own freshness chip (DataFreshness) renders stale/offline last-known-good.
+
+  NOTE on layout: the shared featureviews ScheduledExportsPanel card view renders 34 of the 36 web strings (it shows
+  the schedule name as a card title and the actions as buttons, so it omits the web table's `Name`/`Actions` column
+  headers). This page is the ledgered parity unit and must render ALL 36, so it renders its own card surface that
+  surfaces every web table column header as a field label — table.name labels each card's name and table.actions
+  labels its action group — reusing the shared ViewModel + pure model + A3 components for all logic/data.
+
+=== PARITY ===
+PARITY_REQUIRED=40
+
+[panel 1/1] GlassPanel1  GlassPanel(padding=Lg) in ScheduledExportsPanelContent   ScheduledExportsPanel.kt:299
+            (web L155 the single <GlassPanel> wrapping the whole page; the form card + each schedule card reuse
+             the same GlassPanel primitive at :364 and :580.)
+
+[state 1/3] loading  schedulesState.isLoading -> ScheduledExportsLoading (3 row skeletons)   ScheduledExportsPanel.kt:479,512
+            (web L333 isLoading -> [1,2,3].map(<Skeleton/>))
+[state 2/3] empty    schedulesState.isEmpty -> ScheduledExportsEmptyState                     ScheduledExportsPanel.kt:481,534
+            (web L339 rows.length === 0 -> <EmptyState/>)
+[state 3/3] success  else -> rows.forEach { ScheduledExportCard }                             ScheduledExportsPanel.kt:487,569
+            (web L348 the populated <table> rows)
+            (error fidelity: schedulesState.isError -> ScheduledExportsErrorState + Retry      ScheduledExportsPanel.kt:480,520
+             — every phase renders a non-blank region; the prompt's loading/empty/success are all covered.)
+
+[string  1/36] dataExport.scheduled.title            R.string.translation_dataExport_scheduled_title             :192,340
+[string  2/36] dataExport.scheduled.subtitle         R.string.translation_dataExport_scheduled_subtitle          :341
+[string  3/36] dataExport.scheduled.newSchedule      R.string.translation_dataExport_scheduled_newSchedule       :344,540
+[string  4/36] dataExport.scheduled.form.name        R.string.translation_dataExport_scheduled_form_name         :369
+[string  5/36] dataExport.scheduled.form.namePlaceholder R.string.translation_dataExport_scheduled_form_namePlaceholder :370
+[string  6/36] dataExport.scheduled.form.scheduleCron R.string.translation_dataExport_scheduled_form_scheduleCron :376
+[string  7/36] dataExport.scheduled.form.scheduleCronHelp R.string.translation_dataExport_scheduled_form_scheduleCronHelp :377
+[string  8/36] dataExport.scheduled.form.exportType  R.string.translation_dataExport_scheduled_form_exportType   :384
+[string  9/36] dataExport.scheduled.form.format      R.string.translation_dataExport_scheduled_form_format       :390
+[string 10/36] dataExport.scheduled.form.rangeWindow R.string.translation_dataExport_scheduled_form_rangeWindow  :395
+[string 11/36] dataExport.scheduled.form.rangeWindowHelp R.string.translation_dataExport_scheduled_form_rangeWindowHelp :396
+[string 12/36] dataExport.scheduled.form.deliveryKind R.string.translation_dataExport_scheduled_form_deliveryKind :402
+[string 13/36] dataExport.scheduled.form.deliveryTarget R.string.translation_dataExport_scheduled_form_deliveryTarget :408
+[string 14/36] dataExport.scheduled.form.deliveryTargetHelp R.string.translation_dataExport_scheduled_form_deliveryTargetHelp :409
+[string 15/36] dataExport.scheduled.form.cancel      R.string.translation_dataExport_scheduled_form_cancel       :438
+[string 16/36] dataExport.scheduled.form.submit      R.string.translation_dataExport_scheduled_form_submit       :461
+[string 17/36] dataExport.scheduled.empty            R.string.translation_dataExport_scheduled_empty             :537
+[string 18/36] dataExport.scheduled.emptyMessage     R.string.translation_dataExport_scheduled_emptyMessage      :536
+[string 19/36] dataExport.scheduled.table.name       R.string.translation_dataExport_scheduled_table_name        :586
+[string 20/36] dataExport.scheduled.table.type       R.string.translation_dataExport_scheduled_table_type        :609
+[string 21/36] dataExport.scheduled.table.cron       R.string.translation_dataExport_scheduled_table_cron        :612
+[string 22/36] dataExport.scheduled.table.delivery   R.string.translation_dataExport_scheduled_table_delivery    :615
+[string 23/36] dataExport.scheduled.table.nextRun    R.string.translation_dataExport_scheduled_table_nextRun     :618
+[string 24/36] dataExport.scheduled.table.lastRun    R.string.translation_dataExport_scheduled_table_lastRun     :621
+[string 25/36] dataExport.scheduled.table.status     R.string.translation_dataExport_scheduled_table_status      :624
+[string 26/36] dataExport.scheduled.table.actions    R.string.translation_dataExport_scheduled_table_actions     :591
+[string 27/36] dataExport.scheduled.status.ok        R.string.translation_dataExport_scheduled_status_ok         :651
+[string 28/36] dataExport.scheduled.status.failed    R.string.translation_dataExport_scheduled_status_failed     :653
+[string 29/36] dataExport.scheduled.status.never     R.string.translation_dataExport_scheduled_status_never      :720
+[string 30/36] dataExport.scheduled.actions.runNow   R.string.translation_dataExport_scheduled_actions_runNow    :676
+[string 31/36] dataExport.scheduled.actions.disable  R.string.translation_dataExport_scheduled_actions_disable   :707
+[string 32/36] dataExport.scheduled.actions.enable   R.string.translation_dataExport_scheduled_actions_enable    :709
+[string 33/36] dataExport.scheduled.actions.edit     R.string.translation_dataExport_scheduled_actions_edit      :689
+[string 34/36] dataExport.scheduled.actions.delete   R.string.translation_dataExport_scheduled_actions_delete    :255,695
+[string 35/36] dataExport.scheduled.deleteConfirmTitle R.string.translation_dataExport_scheduled_deleteConfirmTitle :253
+[string 36/36] dataExport.scheduled.deleteConfirmBody  R.string.translation_dataExport_scheduled_deleteConfirmBody  :254
+
+PARITY_COVERED=40
+
+--- DATA SOURCES (web hooks ported, same names at the Kotlin call sites; bound through the StateFlow holder) ---
+  useScheduledExports      → ScheduledExportsPanelViewModel.schedules: StateFlow<UiState<List<ScheduledExport>>>
+                             (over ExportsStore/Repository.scheduledExports → GET /scheduled-exports)
+  useCreateScheduledExport → ViewModel.save(editingId=null, form) → source.createScheduledExport
+                             (POST /scheduled-exports)                      ScheduledExportsPanel.kt onSubmit :225
+  useUpdateScheduledExport → ViewModel.save(editingId, form) + ViewModel.toggle(row) → source.updateScheduledExport
+                             (PUT /scheduled-exports/{id})                  onSubmit :225 / onToggle :243
+  useDeleteScheduledExport → ViewModel.delete(id) (from ConfirmDialog) → source.deleteScheduledExport
+                             (DELETE /scheduled-exports/{id})              ScheduledExportsPanel.kt:259
+  useRunScheduledExportNow → ViewModel.runScheduledExportNow(id) → source.runScheduledExportNow
+                             (POST /scheduled-exports/{id}/run); per-row spinner via runningNowId   onRunNow :242
+
+--- ACCESSIBILITY / THEME / UNITS ---
+  paneTitle semantics on the page root (web usePageTitle); every visible string via stringResource (zero hardcoded
+  literals; the one i18n key id containing the substring "Placeholder" carries a `// parity:allow` opt-out with a
+  reason). Buttons/Inputs/Select are the shared Material 3 components (≥48dp targets); the Plus glyph rides the
+  shared Button affordance. All color/typography via MaterialTheme + the A3 typography components; dark + dynamic
+  color inherited from the app theme. No SI/unit value is computed or stored — display formatting (run timestamps)
+  is device-locale at the render boundary only.
+
+--- GATE (android triad: build + lint + test + placeholder scan) ---
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+BUILD SUCCESSFUL in 2m 56s   (:android:compileDebugKotlin executed — new sources compiled clean)
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+BUILD SUCCESSFUL in 12m 17s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+BUILD SUCCESSFUL in 2m 56s   (:android:compileDebugUnitTestKotlin executed — existing tests recompiled clean)
+TEST_EXIT=0
+
+--- LEDGER ---
+apps/parity/android-ledger.json : added row page:system/ScheduledExportsPanel
+  { unitId: page:system/ScheduledExportsPanel, platform: android, status: done, coveredCount: 40, requiredCount: 40,
+    promptId: p3-android/pages/system/ScheduledExportsPanel,
+    evidenceLog: .github/prompts/monorepo/logs/android-page-system-ScheduledExportsPanel.log }
+
+PARITY_COVERED == PARITY_REQUIRED (40 == 40); PLACEHOLDER_EXIT=0; BUILD_EXIT=0; LINT_EXIT=0; TEST_EXIT=0.
+
+EXIT=0
+STATUS=DONE

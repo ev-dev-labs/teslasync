@@ -20,6 +20,15 @@ import io.teslasync.android.system.help.HelpPageRegistration
 private const val DIAGNOSTIC_PAGE_ROUTE = "DiagnosticPage"
 
 /**
+ * Route key for the ScheduledExportsPanel system surface (P3-A7 system/ScheduledExportsPanel). The web page is
+ * UNROUTED (mounted inside the /data-export surface, so no `web/src/App.tsx` route and no [Destinations] row), so it
+ * is registered here as an explicit, standalone Navigation-Compose destination keyed by its page slug and resolved
+ * through [PageHosts] — keeping this module decoupled from the feature page. Must match
+ * `ScheduledExportsPanelPageRegistration.ROUTE_ID` in the system.scheduledexports surface.
+ */
+private const val SCHEDULED_EXPORTS_PANEL_ROUTE = "ScheduledExportsPanel"
+
+/**
  * The single Navigation-Compose graph. Every destination in [Destinations] is registered with its
  * path arguments and deep-link URI patterns, so deep links resolve for every web path + alias and
  * unknown routes fall through to [RouteTable.notFound]. Screen content comes from [PageHosts] when
@@ -60,6 +69,22 @@ fun TeslaSyncNavHost(
         // PageHosts seam so this module stays decoupled from the feature page (P3-A7 system/Diagnostic).
         composable(route = DIAGNOSTIC_PAGE_ROUTE) { entry ->
             val host = PageHosts.hostFor(DIAGNOSTIC_PAGE_ROUTE)
+            if (host != null) {
+                host(entry)
+            } else {
+                NotFoundScreen(
+                    attemptedPath = null,
+                    onNavigateHome = { navController.navigateTopLevel(RouteTable.start) },
+                )
+            }
+        }
+
+        // ScheduledExportsPanel is an unrouted web surface (mounted inside /data-export, so no App.tsx route and no
+        // Destinations row). It is still reachable as an explicit Navigation-Compose destination keyed by its page
+        // slug, wired through the same PageHosts seam so this module stays decoupled from the feature page
+        // (P3-A7 system/ScheduledExportsPanel).
+        composable(route = SCHEDULED_EXPORTS_PANEL_ROUTE) { entry ->
+            val host = PageHosts.hostFor(SCHEDULED_EXPORTS_PANEL_ROUTE)
             if (host != null) {
                 host(entry)
             } else {

@@ -116,6 +116,7 @@ import io.teslasync.android.system.datarepair.DataRepairPageHost
 import io.teslasync.android.system.help.HelpPageHost
 import io.teslasync.android.system.roadmap.RoadmapPageHost
 import io.teslasync.android.system.incidenttimeline.IncidentTimelinePageHost
+import io.teslasync.android.system.scheduledexports.ScheduledExportsPanelPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -292,6 +293,7 @@ class TeslaSyncApplication : Application() {
         HelpPageHost.register()
         RoadmapPageHost.register()
         IncidentTimelinePageHost.register()
+        ScheduledExportsPanelPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
