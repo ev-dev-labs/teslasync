@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Surface-owned strings for the IncidentTimelinePage system surface
+  (com/teslasync/system/IncidentTimelinePage.kt), the native port of
+  web/src/features/system/pages/IncidentTimelinePage.tsx.
+
+  The web page predates the i18n migration: it hard-codes its English copy
+  (titles, badges, the timeline + add-update form, the resolve confirm dialog,
+  toasts) rather than going through react-i18next, so the auto-generated
+  translation_* catalog (web/src/i18n -> apps/shared/i18n -> values/strings.xml)
+  carries no key for it. These keys provide that copy so the native surface
+  resolves every visible string through stringResource (no English literals in
+  Kotlin), using the same hand-authored *_strings.xml mechanism as
+  incident_form_strings.xml / nav_strings.xml / settings_strings.xml. Values are
+  verbatim from the web source.
+-->
+<resources>
+    <!-- PageContainer header (loading / not-found / success scaffolds). -->
+    <string name="translation_incidentTimeline_pageTitle">Incident</string>
+    <string name="translation_incidentTimeline_loadingSubtitle">Loading…</string>
+    <string name="translation_incidentTimeline_loadingBody">Loading incident…</string>
+    <string name="translation_incidentTimeline_notFoundSubtitle">Not found</string>
+    <string name="translation_incidentTimeline_notFoundBody">Incident %1$s not found or you don\'t have access.</string>
+    <string name="translation_incidentTimeline_backToStatus">Back to System Status</string>
+    <string name="translation_incidentTimeline_subtitle">Incident #%1$s</string>
+    <string name="translation_incidentTimeline_back">Back</string>
+
+    <!-- Lifecycle-status labels (web STATUS_LABEL map). -->
+    <string name="translation_incidentTimeline_status_investigating">Investigating</string>
+    <string name="translation_incidentTimeline_status_identified">Identified</string>
+    <string name="translation_incidentTimeline_status_monitoring">Monitoring</string>
+    <string name="translation_incidentTimeline_status_resolved">Resolved</string>
+
+    <!-- Incident header panel. -->
+    <string name="translation_incidentTimeline_resolvedBadge">Resolved · %1$s</string>
+    <string name="translation_incidentTimeline_openBadge">Open · %1$s</string>
+    <string name="translation_incidentTimeline_affects">Affects: %1$s</string>
+    <string name="translation_incidentTimeline_started">Started %1$s</string>
+    <string name="translation_incidentTimeline_resolvedSuffix">" · Resolved %1$s"</string>
+    <string name="translation_incidentTimeline_resolve">Resolve</string>
+
+    <!-- Timeline panel. -->
+    <string name="translation_incidentTimeline_timeline">Timeline</string>
+    <string name="translation_incidentTimeline_entries">%1$d entries</string>
+    <string name="translation_incidentTimeline_byAuthor">· %1$s</string>
+
+    <!-- Add-update form panel. -->
+    <string name="translation_incidentTimeline_addUpdate">Add update</string>
+    <string name="translation_incidentTimeline_adding">Adding…</string>
+    <string name="translation_incidentTimeline_messageHint">What\'s new? Investigation step, mitigation applied, hypothesis…</string>
+    <string name="translation_incidentTimeline_keepStatus">Keep status as %1$s</string>
+    <string name="translation_incidentTimeline_toInvestigating">→ Investigating</string>
+    <string name="translation_incidentTimeline_toIdentified">→ Identified</string>
+    <string name="translation_incidentTimeline_toMonitoring">→ Monitoring</string>
+    <string name="translation_incidentTimeline_toResolved">→ Resolved</string>
+    <string name="translation_incidentTimeline_statusSelectLabel">Change status with this update</string>
+
+    <!-- Toasts (web useToast). -->
+    <string name="translation_incidentTimeline_toastUpdateRequired">Update message is required.</string>
+    <string name="translation_incidentTimeline_toastUpdateAdded">Update added.</string>
+    <string name="translation_incidentTimeline_toastAppendFailed">Failed to append update</string>
+    <string name="translation_incidentTimeline_toastResolved">Incident resolved.</string>
+    <string name="translation_incidentTimeline_toastResolveFailed">Failed to resolve</string>
+
+    <!-- Resolve confirm dialog. -->
+    <string name="translation_incidentTimeline_confirmTitle">Resolve incident?</string>
+    <string name="translation_incidentTimeline_confirmMessage">This will close the incident and stamp resolved_at. You can still view the timeline.</string>
+    <string name="translation_incidentTimeline_confirmResolve">Resolve</string>
+    <string name="translation_incidentTimeline_confirmCancel">Cancel</string>
+    <string name="translation_incidentTimeline_confirmClose">Close</string>
+</resources>

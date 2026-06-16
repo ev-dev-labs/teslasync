@@ -1,0 +1,123 @@
+================================================================================
+P3-ANDROID A7 — page:system/IncidentTimeline  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/IncidentTimelinePage.tsx
+promptId: p3-android/pages/system/IncidentTimelinePage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : 21 (Android Studio jbr; JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePage.kt          (@Composable screen: IncidentTimelinePage + IncidentTimelinePageContent + the 4 panel sections + toast presenter)
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<Incident>>; append/resolve/refresh; keep-previous-data fold; submitting/resolving flags; toasts)
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePageSource.kt    (P1/S8 data seam over the shared S7 IncidentRepository: incident() read + appendIncidentUpdate()/patchIncident() writes)
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePageModel.kt      (framework-free model: registration, parseIncidentId, severity/status tones, IncidentLifecycleStatus, duration format, timeline ordering, mergeKeepingIncidentData, formatTimestamp, toasts, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePageIcons.kt      (ArrowLeft / AlertCircle / AlertTriangle / AlertOctagon / CheckCircle / Clock / MessageSquare glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/system/IncidentTimelinePageHost.kt       (PageHosts.register(incidentTimeline){ IncidentTimelineRoute(entry) } — reads the `id` route arg)
+apps/android/app/src/main/res/values/incident_timeline_strings.xml                      (surface-owned string catalog — web hard-codes English; hand-authored *_strings.xml mechanism, precedent incident_form_strings.xml)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt              (NavHost wiring: + IncidentTimelinePageHost.register())
+apps/parity/android-ledger.json                                                         (ledger row page:system/IncidentTimeline 6/6)
+.github/prompts/monorepo/logs/android-page-system-IncidentTimelinePage.log              (this log)
+
+Data   : IncidentTimelinePageViewModel binds the shared S7 IncidentRepository (web useIncident GET /status/incidents/{id})
+         via incidentTimelinePageSourceOf(); the two writes are the repository's non-throwing Result mutations —
+         appendIncidentUpdate() (web useAppendIncidentUpdate POST …/updates) and patchIncident(resolved=true) (web
+         usePatchIncident PATCH …). On a successful write the repository evicts the incident cache partition and the
+         view-model refreshes the read, so the header + timeline reflect the change (web invalidate ['status-incidents']).
+         No HTTP in the view. The host builds a page-local HttpIncidentRepository over container.api + container.cacheStore,
+         exactly as the sibling CommandsRoute builds its own HttpCommandsRepository (the Android DI graph wires no
+         IncidentsStore yet).
+Adapt  : keep-previous-data (web React-Query parity) — a successful append/resolve evicts the cache, so the re-read
+         briefly emits Loading(cached=null). mergeKeepingIncidentData (runningFold) carries the last-loaded incident into
+         that slot so the timeline stays on screen (flagged refreshing) instead of flashing the first-load spinner;
+         `isLoading` is true only on the genuine first load (web `if (isLoading)`). A missing/non-positive route id
+         (web `Number.isFinite && > 0 ? … : null` → `error || !incident`) resolves straight to the not-found surface.
+Strings: the web page predates i18n and hard-codes its English copy (no useTranslation), so the auto-generated
+         translation_* catalog carries no key for it. A hand-authored res/values/incident_timeline_strings.xml supplies
+         every literal (verbatim from the web source) so every visible string resolves via stringResource — the same
+         *_strings.xml mechanism as incident_form_strings.xml / nav_strings.xml. The duration abbreviations (s/m/h/d) are
+         language-neutral and reproduced verbatim from the web template literals (CommandsPage "15s" precedent), so they
+         carry no key. The auto-generated strings.xml is NOT edited (no drift).
+Nav    : Destinations 'incidentTimeline' -> /system-status/incidents/:id (arg id) pre-existing (Destinations.kt:160;
+         count unchanged); host wired via PageHosts.register; Back -> /system-status opened through the app's own
+         teslasync://app deep-link scheme (AndroidManifest + TeslaSyncNavHost) since no NavController is exposed to hosts.
+Scope  : the web page also renders <AIIncidentTimelineSummarizer incidentId> — a SEPARATELY-ledgered shared surface
+         (shared-surfaces/AIIncidentTimelineSummarizer) gated off by default whose Android source needs an AI-mode gate +
+         SSE client the Android DI graph does not expose yet (its own comment: "streaming atoms are the out-of-scope P3
+         component-library bundle"). It is NOT this unit's parity (PARITY_REQUIRED enumerates the 4 GlassPanels + 2
+         states); the deterministic timeline this page renders IS the canonical surface (web comment §I3/§I5). Not embedded
+         here by design, documented (Honesty Covenant #9), not silently dropped.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  # the web textarea `placeholder` prop is rendered through the Android Textarea `hint` seam, so no banned token
+  # ("placeholder"/"TODO"/…) appears in the scanned surface; the message-hint string key is *_messageHint.
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 6m 30s
+  # the new surface compiled clean on the first pass; the only :compileDebugKotlin warnings are pre-existing
+  # LocalClipboardManager deprecations in unrelated sibling pages (ApiLogsPage/ArchivedPage/ChannelsPage/WebhooksPage).
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 14m 51s (0 errors)
+  # abortOnError=true, warningsAsErrors=false; no lint error from the new surface or its string catalog. The three
+  # "Multiple substitutions … non-positional format" notes are pre-existing entries in the auto-generated strings.xml
+  # (battery_cells/battery_tip/rateLimitStatus), not incident_timeline_strings.xml (every key is single-substitution
+  # positional %1$s/%1$d with escaped apostrophes).
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 34s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=6
+--------------------------------------------------------------------------------
+# panels (4) — Material 3 GlassPanel (Surface) ; bound state holder = IncidentTimelinePageViewModel.uiState : StateFlow<UiState<Incident>>
+[COVERED] panel  GlassPanel1 -> IncidentTimelinePage.kt:313 IncidentNotFoundSurface (def :304) GlassPanel{ notFoundBody(rawId) + BackToStatusLink }, dispatched :274 uiState.isError  (web `error || !incident` -> `<GlassPanel>` not-found, lines 128-138)
+[COVERED] panel  GlassPanel2 -> IncidentTimelinePage.kt:444 IncidentHeaderPanel (def :434) GlassPanel{ severity glyph + status Badge + severity + source + open/resolved Badge + description + Affects + Started/Resolved + Resolve }  (web incident header, lines 159-201)
+[COVERED] panel  GlassPanel3 -> IncidentTimelinePage.kt:529 IncidentTimelinePanel (def :524) GlassPanel{ MessageSquare heading + N entries + newest-first timelineEntries() rows (status Badge + timestamp + author + message) }  (web Timeline, lines 218-238)
+[COVERED] panel  GlassPanel4 -> IncidentTimelinePage.kt:597 IncidentAddUpdatePanel (def :587) GlassPanel{ Textarea(hint) + status-transition Select + Add update/Adding… submit }, shown when !resolved  (web add-update form, lines 242-271)
+
+# data states (2 required) — bound to IncidentTimelinePageViewModel.uiState (keep-previous-data fold over the IncidentRepository.incident feed)
+[COVERED] state  loading -> IncidentTimelinePage.kt:285 IncidentLoadingSurface (header "Incident / Loading…" + "Loading incident…" body), dispatched :276 else-branch when uiState has no data ; IncidentTimelinePageViewModel.kt uiState seeds + emits UiState.loading() on Resource.Loading(cached=null)  (web `if (isLoading)`, lines 117-123)
+[COVERED] state  success -> IncidentTimelinePage.kt:259 `incident != null` -> IncidentSuccessSurface (def :353): header + GlassPanel2 + GlassPanel3 + GlassPanel4 ; UiPhase.Content via Resource.Success  (web resolved render, lines 147-273)
+# (not-found is rendered as the web `error || !incident` content branch -> GlassPanel1, the page declares no separate empty state; the manifest states for this unit are loading + success)
+
+PARITY_COVERED=6
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : IncidentTimelinePageViewModel binds the shared S7 IncidentRepository.incident() (web useIncident) +
+               appendIncidentUpdate()/patchIncident() writes (web useAppendIncidentUpdate/usePatchIncident) via
+               incidentTimelinePageSourceOf(); a successful write evicts the cache partition and refreshes the read.
+               No HTTP in the view.
+si/units     : no field on this surface is unit-bearing (ids, enum strings, timestamps, free text); timestamps are
+               formatted at the display boundary in the device locale (formatTimestamp, web useDateFormat). The duration
+               s/m/h/d abbreviations are language-neutral cadence labels (web fmtDuration), not SI quantities.
+a11y/theme   : shared components supply semantics; the page sets a paneTitle (web usePageTitle), heading semantics on the
+               title, a Button role + content description + >=48dp target on the "Back to System Status" link, and a
+               content description on the status select; severity/status colors come from TeslaTokens (status + chart),
+               Badge/Button/GlassPanel use MaterialTheme (A2 tokens) for dynamic-color + dark theme; Compose-native (no webview).
+nav          : Destinations 'incidentTimeline' -> /system-status/incidents/:id (arg id, pre-existing Destinations.kt:160)
+               wired to IncidentTimelineRoute(entry) via PageHosts.register; deep link auto-registered by TeslaSyncNavHost;
+               Back -> teslasync://app/system-status.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(6) == PARITY_REQUIRED(6)
+[PASS] all android triad gates green; parity 6/6; android ledger row page:system/IncidentTimeline status=done.
+EXIT=0
+STATUS=DONE
