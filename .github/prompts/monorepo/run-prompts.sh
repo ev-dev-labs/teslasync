@@ -544,6 +544,15 @@ worker_main() { # $1 = manifest line number (1-based)
                 verdict="CONFLICT"; reason="merge conflict into integration branch"
             fi
         fi
+        # After a successful integration, auto-heal any duplicate top-level type the
+        # new surface introduced (the flat module dead-locks on collisions). Keeps the
+        # Sources/Features side canonical and renames the secondary widget/modal/
+        # feature-view copy, scoped to that surface — exactly the manual dedupe runbook.
+        # Best-effort: never fails the merge (|| true). Disable with PP_AUTODEDUPE=0.
+        if [ "$verdict" = "MERGED" ] && [ "${PP_AUTODEDUPE:-1}" = "1" ]; then
+            python3 "$(dirname "$SELF")/dedupe_types.py" \
+                --worktree "$PP_INT_WT" --commit --verbose >>"$logfile" 2>&1 || true
+        fi
         pp_unlock
     fi
 
