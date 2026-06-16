@@ -297,6 +297,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DiagnosticPage.log"
   },
   {
+    "unitId": "page:system/NotFound",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p3-android/pages/system/NotFoundPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-NotFoundPage.log"
+  },
+  {
     "unitId": "page:system/Search",
     "platform": "android",
     "status": "done",
