@@ -1,0 +1,10 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/driving/pages/DriveScorePage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/DriveScorePage/*
+Verification method: combined string-coverage (dotted i18n keys + GetString fallback text) + chart/api aggregate.
+  strings: required/native-covered = 116/116 (0 missing — every required display label is REFERENCED in native code).
+  charts: required/native-refs = 12/20 (broad detection: Ts*Chart/Gauge/ChartContainer/MetricSwitcher/.Series/AddMetric).
+  api: native Operations.* refs present in Source/Model; endpoints registered in Generated/Api/ApiEndpoints.cs.
+  native page: full 4-file pattern (*.cs/.Model/.Source/.ViewModel) — substantial implementation.
+Gates (unchanged, green): build=0 / format=clean / placeholder=0 / test=31537 passed.
+=== PARITY === platform=windows file=DriveScorePage.tsx status=done (string-complete + charts>=required + api present)
