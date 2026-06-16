@@ -15,6 +15,8 @@ public enum AppRouteParser {
         "/statistics": .analytics,
         "/analytics/tco": .tco,
         "/analytics/range": .projectedRange,
+        "/analytics/anomalies": .diagnostics,
+        "/anomaly-detection": .diagnostics,
         "/tco": .tco,
         "/location": .maps,
         "/alerts": .notifications,
