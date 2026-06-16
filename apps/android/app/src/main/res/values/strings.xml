@@ -8995,4 +8995,22 @@
   <string name="translation_explore_desc_api_logs">Recent HTTP requests with status, duration, and payload size.</string>
   <string name="translation_explore_desc_api_playground">Try any API endpoint with parameter forms.</string>
   <string name="translation_explore_desc_roadmap">Upcoming features grouped by quarter.</string>
+  <!-- P3-ANDROID A7 page:maps/Locations — visited-locations literals (web bare-string i18n keys; default locale). -->
+  <string name="translation_All_Locations">All Locations</string>
+  <string name="translation_Avg_Visit">Avg Visit</string>
+  <string name="translation_Most_Visited">Most Visited</string>
+  <string name="translation_No_locations">No locations</string>
+  <string name="translation_No_locations_match_your_search">No locations match your search</string>
+  <string name="translation_No_time_spent_data_available">No time-spent data available</string>
+  <string name="translation_No_visited_location_data">No visited location data</string>
+  <string name="translation_No_visited_locations_recorded_yet">No visited locations recorded yet</string>
+  <string name="translation_Places_you_ve_been___ranked_by_frequency">Places you\'ve been — ranked by frequency</string>
+  <string name="translation_Search_by_address_">Search by address…</string>
+  <string name="translation_Top_Locations_by_Time_Spent__hours_">Top Locations by Time Spent (hours)</string>
+  <string name="translation_Top_Locations_by_Visits">Top Locations by Visits</string>
+  <string name="translation_Total_Time">Total Time</string>
+  <string name="translation_Total_Visits">Total Visits</string>
+  <string name="translation_Unique_Cities">Unique Cities</string>
+  <string name="translation_Unique_Places">Unique Places</string>
+  <string name="translation_Visited_Locations">Visited Locations</string>
 </resources>

@@ -1,0 +1,175 @@
+================================================================================
+P3-ANDROID · A7 · page:maps/Locations — evidence log
+Native Jetpack Compose / Material 3 port of web LocationsPage
+Source: web/src/features/maps/pages/LocationsPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/maps/**
+Package: io.teslasync.android.maps.locations
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21.0.9 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / RegenEfficiency precedents)
+  LocationsPageModel.kt      framework-free: registration ids; LocationsRange (web useRangeState,
+                             preset 'all'); LocationsInteraction (web q/page URL cells + range);
+                             the verbatim ports of the web useMemo chain — filterToRange (web
+                             rawLocations.filter over last_visited), LocationsStats.from (totalVisits/
+                             totalTime/uniquePlaces/uniqueCities/topName/avgDurationS), searchLocations
+                             (web useFilteredList), visitsBars/timeBars (web slice(0,15)/slice(0,10) +
+                             truncateName + hoursOf), paginate/pageOffset, isUnnamedLocation (verbatim
+                             web predicate), visitedMillisOf (web new Date(last_visited)),
+                             recordLocationsPageOpened (view.opened). No Compose / no HTTP.
+  LocationsPageSource.kt     seam over LocationRepository.visitedLocations (web useLocations,
+                             GET /locations?vehicle_id=) + SelectedVehicleStore (web useSelectedVehicle).
+  LocationsPageViewModel.kt  BaseFeedViewModel; locationsState: StateFlow<UiState<List<VisitedLocation>>>
+                             re-collected on vehicle/refresh, gated on the active vehicle, empty-success
+                             when no vehicle (web enabled: vehicleId !== null); interaction StateFlow
+                             (setSearch/clearSearch/setPage/setRange); appliedNames StateFlow (web
+                             appliedName, applyName); refresh/retry/recordViewOpened. No HTTP in the view.
+  LocationsPage.kt           stateless LocationsPageContent + the ten Material 3 panels; the single
+                             useLocations feed is folded by the framework-free model into the stat cards,
+                             the two bar charts, and the searchable/paginated list. SI seconds are
+                             converted to the user's units only here via the shared UnitFormatter.
+  LocationsPageHost.kt       registers LocationsRoute for the `locations` destination (Destinations.kt
+                             L99, /locations); wired in TeslaSyncApplication.onCreate() (NavHost
+                             registration). Builds a page-local HttpLocationRepository over the shared
+                             client + offline cache (the DI graph wires no LocationsStore yet), exactly
+                             as the sibling DrivesList host does.
+
+SI BOUNDARY (P1/S5)
+  The visited-location feed stays SI on the wire (total_duration_s seconds). Display conversion happens
+  only at the render boundary: durations via the shared UnitFormatter.duration (Total-Time / Avg-Visit
+  cards + each row's total/avg), and the chart's seconds→hours figure via the model hoursOf
+  (web total_duration_s / 3600). Never stored converted (Phase-48 SI-canonical; ADR-013 keeps cache SI).
+
+LIVE DATA / STALENESS (ADR-013)
+  The locations feed is not an SSE live source; it is a cache-then-network Resource stream projected to
+  UiState, so the header DataFreshness chip surfaces fetchedAt / refreshing / stale / error rather than a
+  >2 min live-staleness badge (no live source on this page).
+
+AI AUTO-NAME AFFORDANCE (web <AIAutoNameUnnamedLocations onApplyName={…} />)
+  Unnamed rows (isUnnamedLocation) render the real AIAutoNameUnnamedLocations shared surface
+  (com/teslasync/shared-surfaces), wired with onApplyName → viewModel.applyName so an accepted proposal
+  surfaces the "ready to save" confirmation (locations.aiAutoName.applied). It is gated to its web default
+  AI-off state (web useAiEnabled('auto-name-unnamed-locations') ⇒ off; the component renders nothing when
+  disabled) because the app DI graph exposes no name-draft SSE transport yet (that transport is the AI
+  surface's own separately-shipped concern, outside this artifact's allowed files). The composition + data
+  flow are the faithful 1:1 port; when AI is enabled app-wide the panel + Apply + confirmation work end to
+  end. This is disclosed here per the honesty covenant rather than presented as fully live.
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+PANELS (10) — the six summary MetricCards + the two chart GlassPanels + the list panel + the per-row card
+  [01] panel  Unique-Places  LocationsPage.kt:388  StatCardCell (label L390 translation_Unique_Places, MapsGlyphs.Navigation)
+  [02] panel  Unique-Cities  LocationsPage.kt:395  StatCardCell (label L397 translation_Unique_Cities, MapsGlyphs.Map)
+  [03] panel  Total-Visits   LocationsPage.kt:402  StatCardCell (label L404 translation_Total_Visits, DataDisplayGlyphs.History)
+  [04] panel  Total-Time     LocationsPage.kt:411  StatCardCell (label L413 translation_Total_Time, UnitFormatter.duration)
+  [05] panel  Most-Visited   LocationsPage.kt:418  StatCardCell (label L420 translation_Most_Visited, topName ?? '—')
+  [06] panel  Avg-Visit      LocationsPage.kt:425  StatCardCell (label L427 translation_Avg_Visit, UnitFormatter.duration)
+  [07] panel  GlassPanel7    LocationsPage.kt:458  VisitsChartPanel (ChartContainer = GlassPanel, title L463)
+  [08] panel  GlassPanel8    LocationsPage.kt:498  TimeChartPanel (ChartContainer = GlassPanel, title L503)
+  [09] panel  GlassPanel9    LocationsPage.kt:544  AllLocationsPanel (GlassPanel L555, title L557 translation_All_Locations)
+  [10] panel  GlassPanel10   LocationsPage.kt:658  LocationRow (per-location GlassPanel L670 + RankBadge)
+
+CHARTS (2) — native A3 Vico bar wrappers via ChartContainer, never a webview
+  [11] chart  BarChart  LocationsPage.kt:487  BarChartWrapper(series=visits #10b981, xLabels=top-15 names)
+  [12] chart  BarChart  LocationsPage.kt:527  BarChartWrapper(series=hours  #a855f7, xLabels=top-10 names)
+
+DATA STATES (4) — for the useLocations source (the charts + list carry their own per-section states)
+  [13] state  loading  LocationsPage.kt:246  if (locationsState.isLoading) LocationsLoading() (skeleton L302)
+  [14] state  empty    LocationsPage.kt:580  ranged.isEmpty()→EmptyState + L592 filtered.isEmpty()→EmptyState + ChartStatus.Empty (chartStatusOf L759)
+  [15] state  error    LocationsPage.kt:272  isError && empty → LocationsError(onRetry) (L362) + ChartStatus.Error (chartStatusOf)
+  [16] state  success  LocationsPage.kt:274  loaded body — LocationsStatsGrid + charts + LocationsList (L622)
+
+STRINGS (28) — every visible literal resolves from res/values/strings.xml; key names match web
+  [17] string All Locations                              LocationsPage.kt:557  translation_All_Locations
+  [18] string Avg Visit                                  LocationsPage.kt:427  translation_Avg_Visit
+  [19] string Clear search                               LocationsPage.kt:562  translation_Clear_search
+  [20] string Hours                                      LocationsPage.kt:504  translation_Hours
+  [21] string Last                                       LocationsPage.kt:781  translation_Last
+  [22] string Locations                                  LocationsPage.kt:245  translation_Locations (paneTitle ≙ web usePageTitle)
+  [23] string Most Visited                               LocationsPage.kt:420  translation_Most_Visited
+  [24] string No locations                               LocationsPage.kt:583  translation_No_locations
+  [25] string No locations match your search             LocationsPage.kt:596  translation_No_locations_match_your_search
+  [26] string No time-spent data available               LocationsPage.kt:523  translation_No_time_spent_data_available
+  [27] string No visited location data                   LocationsPage.kt:483  translation_No_visited_location_data
+  [28] string No visited locations recorded yet          LocationsPage.kt:584  translation_No_visited_locations_recorded_yet
+  [29] string Places you've been — ranked by frequency   LocationsPage.kt:335  translation_Places_you_ve_been___ranked_by_frequency
+  [30] string Search by address…                         LocationsPage.kt:561  translation_Search_by_address_
+  [31] string Top Locations by Time Spent (hours)        LocationsPage.kt:503  translation_Top_Locations_by_Time_Spent__hours_
+  [32] string Top Locations by Visits                    LocationsPage.kt:463  translation_Top_Locations_by_Visits
+  [33] string Total Time                                 LocationsPage.kt:413  translation_Total_Time
+  [34] string Total Visits                               LocationsPage.kt:404  translation_Total_Visits
+  [35] string Unique Cities                              LocationsPage.kt:397  translation_Unique_Cities
+  [36] string Unique Places                              LocationsPage.kt:390  translation_Unique_Places
+  [37] string Visited Locations                          LocationsPage.kt:333  translation_Visited_Locations
+  [38] string Visits                                     LocationsPage.kt:464  translation_Visits
+  [39] string avg                                        LocationsPage.kt:780  translation_avg
+  [40] string locations.aiAutoName.applied               LocationsPage.kt:682  translation_locations_aiAutoName_applied
+  [41] string locations.empty.cta                        LocationsPage.kt:587  translation_locations_empty_cta
+  [42] string locations.filterLabel.search               LocationsPage.kt:570  translation_locations_filterLabel_search
+  [43] string total                                      LocationsPage.kt:779  translation_total
+  [44] string visits                                     LocationsPage.kt:778  translation_visits
+
+PARITY_COVERED=44
+
+STRING CATALOG
+  10 of the 28 keys already existed in res/values/strings.xml (Hours, Last, Locations, Visits, visits,
+  total, avg, locations.aiAutoName.applied, locations.empty.cta, locations.filterLabel.search). The 18
+  missing keys — the bare-string headings/empties (Visited Locations, Unique Places/Cities, Total
+  Visits/Time, Most Visited, Avg Visit, All Locations, Clear search, the two chart titles, the four
+  empty-state messages, the subtitle) — were added to res/values/strings.xml with their verbatim web
+  default text (the androidName slug of each web i18n key, e.g. t('Visited Locations') →
+  translation_Visited_Locations). `res/values*/strings.xml` is an allowed file. MissingTranslation /
+  ExtraTranslation are disabled for the generated catalog (app/build.gradle.kts L114), so the
+  default-locale add raises no lint error; the ar/he locale files mirror English fallback as the
+  generator already ships them. These keys are not yet in the shared i18n catalog (apps/shared/i18n —
+  outside this artifact's allowed files); the web renders them via i18next key-as-fallback, the same way.
+
+PLACEHOLDER OPT-OUTS (the gate's case-insensitive "todo" substring rule; none is a stub)
+  LocationsPageModel.kt   LocationsStats.from avgDurationS  `.toDouble()` SI-seconds→Double mean ("toDo" substr)
+  LocationsPageModel.kt   visitsBars                        `.toDouble()` SI-count→Double series
+  LocationsPage.kt        Total-Time card value             `.toDouble()` SI-seconds→Double
+  LocationsPage.kt        rowSubtitle avgPerVisit           `.toDouble()` SI-seconds→Double mean
+  LocationsPage.kt        rowSubtitle totalDuration         `.toDouble()` SI-seconds→Double
+  Each carries `// parity:allow … not a TODO stub`, mirroring the RegenEfficiency / DrivesList precedent.
+  hoursOf was rewritten as Long / Double (no cast) so it needs no opt-out. PLACEHOLDER_ALLOWED=5,
+  PLACEHOLDER_COUNT=0 (dir-wide total for com/teslasync/maps).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/maps -Language kotlin
+    PLACEHOLDER_ALLOWED=5
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 21s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 47s (lint-results-debug.html written, abortOnError=true, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 2m 37s
+  TEST_EXIT=0
+  Re-verified together after the paneTitle add: assembleDebug + lintDebug + testDebugUnitTest → BUILD SUCCESSFUL, GATE_EXIT=0.
+
+ACCEPTANCE
+  [x] Every named panel implemented (six summary MetricCards, the two bar-chart GlassPanels, the
+      All-Locations list panel, and the per-location row card); every anonymous region from the web
+      source reproduced (the date-range filter + freshness chip in the header, the search field + active
+      filter chip, the rank badge, the visit-count trailing chip, the unnamed-location AI affordance).
+  [x] All 44 parity items render from the bound StateFlow state holder (locationsState + interaction +
+      appliedNames + the live unitFormatter), folded by the framework-free model.
+  [x] loading / empty / error / success implemented for the useLocations source; the charts + list each
+      carry their own empty surface (ChartStatus.Empty / EmptyState) so no region ever blanks.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets (shared Button/SearchInput/Pagination);
+      EmptyState + chart + applied-name carry semantics content descriptions, the root carries paneTitle
+      (a11y); SI units honored at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (44).
+  [x] android ledger row for page:maps/Locations set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
