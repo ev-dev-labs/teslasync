@@ -1063,6 +1063,24 @@
       "requiredCount": 47,
       "promptId": "p4-apple/P7/page:battery/ProjectedRange",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-ProjectedRangePage.log"
+    },
+    {
+      "unitId": "page:battery/VampireDrain",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 45,
+      "requiredCount": 45,
+      "promptId": "p4-apple/P7/page:battery/VampireDrain",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-VampireDrainPage.log"
+    },
+    {
+      "unitId": "page:battery/VampireDrain",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 45,
+      "requiredCount": 45,
+      "promptId": "p4-apple/P7/page:battery/VampireDrain",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-VampireDrainPage.log"
     }
   ]
 }

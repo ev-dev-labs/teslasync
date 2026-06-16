@@ -1,6 +1,347 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "Analyze phantom energy loss while your vehicle is parked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Analyze phantom energy loss while your vehicle is parked"
+          }
+        }
+      }
+    },
+    "Avg Drain Rate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avg Drain Rate"
+          }
+        }
+      }
+    },
+    "Avoid opening the app frequently \u2014 each wake cycle costs battery." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avoid opening the app frequently \u2014 each wake cycle costs battery."
+          }
+        }
+      }
+    },
+    "Daily Drain While Parked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daily Drain While Parked"
+          }
+        }
+      }
+    },
+    "Disable Sentry Mode when parked at home to save 1\u20132 % per day." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disable Sentry Mode when parked at home to save 1\u20132 % per day."
+          }
+        }
+      }
+    },
+    "Drain %" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drain %"
+          }
+        }
+      }
+    },
+    "Drain Rate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drain Rate"
+          }
+        }
+      }
+    },
+    "Drain Rate Trend" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drain Rate Trend"
+          }
+        }
+      }
+    },
+    "Drain Score" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drain Score"
+          }
+        }
+      }
+    },
+    "Drain Sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drain Sessions"
+          }
+        }
+      }
+    },
+    "Duration" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duration"
+          }
+        }
+      }
+    },
+    "Enable energy-saving mode in vehicle settings for better standby." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable energy-saving mode in vehicle settings for better standby."
+          }
+        }
+      }
+    },
+    "End %" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End %"
+          }
+        }
+      }
+    },
+    "Loss %" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loss %"
+          }
+        }
+      }
+    },
+    "No drain sessions recorded yet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No drain sessions recorded yet."
+          }
+        }
+      }
+    },
+    "Off" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off"
+          }
+        }
+      }
+    },
+    "On" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
+          }
+        }
+      }
+    },
+    "Parked Hours" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parked Hours"
+          }
+        }
+      }
+    },
+    "Rate %/hr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rate %/hr"
+          }
+        }
+      }
+    },
+    "Reduce third-party app polling intervals to let the car sleep faster." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reduce third-party app polling intervals to let the car sleep faster."
+          }
+        }
+      }
+    },
+    "Score" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Score"
+          }
+        }
+      }
+    },
+    "Sentry" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sentry"
+          }
+        }
+      }
+    },
+    "Start %" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start %"
+          }
+        }
+      }
+    },
+    "Tips to Reduce Vampire Drain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tips to Reduce Vampire Drain"
+          }
+        }
+      }
+    },
+    "Total Phantom Loss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Phantom Loss"
+          }
+        }
+      }
+    },
+    "Vampire Drain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vampire Drain"
+          }
+        }
+      }
+    },
+    "Worst Session" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worst Session"
+          }
+        }
+      }
+    },
+    "route.vampireDrain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vampire Drain"
+          }
+        }
+      }
+    },
+    "sessions" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "sessions"
+          }
+        }
+      }
+    },
+    "vampire.selectVehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select vehicle"
+          }
+        }
+      }
+    },
+    "vampire.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vampire Drain"
+          }
+        }
+      }
+    },
     "range.battery" : {
       "extractionState" : "manual",
       "localizations" : {
