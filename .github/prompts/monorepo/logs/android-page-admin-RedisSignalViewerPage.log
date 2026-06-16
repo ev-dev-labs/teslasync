@@ -1,0 +1,140 @@
+================================================================================
+P3-ANDROID A7 — page:admin/RedisSignalViewer  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/RedisSignalViewerPage.tsx
+promptId: p3-android/pages/admin/RedisSignalViewerPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPage.kt          (@Composable screen: RedisSignalViewerPage + RedisSignalViewerContent + the six panel sub-composables)
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPageViewModel.kt (Hilt-free AndroidX ViewModel; StateFlow<UiState>/StateFlow<RedisFeed>; refresh()/auto-refresh; purge mutations)
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPageSource.kt     (data seam: VehiclesStore.vehicles() + the redis dev-tools endpoints over the resilient ApiHttpClient)
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPageModel.kt      (framework-free model: categorization, isLocation, JSON->rows/meta/keys projection, filter/sort, error fold, toast keys)
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPageIcons.kt      (Database glyph for the Total-Signals card + select-prompt empty state)
+apps/android/app/src/main/kotlin/com/teslasync/admin/RedisSignalViewerPageHost.kt       (PageHosts.register(redisSignals){ RedisSignalViewerRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt              (NavHost wiring: + RedisSignalViewerPageHost.register())
+apps/parity/android-ledger.json                                                          (ledger row page:admin/RedisSignalViewer)
+.github/prompts/monorepo/logs/android-page-admin-RedisSignalViewerPage.log               (this log)
+
+Strings : all 40 redis.* page keys + common.cancel already present in res/values/strings.xml
+          (translation_redis_* L5242-5309, translation_common_cancel L2126; + values-ar / values-he fallbacks); NO catalog edit needed.
+Nav     : Destinations 'redisSignals' -> /redis-signals pre-existing (RouteTableTest canonicalPaths L112; NavStrings L121); count unchanged.
+          Host wired via PageHosts.register; deep link auto-registered by the NavHost (RouteTable.deepLinkUris).
+Data    : the redis dev-tools endpoints (/dev-tools/redis-signals[, /keys]) have NO shared-core store and the KMP shared
+          build is consumed verbatim (composite build, outside allowed files), so the page binds them over the single
+          resilient ApiHttpClient exposed by AuthContainer.apiHttpClient — reached in the host via
+          (LocalContext.applicationContext as TeslaSyncApplication).container.apiHttpClient. DataContainer is NOT modified.
+          useVehicles is bound through the shared S8 VehiclesStore.vehicles() (the declared parity data source).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=1   (RedisSignalViewerPage.kt:348 — i18n key literally named searchPlaceholder)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 3m 24s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL (lint-results-debug.txt: 0 errors, 3497 warnings [pre-existing UnusedResources etc.])
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 15s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=51
+--------------------------------------------------------------------------------
+# panels (6) — each a Material 3 GlassPanel/Surface ; bound state holder = RedisSignalViewerPageViewModel (vehiclesState / redisFeed)
+[COVERED] panel  GlassPanel1    -> RedisSignalViewerPage.kt:248 RedisSignalViewerContent() GlassPanel(PanelPadding.Md){ RedisControls(...) }  (web controls <GlassPanel>: vehicle Select + search Input + category Select + auto-refresh Toggle + Refresh/Purge/Purge-All Buttons)
+[COVERED] panel  Total-Signals  -> RedisSignalViewerPage.kt:451 RedisStatGrid() StatCard(label=translation_redis_totalSignals, icon=RedisSignalViewerGlyphs.Database)  (web <StatCard label=redis.totalSignals icon=Database>)
+[COVERED] panel  Numbers        -> RedisSignalViewerPage.kt:457 RedisStatGrid() StatCard(label=translation_redis_numbers, value=numberCount)  (web <StatCard label=redis.numbers>)
+[COVERED] panel  Strings        -> RedisSignalViewerPage.kt:462 RedisStatGrid() StatCard(label=translation_redis_strings, value=stringCount)  (web <StatCard label=redis.strings>)
+[COVERED] panel  Booleans       -> RedisSignalViewerPage.kt:467 RedisStatGrid() StatCard(label=translation_redis_booleans, value=booleanCount)  (web <StatCard label=redis.booleans>)
+[COVERED] panel  GlassPanel6    -> RedisSignalViewerPage.kt:278 RedisSignalViewerContent() GlassPanel(PanelPadding.Md){ RedisTablePanel(...) }  (web table <GlassPanel>: DataTable / EmptyState / RedisDiagnosticEmptyState)
+# (+ web persistent diagnostic chip strip reproduced: RedisSignalViewerPage.kt:414 RedisDiagnosticChips(meta) — mode / VIN / L1-last-seen Badges)
+
+# data states (4 required) — bound to RedisSignalViewerPageViewModel.vehiclesState : StateFlow<UiState> and .redisFeed : StateFlow<RedisFeed{UiState,DiagnosticError}>
+[COVERED] state  loading        -> RedisSignalViewerPageViewModel.kt:101 redisFeed (toRedisFeed:301 .toUiState -> UiState.loading / UiPhase.Loading) -> RedisSignalViewerPage.kt:504 TableSkeleton(rows=6,columns=4); useVehicles loading via vehiclesState:89 asUiState (empty picker shows the select prompt)
+[COVERED] state  empty          -> RedisSignalViewerPageViewModel.kt:301 toRedisFeed .toUiState{ it.isEmpty } -> UiPhase.Empty ; RedisSignalViewerPage.kt:498 EmptyState(redis.selectPrompt) [no vehicle] + :517 EmptyState(redis.noMatch) [filtered] + :508 RedisDiagnosticEmptyState [cache empty]
+[COVERED] state  error          -> RedisSignalViewerPage.kt:508 RedisDiagnosticEmptyState(error=redisFeed.error) ; RedisSignalViewerPageModel.kt:383 Resource.toDiagnosticError() folds ApiError.Http->Server(status,body)/else->Network (web errorBannerProps) ; redisFeed.state.isError ; useVehicles hard-error retry RedisSignalViewerPage.kt:336 (vehiclesState.isError)
+[COVERED] state  success        -> RedisSignalViewerPageViewModel.kt:101 redisFeed (UiPhase.Content) -> RedisSignalViewerPage.kt:555 DataTable(rows=filtered+sorted, Pagination footer)  (web <DataTable> with virtualized rows)
+
+# strings (41) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string common.cancel               -> RedisSignalViewerPage.kt:657 ConfirmDialog(cancelLabel=translation_common_cancel)
+[COVERED] string redis.allCategories         -> RedisSignalViewerPage.kt:354 RedisControls() category SelectOption(translation_redis_allCategories)
+[COVERED] string redis.autoRefresh           -> RedisSignalViewerPage.kt:368 RedisControls() Caption(translation_redis_autoRefresh)
+[COVERED] string redis.booleans              -> RedisSignalViewerPage.kt:468 RedisStatGrid() StatCard(label=translation_redis_booleans)
+[COVERED] string redis.category              -> RedisSignalViewerPage.kt:607 redisColumns() TableColumn(header=translation_redis_category)
+[COVERED] string redis.headerChip.l1Seen     -> RedisSignalViewerPage.kt:430 RedisDiagnosticChips() Badge(translation_redis_headerChip_l1Seen, formatInstant)
+[COVERED] string redis.headerChip.mode       -> RedisSignalViewerPage.kt:422 RedisDiagnosticChips() Badge(translation_redis_headerChip_mode, mode)
+[COVERED] string redis.maskedCoord           -> RedisSignalViewerPage.kt:543 RedisSignalsTable() MaskedValue accessibleName=translation_redis_maskedCoord (value cell)
+[COVERED] string redis.noMatch               -> RedisSignalViewerPage.kt:518 RedisTablePanel() EmptyState(message=translation_redis_noMatch)
+[COVERED] string redis.numbers               -> RedisSignalViewerPage.kt:458 RedisStatGrid() StatCard(label=translation_redis_numbers)
+[COVERED] string redis.purgeAllButton        -> RedisSignalViewerPage.kt:398 RedisControls() Button(label=translation_redis_purgeAllButton)
+[COVERED] string redis.purgeAllButtonTitle   -> RedisSignalViewerPage.kt:374 RedisControls() semantics contentDescription=translation_redis_purgeAllButtonTitle
+[COVERED] string redis.purgeAllConfirm       -> RedisSignalViewerPage.kt:653 RedisPurgeDialog() ConfirmDialog(confirmLabel=translation_redis_purgeAllConfirm)
+[COVERED] string redis.purgeAllMessage       -> RedisSignalViewerPage.kt:647 RedisPurgeDialog() ConfirmDialog(message=translation_redis_purgeAllMessage)
+[COVERED] string redis.purgeAllPartial       -> RedisSignalViewerPage.kt:710 resolveToastMessage() translation_redis_purgeAllPartial
+[COVERED] string redis.purgeAllPartialDetail -> RedisSignalViewerPage.kt:711 resolveToastMessage() translation_redis_purgeAllPartialDetail(count,limit)
+[COVERED] string redis.purgeAllSuccess       -> RedisSignalViewerPage.kt:714 resolveToastMessage() translation_redis_purgeAllSuccess
+[COVERED] string redis.purgeAllSuccessDetail -> RedisSignalViewerPage.kt:715 resolveToastMessage() translation_redis_purgeAllSuccessDetail(count)
+[COVERED] string redis.purgeAllTitle         -> RedisSignalViewerPage.kt:641 RedisPurgeDialog() ConfirmDialog(title=translation_redis_purgeAllTitle)
+[COVERED] string redis.purgeAllTypedLabel    -> RedisSignalViewerPage.kt:663 RedisPurgeDialog() ConfirmDialog(typedConfirmationLabel=translation_redis_purgeAllTypedLabel)
+[COVERED] string redis.purgeButton           -> RedisSignalViewerPage.kt:389 RedisControls() Button(label=translation_redis_purgeButton)
+[COVERED] string redis.purgeButtonTitle      -> RedisSignalViewerPage.kt:373 RedisControls() semantics contentDescription=translation_redis_purgeButtonTitle
+[COVERED] string redis.purgeConfirm          -> RedisSignalViewerPage.kt:655 RedisPurgeDialog() ConfirmDialog(confirmLabel=translation_redis_purgeConfirm)
+[COVERED] string redis.purgeError            -> RedisSignalViewerPage.kt:705 resolveToastMessage() translation_redis_purgeError
+[COVERED] string redis.purgeMessage          -> RedisSignalViewerPage.kt:649 RedisPurgeDialog() ConfirmDialog(message=translation_redis_purgeMessage)
+[COVERED] string redis.purgeNoOpDetail       -> RedisSignalViewerPage.kt:702 resolveToastMessage() translation_redis_purgeNoOpDetail(vehicle)
+[COVERED] string redis.purgeNoOpTitle        -> RedisSignalViewerPage.kt:701 resolveToastMessage() translation_redis_purgeNoOpTitle
+[COVERED] string redis.purgeSuccess          -> RedisSignalViewerPage.kt:697 resolveToastMessage() translation_redis_purgeSuccess
+[COVERED] string redis.purgeSuccessDetail    -> RedisSignalViewerPage.kt:698 resolveToastMessage() translation_redis_purgeSuccessDetail(vehicle)
+[COVERED] string redis.purgeTitle            -> RedisSignalViewerPage.kt:643 RedisPurgeDialog() ConfirmDialog(title=translation_redis_purgeTitle, vehicle)
+[COVERED] string redis.refresh               -> RedisSignalViewerPage.kt:381 RedisControls() Button(label=translation_redis_refresh)
+[COVERED] string redis.searchPlaceholder     -> RedisSignalViewerPage.kt:348 RedisControls() Input(label=translation_redis_searchPlaceholder)
+[COVERED] string redis.selectPrompt          -> RedisSignalViewerPage.kt:499 RedisTablePanel() EmptyState(message=translation_redis_selectPrompt)
+[COVERED] string redis.selectVehicle         -> RedisSignalViewerPage.kt:331 RedisControls() Select(emptyLabel=translation_redis_selectVehicle)
+[COVERED] string redis.signalName            -> RedisSignalViewerPage.kt:588 redisColumns() TableColumn(header=translation_redis_signalName)
+[COVERED] string redis.strings               -> RedisSignalViewerPage.kt:463 RedisStatGrid() StatCard(label=translation_redis_strings)
+[COVERED] string redis.subtitle              -> RedisSignalViewerPage.kt:303 RedisHeader() BodyText(translation_redis_subtitle)
+[COVERED] string redis.title                 -> RedisSignalViewerPage.kt:301 RedisHeader() PageTitle(translation_redis_title)
+[COVERED] string redis.totalSignals          -> RedisSignalViewerPage.kt:452 RedisStatGrid() StatCard(label=translation_redis_totalSignals)
+[COVERED] string redis.type                  -> RedisSignalViewerPage.kt:604 redisColumns() TableColumn(header=translation_redis_type)
+[COVERED] string redis.value                 -> RedisSignalViewerPage.kt:591 redisColumns() TableColumn(header=translation_redis_value)
+
+PARITY_COVERED=51
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : RedisSignalViewerPageViewModel binds shared S8 VehiclesStore.vehicles() (web useVehicles) for the picker, plus the
+               redis dev-tools reads/mutations over the resilient ApiHttpClient via RedisSignalViewerSource (redisSignalViewerSource):
+               GET /dev-tools/redis-signals?vehicle_id (web getRedisSignals), GET /dev-tools/redis-signals/keys (web getRedisSignalKeys,
+               for the diagnostic "other vehicles" chips), DELETE /dev-tools/redis-signals?vehicle_id (web purgeRedisSignals),
+               DELETE /dev-tools/redis-signals/keys (web purgeAllRedisSignals). JSON->rows/meta/keys projection in RedisSignalViewerPageModel;
+               no HTTP in the view. The single redisFeed collection yields BOTH the UiState and the DiagnosticError (no second fetch).
+si/units     : Redis cache payload carries no unit-bearing fields (signal names, raw values, type/category enums, ISO timestamps, meta
+               counts) — round-trips verbatim, no SI conversion; location values masked by default via MaskedValue (click-to-reveal).
+a11y/theme   : >=48dp Material targets; destructive buttons carry Modifier.semantics content descriptions (purge*ButtonTitle); EmptyState
+               content descriptions; dynamic-color + dark theme via MaterialTheme (A2 tokens); Compose-native only (no webview).
+nav          : Destinations 'redisSignals' -> /redis-signals (pre-existing) wired to RedisSignalViewerRoute() via PageHosts.register;
+               deep link auto-registered by the NavHost. RouteTableTest already enumerates /redis-signals -> redisSignals (green).
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=1: the searchPlaceholder i18n key name)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(51) == PARITY_REQUIRED(51)
+[PASS] all android triad gates green; parity 51/51; android ledger row page:admin/RedisSignalViewer status=done.
+EXIT=0
+STATUS=DONE
