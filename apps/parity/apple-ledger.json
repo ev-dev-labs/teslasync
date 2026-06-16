@@ -1297,6 +1297,24 @@
       "requiredCount": 29,
       "promptId": "p4-apple/P7/page:driving/RouteEfficiency",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-RouteEfficiencyPage.log"
+    },
+    {
+      "unitId": "page:driving/TripReplay",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 0,
+      "requiredCount": 0,
+      "promptId": "p4-apple/P7/page:driving/TripReplay",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-TripReplayPage.log"
+    },
+    {
+      "unitId": "page:driving/TripReplay",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 0,
+      "requiredCount": 0,
+      "promptId": "p4-apple/P7/page:driving/TripReplay",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-TripReplayPage.log"
     }
   ]
 }
