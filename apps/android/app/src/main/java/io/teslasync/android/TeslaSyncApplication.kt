@@ -43,6 +43,7 @@ import io.teslasync.android.admin.gdpr.GDPRExportPageHost
 import io.teslasync.android.admin.fleettelemetry.FleetTelemetryCoveragePageHost
 import io.teslasync.android.admin.fleetapi.FleetAPIPageHost
 import io.teslasync.android.admin.livesignals.LiveSignalInspectorPageHost
+import io.teslasync.android.admin.livelogs.LiveLogsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -149,6 +150,7 @@ class TeslaSyncApplication : Application() {
         FleetTelemetryCoveragePageHost.register()
         FleetAPIPageHost.register()
         LiveSignalInspectorPageHost.register()
+        LiveLogsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

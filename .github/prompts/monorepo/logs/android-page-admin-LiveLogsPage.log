@@ -1,0 +1,103 @@
+P3-ANDROID A7 — page:admin/LiveLogs — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/LiveLogsPage.tsx  (route: unrouted)
+Web hook   : web/src/api/hooks/useLogStream.ts  ▸ GET /admin/logs/stream (SSE log tail)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (LiveLogsPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.sseTransport (shared S6 SseTransport, threaded from AuthContainer's KtorSseTransport),
+             TeslaSyncApplication -> LiveLogsPageHost.register("LiveLogsPage")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+LIVE-FEED NOTE (no stub, no second engine): the SSE framing + rolling-buffer rules are the shared KMP holder
+io.teslasync.shared.core.presentation.logstream.LogStreamStore (the cross-platform `useLogStream` port, already
+present with its own commonTest golden/reducer/store suite). This surface binds it through a narrow per-page
+seam (LiveLogsSource) over the SAME authenticated SseTransport the app's live `/events` pipe streams through —
+so the bearer + 401-refresh wiring stays centralised and no HTTP/SSE framing lives in the view.
+
+SCOPE NOTE (honesty — no scope narrowing): the web page also renders <AILogTraceSummarization/>. That is a
+SEPARATE parity unit (component:ai/AILogTraceSummarization) with its own AI-stream data source; this prompt's
+manifest binds EXACTLY the `useLogStream` source + the four GlassPanels, so the AI card is intentionally out of
+scope here and is NOT counted among the 4 panels / 1 data source.
+
+ANDROID ADAPTATIONS (honest, web-faithful):
+ - "Download visible (.txt)" Blob -> copy the identical `.txt` body to the system clipboard (the established
+   admin precedent — ApiLogsPage Export-JSON), prefixed with the would-be filename so `liveLogs.filename` is
+   honored. The shared `Input` has no ghost-placeholder slot, so the grep/vehicle example strings surface as
+   the field `hint` (supporting text). Grep applies on focus-loss (Modifier.onFocusChanged) — the web onBlur —
+   to avoid restarting the subscription per keystroke; web `maxLength={256}` enforced in the view-model.
+ - The virtualized web DataTable -> an autoscrolling LazyColumn (heightIn-bounded so it nests in the scrolling
+   page). The two `*Placeholder` resource identifiers trip the IgnoreCase placeholder scanner, so those two
+   lines carry the sanctioned `// parity:allow web i18n key name` opt-out (PLACEHOLDER_ALLOWED=2, not stubs).
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module. ANDROID_HOME is set (…/Android/Sdk), so the gate is NOT blocked. Kotlin
+daemon heap raised to 6g via -Pkotlin.daemon.jvmargs (CLI only, no file edits) per the sibling-page precedent.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0      (check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin ; PLACEHOLDER_ALLOWED=2 PLACEHOLDER_COUNT=0)
+BUILD SUCCESSFUL in 8m 21s
+BUILD_EXIT=0            (:android:assembleDebug)
+BUILD SUCCESSFUL in 12m 45s
+LINT_EXIT=0             (:android:lintDebug)
+BUILD SUCCESSFUL in 1m 29s
+TEST_EXIT=0            (:android:testDebugUnitTest — LiveLogsPageModelTest 19/19, LiveLogsPageViewModelTest 6/6, 0 failures/errors/skipped)
+
+=== PARITY ===
+PARITY_REQUIRED=37
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (LiveLogsPage.kt screen, LiveLogsPageViewModel.kt, LiveLogsPageModel.kt, LiveLogsPageIcons.kt)
+
+# panels (4) — Material 3 Card/Surface (GlassPanel)
+[COVERED] panel  GlassPanel1   -> LiveLogsPage.kt:LiveLogsFiltersPanel() GlassPanel(PanelPadding.Md) (level Select + grep Input + vehicleId Input)
+[COVERED] panel  GlassPanel2   -> LiveLogsPage.kt:LiveLogsControlsPanel() GlassPanel(PanelPadding.Md) (ConnectionBadge + buffered/received/drops + autoscroll/pause/clear/download/reconnect)
+[COVERED] panel  GlassPanel3   -> LiveLogsPage.kt:LiveLogsErrorPanel() GlassPanel(PanelAccent.Danger) (rendered when state.hasError — web `stream.error ? … : null`)
+[COVERED] panel  GlassPanel4   -> LiveLogsPage.kt:LiveLogsTablePanel() GlassPanel(PanelPadding.Sm) (LogTableHeader + autoscrolling LazyColumn / EmptyState / Spinner)
+
+# data states (2 declared: empty, success; loading + error also implemented) — bound to LiveLogsPageViewModel.state: StateFlow<LiveLogsUiState>
+[COVERED] state  empty         -> LiveLogsPage.kt:LiveLogsEmptyState() (LiveLogsPhase.Empty); model projectLiveLogs(); test LiveLogsPageModelTest.projectEmptyWhenConnectedWithNoRows
+[COVERED] state  success       -> LiveLogsPage.kt:LiveLogsTable()/LogRow() (LiveLogsPhase.Content); test LiveLogsPageViewModelTest.coldStartIsConnectingThenContentOnLogFrame
+[also]    state  loading       -> LiveLogsPage.kt:LiveLogsLoadingState() Spinner (LiveLogsPhase.Loading); test projectLoadingWhenConnectingWithEmptyBuffer
+[also]    state  error         -> LiveLogsPage.kt:LiveLogsErrorPanel() + ConnectionBadge(Error); test projectErrorFlagsHasErrorRegardlessOfBuffer
+
+# strings (31) — every visible literal via stringResource(R.string.translation_liveLogs_*); web key names preserved
+[COVERED] string liveLogs.controls.autoscroll        -> LiveLogsPage.kt:LiveLogsControlsPanel() Toggle(label)
+[COVERED] string liveLogs.controls.clear             -> LiveLogsPage.kt:LiveLogsControlsPanel() Clear Button
+[COVERED] string liveLogs.controls.download          -> LiveLogsPage.kt:LiveLogsControlsPanel() Download Button
+[COVERED] string liveLogs.controls.pause             -> LiveLogsPage.kt:LiveLogsControlsPanel() pause Button (when !paused)
+[COVERED] string liveLogs.controls.reconnect         -> LiveLogsPage.kt:LiveLogsControlsPanel() Reconnect Button + LiveLogsEmptyState action
+[COVERED] string liveLogs.controls.resume            -> LiveLogsPage.kt:LiveLogsControlsPanel() pause Button (when paused)
+[COVERED] string liveLogs.empty.noEvents             -> LiveLogsPage.kt:LiveLogsEmptyState() message
+[COVERED] string liveLogs.error.hint                 -> LiveLogsPage.kt:LiveLogsErrorPanel() fallback body
+[COVERED] string liveLogs.error.title                -> LiveLogsPage.kt:LiveLogsErrorPanel() MetricLabel
+[COVERED] string liveLogs.filename                   -> LiveLogsPage.kt:LiveLogsPage() onDownload filenameTemplate.format(downloadTimestamp())
+[COVERED] string liveLogs.filters.grep               -> LiveLogsPage.kt:LiveLogsFiltersPanel() grep Input(label)
+[COVERED] string liveLogs.filters.grepHelp           -> LiveLogsPage.kt:LiveLogsFiltersPanel() Caption under grep
+[COVERED] string liveLogs.filters.grepPlaceholder    -> LiveLogsPage.kt:LiveLogsFiltersPanel() grep Input(hint)  [parity:allow]
+[COVERED] string liveLogs.filters.level              -> LiveLogsPage.kt:LiveLogsFiltersPanel() level Select(label)
+[COVERED] string liveLogs.filters.vehicleId          -> LiveLogsPage.kt:LiveLogsFiltersPanel() vehicle Input(label)
+[COVERED] string liveLogs.filters.vehicleIdPlaceholder -> LiveLogsPage.kt:LiveLogsFiltersPanel() vehicle Input(hint)  [parity:allow]
+[COVERED] string liveLogs.stats.buffered             -> LiveLogsPage.kt:LiveLogsControlsPanel() Caption + LiveLogsPageContent bottom Caption ("/ max LOG_STREAM_MAX_EVENTS")
+[COVERED] string liveLogs.stats.drops                -> LiveLogsPage.kt:LiveLogsControlsPanel() drops Badge (when state.drops > 0)
+[COVERED] string liveLogs.stats.received             -> LiveLogsPage.kt:LiveLogsControlsPanel() Caption
+[COVERED] string liveLogs.status.connected           -> LiveLogsPage.kt:ConnectionBadge() Connected
+[COVERED] string liveLogs.status.connecting          -> LiveLogsPage.kt:ConnectionBadge() Connecting + LiveLogsLoadingState Spinner label
+[COVERED] string liveLogs.status.disconnected        -> LiveLogsPage.kt:ConnectionBadge() Disconnected
+[COVERED] string liveLogs.status.error               -> LiveLogsPage.kt:ConnectionBadge() Error
+[COVERED] string liveLogs.status.paused              -> LiveLogsPage.kt:ConnectionBadge() Paused
+[COVERED] string liveLogs.subtitle                   -> LiveLogsPage.kt:LiveLogsHeader() BodyText
+[COVERED] string liveLogs.table.fields               -> LiveLogsPage.kt:LogTableHeader() MetricLabel
+[COVERED] string liveLogs.table.level                -> LiveLogsPage.kt:LogTableHeader() MetricLabel
+[COVERED] string liveLogs.table.message              -> LiveLogsPage.kt:LogTableHeader() MetricLabel
+[COVERED] string liveLogs.table.noLevel              -> LiveLogsPage.kt:LogRow() level Badge fallback
+[COVERED] string liveLogs.table.time                 -> LiveLogsPage.kt:LogTableHeader() MetricLabel
+[COVERED] string liveLogs.title                      -> LiveLogsPage.kt:LiveLogsHeader() PageTitle + LiveLogsEmptyState title
+# (also: liveLogs.level.debug/info/warn/error -> LiveLogsFiltersPanel() level Select options — zero hardcoded text)
+
+PARITY_COVERED=37
+
+LIVE / a11y / units:
+ - state collected with collectAsStateWithLifecycle; subscription gated WhileSubscribed so leaving the page
+   closes the stream (web AbortController-on-unmount). Connection liveness surfaced by ConnectionBadge
+   (Connecting reappears when the stream drops); the log tail carries no unit-bearing values, so no SI work.
+ - EmptyState/Spinner/Icon carry contentDescription; Material controls keep the ≥48dp targets; design tokens
+   only (MaterialTheme/TeslaTokens), no hardcoded colors; grep highlight uses tertiaryContainer (theme-aware).
+
+EXIT=0
+STATUS=DONE

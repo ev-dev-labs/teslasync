@@ -109,6 +109,7 @@ class AuthContainer(
             scope = scope,
             logger = diagnostics.logger,
             liveSessionStore = liveSessionStore,
+            sseTransport = sseTransport,
         )
 
     /** The global auth state holder bound to the Compose UI. */

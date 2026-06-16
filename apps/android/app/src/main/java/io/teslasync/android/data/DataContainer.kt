@@ -24,6 +24,7 @@ import io.teslasync.shared.core.data.repo.HttpUserRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
+import io.teslasync.shared.core.net.sse.SseTransport
 import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.analytics.AnalyticsStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
@@ -65,6 +66,10 @@ import io.teslasync.shared.core.presentation.telemetry.TelemetryStore
  * @param liveSessionStore the app-scoped live-data pipeline holder (ADR-009), built in the auth graph
  *   over the shared SSE client + auth gate; `LiveViewModel` projects it per page and
  *   `TeslaSyncApplication` binds it to the process foreground lifecycle.
+ * @param sseTransport the shared authenticated SSE transport (the SAME one the `/events` live pipe streams
+ *   through), exposed so embedded admin surfaces that open their own server-sent stream — the A7 LiveLogs
+ *   tail over `/admin/logs/stream` — reuse the centralised bearer + 401-refresh wiring rather than minting a
+ *   second engine. The view binds it through a narrow per-surface source seam; no HTTP lives in a page.
  * @param clock wall-clock seam for cache freshness; injectable for tests.
  */
 class DataContainer(
@@ -73,6 +78,7 @@ class DataContainer(
     private val scope: CoroutineScope,
     val logger: Logger,
     val liveSessionStore: LiveSessionStore,
+    val sseTransport: SseTransport,
     clock: Clock = SystemClock,
 ) {
     // S7 repositories — HTTP-backed, cache-then-network, over the shared resilient client + offline cache.
