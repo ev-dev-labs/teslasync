@@ -6331,8 +6331,10 @@
   <string name="translation_speedProfile_avgSpeed">Avg Speed</string>
   <string name="translation_speedProfile_better">better</string>
   <string name="translation_speedProfile_distribution">Speed Distribution</string>
+  <string name="translation_speedProfile_distribution_aria">Speed-bucket time-share distribution bar chart</string>
   <string name="translation_speedProfile_drives">Drives</string>
   <string name="translation_speedProfile_effVsSpeed">Efficiency vs Speed</string>
+  <string name="translation_speedProfile_effVsSpeed_aria">Per-drive efficiency versus speed scatter plot</string>
   <string name="translation_speedProfile_efficient">Efficient</string>
   <string name="translation_speedProfile_highConsumption">High consumption</string>
   <string name="translation_speedProfile_insightText">Drives around %1$s %2$s show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%%.</string>
