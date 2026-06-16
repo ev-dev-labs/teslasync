@@ -349,5 +349,14 @@
     "requiredCount": 17,
     "promptId": "p3-android/pages/telemetry/SignalLogViewerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalLogViewerPage.log"
+  },
+  {
+    "unitId": "page:trips/TripList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 34,
+    "requiredCount": 34,
+    "promptId": "p3-android/pages/trips/TripListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-trips-TripListPage.log"
   }
 ]

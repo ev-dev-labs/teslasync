@@ -7417,6 +7417,7 @@
   <string name="translation_trips_chart_distance">Distance</string>
   <string name="translation_trips_chart_empty">No trip data to chart</string>
   <string name="translation_trips_chart_title">Top Trips by Distance</string>
+  <string name="translation_trips_chart_title_aria">Top trips ranked by distance horizontal bar chart</string>
   <string name="translation_trips_detail_aiSuggestName_badge">Helix</string>
   <string name="translation_trips_detail_aiSuggestName_description">Get a short, propose-only name suggestion grounded in this trip’s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically — review the proposed name in the panel and click Save to apply it.</string>
   <string name="translation_trips_detail_aiSuggestName_generateButton">Suggest a name</string>

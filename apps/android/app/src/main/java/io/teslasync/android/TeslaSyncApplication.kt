@@ -126,6 +126,7 @@ import io.teslasync.android.telemetry.mqttinspector.MQTTInspectorPageHost
 import io.teslasync.android.telemetry.signaldiff.SignalDiffPageHost
 import io.teslasync.android.analytics.AnalyticsPageHost
 import io.teslasync.android.trips.tripdetail.TripDetailPageHost
+import io.teslasync.android.trips.triplist.TripListPageHost
 import io.teslasync.android.telemetry.signalsworkspace.SignalsWorkspacePageHost
 
 /**
@@ -316,6 +317,7 @@ class TeslaSyncApplication : Application() {
         SignalDiffPageHost.register()
         AnalyticsPageHost.register()
         TripDetailPageHost.register()
+        TripListPageHost.register()
         SignalsWorkspacePageHost.register()
         ShortcutPublisher(this).publish()
     }
