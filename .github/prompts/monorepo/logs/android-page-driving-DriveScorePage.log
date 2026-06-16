@@ -1,0 +1,189 @@
+=== p3-android A7 page:driving/DriveScore — Compose / Material 3 ===
+artifact   : page:driving/DriveScore  (web /drive-score  ->  web/src/features/driving/pages/DriveScorePage.tsx)
+output     : apps/android/app/src/main/kotlin/com/teslasync/driving/ (DriveScorePage.kt + ViewModel + Source + Model + Icons + Host)
+sdk        : ANDROID_HOME present, JDK 21, minSdk 26 (java.time native) -> NOT BLOCKED
+
+=== PARITY ===
+[COVERED] panel  GlassPanel1          -> DriveScorePage.kt:HeroScorePanel() GlassPanel
+[COVERED] panel  GlassPanel2          -> DriveScorePage.kt:GradeBadgePanel() GlassPanel
+[COVERED] panel  GlassPanel3          -> DriveScorePage.kt:CategoryGaugeCard(Efficiency) GlassPanel
+[COVERED] panel  GlassPanel4          -> DriveScorePage.kt:CategoryGaugeCard(Smoothness) GlassPanel
+[COVERED] panel  GlassPanel5          -> DriveScorePage.kt:CategoryGaugeCard(Speed) GlassPanel
+[COVERED] panel  GlassPanel6          -> DriveScorePage.kt:ScoreTrendPanel() ChartContainer GlassPanel chrome
+[COVERED] panel  Score-Trend          -> DriveScorePage.kt:ScoreTrendPanel() ChartContainer title=driveScore.scoreTrend
+[COVERED] panel  GlassPanel8          -> DriveScorePage.kt:CategoryBreakdownPanel() ChartContainer GlassPanel chrome
+[COVERED] panel  Category-Breakdown   -> DriveScorePage.kt:CategoryBreakdownPanel() ChartContainer title=driveScore.categoryBreakdown
+[COVERED] panel  GlassPanel10         -> DriveScorePage.kt:ScoreDistributionPanel() ChartContainer GlassPanel chrome
+[COVERED] panel  Score-Distribution   -> DriveScorePage.kt:ScoreDistributionPanel() ChartContainer title=driveScore.scoreDistribution
+[COVERED] panel  GlassPanel12         -> DriveScorePage.kt:TipsPanel() GlassPanel
+[COVERED] panel  GlassPanel13         -> DriveScorePage.kt:DriveHighlightCard(best) GlassPanel
+[COVERED] panel  GlassPanel14         -> DriveScorePage.kt:DriveHighlightCard(worst) GlassPanel
+[COVERED] panel  GlassPanel15         -> DriveScorePage.kt:DriveHistoryPanel() GlassPanel
+[COVERED] panel  Avg-Score            -> DriveScorePage.kt:SummaryStatsPanel() StatCard driveScore.avgScore
+[COVERED] panel  Best-Score           -> DriveScorePage.kt:SummaryStatsPanel() StatCard driveScore.bestScore
+[COVERED] panel  Total-Drives         -> DriveScorePage.kt:SummaryStatsPanel() StatCard driveScore.totalDrivesLabel
+[COVERED] panel  Avg-Efficiency       -> DriveScorePage.kt:SummaryStatsPanel() StatCard driveScore.avgEffLabel
+[COVERED] panel  GlassPanel20         -> DriveScorePage.kt:PeriodTile(thisWeek) GlassPanel
+[COVERED] panel  GlassPanel21         -> DriveScorePage.kt:PeriodTile(thisMonth) GlassPanel
+[COVERED] panel  GlassPanel22         -> DriveScorePage.kt:PeriodTile(bestWeek) GlassPanel
+[COVERED] panel  GlassPanel23         -> DriveScorePage.kt:PeriodTile(bestMonth) GlassPanel
+[COVERED] panel  GlassPanel24         -> DriveScorePage.kt:PeriodTile(totalDrives) GlassPanel
+[COVERED] panel  GlassPanel25         -> DriveScorePage.kt:PeriodTile(ratedAPlus) GlassPanel
+[COVERED] panel  GlassPanel26         -> DriveScorePage.kt:PeriodStatsPanel() noPeriodStats GlassPanel+EmptyState
+[COVERED] panel  GlassPanel27         -> DriveScorePage.kt:AchievementsPanel() GlassPanel
+[COVERED] panel  Card28               -> DriveScorePage.kt:ScoreDetailPanel() Card breakdown KVList
+[COVERED] panel  Card29               -> DriveScorePage.kt:ScoreDetailPanel() Card periodStats KVList
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:HeroScorePanel() RadialGauge overall/100
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:CategoryGaugeCard(Efficiency) RadialGauge /40
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:CategoryGaugeCard(Smoothness) RadialGauge /30
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:CategoryGaugeCard(Speed) RadialGauge /30
+[COVERED] chart  ChartContainer       -> DriveScorePage.kt:ScoreTrendPanel() ChartContainer
+[COVERED] chart  LineChart            -> DriveScorePage.kt:ScoreTrendPanel() LineChartWrapper score/eff/smooth/speed
+[COVERED] chart  ChartContainer       -> DriveScorePage.kt:CategoryBreakdownPanel() ChartContainer
+[COVERED] chart  BarChart             -> DriveScorePage.kt:CategoryBreakdownPanel() BarChartWrapper value+max
+[COVERED] chart  ChartContainer       -> DriveScorePage.kt:ScoreDistributionPanel() ChartContainer
+[COVERED] chart  BarChart             -> DriveScorePage.kt:ScoreDistributionPanel() BarChartWrapper count
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:DriveHighlightCard(best) RadialGauge score
+[COVERED] chart  RadialGauge          -> DriveScorePage.kt:DriveHighlightCard(worst) RadialGauge score
+[COVERED] state  loading              -> DriveScorePage.kt:DriveScoreLoading() PageLoader (UiState.isLoading)
+[COVERED] state  empty                -> DriveScorePage.kt:DriveScoreEmpty() EmptyState emptyTitle/empty/noData (UiState.isEmpty)
+[COVERED] state  success              -> DriveScorePage.kt:DriveScoreBody() (UiState content) + DriveScoreError() retry tier
+[COVERED] string common.noData                              -> DriveScorePage.kt:DriveScoreEmpty() EmptyState
+[COVERED] string help.driveScore.iconLabel                  -> DriveScorePage.kt:HeroScorePanel() HelpIcon contentDescription
+[COVERED] string driveScore.title                           -> DriveScorePage.kt:DriveScoreChrome() PageTitle
+[COVERED] string driveScore.subtitle                        -> DriveScorePage.kt:DriveScoreChrome() BodyText
+[COVERED] string driveScore.emptyTitle                      -> DriveScorePage.kt:DriveScoreEmpty() EmptyState title
+[COVERED] string driveScore.empty                           -> DriveScorePage.kt:DriveScoreEmpty() EmptyState message
+[COVERED] string driveScore.overall                         -> DriveScorePage.kt:HeroScorePanel() RadialGauge label
+[COVERED] string driveScore.basedOn                         -> DriveScorePage.kt:HeroScorePanel() Caption
+[COVERED] string driveScore.trendUp                         -> DriveScorePage.kt:TrendRow() trendLabelRes
+[COVERED] string driveScore.trendDown                       -> DriveScorePage.kt:TrendRow() trendLabelRes
+[COVERED] string driveScore.trendFlat                       -> DriveScorePage.kt:TrendRow() trendLabelRes
+[COVERED] string driveScore.gradeLabel                      -> DriveScorePage.kt:GradeBadgePanel() PanelTitle
+[COVERED] string driveScore.drivesInPeriod                  -> DriveScorePage.kt:GradeBadgePanel() Caption
+[COVERED] string driveScore.efficiency                      -> DriveScorePage.kt:categoryLabelRes(Efficiency)
+[COVERED] string driveScore.smoothness                      -> DriveScorePage.kt:categoryLabelRes(Smoothness)
+[COVERED] string driveScore.speedDiscipline                 -> DriveScorePage.kt:categoryLabelRes(Speed)
+[COVERED] string driveScore.avgConsumption                  -> DriveScorePage.kt:CategoryGaugesPanel() Efficiency InlineMetric
+[COVERED] string driveScore.powerRange                      -> DriveScorePage.kt:CategoryGaugesPanel() Smoothness InlineMetric
+[COVERED] string driveScore.avgMaxSpeed                     -> DriveScorePage.kt:CategoryGaugesPanel() Speed InlineMetric
+[COVERED] string driveScore.scoreTrend                      -> DriveScorePage.kt:ScoreTrendPanel() ChartContainer title
+[COVERED] string driveScore.scoreTrend.aria                 -> DriveScorePage.kt:ScoreTrendPanel() accessibleDescription
+[COVERED] string driveScore.totalScore                      -> DriveScorePage.kt:ScoreTrendPanel() score line name
+[COVERED] string driveScore.gradeALine                      -> DriveScorePage.kt:ScoreTrendPanel() Caption A-line
+[COVERED] string driveScore.col.date                        -> DriveScorePage.kt:ScoreTrendPanel() dataTableHeader
+[COVERED] string driveScore.col.score                       -> DriveScorePage.kt:ScoreTrendPanel() dataTableHeader
+[COVERED] string driveScore.col.efficiency                  -> DriveScorePage.kt:ScoreTrendPanel() dataTableHeader
+[COVERED] string driveScore.col.smoothness                  -> DriveScorePage.kt:ScoreTrendPanel() dataTableHeader
+[COVERED] string driveScore.col.speed                       -> DriveScorePage.kt:ScoreTrendPanel() dataTableHeader
+[COVERED] string driveScore.categoryBreakdown               -> DriveScorePage.kt:CategoryBreakdownPanel() ChartContainer title
+[COVERED] string driveScore.categoryBreakdown.aria          -> DriveScorePage.kt:CategoryBreakdownPanel() accessibleDescription
+[COVERED] string driveScore.col.category                    -> DriveScorePage.kt:CategoryBreakdownPanel() dataTableHeader
+[COVERED] string driveScore.col.value                       -> DriveScorePage.kt:CategoryBreakdownPanel() dataTableHeader/series
+[COVERED] string driveScore.col.max                         -> DriveScorePage.kt:CategoryBreakdownPanel() dataTableHeader/series
+[COVERED] string driveScore.scoreDistribution               -> DriveScorePage.kt:ScoreDistributionPanel() ChartContainer title
+[COVERED] string driveScore.scoreDistribution.aria          -> DriveScorePage.kt:ScoreDistributionPanel() accessibleDescription
+[COVERED] string driveScore.drives                          -> DriveScorePage.kt:ScoreDistributionPanel() count series
+[COVERED] string driveScore.col.range                       -> DriveScorePage.kt:ScoreDistributionPanel() dataTableHeader
+[COVERED] string driveScore.col.drives                      -> DriveScorePage.kt:ScoreDistributionPanel() dataTableHeader
+[COVERED] string driveScore.tipsTitle                       -> DriveScorePage.kt:TipsPanel() CardHeader
+[COVERED] string driveScore.tipsSubtitle                    -> DriveScorePage.kt:TipsPanel() Caption
+[COVERED] string driveScore.tips.preCondition               -> DriveScorePage.kt:tipsForCategory(Efficiency)
+[COVERED] string driveScore.tips.coastMore                  -> DriveScorePage.kt:tipsForCategory(Efficiency)
+[COVERED] string driveScore.tips.tirePressure               -> DriveScorePage.kt:tipsForCategory(Efficiency)
+[COVERED] string driveScore.tips.smoothAccel                -> DriveScorePage.kt:tipsForCategory(Smoothness)
+[COVERED] string driveScore.tips.regenBraking               -> DriveScorePage.kt:tipsForCategory(Smoothness)
+[COVERED] string driveScore.tips.followDistance             -> DriveScorePage.kt:tipsForCategory(Smoothness)
+[COVERED] string driveScore.tips.speedLimit                 -> DriveScorePage.kt:tipsForCategory(Speed)
+[COVERED] string driveScore.tips.cruiseControl              -> DriveScorePage.kt:tipsForCategory(Speed)
+[COVERED] string driveScore.tips.routePlanning              -> DriveScorePage.kt:tipsForCategory(Speed)
+[COVERED] string driveScore.bestDrive                       -> DriveScorePage.kt:BestWorstPanel() DriveHighlightCard title
+[COVERED] string driveScore.worstDrive                      -> DriveScorePage.kt:BestWorstPanel() DriveHighlightCard title
+[COVERED] string driveScore.score                           -> DriveScorePage.kt:DriveHighlightCard() RadialGauge label
+[COVERED] string driveScore.distance                        -> DriveScorePage.kt:DriveHighlightCard() DetailRow
+[COVERED] string driveScore.durationLabel                   -> DriveScorePage.kt:DriveHighlightCard() DetailRow
+[COVERED] string driveScore.consumption                     -> DriveScorePage.kt:DriveHighlightCard() DetailRow
+[COVERED] string driveScore.noDrives                        -> DriveScorePage.kt:DriveHighlightCard()/DriveHistoryPanel() empty
+[COVERED] string driveScore.tipBestEff                      -> DriveScorePage.kt:bestTipRes()
+[COVERED] string driveScore.tipBestSmooth                   -> DriveScorePage.kt:bestTipRes()
+[COVERED] string driveScore.tipBestSpeed                    -> DriveScorePage.kt:bestTipRes()
+[COVERED] string driveScore.tipWorstEff                     -> DriveScorePage.kt:worstTipRes()
+[COVERED] string driveScore.tipWorstSmooth                  -> DriveScorePage.kt:worstTipRes()
+[COVERED] string driveScore.tipWorstSpeed                   -> DriveScorePage.kt:worstTipRes()
+[COVERED] string driveScore.driveHistory                    -> DriveScorePage.kt:DriveHistoryPanel() CardHeader
+[COVERED] string driveScore.colDate                         -> DriveScorePage.kt:DriveHistoryPanel() SortHeaderCell
+[COVERED] string driveScore.colRoute                        -> DriveScorePage.kt:DriveHistoryPanel() HeaderCell
+[COVERED] string driveScore.colDistance                     -> DriveScorePage.kt:DriveHistoryPanel() SortHeaderCell
+[COVERED] string driveScore.colDuration                     -> DriveScorePage.kt:DriveHistoryPanel() HeaderCell
+[COVERED] string driveScore.colConsumption                  -> DriveScorePage.kt:DriveHistoryPanel() HeaderCell
+[COVERED] string driveScore.colScore                        -> DriveScorePage.kt:DriveHistoryPanel() SortHeaderCell
+[COVERED] string driveScore.colGrade                        -> DriveScorePage.kt:DriveHistoryPanel() HeaderCell
+[COVERED] string driveScore.colEfficiency                   -> DriveScorePage.kt:DriveHistoryPanel() SortHeaderCell
+[COVERED] string driveScore.unknownRoute                    -> DriveScorePage.kt:DriveHistoryRow() route fallback
+[COVERED] string driveScore.avgScore                        -> DriveScorePage.kt:SummaryStatsPanel() StatCard
+[COVERED] string driveScore.bestScore                       -> DriveScorePage.kt:SummaryStatsPanel() StatCard
+[COVERED] string driveScore.totalDrivesLabel                -> DriveScorePage.kt:SummaryStatsPanel()/PeriodTile StatCard
+[COVERED] string driveScore.avgEffLabel                     -> DriveScorePage.kt:SummaryStatsPanel() StatCard
+[COVERED] string driveScore.thisWeek                        -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile
+[COVERED] string driveScore.thisMonth                       -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile
+[COVERED] string driveScore.bestWeek                        -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile
+[COVERED] string driveScore.bestMonth                       -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile
+[COVERED] string driveScore.ratedAPlus                      -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile
+[COVERED] string driveScore.vsLastWeek                      -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile sublabel
+[COVERED] string driveScore.vsLastMonth                     -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile sublabel
+[COVERED] string driveScore.drivesScored                    -> DriveScorePage.kt:PeriodStatsPanel() PeriodTile sublabel
+[COVERED] string driveScore.ofDrives                        -> DriveScorePage.kt:ratedSublabel()
+[COVERED] string driveScore.noPeriodStats                   -> DriveScorePage.kt:PeriodStatsPanel() EmptyState
+[COVERED] string driveScore.achievements.title              -> DriveScorePage.kt:AchievementsPanel() CardHeader
+[COVERED] string driveScore.achievements.unlocked           -> DriveScorePage.kt:AchievementCell() Badge
+[COVERED] string driveScore.achievements.firstDrive         -> DriveScorePage.kt:achievementLabelRes(FirstDrive)
+[COVERED] string driveScore.achievements.firstDriveDesc     -> DriveScorePage.kt:achievementDescRes(FirstDrive)
+[COVERED] string driveScore.achievements.tenDrives          -> DriveScorePage.kt:achievementLabelRes(TenDrives)
+[COVERED] string driveScore.achievements.tenDrivesDesc      -> DriveScorePage.kt:achievementDescRes(TenDrives)
+[COVERED] string driveScore.achievements.fiftyDrives        -> DriveScorePage.kt:achievementLabelRes(FiftyDrives)
+[COVERED] string driveScore.achievements.fiftyDrivesDesc    -> DriveScorePage.kt:achievementDescRes(FiftyDrives)
+[COVERED] string driveScore.achievements.perfectScore       -> DriveScorePage.kt:achievementLabelRes(PerfectScore)
+[COVERED] string driveScore.achievements.perfectScoreDesc   -> DriveScorePage.kt:achievementDescRes(PerfectScore)
+[COVERED] string driveScore.achievements.aPlusStreak        -> DriveScorePage.kt:achievementLabelRes(APlusStreak)
+[COVERED] string driveScore.achievements.aPlusStreakDesc    -> DriveScorePage.kt:achievementDescRes(APlusStreak)
+[COVERED] string driveScore.achievements.efficiencyMaster   -> DriveScorePage.kt:achievementLabelRes(EfficiencyMaster)
+[COVERED] string driveScore.achievements.efficiencyMasterDesc -> DriveScorePage.kt:achievementDescRes(EfficiencyMaster)
+[COVERED] string driveScore.achievements.smoothOperator     -> DriveScorePage.kt:achievementLabelRes(SmoothOperator)
+[COVERED] string driveScore.achievements.smoothOperatorDesc -> DriveScorePage.kt:achievementDescRes(SmoothOperator)
+[COVERED] string driveScore.achievements.speedSaint         -> DriveScorePage.kt:achievementLabelRes(SpeedSaint)
+[COVERED] string driveScore.achievements.speedSaintDesc     -> DriveScorePage.kt:achievementDescRes(SpeedSaint)
+[COVERED] string driveScore.breakdown                       -> DriveScorePage.kt:ScoreDetailPanel() Card breakdown CardHeader
+[COVERED] string driveScore.efficiencyLabel                 -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.smoothnessLabel                 -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.speedLabel                      -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.totalLabel                      -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.periodStats                     -> DriveScorePage.kt:ScoreDetailPanel() Card periodStats CardHeader
+[COVERED] string driveScore.totalDistance                   -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.totalDuration                   -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.avgDistance                     -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.avgDuration                     -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.highestSpeed                    -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+[COVERED] string driveScore.aPlusCount                      -> DriveScorePage.kt:ScoreDetailPanel() KVItem
+PARITY_REQUIRED=160
+PARITY_COVERED=160
+
+=== GATE (android triad: placeholder + build + lint + test) ===
+PLACEHOLDER_EXIT=0   (apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin)
+BUILD_EXIT=0         (./gradlew :android:assembleDebug — BUILD SUCCESSFUL)
+LINT_EXIT=0          (./gradlew :android:lintDebug — BUILD SUCCESSFUL)
+TEST_EXIT=0          (./gradlew :android:testDebugUnitTest — BUILD SUCCESSFUL)
+note: the module Gradle path is :android (sources under app/); the prompt's :app is shorthand, per settings.gradle.kts.
+
+=== SUMMARY ===
+data sources : DriveScorePageViewModel binds useDrives + useDriveScore via DriveScorePageSource over the shared S7 HttpDrivingRepository (drives -> List<Drive>, driveScore -> JsonElement) + the S8 SettingsStore (useUnits) + the app-scoped SelectedVehicleStore (useSelectedVehicle); all scoring + aggregation in the framework-free DriveScorePageModel; no HTTP in the view.
+nav          : Destinations 'driveScore' -> /drive-score (pre-existing) wired to DriveScoreRoute() via PageHosts.register in DriveScorePageHost; registered once in TeslaSyncApplication.onCreate(); deep link auto-registered by the NavHost.
+units        : SI on the wire (distance m, speed m/s, power W, energy Wh); converted at the render boundary via DriveScoreDisplayPrefs (convertDistanceFromSI/convertSpeedFromSI + Wh/km->Wh/mi).
+strings      : +24 missing driveScore.* strings added to res/values/strings.xml (web defaults); all 116 parity strings resolve via stringResource; zero hardcoded visible literals.
+states       : loading (PageLoader) / empty (EmptyState emptyTitle+empty+noData) / error (ErrorDisplay+Retry) / success (full body) + ADR-013 stale/offline via DataFreshness.
+a11y         : RadialGauge + ChartContainer carry accessibleDescription/contentDescription; >=48dp touch targets; Material3 dynamic + dark theme via design tokens.
+placeholder  : PLACEHOLDER_COUNT=0
+parity       : PARITY_COVERED(160) == PARITY_REQUIRED(160)
+[PASS] all android triad gates green; parity 160/160; android ledger row page:driving/DriveScore status=done.
+
+EXIT=0
+STATUS=DONE

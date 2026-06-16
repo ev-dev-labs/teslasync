@@ -81,6 +81,7 @@ import io.teslasync.android.dashboard.dashboard.DashboardPageHost
 import io.teslasync.android.dashboard.quickstats.QuickStatsPageHost
 import io.teslasync.android.diagnostics.anomalydashboard.AnomalyDashboardPageHost
 import io.teslasync.android.driving.drivedetail.DriveDetailPageHost
+import io.teslasync.android.driving.drivescore.DriveScorePageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -224,6 +225,7 @@ class TeslaSyncApplication : Application() {
         QuickStatsPageHost.register()
         AnomalyDashboardPageHost.register()
         DriveDetailPageHost.register()
+        DriveScorePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
