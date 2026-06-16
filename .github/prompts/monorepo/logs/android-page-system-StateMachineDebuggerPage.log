@@ -1,0 +1,178 @@
+================================================================================
+P3-ANDROID A7 — page:system/StateMachineDebugger  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/StateMachineDebuggerPage.tsx
+promptId: p3-android/pages/system/StateMachineDebuggerPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr 21.0.9 (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPage.kt          (@Composable screen: StateMachineDebuggerPage + StateMachineDebuggerContent + DebuggerBody + 11 panel/2 chart sections)
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPageViewModel.kt (AndroidX BaseFeedViewModel; StateFlow<UiState<DebuggerData>> + snapshotState; selectVehicle/setFsmType/setPage/setPerPage/toggleTransition/refresh)
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPageSource.kt    (S8 data seam over VehiclesStore + FsmStore + SelectedVehicleStore + ApiHttpClient snapshot read)
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPageModel.kt     (framework-free model: registration, FSM domain types, parseFsmStats/parseFsmTransitions/parseSnapshot, stateDistribution/transitionSummary/computeFlapIds, formatDuration/formatCount/timestamps, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPageIcons.kt     (Refresh / Activity / Zap / AlertTriangle / ChevronDown / ChevronRight / Info / Share glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/system/StateMachineDebuggerPageHost.kt      (PageHosts.register(stateDebugger){ StateMachineDebuggerRoute() } — page-local FsmStore over the shared client/cache)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                (NavHost wiring: + StateMachineDebuggerPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                          (+12 keys: 6 required ports + fsm.allFsms/fsm.telemetryConnection/fsm.modeCharging/Drive/Sleep/Idle for zero-hardcoded)
+apps/parity/android-ledger.json                                                           (ledger row page:system/StateMachineDebugger 63/63 done)
+.github/prompts/monorepo/logs/android-page-system-StateMachineDebuggerPage.log            (this log)
+
+Data   : StateMachineDebuggerPageViewModel binds FOUR reads via stateMachineDebuggerPageSourceOf():
+         - useVehicleStateMachine -> shared S8 VehiclesStore.vehicleState(id) (VehicleStateEnvelope.state, typed+SI)
+         - useFSMStats            -> shared S8 FsmStore.stats(entityId)        (GET /fsm/stats, raw JsonElement)
+         - useFSMTransitions      -> shared S8 FsmStore.transitions(...)        (GET /fsm/transitions, raw JsonElement)
+         - useSignalSnapshot      -> ApiHttpClient.safeRequest(/signals/{id}/snapshot) (no shared snapshot store exists;
+                                     bound as a cache-free Loading->Success/Error Resource flow at the source seam)
+         The vehicle list (VehiclesStore.vehicles) + the app-scoped SelectedVehicleStore drive the picker; the vehicle
+         feed gates the page phase (web PageContainer + `!vehicleOptions.length`), the FSM/state/snapshot reads fold in
+         with their own in-flight flags so each panel draws its own loading/empty surface. No HTTP in the view.
+Adapt  : the shared FsmRepository carries the FSM feeds as raw JsonElement (non-unit-bearing), so the four web hook
+         shapes are decoded with the exact web field names in the framework-free model (parseFsmStats/parseFsmTransitions/
+         parseSnapshot) and the page derivations (state distribution, per-state avg-interval summary, 60s/>5 flap window,
+         current-state mode reduction) are pure + reproduced from the web memos. DataContainer wires no FsmStore yet, so
+         the host builds a page-local FsmStore(HttpFsmRepository(api,cacheStore), rememberCoroutineScope) — the sanctioned
+         page-local-store seam the sibling Commands/VehicleCommandCenter surfaces use.
+Strings: 41/47 page keys already present in res/values/strings.xml; 6 required keys were missing and added verbatim
+         (fsm.allTime, fsm.detail.name, fsm.distributionByState.aria, fsm.selectVehicle, help.fsm.liveState.aria,
+         help.fsm.type.aria), plus 6 non-hardcoding labels the native Select/mode rows need (fsm.allFsms,
+         fsm.telemetryConnection, fsm.mode{Charging,Drive,Sleep,Idle}). Every visible literal resolves via
+         stringResource(R.string.translation_*); Pagination first/prev/next/last/showing reuse the existing
+         translation_pagination_* / translation_common_* keys; web key names preserved.
+Nav    : Destinations 'stateDebugger' -> /state-debugger PRE-EXISTING (Destinations.kt:166; count unchanged); host wired
+         via PageHosts.register in TeslaSyncApplication after DiagnosticPageHost.register(). Share-permalink copies the
+         app's teslasync://app/state-debugger?vehicle_id={id} deep link to the clipboard.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  # first pass surfaced 2 hits: the scanner's case-insensitive "TODO" substring matched "toDouble"/"toDoubleOrNull"
+  # (toDo). Rewrote both (totalGap*1.0 ; java.lang.Double.parseDouble) so zero markers remain — no parity:allow needed.
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 1m 52s
+  # first compile surfaced 4 errors: two companion objects in the ViewModel (Kotlin allows one) which also broke the
+  # `.factory(...)` reference. Merged the private const block into the single companion object. Re-run: clean.
+  # (the only warning on the new code is the LocalClipboardManager deprecation — identical to the existing ApiLogsPage/
+  #  ArchivedPage/ChannelsPage/WebhooksPage/PrivacyPage usages; non-fatal, consistent with the codebase.)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 13m 34s
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 13s  (1287 test-result XMLs; full suite green)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+--------------------------------------------------------------------------------
+PARITY_REQUIRED=63
+bound state holder = StateMachineDebuggerPageViewModel.uiState : StateFlow<UiState<DebuggerData>>
+                   + StateMachineDebuggerPageViewModel.snapshotState : StateFlow<UiState<SnapshotData>>
+
+# panels (11) — Material 3 GlassPanel (Surface/Card) ; DOM-order mapping to the web source's GlassPanel/StatCard/Chart literals
+[COVERED] panel  GlassPanel1       -> StateMachineDebuggerPage.kt:352 FiltersPanel -> GlassPanel{ FSM-type Select + per-page Select ; noVehicles EmptyState }  (web Section-1 filters GlassPanel L518)
+[COVERED] panel  GlassPanel2       -> StateMachineDebuggerPage.kt:395 CurrentStatePanel -> GlassPanel{ vehicleLiveState + StatusBadge hero + type/mode/since ; loading Skeleton ; noState EmptyState }  (web Section-3 Current Vehicle State GlassPanel L590)
+[COVERED] panel  GlassPanel3       -> StateMachineDebuggerPage.kt:437 TimelinePanel -> GlassPanel{ recent-transition state-timeline chips (tap=select) + SnapshotInspector(snapshotState) }  (web live controls/timeline/inspector GlassPanel L656)
+[COVERED] panel  State-Distribution-> StateMachineDebuggerPage.kt:516 DistributionPanel -> ChartContainer(title=distributionByState){ donut + legend }  (web ChartContainer "State Distribution" L715)
+[COVERED] panel  GlassPanel5       -> StateMachineDebuggerPage.kt:596 TransitionCountsPanel -> GlassPanel{ transitionCounts + state/count/avgInterval table }  (web Transition Counts GlassPanel L766)
+[COVERED] panel  Transitions-Page  -> StateMachineDebuggerPage.kt:639 SummaryCards StatCard(label=fsm.totalOnPage, value="{onPage} / {total}", icon=Activity)  (web StatCard "Transitions (Page)" L789)
+[COVERED] panel  Total-Transitions -> StateMachineDebuggerPage.kt:645 SummaryCards StatCard(label=fsm.totalTransitions, value=total, icon=Activity)  (web StatCard "Total Transitions" L794)
+[COVERED] panel  Flap-Warnings     -> StateMachineDebuggerPage.kt:653 SummaryCards StatCard(label=fsm.flapCount, value=computeFlapIds.size, icon=AlertTriangle)  (web StatCard "Flap Warnings" L799)
+[COVERED] panel  Current-State     -> StateMachineDebuggerPage.kt:659 SummaryCards StatCard(label=fsm.currentState, value=currentStateName, icon=Zap)  (web StatCard "Current State" L804)
+[COVERED] panel  GlassPanel10      -> StateMachineDebuggerPage.kt:672 TransitionLogPanel -> GlassPanel{ timelineTitle + transition table (#/time/type/from/to/trigger + chevron) + Pagination }  (web Transition Table GlassPanel L819)
+[COVERED] panel  GlassPanel11      -> StateMachineDebuggerPage.kt:770 TransitionDetailPanel -> GlassPanel{ detailTitle + id/vehicleId/name/from/to/trigger/guard/duration/timestamp/context grid }  (web Selected Transition Detail GlassPanel L866)
+
+# charts (2) — native Compose, never a webview
+[COVERED] chart  ChartContainer    -> StateMachineDebuggerPage.kt:527 ChartContainer(title=fsm.distributionByState, status=Loading/Empty/Ready, accessibleDescription=fsm.distributionByState.aria, dataTableHeader=[state,count])  (web ChartContainer wrapper)
+[COVERED] chart  PieChart          -> StateMachineDebuggerPage.kt:552 StateDistributionDonut -> Canvas drawArc donut over paletteColor(i) + DistributionLegend  (web recharts PieChart/Pie/Cell innerRadius/outerRadius)
+
+# data states (3 required) — implemented for every bound data source
+[COVERED] state  loading -> StateMachineDebuggerPage.kt:213 (data==null & uiState.isLoading -> DebuggerLoadingState/PageSkeleton) ; per-source skeletons: currentStateLoading->Skeleton:412, transitionsLoading->ChartStatus.Loading:523 + TableSkeleton:605/688, snapshotState.isLoading->Skeleton:496 ; ViewModel asUiState -> UiState.loading()
+[COVERED] state  empty   -> StateMachineDebuggerPage.kt:360 FiltersPanel noVehicles EmptyState ; CurrentState noState:427 ; ChartStatus.Empty:524 ; TransitionCounts/Log EmptyState(noTransitionsInRange) ; SnapshotInspector empty:498 ; UiPhase.Empty via asUiState{ !it.hasVehicles } and snapshot asUiState{ it.signals.isEmpty() }
+[COVERED] state  success -> StateMachineDebuggerPage.kt:217 DebuggerBody renders all 11 panels + 2 charts from DebuggerData ; UiPhase.Content
+# (a hard list failure with no cache also surfaces an error composable + Retry at :233 DebuggerErrorState -> refresh(), per ADR-013 — never a blank region)
+
+# strings (47) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string debugger.share                 -> StateMachineDebuggerPage.kt:279 IconButton(contentDescription=translation_debugger_share)
+[COVERED] string fsm.allTime                     -> StateMachineDebuggerPage.kt:318 emptyRangeMessage arg (translation_fsm_allTime)
+[COVERED] string fsm.autoRefresh                 -> StateMachineDebuggerPage.kt:301 AutoRefreshIndicator Caption(translation_fsm_autoRefresh)
+[COVERED] string fsm.avgInterval                 -> StateMachineDebuggerPage.kt:611 TransitionCounts header (translation_fsm_avgInterval)
+[COVERED] string fsm.col.count                   -> StateMachineDebuggerPage.kt:536 ChartContainer dataTableHeader (translation_fsm_col_count)
+[COVERED] string fsm.col.state                   -> StateMachineDebuggerPage.kt:535 ChartContainer dataTableHeader (translation_fsm_col_state)
+[COVERED] string fsm.count                       -> StateMachineDebuggerPage.kt:610 TransitionCounts header (translation_fsm_count)
+[COVERED] string fsm.currentState                -> StateMachineDebuggerPage.kt:660 StatCard(label=translation_fsm_currentState)
+[COVERED] string fsm.detail.context             -> StateMachineDebuggerPage.kt:799 TransitionDetail Caption(translation_fsm_detail_context)
+[COVERED] string fsm.detail.duration            -> StateMachineDebuggerPage.kt:795 TransitionDetail KeyValueRow(translation_fsm_detail_duration)
+[COVERED] string fsm.detail.from                -> StateMachineDebuggerPage.kt:783 TransitionDetail Caption(translation_fsm_detail_from)
+[COVERED] string fsm.detail.guard               -> StateMachineDebuggerPage.kt:792 TransitionDetail KeyValueRow(translation_fsm_detail_guard)
+[COVERED] string fsm.detail.id                  -> StateMachineDebuggerPage.kt:777 TransitionDetail KeyValueRow(translation_fsm_detail_id)
+[COVERED] string fsm.detail.name                -> StateMachineDebuggerPage.kt:780 TransitionDetail KeyValueRow(translation_fsm_detail_name)
+[COVERED] string fsm.detail.timestamp           -> StateMachineDebuggerPage.kt:797 TransitionDetail KeyValueRow(translation_fsm_detail_timestamp)
+[COVERED] string fsm.detail.to                  -> StateMachineDebuggerPage.kt:787 TransitionDetail Caption(translation_fsm_detail_to)
+[COVERED] string fsm.detail.trigger             -> StateMachineDebuggerPage.kt:790 TransitionDetail KeyValueRow(translation_fsm_detail_trigger)
+[COVERED] string fsm.detail.vehicleId           -> StateMachineDebuggerPage.kt:778 TransitionDetail KeyValueRow(translation_fsm_detail_vehicleId)
+[COVERED] string fsm.detailTitle                 -> StateMachineDebuggerPage.kt:772 TransitionDetail PanelTitle(translation_fsm_detailTitle)
+[COVERED] string fsm.distributionByState         -> StateMachineDebuggerPage.kt:528 ChartContainer(title=translation_fsm_distributionByState)
+[COVERED] string fsm.distributionByState.aria    -> StateMachineDebuggerPage.kt:531 ChartContainer(accessibleDescription=translation_fsm_distributionByState_aria)
+[COVERED] string fsm.flapCount                   -> StateMachineDebuggerPage.kt:654 StatCard(label=translation_fsm_flapCount)
+[COVERED] string fsm.from                        -> StateMachineDebuggerPage.kt:695 TransitionLog header (translation_fsm_from)
+[COVERED] string fsm.fsmType                     -> StateMachineDebuggerPage.kt:368 FiltersPanel FieldLabelText(translation_fsm_fsmType)
+[COVERED] string fsm.mode                        -> StateMachineDebuggerPage.kt:419 CurrentState KeyValueRow(translation_fsm_mode) + modeStringId(:850 fsm.mode{Charging,Drive,Sleep,Idle})
+[COVERED] string fsm.noState                     -> StateMachineDebuggerPage.kt:427 CurrentState EmptyState(translation_fsm_noState)
+[COVERED] string fsm.noTransitionsInRange        -> StateMachineDebuggerPage.kt:318 emptyRangeMessage (translation_fsm_noTransitionsInRange) used by distribution/counts/log empties
+[COVERED] string fsm.noVehicles                  -> StateMachineDebuggerPage.kt:360 FiltersPanel EmptyState(translation_fsm_noVehicles)
+[COVERED] string fsm.perPage                     -> StateMachineDebuggerPage.kt:386 Select(label=translation_fsm_perPage)
+[COVERED] string fsm.selectVehicle               -> StateMachineDebuggerPage.kt:270 header vehicle Select(label=translation_fsm_selectVehicle)
+[COVERED] string fsm.since                       -> StateMachineDebuggerPage.kt:421 CurrentState KeyValueRow(translation_fsm_since)
+[COVERED] string fsm.state                       -> StateMachineDebuggerPage.kt:609 TransitionCounts header (translation_fsm_state)
+[COVERED] string fsm.subtitle                    -> StateMachineDebuggerPage.kt:257 header BodyText(translation_fsm_subtitle)
+[COVERED] string fsm.time                        -> StateMachineDebuggerPage.kt:693 TransitionLog header (translation_fsm_time)
+[COVERED] string fsm.timelineTitle               -> StateMachineDebuggerPage.kt:682 TransitionLog PanelTitle(translation_fsm_timelineTitle)
+[COVERED] string fsm.title                       -> StateMachineDebuggerPage.kt:255 PageTitle(translation_fsm_title) + :149 semantics paneTitle (web usePageTitle)
+[COVERED] string fsm.to                          -> StateMachineDebuggerPage.kt:696 TransitionLog header (translation_fsm_to)
+[COVERED] string fsm.total                       -> StateMachineDebuggerPage.kt:684 TransitionLog HelperText("{total} translation_fsm_total")
+[COVERED] string fsm.totalOnPage                 -> StateMachineDebuggerPage.kt:640 StatCard(label=translation_fsm_totalOnPage)
+[COVERED] string fsm.totalTransitions            -> StateMachineDebuggerPage.kt:646 StatCard(label=translation_fsm_totalTransitions)
+[COVERED] string fsm.transitionCounts            -> StateMachineDebuggerPage.kt:601 TransitionCounts PanelTitle(translation_fsm_transitionCounts)
+[COVERED] string fsm.trigger                     -> StateMachineDebuggerPage.kt:697 TransitionLog header (translation_fsm_trigger)
+[COVERED] string fsm.type                        -> StateMachineDebuggerPage.kt:418 CurrentState FSM-type row + :694 TransitionLog "FSM" column (translation_fsm_type)
+[COVERED] string fsm.vehicleLiveState            -> StateMachineDebuggerPage.kt:401 CurrentState PanelTitle(translation_fsm_vehicleLiveState)
+[COVERED] string fsm.viewDetail                  -> StateMachineDebuggerPage.kt:746 TransitionRow chevron Icon(contentDescription=translation_fsm_viewDetail)
+[COVERED] string help.fsm.liveState.aria         -> StateMachineDebuggerPage.kt:404 CurrentState Info Icon(contentDescription=translation_help_fsm_liveState_aria)
+[COVERED] string help.fsm.type.aria              -> StateMachineDebuggerPage.kt:371 FiltersPanel Info Icon(contentDescription=translation_help_fsm_type_aria)
+
+PARITY_COVERED=63
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : ViewModel binds the four web reads via stateMachineDebuggerPageSourceOf() — shared S8 VehiclesStore
+               (vehicles + per-vehicle state), shared S8 FsmStore (stats + transitions), the app-scoped
+               SelectedVehicleStore (picker), and ApiHttpClient.safeRequest for the snapshot inspector. uiState folds
+               vehicles+state+stats+transitions into one UiState<DebuggerData>; snapshotState is the selected-transition
+               signal feed. No HTTP in the view.
+si/units     : the FSM feeds are non-unit-bearing (state names, triggers, counts, RFC-3339 instants), so there is no SI
+               conversion at the boundary; the one typed read (/vehicles/{id}/state) stays SI end to end and only its
+               state/since/charging/speed fields feed the live-state hero. No new non-SI fields introduced.
+a11y/theme   : MaterialTheme tokens only (no hardcoded color/typography); panel paneTitle + Icon contentDescriptions +
+               ChartContainer accessibleDescription + IconButton 48dp targets; dark/dynamic theme honored via the
+               shared components.
+nav          : Destinations 'stateDebugger' -> /state-debugger pre-existing (count unchanged); host registered in
+               TeslaSyncApplication; idempotent.
+ledger       : apps/parity/android-ledger.json row page:system/StateMachineDebugger set covered 63/63 (status done).
+
+EXIT=0
+STATUS=DONE

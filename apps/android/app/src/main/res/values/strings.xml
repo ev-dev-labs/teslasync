@@ -4045,6 +4045,10 @@
   <string name="translation_fsm_activeCharge">Charge Session</string>
   <string name="translation_fsm_activeDrive">Drive Session</string>
   <string name="translation_fsm_autoRefresh">Live 10s</string>
+  <string name="translation_fsm_allTime">All time</string>
+  <string name="translation_fsm_allFsms">All FSMs</string>
+  <string name="translation_fsm_selectVehicle">Select vehicle</string>
+  <string name="translation_fsm_telemetryConnection">Telemetry Connection</string>
   <string name="translation_fsm_avgInterval">Avg Interval</string>
   <string name="translation_fsm_col_count">Count</string>
   <string name="translation_fsm_col_state">State</string>
@@ -4056,12 +4060,14 @@
   <string name="translation_fsm_detail_guard">Guard</string>
   <string name="translation_fsm_detail_id">Transition ID</string>
   <string name="translation_fsm_detail_instanceId">Instance ID</string>
+  <string name="translation_fsm_detail_name">FSM Name</string>
   <string name="translation_fsm_detail_timestamp">Timestamp</string>
   <string name="translation_fsm_detail_to">To State</string>
   <string name="translation_fsm_detail_trigger">Trigger</string>
   <string name="translation_fsm_detail_vehicleId">Vehicle ID</string>
   <string name="translation_fsm_detailTitle">Transition Detail</string>
   <string name="translation_fsm_distributionByState">State Distribution</string>
+  <string name="translation_fsm_distributionByState_aria">FSM state distribution donut chart with per-state counts</string>
   <string name="translation_fsm_flapCount">Flap Warnings</string>
   <string name="translation_fsm_from">From</string>
   <string name="translation_fsm_fsmType">FSM Type</string>
@@ -4074,6 +4080,10 @@
   <string name="translation_fsm_health_stuckTitle">Stuck Sessions</string>
   <string name="translation_fsm_health_title">FSM Health</string>
   <string name="translation_fsm_mode">Mode</string>
+  <string name="translation_fsm_modeCharging">Charging</string>
+  <string name="translation_fsm_modeDrive">Drive</string>
+  <string name="translation_fsm_modeSleep">Sleep</string>
+  <string name="translation_fsm_modeIdle">Idle</string>
   <string name="translation_fsm_noState">No state data available</string>
   <string name="translation_fsm_noStats">No transition data recorded</string>
   <string name="translation_fsm_noSubFSMs">No active drive or charge sessions</string>
@@ -4293,7 +4303,9 @@
   <string name="translation_help_fields_settings_weekStart">First day of the week in calendar pickers and weekly aggregations. ISO 8601 default is Monday; many U.S. users prefer Sunday.</string>
   <string name="translation_help_fleetTelemetryHealthy_body">Last MQTT message received within the last 5 minutes. Stale means no recent message; check the fleet-telemetry deployment.</string>
   <string name="translation_help_fsm_liveState">The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out.</string>
+  <string name="translation_help_fsm_liveState_aria">More info about FSM live state</string>
   <string name="translation_help_fsm_type">Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.</string>
+  <string name="translation_help_fsm_type_aria">More info about FSM types</string>
   <string name="translation_help_intro">Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.</string>
   <string name="translation_help_lifetime_avgEfficiency">Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.</string>
   <string name="translation_help_regenEfficiency_body">Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.</string>
