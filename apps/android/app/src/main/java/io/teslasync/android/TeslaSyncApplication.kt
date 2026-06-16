@@ -90,6 +90,7 @@ import io.teslasync.android.driving.speedprofile.SpeedProfilePageHost
 import io.teslasync.android.explore.ExplorePageHost
 import io.teslasync.android.driving.tripreplay.TripReplayPageHost
 import io.teslasync.android.exports.exports.ExportsPageHost
+import io.teslasync.android.maps.MapOverviewPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -241,6 +242,7 @@ class TeslaSyncApplication : Application() {
         ExplorePageHost.register()
         TripReplayPageHost.register()
         ExportsPageHost.register()
+        MapOverviewPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

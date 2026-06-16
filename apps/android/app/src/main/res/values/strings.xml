@@ -4573,6 +4573,7 @@
   <string name="translation_mapOverview_navRoute">Navigation Route</string>
   <string name="translation_mapOverview_no">No</string>
   <string name="translation_mapOverview_noGps">GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.</string>
+  <string name="translation_mapOverview_noHistory">No location history found.</string>
   <string name="translation_mapOverview_noLocation">No location data available yet</string>
   <string name="translation_mapOverview_odometer">Odometer</string>
   <string name="translation_mapOverview_pageTitle">Map Overview</string>
@@ -4582,6 +4583,7 @@
   <string name="translation_mapOverview_recentPlayback">Recent Route Playback</string>
   <string name="translation_mapOverview_speedUnit">mph</string>
   <string name="translation_mapOverview_speedUnitValue">%1$s</string>
+  <string name="translation_mapOverview_subtitle">Live vehicle location and recent history</string>
   <string name="translation_mapOverview_title">Map Overview</string>
   <string name="translation_mapOverview_unknown">Unknown</string>
   <string name="translation_mapOverview_vehicle">Vehicle</string>

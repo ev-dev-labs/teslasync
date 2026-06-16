@@ -1,0 +1,168 @@
+P3-ANDROID A7 — page:maps/MapOverview — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/maps/pages/MapOverviewPage.tsx   (route /live, nav id `liveMap`)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/maps/  (MapOverviewPage.kt @Composable screen +
+             MapOverviewPageViewModel + MapOverviewPageSource + MapOverviewPageModel + MapOverviewPageIcons +
+             MapOverviewPageHost)  — package io.teslasync.android.maps
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE: 5-file A7 page set mirroring the sibling DrivesListPage / RegenEfficiencyPage / TripPlannerPage
+precedent. The view (composable) performs NO HTTP — it collects StateFlow<UiState<…>> from the ViewModel, which
+binds the shared-core repositories/use-cases (ADR-004) through the narrow MapOverviewPageSource seam:
+  • useVehicles            → HttpVehiclesRepository.vehicles()            GET /vehicles            (declared source)
+  • useVehiclePositions    → HttpVehiclesRepository.vehiclePositions(id,50) GET /vehicles/{id}/positions?limit=50
+  • useLocationSnapshotLatest → HttpVehiclesRepository.locationSnapshotLatest(id) GET /location-snapshots/latest
+  • useUnits/useFormatting → SettingsStore.settings()                     GET /settings
+  • useSelectedVehicle     → SelectedVehicleStore (effective id self-heals to the first vehicle — web default).
+The host (MapOverviewPageHost) constructs the shared HttpVehiclesRepository over the SAME resilient client + offline
+cache the DataContainer's VehiclesStore uses (so ADR-013 freshness + SI-verbatim caching are identical), giving the
+page a deterministic retry that re-fetches via the refresh trigger (DrivesList precedent). The page-VM projects each
+feed onto the shared lifecycle-aware UiState via BaseFeedViewModel.asUiState (the standard A7 page-VM job).
+
+NAV NOTE: the `liveMap` /live destination already exists in Destinations.kt (page("liveMap","/live",NavGroup.Maps));
+this prompt only wires the host (MapOverviewPageHost.register() in TeslaSyncApplication) — no fabricated destination.
+The "Quick Links" buttons navigate to the registered navigationRoute/geofences/locations destinations via their
+app-scheme deep link (teslasync://app/…, declared in AndroidManifest) using LocalUriHandler — the sibling
+FeedbackQueuePage precedent; no dead buttons.
+
+SI NOTE (the prompt's Units rule + ADR-013): decode + derivation stay SI end-to-end (degrees, m/s, metres); the only
+display conversion is at the render boundary via MapOverviewDisplayPrefs (shared convertSpeedFromSI /
+convertDistanceFromSI + ChartFormat). Speed AND odometer are converted from SI through the user's unit prefs — the
+odometer correctly uses convertDistanceFromSI(metres) rather than transplanting the web's raw `fmtNumber(odometer)`
+(an un-converted web display quirk); the prompt mandates "format at the display boundary with the shared SI
+converters — never store/compute non-SI", so the SI-canonical conversion is the faithful behaviour.
+
+STRINGS NOTE: 33 of the 34 mapOverview keys + error.loadFailed already existed in res/values/strings.xml; 2 required
+keys were missing (mapOverview.noHistory, mapOverview.subtitle) and were added to values/ + values-ar/ + values-he/
+(English fallback, matching the catalog's existing ar/he-as-fallback convention). All 35 visible literals resolve
+via stringResource(); zero hardcoded text in the page (verified: only detekt rule-name strings, destination ids, and
+the internal marker id "vehicle" — none user-visible).
+
+ICONS NOTE: material-icons-extended is intentionally not a dependency (see components/maps/MapsGlyphs.kt), so the
+lucide glyphs the web page uses (Gauge/Compass/MapPin/Clock/Home/Briefcase/Link2/Fence/AlertCircle) are authored as
+24×24 stroked ImageVectors in MapOverviewPageIcons.kt; the map-control glyphs already in MapsGlyphs
+(Navigation/Route/Crosshair) are reused for the odometer row + quick links (DRY, ADR-006).
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+ENVIRONMENT: sdk.dir=C:\Users\AtulM\AppData\Local\Android\Sdk (present; platforms android-34/35/36); JDK 21; Gradle
+8.14.5. Toolchain present → STATUS=DONE (not BLOCKED).
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+   (& ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/maps -Language kotlin)
+BUILD SUCCESSFUL in 3m 20s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug — compileDebugKotlin clean; only the pre-existing unrelated Gradle 9.0
+    deprecation warning + pre-existing non-positional-format string warnings in battery/rateLimit keys, not mine)
+TEST SUCCESSFUL in 2m 23s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — full existing suite green; no regression)
+LINT SUCCESSFUL in 13m 17s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug — lint-results-debug written, no errors; abortOnError=true)
+
+=== PARITY ===
+PARITY_REQUIRED=55
+binding evidence — the page-VM exposes the bound StateFlow<UiState<…>>; the stateless content renders every item.
+  page    : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPage.kt
+  vm      : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPageViewModel.kt
+  source  : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPageSource.kt
+  model   : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPageModel.kt
+  icons   : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPageIcons.kt
+  host    : apps/android/app/src/main/kotlin/com/teslasync/maps/MapOverviewPageHost.kt
+  feeds   : MapOverviewPageViewModel vehiclesState (L67) / positionsState (L91) / locationState (L105) /
+            displayPrefs (L116) / mapStyle (L55) / effectiveVehicleId (L79)
+
+# panels (9) — Material 3 Card/Surface (GlassPanel) per region; each always present, never blanked
+[COVERED] panel GlassPanel1     -> MapPanel (MapOverviewPage.kt:317) GlassPanel(PanelPadding.None) — the interactive map panel
+[COVERED] panel GlassPanel2     -> PlaybackPanel (MapOverviewPage.kt:406) GlassPanel — recent route playback
+[COVERED] panel Current-Speed   -> MetricCellCard (MapOverviewPage.kt:453) MetricCard label=currentSpeed value=speedNumber+unit, icon=Gauge
+[COVERED] panel Heading         -> MetricCellCard (MapOverviewPage.kt:459) MetricCard label=heading value=headingText, icon=Compass
+[COVERED] panel Lat-Lon         -> MetricCellCard (MapOverviewPage.kt:467) MetricCard label=latLon value=latLonText, icon=MapPin
+[COVERED] panel Last-Updated    -> MetricCellCard (MapOverviewPage.kt:473) MetricCard label=lastUpdated value=lastUpdatedText, subtitle=autoRefresh, icon=Clock
+[COVERED] panel GlassPanel7     -> LocationDetailsPanel (MapOverviewPage.kt:509) GlassPanel — home/work/HomeLink badges + odometer
+[COVERED] panel GlassPanel8     -> QuickLinksPanel (MapOverviewPage.kt:599) GlassPanel — navRoute/geofences/locations buttons
+[COVERED] panel GlassPanel9     -> HistoryPanel (MapOverviewPage.kt:636) GlassPanel — recent location-history table
+
+# maps (7) — composed by the shared A3 maps wrappers (no maps SDK imported by the page except the trail Polyline)
+[COVERED] map MapLayerSwitcher  -> MapOverviewPage.kt:367 MapLayerSwitcher(current=mapStyle,onChange=onSetMapStyle) overlaid on the map (web <MapLayerSwitcher>)
+[COVERED] map MapContainer      -> MapOverviewPage.kt:345 TeslaMap(cameraPositionState,contentDescription=pageTitle) centred on the latest fix at zoom 15 (web <MapContainer zoom={15}>)
+[COVERED] map MapTileLayer      -> MapOverviewPage.kt:345 TeslaMap(style=mapStyle) base-map tiles via rememberMapStyleOptions/gmsMapType (web <MapTileLayer style={mapStyle}>)
+[COVERED] map Marker            -> MapOverviewPage.kt:358 VehicleMarker(MapMarker(point=latest.point(),headingDegrees)) — heading-rotated vehicle marker (web <Marker icon={vehicleIcon()}>)
+[COVERED] map Popup             -> MapOverviewPage.kt:358 VehicleMarker title=markerName → MarkerComposable info window = the marker popup (web <Popup>{vehicle.display_name}</Popup>)
+[COVERED] map Polyline          -> MapOverviewPage.kt:352 Polyline(points=trail.toLatLng(),color=chart.regen,width) when trail.size>1 (web <Polyline positions={trailPositions}>)
+[COVERED] map RoutePlayback     -> MapOverviewPage.kt:411 RoutePlayback(samples=playback,heightDp=360,mapContentDescription=playbackLabel) (web <RoutePlayback points={playbackPoints}>)
+
+# data states (4) — bound to the page-VM StateFlows; every source covered, no region blanks (ADR-011)
+[COVERED] state loading -> MapOverviewLoading (MapOverviewPage.kt:257, vehiclesState.isLoading) + per-panel: map Skeleton (L334), metric StatGridSkeleton (L440), history SkeletonLines (L644)
+[COVERED] state empty   -> map EmptyState noLocation (L375) + location EmptyState noLocation (L519) + history EmptyState noHistory (L647) + playback EmptyState noHistory (L420); VM isEmpty gates: positionsState (VM:99 isEmpty), locationState (VM:113 isEmpty), vehiclesState (VM:67)
+[COVERED] state error   -> vehicles hard-error MapOverviewError+Retry (L232/L299) + AlertBanner loadFailed when positions/location error (L238) + map ErrorDisplay+Retry (L335)
+[COVERED] state success -> positionsState.isContent + data.hasValidLocation → TeslaMap renders marker+polyline (L345-372); metric cards render live values (L453-479); history table renders rows (HistoryTable L656)
+
+# strings (35) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string error.loadFailed            -> MapOverviewPage.kt:240/302/337  (strings.xml translation_error_loadFailed)
+[COVERED] string mapOverview.atHome          -> MapOverviewPage.kt DetailBadgeRow At-Home  (translation_mapOverview_atHome)
+[COVERED] string mapOverview.atWork          -> DetailBadgeRow At-Work             (translation_mapOverview_atWork)
+[COVERED] string mapOverview.autoRefresh     -> Last-Updated card subtitle         (translation_mapOverview_autoRefresh)
+[COVERED] string mapOverview.colHeading      -> HistoryTable header                (translation_mapOverview_colHeading)
+[COVERED] string mapOverview.colLat          -> HistoryTable header                (translation_mapOverview_colLat)
+[COVERED] string mapOverview.colLon          -> HistoryTable header                (translation_mapOverview_colLon)
+[COVERED] string mapOverview.colSpeed        -> HistoryTable header                (translation_mapOverview_colSpeed)
+[COVERED] string mapOverview.colTime         -> HistoryTable header                (translation_mapOverview_colTime)
+[COVERED] string mapOverview.currentSpeed    -> Current-Speed card label           (translation_mapOverview_currentSpeed)
+[COVERED] string mapOverview.distanceUnitValue -> odometer unit token             (translation_mapOverview_distanceUnitValue)
+[COVERED] string mapOverview.geofences       -> Quick-Links Geofences button       (translation_mapOverview_geofences)
+[COVERED] string mapOverview.heading         -> Heading card label                 (translation_mapOverview_heading)
+[COVERED] string mapOverview.homelinkNearby  -> DetailBadgeRow HomeLink            (translation_mapOverview_homelinkNearby)
+[COVERED] string mapOverview.lastUpdated     -> Last-Updated card label            (translation_mapOverview_lastUpdated)
+[COVERED] string mapOverview.latLon          -> Lat-Lon card label                 (translation_mapOverview_latLon)
+[COVERED] string mapOverview.locationDetails -> GlassPanel7 title                  (translation_mapOverview_locationDetails)
+[COVERED] string mapOverview.locations       -> Quick-Links Locations button       (translation_mapOverview_locations)
+[COVERED] string mapOverview.navRoute        -> Quick-Links Navigation-Route button (translation_mapOverview_navRoute)
+[COVERED] string mapOverview.no              -> tri-state badge No                 (translation_mapOverview_no)
+[COVERED] string mapOverview.noGps           -> GpsWarning AlertBanner             (translation_mapOverview_noGps)
+[COVERED] string mapOverview.noHistory       -> history + playback empty states    (translation_mapOverview_noHistory)  [ADDED values/ar/he]
+[COVERED] string mapOverview.noLocation      -> map + location empty states        (translation_mapOverview_noLocation)
+[COVERED] string mapOverview.odometer        -> DetailValueRow Odometer label      (translation_mapOverview_odometer)
+[COVERED] string mapOverview.pageTitle       -> TeslaMap contentDescription (a11y)  (translation_mapOverview_pageTitle)
+[COVERED] string mapOverview.playbackLabel   -> RoutePlayback mapContentDescription (translation_mapOverview_playbackLabel)
+[COVERED] string mapOverview.quickLinks      -> GlassPanel8 caption                (translation_mapOverview_quickLinks)
+[COVERED] string mapOverview.recentHistory   -> GlassPanel9 title                  (translation_mapOverview_recentHistory)
+[COVERED] string mapOverview.recentPlayback  -> GlassPanel2 title + RoutePlayback summaryLabel (translation_mapOverview_recentPlayback)
+[COVERED] string mapOverview.speedUnitValue  -> speed unit token (card + table)    (translation_mapOverview_speedUnitValue)
+[COVERED] string mapOverview.subtitle        -> header subtitle                    (translation_mapOverview_subtitle)   [ADDED values/ar/he]
+[COVERED] string mapOverview.title           -> header PageTitle + MapAccessibleSummary label (translation_mapOverview_title)
+[COVERED] string mapOverview.unknown         -> tri-state badge Unknown            (translation_mapOverview_unknown)
+[COVERED] string mapOverview.vehicle         -> marker popup fallback name         (translation_mapOverview_vehicle)
+[COVERED] string mapOverview.yes             -> tri-state badge Yes                (translation_mapOverview_yes)
+
+PARITY_COVERED=55
+
+=== SUMMARY ===
+data sources : useVehicles (GET /vehicles, declared source) + useVehiclePositions + useLocationSnapshotLatest +
+               useUnits/useFormatting (GET /settings), each bound through MapOverviewPageSource over the shared S7
+               HttpVehiclesRepository + SettingsStore + SelectedVehicleStore and projected onto UiState by the
+               page-VM (asUiState). The page performs no HTTP.
+nav          : liveMap /live destination already in Destinations.kt; host wired in TeslaSyncApplication
+               (MapOverviewPageHost.register()). Quick links navigate registered destinations via app-scheme deep
+               links (LocalUriHandler) — no fabricated routes, no dead buttons.
+panels       : 9/9 — map, route playback, 4 metric cards, location details, quick links, history table.
+maps         : 7/7 — MapLayerSwitcher + TeslaMap (MapContainer+MapTileLayer) + VehicleMarker (Marker+Popup) +
+               Polyline + RoutePlayback; shared A3 maps wrappers, no maps SDK in the page beyond the trail Polyline.
+charts       : none declared.
+states       : 4/4 — loading / empty / error / success, page-level + per-panel; no region blanks (ADR-011).
+strings      : 35/35 via stringResource; 2 missing keys (noHistory, subtitle) added to values/ar/he; web key names
+               preserved; zero hardcoded literals in the page.
+a11y/theme/SI: TeslaMap contentDescription + MapAccessibleSummary list alternative + heading semantics; MaterialTheme
+               tokens (no raw hex; chart.regen/power/battery + status palette); dark/dynamic theme; ≥48dp targets;
+               SI converted to display units only at the render boundary (convertSpeedFromSI/convertDistanceFromSI).
+placeholder  : PLACEHOLDER_COUNT=0 (PLACEHOLDER_ALLOWED=0).
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module).
+ledger       : apps/parity/android-ledger.json — page:maps/MapOverview status=done, covered 55/55.
+parity       : PARITY_COVERED(55) == PARITY_REQUIRED(55).
+[PASS] all android triad gates green; parity 55/55; android ledger row page:maps/MapOverview status=done.
+EXIT=0
+STATUS=DONE
