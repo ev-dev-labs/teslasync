@@ -9049,4 +9049,17 @@
   <string name="translation_Quiet_hours_active">Quiet hours active</string>
   <string name="translation_Your_fleet_is_running_smoothly_Alerts_will_appear_here">Your fleet is running smoothly. Alerts will appear here.</string>
   <string name="translation_Mark_read">Mark read</string>
+  <!-- A7 notifications/AuditLog page (com/teslasync/notifications) — hand-added parity strings (P3/A7). -->
+  <string name="translation_auditLog_title">Audit Log</string>
+  <string name="translation_auditLog_subtitle">Recent system-level changes recorded by the audit subsystem</string>
+  <string name="translation_auditLog_recentActivity">Recent Activity</string>
+  <string name="translation_auditLog_loadFailed">Failed to load audit logs</string>
+  <string name="translation_auditLog_empty">No audit entries found</string>
+  <string name="translation_auditLog_colTime">Time</string>
+  <string name="translation_auditLog_colAction">Action</string>
+  <string name="translation_auditLog_colResource">Resource</string>
+  <string name="translation_auditLog_colDetails">Details</string>
+  <string name="translation_auditLog_searchHint">Search by action, resource, or details…</string>
+  <string name="translation_auditLog_filterLabelSearch">Search</string>
+  <string name="translation_auditLog_noMatches">No audit entries match your search.</string>
 </resources>

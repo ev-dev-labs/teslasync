@@ -96,6 +96,7 @@ import io.teslasync.android.maps.navigationroute.NavigationRoutePageHost
 import io.teslasync.android.notifications.alertrules.AlertRulesPageHost
 import io.teslasync.android.notifications.alertslist.AlertsListPageHost
 import io.teslasync.android.notifications.alertstudio.AlertStudioPageHost
+import io.teslasync.android.notifications.auditlog.AuditLogPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -253,6 +254,7 @@ class TeslaSyncApplication : Application() {
         AlertRulesPageHost.register()
         AlertsListPageHost.register()
         AlertStudioPageHost.register()
+        AuditLogPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

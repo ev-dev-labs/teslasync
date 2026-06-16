@@ -8384,4 +8384,17 @@
   <string name="translation_energyFlow_dailyEnergyUsage_aria">Daily energy usage chart</string>
   <string name="translation_energyFlow_dailyDistance_aria">Daily distance chart</string>
   <string name="translation_energyFlow_dailyEfficiency_aria">Daily efficiency chart</string>
+  <!-- A7 notifications/AuditLog page (com/teslasync/notifications) — hand-added parity strings (P3/A7); ar ships English fallback. -->
+  <string name="translation_auditLog_title">Audit Log</string>
+  <string name="translation_auditLog_subtitle">Recent system-level changes recorded by the audit subsystem</string>
+  <string name="translation_auditLog_recentActivity">Recent Activity</string>
+  <string name="translation_auditLog_loadFailed">Failed to load audit logs</string>
+  <string name="translation_auditLog_empty">No audit entries found</string>
+  <string name="translation_auditLog_colTime">Time</string>
+  <string name="translation_auditLog_colAction">Action</string>
+  <string name="translation_auditLog_colResource">Resource</string>
+  <string name="translation_auditLog_colDetails">Details</string>
+  <string name="translation_auditLog_searchHint">Search by action, resource, or details…</string>
+  <string name="translation_auditLog_filterLabelSearch">Search</string>
+  <string name="translation_auditLog_noMatches">No audit entries match your search.</string>
 </resources>

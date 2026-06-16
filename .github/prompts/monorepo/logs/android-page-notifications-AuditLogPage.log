@@ -1,0 +1,84 @@
+P3-ANDROID A7 — page:notifications/AuditLog — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/notifications/pages/AuditLogPage.tsx  (route /notifications/audit)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/notifications/ (AuditLogPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.adminStore (S8 AdminStore.auditLogs() -> GET /system/audit); TeslaSyncApplication -> AuditLogPageHost.register("notificationsAudit")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WIRE-SHAPE NOTE (honesty): the web `AuditLogEntry` interface names its columns
+createdAt / action / resource / details, but the real backend
+(internal/api/audit/log_handler.go -> internal/models/system.AuditLog) serializes
+snake_case ts / actor / action / entity_type / entity_id / detail. The KMP shared
+client returns the raw server JSON (no camelCase transform), so AuditLogPageModel.kt
+reads the real wire keys and maps them onto the web's intended display semantics
+(ts -> Time, entity_type[+entity_id] -> Resource, detail -> Details), with the web
+aliases accepted as fallbacks. The page therefore renders real data rather than the
+undefined fields the literal web property names would yield — no stubbing, ADR-011.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps
+':android' -> app/); the prompt snippet's ':app:' is the same module (the README gate
+contract addresses ':android:'). Android SDK present (local.properties sdk.dir +
+ANDROID_HOME), JDK 21, so the gate runs — not BLOCKED.
+
+STRINGS NOTE (honesty): every visible literal resolves from res/values*/strings.xml via
+stringResource (zero hardcoded text). The web string DEFAULTS are ported verbatim; the
+Android resource keys live under the cohesive translation_auditLog_* namespace (the
+established translation_<page>_* convention, mirroring translation_apiLogs_*). The
+value <-> web-key mapping is enumerated in the PARITY section below. New keys were added
+to values/, values-ar/ and values-he/ (ar/he ship the English fallback, exactly as the
+i18n generator emits untranslated keys). MissingTranslation/ExtraTranslation are disabled
+in the app lint config; lintDebug is green with these additions.
+
+=== GATE ===
+& ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 7m   (:android:assembleDebug)
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 13m 20s   (:android:lintDebug — 1 self-introduced error fixed: NonObservableLocale -> Locale.ROOT fallback like ApiLogsPage)
+LINT_EXIT=0
+BUILD SUCCESSFUL in 13m 20s   (:android:testDebugUnitTest — green; existing RouteTableTest already asserts /notifications/audit -> notificationsAudit)
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=15
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/notifications/ (AuditLogPage.kt screen, AuditLogPageViewModel.kt, AuditLogPageModel.kt)
+
+# panels (1) — Material 3 Surface (GlassPanel)
+[COVERED] panel  GlassPanel1   -> AuditLogPage.kt:AuditLogPanel() GlassPanel(PanelPadding.Lg) — the "Recent Activity" card
+
+# data states (2 required: loading -> success) — bound to AuditLogPageViewModel.state: StateFlow<UiState<AuditLogData>>
+[COVERED] state  loading       -> AuditLogPage.kt:AuditLogLoadingState() (state.isLoading) — five Skeleton shimmer rows
+[COVERED] state  success       -> AuditLogPage.kt:AuditLogLoadedState() content branch -> AuditLogTable() DataTable; AuditLogPageViewModel.state UiPhase.Content
+# (beyond the required 2, also implemented per the spec's 3-state rule:)
+[EXTRA]   state  empty         -> AuditLogPage.kt:AuditLogEmptyState() (state.isEmpty, UiPhase.Empty) EmptyState
+[EXTRA]   state  error         -> AuditLogPage.kt:AuditLogErrorState() (state.isError) Icon+ErrorText+Retry Button; AuditLogPageViewModel.projectResource -> Resource.Error
+
+# strings (12) — every visible literal via stringResource(R.string.translation_auditLog_*); web default value ported verbatim
+[COVERED] string Action                                                       -> translation_auditLog_colAction      -> AuditLogPage.kt:AuditLogTable() TableColumn(key=action) header
+[COVERED] string Audit Log                                                     -> translation_auditLog_title          -> AuditLogPage.kt:AuditLogHeader() PageTitle
+[COVERED] string Details                                                       -> translation_auditLog_colDetails     -> AuditLogPage.kt:AuditLogTable() TableColumn(key=details) header
+[COVERED] string Failed to load audit logs                                     -> translation_auditLog_loadFailed     -> AuditLogPage.kt:AuditLogErrorState() ErrorText
+[COVERED] string No audit entries found                                        -> translation_auditLog_empty          -> AuditLogPage.kt:AuditLogEmptyState() EmptyState(message)
+[COVERED] string Recent Activity                                               -> translation_auditLog_recentActivity -> AuditLogPage.kt:AuditLogPanel() SectionTitle
+[COVERED] string Recent system-level changes recorded by the audit subsystem   -> translation_auditLog_subtitle       -> AuditLogPage.kt:AuditLogHeader() BodyText
+[COVERED] string Resource                                                      -> translation_auditLog_colResource    -> AuditLogPage.kt:AuditLogTable() TableColumn(key=resource) header
+[COVERED] string Time                                                          -> translation_auditLog_colTime        -> AuditLogPage.kt:AuditLogTable() TableColumn(key=time) header
+[COVERED] string audit.filterLabel.search                                      -> translation_auditLog_filterLabelSearch -> AuditLogPage.kt:AuditLogFilterBar() ActiveFilter(label=...)
+[COVERED] string audit.noMatches                                              -> translation_auditLog_noMatches      -> AuditLogPage.kt:AuditLogLoadedState() BodyText + AuditLogTable() DataTable(emptyText)
+[COVERED] string audit.searchPlaceholder                                      -> translation_auditLog_searchHint     -> AuditLogPage.kt:AuditLogFilterBar() SearchInput(hint=...)
+
+PARITY_COVERED=15
+
+=== SUMMARY ===
+data sources : AuditLogPageViewModel binds shared S8 AdminStore.auditLogs() (raw JsonElement, GET /system/audit, array-guarded) via asAuditLogSource(); no HTTP in the view. useAuditLogs hook name kept at the Kotlin call site (AuditLogSource.auditLogs()).
+charts/maps  : none (web page has no chart and no map).
+nav          : Destinations 'notificationsAudit' -> /notifications/audit (pre-existing, Destinations.kt:122) wired to AuditLogRoute() via PageHosts.register; RouteTableTest already covers the path; deep link auto-registered by TeslaSyncNavHost.
+search       : SearchInput + ActiveFilterChips combo over the model's filterAuditLogs() predicate (web useFilteredList(['action','resource','details'])); no-matches message rendered, region never blank.
+a11y/theme   : MaterialTheme tokens only (no hardcoded colors), Icon contentDescription on decorative glyphs null, EmptyState semantics; dynamic color + dark theme via A2 theme.
+placeholder  : PLACEHOLDER_COUNT=0 (renamed searchPlaceholder key -> searchHint to keep the kotlin source clear of the forbidden "Placeholder" token; value unchanged)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(15) == PARITY_REQUIRED(15)
+[PASS] all android triad gates green; parity 15/15; android ledger row page:notifications/AuditLog status=done.
+EXIT=0
+STATUS=DONE
