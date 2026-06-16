@@ -1054,6 +1054,7 @@
   <string name="translation_analytics_weeklyDigest_noAlerts">No alerts this week — everything looks great!</string>
   <string name="translation_analytics_weeklyDigest_noDailyDistance">No driving distance data is available for this week.</string>
   <string name="translation_analytics_weeklyDigest_noData">No Data</string>
+  <string name="translation_analytics_weeklyDigest_noDataMessage">No driving or charging data found for this week.</string>
   <string name="translation_analytics_weeklyDigest_noTopDrive">No top drive is available for this week yet.</string>
   <string name="translation_analytics_weeklyDigest_prevWeek">Previous</string>
   <string name="translation_analytics_weeklyDigest_selectVehicle">Select vehicle</string>

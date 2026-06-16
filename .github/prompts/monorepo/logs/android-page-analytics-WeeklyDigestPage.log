@@ -1,0 +1,178 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/WeeklyDigest
+Native Jetpack Compose / Material 3 parity port of
+  web/src/features/analytics/pages/WeeklyDigestPage.tsx
+Output surface: apps/android/app/src/main/kotlin/com/teslasync/analytics/
+Gradle module: :android (sources under app/; per settings.gradle.kts)
+================================================================================
+
+HONESTY COVENANT (binding)
+  1 No red-as-green ......... every exit code below is the raw task result, pasted verbatim.
+  2 No scope narrowing ...... all 8 manifest parity items implemented (3 states + 5 strings).
+  3 No skip-and-assume ...... endpoint/shape/store APIs all read from source before coding.
+  4 No stubs as final ....... loaded body renders real week + week-over-week data from the feed.
+  5 No parity shortcuts ..... empty/loading/error are real Resource-driven UiState phases.
+  6 No delegation .......... implemented directly (no sub-agent author).
+  7 No predecessor bypass ... reuses A2 tokens, A3 components, P1/S8 stores, ADR-013 UiState.
+  8 No commit on red ........ commit performed only after all four gates green.
+  9 No silent drift ......... divergences documented (see DESIGN NOTES).
+ 10 Log ends with EXIT/STATUS  (bottom of file).
+
+--------------------------------------------------------------------------------
+MANIFEST RECORD (apps/parity/parity-manifest.json → page:analytics/WeeklyDigest)
+--------------------------------------------------------------------------------
+  states  : [loading, empty, error]            (3)
+  strings : analytics.weeklyDigest.noData
+            analytics.weeklyDigest.noDataMessage
+            analytics.weeklyDigest.selectVehicle
+            analytics.weeklyDigest.subtitle
+            analytics.weeklyDigest.title         (5)
+  requiredCount : 8
+  panels=0  charts=0  maps=0  dataSources=0 (page-shell unit; the rich digest
+  sub-sections — WeekSelector/SummaryHeroCards/Driving/Charging/Battery/Alerts/
+  WeekOverWeek — are separate component parity units, not in this record).
+
+--------------------------------------------------------------------------------
+DESIGN NOTES (faithful + in-scope decisions)
+--------------------------------------------------------------------------------
+* Data source: the page binds to the SHARED, already-wired S8 feed
+  AnalyticsStore.weeklyDigest(vehicleId) → GET /vehicles/{id}/weekly-digest
+  (internal/api/weeklydigest/handler.go), documented in the store as the web
+  `useWeeklyDigest` port. This is the in-scope analogue of the web hook's reads
+  (DataContainer exposes analyticsStore + vehiclesStore + settingsStore +
+  selectedVehicleStore; it does NOT expose driving/charging stores and is NOT in
+  this artifact's allowed files, so the rendered server aggregate is used — exactly
+  the LifetimeStatsPage precedent). The three data states are genuine cache-then-
+  network Resource phases projected through ResourceUiState.toUiState (ADR-013),
+  never fabricated.
+* hasData gate: WeeklyDigest.hasData = drives>0 || distanceKm>0 || energyKwh>0
+  mirrors the web `weekDrives.length||weekCharging.length` empty gate, so an
+  all-zero week — or a vehicle-less fleet (via toNoVehicleDigest) — resolves to
+  UiPhase.Empty (the web `noData`/`noDataMessage` EmptyState).
+* SI-canonical (Phase-48): distance read as km off the wire, converted at the
+  display boundary only via prefs.fromKm → convertDistanceFromSI(km*1000, unit);
+  energy(kWh)/efficiency(Wh/km) keep the canonical display units the web renders.
+* Strings: 4 of 5 keys pre-existed in res/values*/strings.xml. The missing
+  translation_analytics_weeklyDigest_noDataMessage was added to all three locale
+  catalogs (values, values-ar, values-he — ar/he ship the English fallback per
+  the generated-catalog convention, app/lint.xml note (1)).
+* Navigation: the `weeklyDigest`/`/weekly-digest` destination already exists in
+  Destinations.kt (NavGroup.Analytics); a PageHost + one idempotent register()
+  call in TeslaSyncApplication attach the screen (LifetimeStatsPageHost precedent).
+* Tests: a co-located unit test would live under app/src/test/** which is OUTSIDE
+  this artifact's allowed files (the sibling analytics LifetimeStatsPage has none
+  either); decode/format/trend logic is isolated in the framework-free model and
+  the full :android:testDebugUnitTest suite passes (TEST_EXIT=0 below).
+
+--------------------------------------------------------------------------------
+FILES (allowed scope only)
+--------------------------------------------------------------------------------
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPageModel.kt
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPageSource.kt
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPageViewModel.kt
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPage.kt
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPageHost.kt
+  A apps/android/app/src/main/kotlin/com/teslasync/analytics/WeeklyDigestPageIcons.kt
+  M apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt  (register host — NavHost registration)
+  M apps/android/app/src/main/res/values/strings.xml                            (+noDataMessage)
+  M apps/android/app/src/main/res/values-ar/strings.xml                         (+noDataMessage)
+  M apps/android/app/src/main/res/values-he/strings.xml                         (+noDataMessage)
+  M apps/parity/android-ledger.json                                             (+row)
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — raw results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+  BUILD SUCCESSFUL in 2m 54s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+  BUILD SUCCESSFUL in 11m 2s
+  Wrote HTML report to app/build/reports/lint-results-debug.html (0 errors)
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+  BUILD SUCCESSFUL in 1m 45s
+TEST_EXIT=0
+
+(Compile confirmed independently: ./gradlew :android:compileDebugKotlin → BUILD SUCCESSFUL,
+ zero warnings from the new com/teslasync/analytics/WeeklyDigest* sources.)
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=8
+Each item is bound to file + symbol evidence in the shipped surface.
+--------------------------------------------------------------------------------
+[1/8] state  · loading
+      WeeklyDigestPage.kt:143  `state.isLoading -> WeeklyDigestLoading()`
+      WeeklyDigestPage.kt:196  `private fun WeeklyDigestLoading()` — GlassPanel + shimmer
+      Skeleton bars (web DigestSkeleton). Driven by UiState.isLoading from the
+      cache-then-network weeklyDigest Resource (BaseFeedViewModel.asUiState).
+      COVERED
+
+[2/8] state  · empty
+      WeeklyDigestPage.kt:145  `state.isEmpty -> WeeklyDigestEmpty()`
+      WeeklyDigestPage.kt:220  `private fun WeeklyDigestEmpty()` — EmptyState(Calendar)
+      Reached via WeeklyDigest.hasData==false (all-zero week / vehicle-less fleet,
+      WeeklyDigestPageModel.kt toNoVehicleDigest + asUiState isEmpty predicate).
+      COVERED
+
+[3/8] state  · error
+      WeeklyDigestPage.kt:144  `state.isError -> WeeklyDigestError(onRetry = onRetry)`
+      WeeklyDigestPage.kt:209  `private fun WeeklyDigestError(onRetry)` — ErrorDisplay + Retry
+      Driven by UiState.isError (Resource.Error, no cache); retry → ViewModel.retry()→refresh().
+      COVERED
+
+[4/8] string · analytics.weeklyDigest.title
+      WeeklyDigestPage.kt:166  PageTitle(stringResource(R.string.translation_analytics_weeklyDigest_title))
+      res/values/strings.xml → "Weekly Digest"
+      COVERED
+
+[5/8] string · analytics.weeklyDigest.subtitle
+      WeeklyDigestPage.kt:168  BodyText(stringResource(R.string.translation_analytics_weeklyDigest_subtitle))
+      res/values/strings.xml → "Your driving and charging summary for the week"
+      COVERED
+
+[6/8] string · analytics.weeklyDigest.selectVehicle
+      WeeklyDigestPage.kt:189  VehicleSelect(emptyLabel = stringResource(R.string.translation_analytics_weeklyDigest_selectVehicle))
+      res/values/strings.xml → "Select vehicle"
+      COVERED
+
+[7/8] string · analytics.weeklyDigest.noData
+      WeeklyDigestPage.kt:223  EmptyState(title = stringResource(R.string.translation_analytics_weeklyDigest_noData))
+      res/values/strings.xml → "No Data"
+      COVERED
+
+[8/8] string · analytics.weeklyDigest.noDataMessage
+      WeeklyDigestPage.kt:224  EmptyState(message = stringResource(R.string.translation_analytics_weeklyDigest_noDataMessage))
+      res/values{,-ar,-he}/strings.xml → "No driving or charging data found for this week."  (ADDED this artifact)
+      COVERED
+--------------------------------------------------------------------------------
+PARITY_COVERED=8
+PARITY_REQUIRED=8
+PARITY_OK=true   (PARITY_COVERED == PARITY_REQUIRED)
+
+--------------------------------------------------------------------------------
+ADDITIONAL PARITY (beyond the 8 required items; faithfulness, not gated)
+--------------------------------------------------------------------------------
+* Page chrome: PageTitle + subtitle + DataFreshness chip (ADR-013 staleness) +
+  per-vehicle VehicleSelect — web PageContainer title/subtitle/actions.
+* Loaded body: WeekSummaryPanel (drives/distance/energyUsed/cost/efficiency) +
+  WeekOverWeekPanel (same metrics with current-vs-previous StatTrend chips,
+  efficiency tone inverted) — web SummaryHeroCards + WeekOverWeekSummary, with
+  staggered FadeIn entrance. All body labels resolve from the existing
+  analytics.weeklyDigest.* catalog (drives/distance/energyUsed/cost/efficiency/
+  weekSummary/weekOverWeek); zero hardcoded literals.
+* a11y: Modifier.semantics contentDescription on both body panels; EmptyState/
+  StatCard carry their own semantics; ≥48dp Material 3 targets; dynamic/dark theme
+  via MaterialTheme (A2 tokens). Units formatted at the display boundary (SI in).
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
