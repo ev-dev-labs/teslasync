@@ -1,0 +1,122 @@
+================================================================================
+P3-ANDROID A7 — page:telemetry/SignalDiff  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/telemetry/pages/SignalDiffPage.tsx
+promptId: p3-android/pages/telemetry/SignalDiffPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (local.properties sdk.dir present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPage.kt           (@Composable screen: SignalDiffPage + SignalDiffPageContent + panels/table/bulk-toolbar)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPageViewModel.kt  (Hilt-free AndroidX ViewModel; 5 StateFlow<UiState> feeds; setters + togglePin/bulk)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPageSource.kt     (S8 data seam over VehiclesStore + TelemetryStore + PinnedStore)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPageModel.kt      (framework-free model: pinned names, filtered rows, window-span, csv/alert/share payloads)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPageIcons.kt      (GitCompare / PinOff / Bell glyphs)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalDiffPageHost.kt       (PageHosts.register(signalDiff){ SignalDiffRoute() })
+apps/android/app/src/test/java/io/teslasync/android/telemetry/signaldiff/SignalDiffPageModelTest.kt  (16 JVM unit tests of the model)
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt            (NavHost wiring: + telemetryStore — the sanctioned A7 DI seam)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt          (NavHost wiring: + SignalDiffPageHost.register())
+apps/parity/android-ledger.json                                                      (ledger row page:telemetry/SignalDiff)
+.github/prompts/monorepo/logs/android-page-telemetry-SignalDiffPage.log              (this log)
+
+Strings: all 15 page keys already present in res/values/strings.xml (added by the sibling SignalCompareControls /
+         SignalDiffTable feature views); no catalog edit needed. Verified present + wired (see PARITY strings below).
+Nav    : Destinations 'signalDiff' -> /signal-diff pre-existing (Destinations.kt:127; RouteTableTest.kt:97 maps it);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+Reuse  : A3 SignalCompareControls feature-view supplies the vehicle picker top slot + windows + presets + filter +
+         category chips; the per-row cell formatting + delta + pinned-first sort is reused from the sibling
+         SignalDiffTable feature-view projection (SignalDiffTableProjection) — DRY, no logic duplicated.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module — settings.gradle.kts maps :android -> app/; '\:app' is not a project)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/telemetry -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL (abortOnError=true; 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL (incl. SignalDiffPageModelTest, 16 tests green)
+TEST_EXIT=0
+
+Note (no silent drift): the embedded prompt gate is placeholder + assembleDebug + lintDebug + testDebugUnitTest.
+The repo additionally applies ktlint + detekt plugins, but neither is part of the embedded gate and BOTH are red on
+the pre-existing committed baseline (e.g. detekt flags ReturnCount/MaxLineLength/MatchingDeclarationName across
+DrivesListPage*, ApiLogsPage, EnergyProductsPage, GeofencesPage, … — 42 issues, all in files this change never
+touched; ktlint flags filename rules on existing *PageIcons.kt). The new telemetry/signaldiff files introduce ZERO
+new detekt/ktlint issues (verified: detekt report contains no telemetry/signaldiff entry).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=23
+--------------------------------------------------------------------------------
+# panels (5) — each a Material 3 StatCard / GlassPanel ; bound state holder = SignalDiffPageViewModel
+[COVERED] panel  Changed-signals       -> SignalDiffPage.kt:360 SignalDiffStatRow() StatCard(label=translation_signalDiff_totalChanged, value=allRows.size)  (web StatCard "Changed signals")
+[COVERED] panel  Visible-after-filter  -> SignalDiffPage.kt:365 SignalDiffStatRow() StatCard(label=translation_signalDiff_visible, value=filteredRows.size)    (web StatCard "Visible after filter")
+[COVERED] panel  Pinned                -> SignalDiffPage.kt:372 SignalDiffStatRow() StatCard(label=translation_signalDiff_pinnedCount, value=pinnedNames.size)  (web StatCard "Pinned")
+[COVERED] panel  Window-span           -> SignalDiffPage.kt:377 SignalDiffStatRow() StatCard(label=translation_signalDiff_windowSpan, value=formatWindowSpan(windowSpan))  (web StatCard "Window span")
+[COVERED] panel  GlassPanel5           -> SignalDiffPage.kt:465 SignalDiffPanel() GlassPanel{ error banner / loading / empty / diff table / pinned badges }  (web <GlassPanel> diff body)
+
+# data states (3 required) — bound to SignalDiffPageViewModel.diffState : StateFlow<UiState<SignalDiffServerResponse>>
+[COVERED] state  loading   -> SignalDiffPage.kt:471 (diffState.isLoading && !hasData) -> DiffLoadingSkeletons() SignalDiffPage.kt:510 (6x Skeleton, web six <Skeleton height={36}>)
+[COVERED] state  empty     -> SignalDiffPage.kt:472 (!hasAnyRows && !filterActive && windowsSet) -> DiffNoChanges() SignalDiffPage.kt:520 (EmptyState + GitCompare, web "No signals changed")
+[COVERED] state  success   -> SignalDiffPage.kt:475 else -> SignalDiffTableView() SignalDiffPage.kt:529 (DataTable sortable+multi-select, web <SignalDiffTable rows={filteredRows}/>)
+# (+ error state additionally implemented: SignalDiffPage.kt:469 DiffErrorBanner when diffState.hasError — web rose error banner above table)
+
+# strings (15) — every visible literal via stringResource(R.string.translation_signalDiff_*); web key names preserved
+[COVERED] string signalDiff.bulk.addAlert -> SignalDiffPage.kt:431 SignalDiffBulkToolbar() Button(label=translation_signalDiff_bulk_addAlert)
+[COVERED] string signalDiff.bulk.csv      -> SignalDiffPage.kt:421 SignalDiffBulkToolbar() Button(label=translation_signalDiff_bulk_csv)
+[COVERED] string signalDiff.bulk.pin      -> SignalDiffPage.kt:407 SignalDiffBulkToolbar() Button(label=translation_signalDiff_bulk_pin)
+[COVERED] string signalDiff.bulk.unpin    -> SignalDiffPage.kt:414 SignalDiffBulkToolbar() Button(label=translation_signalDiff_bulk_unpin)
+[COVERED] string signalDiff.error         -> SignalDiffPage.kt:501 DiffErrorBanner() Text(translation_signalDiff_error)
+[COVERED] string signalDiff.noChanges     -> SignalDiffPage.kt:522 DiffNoChanges() EmptyState(message=translation_signalDiff_noChanges)
+[COVERED] string signalDiff.pinnedCount   -> SignalDiffPage.kt:373 SignalDiffStatRow() StatCard(label=translation_signalDiff_pinnedCount)
+[COVERED] string signalDiff.pinnedLabel   -> SignalDiffPage.kt:637 PinnedBadges() Caption(translation_signalDiff_pinnedLabel) (+ SignalDiffPage.kt:402 bulk toolbar)
+[COVERED] string signalDiff.share         -> SignalDiffPage.kt:316 SignalDiffHeader() CopyButton(copyLabel=translation_signalDiff_share)
+[COVERED] string signalDiff.subtitle      -> SignalDiffPage.kt:312 SignalDiffHeader() BodyText(translation_signalDiff_subtitle)
+[COVERED] string signalDiff.title         -> SignalDiffPage.kt:310 SignalDiffHeader() PageTitle(translation_signalDiff_title)
+[COVERED] string signalDiff.totalChanged  -> SignalDiffPage.kt:361 SignalDiffStatRow() StatCard(label=translation_signalDiff_totalChanged)
+[COVERED] string signalDiff.vehicle       -> SignalDiffPage.kt:344 VehiclePickerSlot() Select(label=translation_signalDiff_vehicle)
+[COVERED] string signalDiff.visible       -> SignalDiffPage.kt:366 SignalDiffStatRow() StatCard(label=translation_signalDiff_visible)
+[COVERED] string signalDiff.windowSpan    -> SignalDiffPage.kt:378 SignalDiffStatRow() StatCard(label=translation_signalDiff_windowSpan)
+
+PARITY_COVERED=23
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : SignalDiffPageViewModel binds all 5 web hooks through SignalDiffPageSource (signalDiffPageSourceOf):
+               useVehicles        -> VehiclesStore.vehicles()                              (vehiclesState : UiState<List<Vehicle>>)
+               useSignals         -> TelemetryStore.signals(id)                            (signalsState  -> narrows the diff csv)
+               useSignalDiffServer-> TelemetryStore.signalDiffServer(id, atA, atB, csv)    (diffState     : UiState<SignalDiffServerResponse>, distinctUntilChanged query)
+               usePinned          -> PinnedStore.pinned(Widget, signal-diff:vehicle:{id})  (pinnedState   : UiState<List<PinnedItem>>)
+               useTogglePin       -> PinnedStore.togglePin(Widget, signal:{name}, pin, ctx)(togglePin + bulkPin/bulkUnpin)
+               No HTTP in the view; the resolved vehicle id self-heals to the first vehicle (web vehicleIdParam || vehicles[0].id).
+si/units     : values are the raw SI the Phase-42 backend serves (signal names, JSON scalar values, source-layer strings,
+               age_ms, ISO instants) — round-tripped verbatim through SignalDiffTableProjection; no non-SI compute/store.
+a11y/theme   : PinButton/SourceLayerBadge/EmptyState carry content descriptions; >=48dp targets (Material 3 Button/IconButton);
+               dynamic-color + dark theme via MaterialTheme + TeslaTokens (A2); Compose-native only (no webview).
+nav          : Destinations 'signalDiff' -> /signal-diff (pre-existing) wired to SignalDiffRoute() via PageHosts.register;
+               deep link auto-registered by TeslaSyncNavHost; RouteTableTest already covers /signal-diff -> signalDiff.
+di seam      : DataContainer + telemetryStore (HttpTelemetryRepository over the shared client/cache) — the documented
+               "single seam A7 page prompts widen", mirroring the ingestXRayStore precedent.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(23) == PARITY_REQUIRED(23)
+[PASS] all android triad gates green; parity 23/23; android ledger row page:telemetry/SignalDiff status=done.
+EXIT=0
+STATUS=DONE
