@@ -1,0 +1,105 @@
+p3-android · A7 · page:power-user/Dashboards — native Jetpack Compose / Material 3 / Kotlin parity
+Web source : web/src/features/power-user/pages/DashboardsPage.tsx  (route /power/dashboards)
+Output dir : apps/android/app/src/main/kotlin/com/teslasync/poweruser/  (pkg io.teslasync.android.poweruser.dashboards)
+Destination: powerDashboards (Destinations.kt page("powerDashboards","/power/dashboards", NavGroup.PowerUser) — already declared)
+Gradle path: :android  (this artifact's app module Gradle path per apps/android/settings.gradle.kts; the README gate
+             contract addresses ":android:" — the prompt's ":app:" placeholder maps to it)
+
+=== APPROACH ===
+Manifest record (apps/parity/parity-manifest.json → page:power-user/Dashboards): requiredCount=16 =
+  2 panels (GlassPanel1, GlassPanel2) + 1 state (success) + 13 strings (powerDashboards.*). 0 charts, 0 maps,
+  no API data sources (renders from local state).
+
+Composition (mirrors the sibling A7 pages):
+  - DashboardsPageModel.kt    — framework-free: Registration (route id/web path/slug), CuratedDashboardPanel +
+                                CURATED_DASHBOARD_PANELS (verbatim web catalog) + sortedCuratedPanels(),
+                                DashboardsCatalog (success payload), CopyStatus, ClipboardTarget seam,
+                                evaluateCopyStatus() (the web handleCopy state machine), recordDashboardsOpened().
+  - DashboardsPageViewModel.kt — BaseFeedViewModel; state: StateFlow<UiState<DashboardsCatalog>> = immediate
+                                UiPhase.Content (the single declared "success" surface); draft + copyStatus flows;
+                                updateDraft/clear/copy/recordViewOpened.
+  - DashboardsPage.kt          — stateless @Composable screen + stateful entry; title + intro chrome, GlassPanel1
+                                (editor) + GlassPanel2 (catalog); all labels via stringResource; a11y semantics.
+  - DashboardsPageHost.kt      — DashboardsRoute + DashboardsPageHost.register() (PageHosts seam).
+  - TeslaSyncApplication.kt    — DashboardsPageHost.register() wired at process start (NavHost registration seam).
+  - DashboardsPageTest.kt      — off-device unit coverage (model + view-model state machine).
+
+Documented divergences (Honesty Covenant #9 — recorded, not silent):
+  - The web AINLDashboardComposer (the optional AI drafter rendered between the intro and the editor) is a
+    SEPARATE parity unit — a shared-surface with its own string set + tests
+    (apps/android/app/src/main/java/com/teslasync/shared-surfaces/AINLDashboardComposer). It is NOT in this
+    page-shell unit's manifest record (panels=[GlassPanel1,GlassPanel2]; its strings are absent from the 13). Out
+    of scope here; not a scope narrowing of THIS unit.
+  - The curated panel name/description pairs are technical reference data (the panel_name must match the Go
+    catalog verbatim), hardcoded as literals in the web source too — NOT i18n strings, intentionally not in the
+    13-string set. Reproduced as static Kotlin data (DashboardsPageModel.CURATED_DASHBOARD_PANELS).
+  - DI: the app uses a manual LocalDataContainer + viewModelFactory seam (not Hilt). Followed the app convention,
+    exactly like every sibling A7 page.
+  - Draft persistence: the web localStorage draft maps to the view-model-retained draft (survives configuration
+    changes). Cross-process persistence is not a manifest parity item and is out of scope (no DataStore/DI wiring).
+  - editor.placeholder (the multi-line JSON example) is shown via the shared Textarea's `hint` slot, only while the
+    editor is blank (mirroring the web placeholder that hides once text is entered) — the shared component models
+    example text as a hint.
+
+i18n (ADR-014):
+  The 13 powerDashboards.* keys were missing from the web base catalog (web/src/i18n/en.json) because the web page
+  used inline t() defaults. The Android catalog is GENERATED from the web catalog by
+  apps/shared/i18n/generators/gen-i18n.ts (strings.xml is "do not edit by hand"). The repo was ALREADY in
+  pre-existing i18n drift (committed strings.xml translated=7781 vs web 7975). To stay surgical:
+    1. Added the 13 keys to web/src/i18n/en.json (source of truth — verbatim web defaults) so they survive any
+       future regeneration.
+    2. Ran the generator, then transplanted ONLY the 13 generated translation_powerDashboards_* entries into the
+       three Android strings.xml (values, values-ar, values-he — ar/he carry the English fallback the generator
+       materializes), reverting the unrelated regenerated drift (other Windows/.resw, Apple/.xcstrings, shared
+       catalog, and the 194 pre-existing drifted keys) — keeping this change to the Android platform string catalog
+       only. Each strings.xml gained exactly 13 lines (git numstat 13/0).
+  lint disables MissingTranslation/ExtraTranslation (apps/android/app/build.gradle.kts), consistent with the
+  English-fallback locale policy.
+
+=== PARITY ===
+PARITY_REQUIRED=16
+
+[covered] panel  GlassPanel1 — DashboardsPage.kt:175 DashboardEditorPanel (web first GlassPanel: PanelTitle
+          editor.title + JSON Textarea + Copy/Clear + status message), inside io.teslasync.android.components.ui.GlassPanel
+[covered] panel  GlassPanel2 — DashboardsPage.kt:252 DashboardCatalogPanel (web second GlassPanel: PanelTitle
+          panels.title + panels.intro + the alphabetically-sorted curated list via CuratedPanelRow:269)
+[covered] state  success     — DashboardsPageViewModel.kt `state: StateFlow<UiState<DashboardsCatalog>>` =
+          UiState(UiPhase.Content, DashboardsCatalog.DEFAULT); rendered by DashboardsPage.kt:132 DashboardsPageContent
+          (`state.data`); unit test DashboardsPageTest.state_isImmediateSuccessOverTheSortedCatalog
+
+[covered] string powerDashboards.editor.clear        — DashboardsPage.kt:208 (R.string.translation_powerDashboards_editor_clear) · values/strings.xml
+[covered] string powerDashboards.editor.copy         — DashboardsPage.kt:202 (R.string.translation_powerDashboards_editor_copy) · values/strings.xml
+[covered] string powerDashboards.editor.copyEmpty    — DashboardsPage.kt:229 (R.string.translation_powerDashboards_editor_copyEmpty) · values/strings.xml
+[covered] string powerDashboards.editor.copyFailed   — DashboardsPage.kt:232 (R.string.translation_powerDashboards_editor_copyFailed) · values/strings.xml
+[covered] string powerDashboards.editor.copySuccess  — DashboardsPage.kt:231 (R.string.translation_powerDashboards_editor_copySuccess) · values/strings.xml
+[covered] string powerDashboards.editor.copyUnavailable — DashboardsPage.kt:230 (R.string.translation_powerDashboards_editor_copyUnavailable) · values/strings.xml
+[covered] string powerDashboards.editor.label        — DashboardsPage.kt:182 (R.string.translation_powerDashboards_editor_label; Textarea contentDescription) · values/strings.xml
+[covered] string powerDashboards.editor.placeholder  — DashboardsPage.kt:184 (R.string.translation_powerDashboards_editor_placeholder; Textarea hint) · values/strings.xml
+[covered] string powerDashboards.editor.title        — DashboardsPage.kt:188 (R.string.translation_powerDashboards_editor_title) · values/strings.xml
+[covered] string powerDashboards.intro               — DashboardsPage.kt:152 (R.string.translation_powerDashboards_intro) · values/strings.xml
+[covered] string powerDashboards.panels.intro        — DashboardsPage.kt:257 (R.string.translation_powerDashboards_panels_intro) · values/strings.xml
+[covered] string powerDashboards.panels.title        — DashboardsPage.kt:255 (R.string.translation_powerDashboards_panels_title) · values/strings.xml
+[covered] string powerDashboards.title               — DashboardsPage.kt:150 (R.string.translation_powerDashboards_title) · values/strings.xml
+
+PARITY_COVERED=16
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/poweruser -Language kotlin
+PLACEHOLDER_ALLOWED=1   (editor.placeholder is a web i18n key name (the JSON example), not a stub — opt-out reason given)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+# ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 1m 16s
+BUILD_EXIT=0
+# ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 30s (0 errors; warningsAsErrors=false)
+LINT_EXIT=0
+# ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 28s
+TEST_EXIT=0
+#   DashboardsPageTest: tests=12 failures=0 errors=0 skipped=0
+# (compileDebugKotlin + compileDebugUnitTestKotlin also clean; the only warning on this surface is the
+#  LocalClipboardManager deprecation, identical to the existing ChannelsPage.kt / CopyButton.kt usage.)
+
+PARITY_COVERED==PARITY_REQUIRED (16==16) AND all gate exits 0.
+
+EXIT=0
+STATUS=DONE

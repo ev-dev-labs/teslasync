@@ -8399,4 +8399,17 @@
   <string name="translation_auditLog_searchHint">Search by action, resource, or details…</string>
   <string name="translation_auditLog_filterLabelSearch">Search</string>
   <string name="translation_auditLog_noMatches">No audit entries match your search.</string>
+  <string name="translation_powerDashboards_editor_clear">Clear</string>
+  <string name="translation_powerDashboards_editor_copy">Copy to clipboard</string>
+  <string name="translation_powerDashboards_editor_copyEmpty">Type or paste a dashboard JSON envelope above before copying.</string>
+  <string name="translation_powerDashboards_editor_copyFailed">Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.</string>
+  <string name="translation_powerDashboards_editor_copySuccess">Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model).</string>
+  <string name="translation_powerDashboards_editor_copyUnavailable">Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.</string>
+  <string name="translation_powerDashboards_editor_label">Dashboard JSON editor</string>
+  <string name="translation_powerDashboards_editor_placeholder">{\n  \"title\": \"Fleet overview\",\n  \"slots\": [\n    {\n      \"panel_name\": \"drives_per_day_timeseries\",\n      \"grid_pos\": { \"x\": 0, \"y\": 0, \"w\": 24, \"h\": 8 }\n    }\n  ]\n}</string>
+  <string name="translation_powerDashboards_editor_title">Manual dashboard JSON editor</string>
+  <string name="translation_powerDashboards_intro">Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.</string>
+  <string name="translation_powerDashboards_panels_intro">These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.</string>
+  <string name="translation_powerDashboards_panels_title">Curated panel catalog</string>
+  <string name="translation_powerDashboards_title">Dashboard Composer</string>
 </resources>

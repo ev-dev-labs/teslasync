@@ -1,4 +1,23 @@
 {
+  "powerDashboards": {
+    "title": "Dashboard Composer",
+    "intro": "Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.",
+    "editor": {
+      "title": "Manual dashboard JSON editor",
+      "placeholder": "{\n  \"title\": \"Fleet overview\",\n  \"slots\": [\n    {\n      \"panel_name\": \"drives_per_day_timeseries\",\n      \"grid_pos\": { \"x\": 0, \"y\": 0, \"w\": 24, \"h\": 8 }\n    }\n  ]\n}",
+      "label": "Dashboard JSON editor",
+      "copy": "Copy to clipboard",
+      "clear": "Clear",
+      "copyEmpty": "Type or paste a dashboard JSON envelope above before copying.",
+      "copyUnavailable": "Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.",
+      "copySuccess": "Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model).",
+      "copyFailed": "Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C."
+    },
+    "panels": {
+      "title": "Curated panel catalog",
+      "intro": "These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once."
+    }
+  },
   "widgetStatusGrid": {
     "noData": "No status data available"
   },

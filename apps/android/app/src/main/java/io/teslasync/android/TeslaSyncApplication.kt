@@ -101,6 +101,7 @@ import io.teslasync.android.notifications.browser.BrowserNotificationsPageHost
 import io.teslasync.android.notifications.inbox.InboxPageHost
 import io.teslasync.android.notifications.quiethours.QuietHoursPageHost
 import io.teslasync.android.onboarding.OnboardingPageHost
+import io.teslasync.android.poweruser.dashboards.DashboardsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -263,6 +264,7 @@ class TeslaSyncApplication : Application() {
         InboxPageHost.register()
         QuietHoursPageHost.register()
         OnboardingPageHost.register()
+        DashboardsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
