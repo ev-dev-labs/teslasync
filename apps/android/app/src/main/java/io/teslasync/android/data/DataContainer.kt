@@ -13,6 +13,7 @@ import io.teslasync.shared.core.cache.Clock
 import io.teslasync.shared.core.cache.SystemClock
 import io.teslasync.shared.core.data.repo.HttpAdminRepository
 import io.teslasync.shared.core.data.repo.HttpAnalyticsRepository
+import io.teslasync.shared.core.data.repo.HttpAutomationsRepository
 import io.teslasync.shared.core.data.repo.HttpDashboardRepository
 import io.teslasync.shared.core.data.repo.HttpEnergyRepository
 import io.teslasync.shared.core.data.repo.HttpFeedbackRepository
@@ -27,6 +28,7 @@ import io.teslasync.shared.core.net.ApiHttpClient
 import io.teslasync.shared.core.net.sse.SseTransport
 import io.teslasync.shared.core.presentation.admin.AdminStore
 import io.teslasync.shared.core.presentation.analytics.AnalyticsStore
+import io.teslasync.shared.core.presentation.automations.AutomationsStore
 import io.teslasync.shared.core.presentation.dashboard.DashboardStore
 import io.teslasync.shared.core.presentation.energy.EnergyStore
 import io.teslasync.shared.core.presentation.feedback.FeedbackStore
@@ -103,6 +105,7 @@ class DataContainer(
     private val ingestXRayRepository = HttpIngestXRayRepository(api, cacheStore, clock)
     private val operatorConfidenceRepository = HttpOperatorConfidenceRepository(api, cacheStore, clock)
     private val userRepository = HttpUserRepository(api, cacheStore, clock)
+    private val automationsRepository = HttpAutomationsRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -189,6 +192,13 @@ class DataContainer(
     val impersonationStore = ImpersonationStore(impersonationRepository, scope)
     private val drivingRepository = HttpDrivingRepository(api, cacheStore, clock)
     val drivingStore = DrivingStore(drivingRepository, scope)
+
+    /**
+     * Shared Automations control-plane state holder (web `useAutomations` port) — the cache-then-network
+     * automation list feed (`GET /automations`) + the allowlisted bulk enable/disable/delete mutation
+     * (`POST /automations/bulk`) the A7 AutomationListPage surface binds to.
+     */
+    val automationsStore = AutomationsStore(automationsRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

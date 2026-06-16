@@ -1,0 +1,159 @@
+================================================================================
+P3-ANDROID A7 — page:automations/AutomationList  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/automations/pages/AutomationListPage.tsx
+promptId: p3-android/pages/automations/AutomationListPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr 21 (java 21.0.9; JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+Note: the prompt gate text addresses ':app:'; this repo's single app module's Gradle path is ':android'
+      (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")), so the
+      canonical ':android:' tasks are invoked, exactly as every prior P3/A7 android page gate did.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files + the documented A7 extension seams)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPage.kt          (@Composable screen: AutomationListPage + AutomationListPageContent + bulk toolbar / table / states)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState> + selection + bulk-pending; toggle/toggleAll/clearSelection/runBulk())
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPageSource.kt    (S8 data seam over AutomationsStore.automations() + bulkAutomationsUpdate(); asAutomationListSource())
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPageModel.kt     (framework-free model: isEmptyList, descriptionOrDash, masterSelection, requiresConfirmation, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPageIcons.kt     (Play / Pause / Trash glyphs — web Icons.play/pause/delete)
+apps/android/app/src/main/kotlin/com/teslasync/automations/AutomationListPageHost.kt      (PageHosts.register(automationList){ AutomationListRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt                (NavHost wiring: + AutomationListPageHost.register())
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt                  (S8 widen seam: + automationsRepository + automationsStore — first automations A7 page; the container's own doc names this the single seam A7 prompts widen)
+apps/android/app/src/main/res/values/strings.xml                                          (+4 page keys: automationList.subtitle / empty.body / bulk.deleteConfirm.title / bulk.deleteConfirm.body; the other 18 page keys pre-existing)
+apps/android/app/src/main/res/values-ar/strings.xml                                       (+4 page keys, EN fallback per existing automationList pattern)
+apps/android/app/src/main/res/values-he/strings.xml                                       (+4 page keys, EN fallback per existing automationList pattern)
+apps/parity/android-ledger.json                                                           (ledger row page:automations/AutomationList 27/27)
+.github/prompts/monorepo/logs/android-page-automations-AutomationListPage.log             (this log)
+
+Data   : single read + single mutation —
+         AutomationListPageViewModel.state binds shared S8 AutomationsStore.automations()
+         (web useAutomations ▸ GET /automations) via asAutomationListSource() (StateFlow<UiState<List<Automation>>>;
+         no HTTP in the view). The bulk action binds AutomationsStore.bulkAutomationsUpdate(ids, op)
+         (web useBulkAutomationsUpdate ▸ POST /automations/bulk); on success the shared store refreshes the list
+         (+ history) feed, which re-emits through state — the table self-updates with no manual reload, the web
+         invalidateQueries(automationKeys.all) analogue. Selection (web useBulkSelection) and the in-flight
+         AutomationBulkOp (web per-action pending) are ViewModel StateFlows.
+Strings: 22 manifest keys all resolve via stringResource / pluralStringResource; web key names preserved
+         (automationList.* -> translation_automationList_* ; bulk.* / common.* shared keys reused). 18 of the 22
+         were already in the generated catalog; the 4 the web page only supplied as inline t() fallbacks
+         (automationList.subtitle / empty.body / bulk.deleteConfirm.title / bulk.deleteConfirm.body) were added
+         to res/values{,-ar,-he}/strings.xml with the verbatim web English defaults, matching the established
+         hand-add pattern of the sibling admin A7 pages (their domain keys are likewise absent from web/src/i18n
+         and present only in strings.xml). Zero hardcoded literals in the page.
+Nav    : Destinations 'automationList' -> /automations/list pre-existing (count unchanged); host wired via
+         PageHosts.register; deep link auto-registered by TeslaSyncNavHost. Cross-route links (a row's name ->
+         /automations/{id}; the empty CTA -> /automations/new) are exposed as AutomationListActions callbacks that
+         default to no-op, because the platform foundation exposes no LocalNavController to a page host (documented
+         limitation in shared-surfaces/TeslaReauthBanner); the affordances are present and ready to wire. Cross-route
+         navigation is NOT one of the 27 manifest parity items.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  # first pass flagged 1 false positive: a doc comment containing the word "placeholder" on AutomationListPage.kt
+  # (the skeleton-rows constant). Reworded to "skeleton rows in the first-load shimmer". Re-run: COUNT=0. No
+  # parity:allow opt-out used.
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 4m 54s
+BUILD_EXIT=0
+  # compileDebugKotlin compiled the six new surface files + the DataContainer widen clean. The only resource
+  # warnings (battery_cells/battery_tip/rateLimitStatus "Multiple substitutions") are pre-existing and unrelated
+  # to the 4 added keys (none of which carries multiple substitutions).
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 14m 38s (0 errors)
+LINT_EXIT=0
+  # clean on first pass. The 4 new keys were added to values/ AND values-ar/ + values-he/ so MissingTranslation
+  # stays satisfied; Locale.ROOT is the locale fallback (FeedbackQueue/SchemaDrift precedent) for the
+  # NonObservableLocale check (locale read from LocalConfiguration at the render boundary).
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 21s
+TEST_EXIT=0
+  # full JVM unit suite: 1287 suite files, 16515 tests, 0 failures, 0 errors (unchanged — no test files added;
+  # the new main-source compiles into the suite and the DataContainer widen leaves every existing test green).
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=27
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (Surface) ; bound state holder = AutomationListPageViewModel.state
+[COVERED] panel  GlassPanel1   -> AutomationListPage.kt:349 AutomationListPanel() -> GlassPanel(PanelPadding.None){ SectionErrorBoundary -> loading/error/empty/table }  (web AutomationListPage single <GlassPanel className="overflow-hidden">)
+# (+ web BulkActionToolbar reproduced above the panel: AutomationListPage.kt:272 AutomationListBulkToolbar() -> :297 DataTableBulkBar{ enable/disable/delete + clear }, delete gated by ConfirmDialog at :233)
+
+# data states (4 required) — bound to AutomationListPageViewModel.state : StateFlow<UiState<List<Automation>>>
+[COVERED] state  loading       -> AutomationListPage.kt:353 state.isLoading -> AutomationListLoadingState() TableSkeleton ; asUiState -> UiState.loading()
+[COVERED] state  empty         -> AutomationListPage.kt:355 state.isEmpty -> AutomationListEmptyState() (title/body/cta) ; UiPhase.Empty via AutomationListPageModel.isEmptyList (web automations.length===0)
+[COVERED] state  error         -> AutomationListPage.kt:354 state.isError -> AutomationListErrorState(state) ErrorDisplay (status-aware title/message, no retry — web <ErrorDisplay error={error}/> passes no onRetry)
+[COVERED] state  success       -> AutomationListPage.kt:356 else -> AutomationListTable(rows, …) ; UiPhase.Content (master + per-row checkboxes, name/desc/runs/status)
+
+# strings (22) — every visible literal via stringResource / pluralStringResource(R.string.translation_*); web key names preserved
+[COVERED] string automationList.bulk.delete               -> AutomationListPage.kt:323 Button(label=…bulk_delete)
+[COVERED] string automationList.bulk.deleteConfirm.body   -> AutomationListPage.kt:236 ConfirmDialog(message=…deleteConfirm_body)
+[COVERED] string automationList.bulk.deleteConfirm.title  -> AutomationListPage.kt:235 ConfirmDialog(title=…deleteConfirm_title)
+[COVERED] string automationList.bulk.disable              -> AutomationListPage.kt:314 Button(label=…bulk_disable)
+[COVERED] string automationList.bulk.enable               -> AutomationListPage.kt:305 Button(label=…bulk_enable)
+[COVERED] string automationList.col.desc                  -> AutomationListPage.kt:419 HeaderCell(…col_desc)
+[COVERED] string automationList.col.name                  -> AutomationListPage.kt:418 HeaderCell(…col_name)
+[COVERED] string automationList.col.runs                  -> AutomationListPage.kt:420 HeaderCell(…col_runs)
+[COVERED] string automationList.col.status                -> AutomationListPage.kt:421 HeaderCell(…col_status)
+[COVERED] string automationList.empty.body                -> AutomationListPage.kt:518 EmptyState(message=…empty_body)
+[COVERED] string automationList.empty.cta                 -> AutomationListPage.kt:522 EmptyStateAction(label=…empty_cta)
+[COVERED] string automationList.empty.title               -> AutomationListPage.kt:519 EmptyState(title=…empty_title)
+[COVERED] string automationList.noun.one                  -> AutomationListPage.kt:282 bulk noun (count==1)
+[COVERED] string automationList.noun.other                -> AutomationListPage.kt:284 bulk noun (count!=1)
+[COVERED] string automationList.selectAutomation          -> AutomationListPage.kt:436 row checkbox contentDescription (…selectAutomation, name)
+[COVERED] string automationList.subtitle                  -> AutomationListPage.kt:257 BodyText(…subtitle)
+[COVERED] string automationList.title                     -> AutomationListPage.kt:255 PageTitle(…title)
+[COVERED] string bulk.selectAll                           -> AutomationListPage.kt:406 master TriStateCheckbox contentDescription (…selectAll)
+[COVERED] string bulk.selectRow                           -> AutomationListPage.kt:438 row checkbox contentDescription fallback (…selectRow when name blank)
+[COVERED] string common.delete                            -> AutomationListPage.kt:237 ConfirmDialog(confirmLabel=…common_delete)
+[COVERED] string common.disabled                          -> AutomationListPage.kt:485 Badge(…common_disabled, Neutral)
+[COVERED] string common.enabled                           -> AutomationListPage.kt:483 Badge(…common_enabled, Success)
+
+# (+ shared bulk/common/error keys also localized, not part of the 27-item manifest count)
+[EXTRA]   string bulk.selected (plural)  -> AutomationListPage.kt:286 pluralStringResource(R.plurals.translation_bulk_selected)
+[EXTRA]   string bulk.ofTotal            -> AutomationListPage.kt:287 ofTotal label
+[EXTRA]   string bulk.clear              -> AutomationListPage.kt:301 DataTableBulkBar(clearLabel)
+[EXTRA]   string bulk.toolbarLabel       -> AutomationListPage.kt:288 bulk bar semantics contentDescription
+[EXTRA]   string common.cancel           -> AutomationListPage.kt:238 ConfirmDialog(cancelLabel)
+[EXTRA]   string common.close            -> AutomationListPage.kt:239 ConfirmDialog(closeLabel)
+[EXTRA]   string error.network/serverError/unauthorized.{title,message} -> AutomationListPage.kt:534-549 AutomationListErrorState (web ErrorDisplay status branching)
+
+PARITY_COVERED=27
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : AutomationListPageViewModel binds shared S8 AutomationsStore.automations() (web useAutomations)
+               via asAutomationListSource() as a typed List<Automation> cache-then-network StateFlow; the bulk
+               action binds AutomationsStore.bulkAutomationsUpdate(ids, op) (web useBulkAutomationsUpdate). No
+               HTTP in the view. Selection + in-flight op are ViewModel StateFlows; on a successful bulk op the
+               selection clears and the shared store refreshes the list feed, which re-emits through state.
+si/units     : the automation payload carries no unit-bearing fields (name, description, an execution count, an
+               enabled flag) — round-trips verbatim, no SI conversion; the run count is locale-formatted at the
+               render boundary (NumberFormat.getIntegerInstance(locale), S5).
+a11y/theme   : shared components supply semantics content descriptions (bulk-bar + master/row checkboxes set
+               contentDescription, EmptyState/ErrorDisplay built-ins), >=48dp targets (Material Checkbox/Button),
+               dynamic-color + dark theme via MaterialTheme (A2 tokens); Compose-native (no webview). The table
+               scrolls horizontally so all five columns stay legible on a phone.
+nav          : Destinations 'automationList' -> /automations/list (pre-existing) wired to AutomationListRoute()
+               via PageHosts.register; deep link auto-registered by TeslaSyncNavHost. Row/empty-CTA cross-route
+               links are callback affordances (no-op under the current no-LocalNavController foundation) and are
+               not manifest parity items.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(27) == PARITY_REQUIRED(27)
+[PASS] all android triad gates green; parity 27/27; android ledger row page:automations/AutomationList status=done.
+EXIT=0
+STATUS=DONE
