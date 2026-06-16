@@ -24,6 +24,7 @@ import io.teslasync.shared.core.data.repo.HttpOperatorConfidenceRepository
 import io.teslasync.shared.core.data.repo.HttpPinnedRepository
 import io.teslasync.shared.core.data.repo.HttpSettingsRepository
 import io.teslasync.shared.core.data.repo.HttpUserRepository
+import io.teslasync.shared.core.data.repo.HttpVehicleSystemsRepository
 import io.teslasync.shared.core.data.repo.HttpVehiclesRepository
 import io.teslasync.shared.core.diagnostics.Logger
 import io.teslasync.shared.core.net.ApiHttpClient
@@ -41,6 +42,7 @@ import io.teslasync.shared.core.presentation.operatorconfidence.OperatorConfiden
 import io.teslasync.shared.core.presentation.pinned.PinnedStore
 import io.teslasync.shared.core.presentation.settings.SettingsStore
 import io.teslasync.shared.core.presentation.user.UserStore
+import io.teslasync.shared.core.presentation.vehiclesystems.VehicleSystemsStore
 import io.teslasync.shared.core.presentation.vehicles.VehiclesStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -114,11 +116,19 @@ class DataContainer(
     private val operatorConfidenceRepository = HttpOperatorConfidenceRepository(api, cacheStore, clock)
     private val userRepository = HttpUserRepository(api, cacheStore, clock)
     private val onboardingRepository = HttpOnboardingRepository(api, cacheStore, clock)
+    private val vehicleSystemsRepository = HttpVehicleSystemsRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
     /** Shared Vehicles domain state holder (web `useVehicles` port). */
     val vehiclesStore = VehiclesStore(vehiclesRepository, scope)
+
+    /**
+     * Shared VehicleSystems read-model state holder (web `useVehicleSystems` port) — the memoized, multi-observer
+     * cache-then-network raw-JSON feeds (`/tire-pressure/latest`, `/tire-pressure`, `/climate/latest`, …) the A7
+     * vehicle-systems surfaces (TirePressurePage, …) bind to.
+     */
+    val vehicleSystemsStore = VehicleSystemsStore(vehicleSystemsRepository, scope)
 
     /**
      * Shared Analytics read-model state holder (web `useAnalytics` port) — the memoized, multi-observer raw-JSON

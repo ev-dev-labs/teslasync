@@ -1,0 +1,144 @@
+================================================================================
+p3-android  A7  page:vehicle-systems/TirePressure  (Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/vehicle-systems/pages/TirePressurePage.tsx
+================================================================================
+artifact      : page:vehicle-systems/TirePressure   (kind=page, web route /tire-pressure)
+web source    : web/src/features/vehicle-systems/pages/TirePressurePage.tsx
+output dir    : apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/
+package       : io.teslasync.android.vehiclesystems.tirepressure
+                (mandated surface dir com/teslasync/vehiclesystems diverges from the io.teslasync.android.*
+                 package -> @file:Suppress("InvalidPackageDeclaration"), as the sibling battery surfaces)
+
+data sources  : the manifest record lists no API data source, but the web page IS data-bound — it reads
+                useTirePressure (GET /tire-pressure/latest?vehicle_id={id}) + useTirePressureHistory
+                (GET /tire-pressure?vehicle_id={id}), both already exposed by the shared S8 VehicleSystemsStore.
+                So the port binds those two feeds (+ SettingsStore unit/locale + the app-scoped
+                SelectedVehicleStore) through a ViewModel exposing StateFlow<UiState>. The view performs NO HTTP
+                (ADR-002/ADR-004). The four corner pressures are SI Pascals on the wire; conversion to the
+                user's display unit (bar/psi) happens ONLY at the render boundary via the shared
+                convertPressureFromSI, exactly like the web convertPressureFromSI(pa/1000, unit)
+                (unit-conversion.instructions / frontend-si-cutover).
+  - useTirePressure         GET /tire-pressure/latest?vehicle_id={id} -> VehicleSystemsStore.tirePressure(id)
+                            seam: TirePressurePageSource.tirePressureLatest (TirePressurePageSource.kt L31)
+  - useTirePressureHistory  GET /tire-pressure?vehicle_id={id}        -> VehicleSystemsStore.tirePressureHistory(id)
+                            seam: TirePressurePageSource.tirePressureHistory (TirePressurePageSource.kt L34)
+
+files created :
+  TirePressurePageModel.kt      framework-free: TirePressurePageRegistration, TirePressureReading/Summary/Snapshot,
+                                parseTirePressureLatest/History, normaliseTpmsToPa (raw->Pa), pressureStatus/gaugeTier/
+                                statusTone, hasTpmsWarning, sortReadings, TireDisplayPrefs (displayValue/pressureText/
+                                pressureWithUnit/count/dateTime via convertPressureFromSI), recordTirePressureOpened,
+                                mapData. JVM-unit-testable.
+  TirePressurePageSource.kt     seam + tirePressurePageSourceOf(vehicleSystemsStore, settingsStore, selectedVehicleStore).
+  TirePressurePageViewModel.kt  BaseFeedViewModel: state StateFlow<UiState<TirePressureSnapshot>> (combine latest+history,
+                                page phase follows latest), displayPrefs, refresh/retry/recordViewOpened.
+  TirePressurePageIcons.kt      TireGlyphs: Gauge/AlertTriangle/TrendingDown/Activity/Clock/AlertCircle authored locally
+                                as 24x24 stroked vectors (web lucide icons), tinted at render.
+  TirePressurePage.kt           stateless Compose render layer: chrome (title/subtitle/freshness/VehicleSelect/banners) +
+                                snapshot-gated body (loader/error/9 panels) + 4 RadialGauges + LineChart wrapper +
+                                sortable DataTable.
+  TirePressurePageHost.kt       PageHosts.register("tirePressure") for the /tire-pressure destination.
+  res/values/tire_pressure_strings.xml  app-owned literal-key labels absent from the generated translation_* catalog
+                                (web renders the i18next fallback in every locale); English-only in values/ so ar/he
+                                fall back to it, reproducing the web exactly (vampire_drain_strings precedent).
+shared wiring :
+  data/DataContainer.kt         + vehicleSystemsRepository (HttpVehicleSystemsRepository) + vehicleSystemsStore
+                                (VehicleSystemsStore) — the S8 holder the surface binds to (mirrors energyStore; the
+                                store already existed in shared core but was not yet wired into the Android container).
+  TeslaSyncApplication.kt       + TirePressurePageHost.register() in onCreate (NavHost host registration).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=34   (9 panels + 2 charts + 4 states + 19 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1     -> TirePressurePage.kt:291 WarningBannerPanel GlassPanel (web warning <GlassPanel> L407)
+[COVERED] panel  GlassPanel2     -> TirePressurePage.kt:326 CurrentReadingsPanel GlassPanel (web gauges <GlassPanel> L430)
+[COVERED] panel  GlassPanel3     -> TirePressurePage.kt:358 RowScope.TireGaugeCell GlassPanel (web per-corner <GlassPanel> L448, x4)
+[COVERED] panel  Avg-Pressure    -> TirePressurePage.kt:400 SummaryMetricsGrid MetricCard (summary.avgPa, prefs.pressureWithUnit, tire_pressure_avg_pressure)
+[COVERED] panel  Min-Pressure    -> TirePressurePage.kt:407 SummaryMetricsGrid MetricCard (summary.minPa, prefs.pressureWithUnit, tire_pressure_min_pressure)
+[COVERED] panel  Warning-Count   -> TirePressurePage.kt:416 SummaryMetricsGrid MetricCard (summary.warningCount, tire_pressure_warning_count)
+[COVERED] panel  Last-Updated    -> TirePressurePage.kt:423 SummaryMetricsGrid MetricCard (snapshot.lastUpdatedAt, prefs.dateTime, tire_pressure_last_updated)
+[COVERED] panel  GlassPanel8     -> TirePressurePage.kt:440 PressureHistoryPanel ChartContainer/GlassPanel (web history <GlassPanel> L514)
+[COVERED] panel  GlassPanel9     -> TirePressurePage.kt:495 HistoryTablePanel GlassPanel (web table <GlassPanel> L565)
+[COVERED] chart  RadialGauge     -> TirePressurePage.kt:370 TireGaugeCell RadialGauge (A3 native Compose-canvas; per-corner Pa->display unit, swept + gaugeTierColor, x4)
+[COVERED] chart  LineChart       -> TirePressurePage.kt:469 PressureHistoryPanel LineChartWrapper (A3 Vico; 4 corner series fl/fr/rl/rr over history, display-unit values)
+[COVERED] state  loading         -> TirePressurePage.kt:186 state.isLoading -> TirePressureLoading PageLoader (L256)
+[COVERED] state  empty           -> TirePressurePage.kt:458 ChartStatus.Empty emptyMessage (history chart) + L515 HistoryTablePanel EmptyState (No History Data)
+[COVERED] state  error           -> TirePressurePage.kt:187 state.isError -> TirePressureError ErrorDisplay + retry (L260) ; inline InlineLoadError (L237) on history-feed failure
+[COVERED] state  success         -> TirePressurePage.kt:188 else -> TirePressureBody (L271 renders the 9 panels); chart/table empty surfaces keep every section visible
+[COVERED] string Avg Pressure          -> TirePressurePage.kt:400 tire_pressure_avg_pressure
+[COVERED] string Current Readings      -> TirePressurePage.kt:337 tire_pressure_current_readings
+[COVERED] string Hard Warning          -> TirePressurePage.kt:576 tire_pressure_hard_warning (history-table warnings badge)
+[COVERED] string Hard Warning Active   -> TirePressurePage.kt:308 tire_pressure_hard_warning_active (warning banner)
+[COVERED] string History Table         -> TirePressurePage.kt:511 tire_pressure_history_table
+[COVERED] string Last Updated          -> TirePressurePage.kt:423 tire_pressure_last_updated
+[COVERED] string Min Pressure          -> TirePressurePage.kt:407 tire_pressure_min_pressure
+[COVERED] string No History Data       -> TirePressurePage.kt:458/517/527 tire_pressure_no_history_data (chart empty + table empty + DataTable emptyText)
+[COVERED] string Ok                    -> TirePressurePage.kt:579 translation_Ok (generated catalog; warnings badge)
+[COVERED] string Pressure History      -> TirePressurePage.kt:455 tire_pressure_pressure_history
+[COVERED] string Soft Warning          -> TirePressurePage.kt:578 tire_pressure_soft_warning (history-table warnings badge)
+[COVERED] string Soft Warning Active   -> TirePressurePage.kt:310 tire_pressure_soft_warning_active (warning banner)
+[COVERED] string Time                  -> TirePressurePage.kt:459/536 translation_Time (generated catalog; chart data table + table column)
+[COVERED] string Warning Count         -> TirePressurePage.kt:416 tire_pressure_warning_count
+[COVERED] string Warnings              -> TirePressurePage.kt:537 translation_Warnings (generated catalog; table column)
+[COVERED] string error.loadFailed      -> TirePressurePage.kt:262 translation_error_loadFailed (page ErrorDisplay; also inline banner L244)
+[COVERED] string tirePressure.selectVehicle -> TirePressurePage.kt:221 tire_pressure_select_vehicle (VehicleSelect aria semantics, ADR-015)
+[COVERED] string tirePressure.subtitle -> TirePressurePage.kt:206 translation_tirePressure_subtitle (generated catalog)
+[COVERED] string tirePressure.title    -> TirePressurePage.kt:173/204 translation_tirePressure_title (web usePageTitle -> Compose paneTitle semantics + visible PageTitle)
+--------------------------------------------------------------------------------
+PARITY_COVERED=34
+================================================================================
+
+panel map    : the 9 manifest panels = 3 web <GlassPanel> usages named in the manifest (GlassPanel1 warning banner
+               L407, GlassPanel2 current-readings L430, GlassPanel3 per-corner gauge cell L448) + 4 web <MetricCard>
+               tiles (Avg-Pressure / Min-Pressure / Warning-Count / Last-Updated) + 2 web <GlassPanel> usages
+               (GlassPanel8 history chart L514, GlassPanel9 history table L565). All 4 MetricCards always render
+               (em-dash / 0 before data) and every panel always shows -> no hidden sections (ADR-011 #6). The optional
+               web AITirePressureTrendReasoning narrator is conditionally null (withAiFeature) and never a
+               deterministic panel, so it is not a parity unit (out of scope, as the sibling VampireDrain narrator).
+charts       : 2 native chart wrappers, never a webview — 4x RadialGauge (Compose canvas), one per corner, swept to the
+               display pressure and colored by the gauge tier (web pressureColor normal/soft/critical -> theme status
+               colors); LineChartWrapper (Vico) plotting the four corner pressures over the history window, values
+               converted SI Pa -> the user's display unit at the boundary. The web LINE_COLORS corner->palette mapping
+               (fl=0, fr=2, rl=1, rr=3) is reproduced.
+states       : the latest feed drives the page loading(PageLoader)/error(ErrorDisplay+retry)/success(panels); the
+               history feed drives the chart's own ChartStatus.Loading/Empty and the table's EmptyState/loading. So
+               loading/empty/error/success are all implemented and no region is ever blank (ADR-011). isEmpty={false}
+               keeps zero/empty snapshots as content so the panels always render with internal empty surfaces (web
+               parity — the web never replaces the deterministic panels with a page-level empty state). The inline
+               error banner (web AlertBanner) surfaces error.loadFailed when the history feed fails while the latest
+               reading still renders.
+units        : the four corner pressures are SI Pascals on the wire + through the cache; display conversion to bar/psi
+               happens only at the render boundary via the shared convertPressureFromSI (web convertPressureFromSI(
+               pa/1000, unit)). The interim raw->Pa coercion (web normaliseTpmsToPa, for vehicles missing a unit-history
+               row) is ported verbatim. Nothing is stored/computed non-SI (frontend-si-cutover / unit-conversion.instructions).
+i18n         : every visible literal via stringResource (ADR-014); web key names kept. The shared keys reuse the
+               generated res/values catalog (translation_tirePressure_title/_subtitle, translation_Time/Warnings/Ok,
+               translation_error_loadFailed + the loader/retry/freshness/error-title chrome strings); the literal-key
+               labels (web i18next-fallback-only, absent from the generated catalog) live in the app-owned
+               res/values/tire_pressure_strings.xml, English-only so ar/he fall back to values/ — reproducing the web's
+               missing-key fallback in every locale (vampire_drain_strings precedent). The per-corner TIRE_LABELS +
+               STATUS_LABELS (plain English literals in the web source) are also resourced so the surface carries zero
+               hardcoded text.
+a11y         : Compose semantics paneTitle for the screen title (tirePressure.title); accessibleDescription on the
+               history chart + the RadialGauge component descriptions; the VehicleSelect aria label (tirePressure.
+               selectVehicle) exposed as a contentDescription; the chart's expandable accessible data table is the
+               screen-reader fallback for the canvas; >=48dp Material 3 targets; dynamic-color + dark theme via
+               MaterialTheme tokens; no hardcoded colors/typography (ADR-005/ADR-015).
+nav          : Destinations 'tirePressure' -> /tire-pressure pre-existing (Destinations.kt L104, count unchanged); host
+               wired via PageHosts.register("tirePressure") in TeslaSyncApplication.onCreate; deep links auto-registered
+               by the NavHost. DataContainer gains vehicleSystemsStore (the shared S8 VehicleSystemsStore was present in
+               apps/shared/core but not yet wired into the Android container; added mirroring energyStore so the surface
+               binds an S8 holder per ADR-004, not the network).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 1m 33s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 9m 03s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 10s  (1317 suites, 16865 tests, 0 failures, 0 errors)
+   (the p3-android README gate contract names :app:; this artifact's settings.gradle.kts maps the single app module to
+    the Gradle path :android with sources under app/, so the gate is addressed as :android: — same module, same tasks.)
+parity       : PARITY_COVERED(34) == PARITY_REQUIRED(34)
+[PASS] all android triad gates green; parity 34/34; android ledger row page:vehicle-systems/TirePressure status=done.
+EXIT=0
+STATUS=DONE

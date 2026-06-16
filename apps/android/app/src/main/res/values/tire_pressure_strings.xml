@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App-owned strings for the TirePressurePage parity surface (not part of the auto-generated i18n
+  translation_* catalog).
+
+  The web TirePressurePage (web/src/features/vehicle-systems/pages/TirePressurePage.tsx) renders most
+  of its copy via literal-key calls — t('Current Readings'), t('Avg Pressure'), t('Pressure History'),
+  t('Hard Warning Active'), the per-corner status badges, etc. Those keys do NOT exist in the web
+  react-i18next catalog, so the web app renders the i18next *fallback* string (the English key itself)
+  in every locale (including ar/he). The neutral P1/S10 catalog (apps/shared/i18n, generated into the
+  translation_* resources) therefore has no matching key to bind, and that catalog is auto-generated —
+  it must never be hand-edited.
+
+  To keep the native surface free of hardcoded English while reproducing the web verbatim, those labels
+  live here as app-owned resources, mirroring the established vampire_drain_strings / preset_gallery
+  pattern. They are English-only in values/ on purpose: Android falls back to values/ for ar/he, which
+  reproduces the web's missing-key fallback (English shown in every locale) exactly. (MissingTranslation
+  is disabled in app/build.gradle.kts for the same reason.)
+
+  The strings the web shares with the generated catalog — tirePressure.title / tirePressure.subtitle
+  (→ translation_tirePressure_title / _subtitle), Time (→ translation_Time), Warnings
+  (→ translation_Warnings), Ok (→ translation_Ok), and error.loadFailed (→ translation_error_loadFailed)
+  — are bound from the generated strings.xml directly and are intentionally NOT duplicated here.
+
+  The corner labels (web `TIRE_LABELS`) and status labels (web `STATUS_LABELS`) are plain English
+  literals in the web source; they are mirrored here as resources so the native surface carries zero
+  hardcoded text.
+-->
+<resources>
+    <!-- VehicleSelect aria label (web t('tirePressure.selectVehicle', 'Select vehicle')). -->
+    <string name="tire_pressure_select_vehicle">Select vehicle</string>
+
+    <!-- Current-readings gauges panel -->
+    <string name="tire_pressure_current_readings">Current Readings</string>
+
+    <!-- Summary metric tiles -->
+    <string name="tire_pressure_avg_pressure">Avg Pressure</string>
+    <string name="tire_pressure_min_pressure">Min Pressure</string>
+    <string name="tire_pressure_warning_count">Warning Count</string>
+    <string name="tire_pressure_last_updated">Last Updated</string>
+
+    <!-- Pressure-history line chart -->
+    <string name="tire_pressure_pressure_history">Pressure History</string>
+    <string name="tire_pressure_no_history_data">No History Data</string>
+
+    <!-- History table -->
+    <string name="tire_pressure_history_table">History Table</string>
+
+    <!-- TPMS warning banner + per-row warning badges -->
+    <string name="tire_pressure_hard_warning_active">Hard Warning Active</string>
+    <string name="tire_pressure_soft_warning_active">Soft Warning Active</string>
+    <string name="tire_pressure_hard_warning">Hard Warning</string>
+    <string name="tire_pressure_soft_warning">Soft Warning</string>
+
+    <!-- Corner labels (web TIRE_LABELS) -->
+    <string name="tire_pressure_corner_fl">Front Left</string>
+    <string name="tire_pressure_corner_fr">Front Right</string>
+    <string name="tire_pressure_corner_rl">Rear Left</string>
+    <string name="tire_pressure_corner_rr">Rear Right</string>
+
+    <!-- Pressure-status labels (web STATUS_LABELS) -->
+    <string name="tire_pressure_status_normal">Normal</string>
+    <string name="tire_pressure_status_low">Low</string>
+    <string name="tire_pressure_status_high">High</string>
+    <string name="tire_pressure_status_critical">Critical</string>
+</resources>
