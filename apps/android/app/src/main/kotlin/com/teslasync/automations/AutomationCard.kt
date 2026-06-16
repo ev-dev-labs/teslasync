@@ -159,6 +159,54 @@ fun AutomationCardScreen(
     )
 }
 
+
+/** The per-card interaction callbacks (web `AutomationCard` props). */
+data class AutomationCardActions(
+    val onToggle: (Long, Boolean) -> Unit,
+    val onReEnable: (Long) -> Unit,
+    val onDelete: (Long) -> Unit,
+    val onTestRun: (Long) -> Unit,
+)
+
+/** One automation row for [AutomationsListPage], adapted to the shared AutomationCard feature view. */
+@Composable
+fun AutomationCard(
+    automation: Automation,
+    vehicleName: String?,
+    busy: Boolean,
+    actions: AutomationCardActions,
+    modifier: Modifier = Modifier,
+) {
+    val view = remember(automation) { automation.toAutomationView() }
+    AutomationCardContent(
+        state = UiState(UiPhase.Content, data = view),
+        onToggle = { id, enabled -> if (!busy) actions.onToggle(id, enabled) },
+        onReEnable = { id -> if (!busy) actions.onReEnable(id) },
+        onDelete = { id -> if (!busy) actions.onDelete(id) },
+        onTestRun = { id -> if (!busy) actions.onTestRun(id) },
+        onRetry = {},
+        modifier = modifier,
+        vehicleName = vehicleName,
+    )
+}
+
+private fun Automation.toAutomationView(): AutomationView =
+    AutomationView(
+        id = id,
+        name = name,
+        description = description,
+        enabled = enabled,
+        vehicleId = vehicleId,
+        lastTriggeredAt = lastTriggeredAt,
+        executionCount = executionCount,
+        failureCount = failureCount,
+        autoDisabled = autoDisabled,
+        autoDisabledReason = autoDisabledReason,
+        nextFireTime = nextFireTime,
+        conflicts = conflicts.map { AutomationConflictView(it.automationId, it.automationName, it.reason, it.severity) },
+    )
+
+
 // ── Previews (tooling-only; @Preview entry points exercise the screen's content + empty branches) ────────────
 
 private val PREVIEW_AUTOMATION =
@@ -209,13 +257,5 @@ private fun AutomationCardScreenEmptyPreview() {
         )
     }
 }
-    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0) ?: Locale.ROOT
-    val numbers = remember(locale) { NumberFormat.getIntegerInstance(locale) }
-    val accent = if (automation.autoDisabled) PanelAccent.Danger else PanelAccent.None
-    val toggleLabel = stringResource(R.string.translation_automations_toggleLabel)
-            val interactive = !busy && !automation.autoDisabled
-    val runsLabel = stringResource(R.string.translation_automations_runs)
-    val failsLabel = stringResource(R.string.translation_automations_fails)
-    val lastLabel = stringResource(R.string.translation_automations_lastRun)
-    val neverRun = stringResource(R.string.translation_automations_neverRun)
-    val lastFired = formatAutomationTimestamp(automation.lastTriggeredAt, locale)
+
+

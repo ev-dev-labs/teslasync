@@ -36,29 +36,6 @@ import io.teslasync.android.featureviews.automationactivityfeed.AutomationActivi
 import io.teslasync.android.featureviews.automationactivityfeed.AutomationLiveEvent
 import io.teslasync.android.ui.theme.generated.Spacing
 import io.teslasync.shared.core.diagnostics.Logger
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
-import androidx.core.os.ConfigurationCompat
-import io.teslasync.android.R
-import io.teslasync.android.components.feedback.EmptyState
-import io.teslasync.android.components.feedback.Spinner
-import io.teslasync.android.components.feedback.SpinnerSize
-import io.teslasync.android.components.ui.Badge
-import io.teslasync.android.components.ui.BadgeVariant
-import io.teslasync.android.components.ui.Caption
-import io.teslasync.android.components.ui.GlassPanel
-import io.teslasync.android.components.ui.HelperText
-import io.teslasync.android.components.ui.PanelPadding
-import io.teslasync.android.components.ui.SectionTitle
-import io.teslasync.shared.core.presentation.automations.AutomationHistory
-import io.teslasync.shared.core.presentation.automations.AutomationHistoryListResponse
-import io.teslasync.shared.core.presentation.automations.AutomationHistoryStats
-import java.text.NumberFormat
-import java.util.Locale
 
 /**
  * Stateful entry: constructs the [AutomationActivityFeedViewModel] over the supplied [source] (the host wires
@@ -135,8 +112,3 @@ fun AutomationActivityFeedPageContent(
         )
     }
 }
-    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0) ?: Locale.ROOT
-    val integers = remember(locale) { NumberFormat.getIntegerInstance(locale) }
-    val percents = remember(locale) { NumberFormat.getPercentInstance(locale) }
-                    val items = state.data?.items ?: emptyList()
-    val triggered = formatAutomationTimestamp(history.triggeredAt, locale)

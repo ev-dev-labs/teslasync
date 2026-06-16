@@ -28,7 +28,6 @@ import io.teslasync.android.notifications.archived.ArchivedPageHost
 import io.teslasync.android.notifications.channels.ChannelsPageHost
 import io.teslasync.android.notifications.webhooks.WebhooksPageHost
 import io.teslasync.android.poweruser.sqlplayground.SqlPlaygroundPageHost
-import io.teslasync.android.settings.SettingsPageHost
 import io.teslasync.android.settings.privacy.PrivacyPageHost
 import io.teslasync.android.sharing.shareddrive.SharedDrivePageHost
 import io.teslasync.android.shortcuts.ShortcutPublisher
