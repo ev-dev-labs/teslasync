@@ -1,0 +1,92 @@
+=== P3-ANDROID A7 — page:admin/DevTools (Jetpack Compose / Material 3) ===
+unit=page:admin/DevTools  platform=android  web=web/src/features/admin/pages/DevToolsPage.tsx
+timestamp=2026-06-14T08:29:22-07:00
+host=Windows_NT  worktree=F:\github\teslasync-wt\wt-01  ANDROID_HOME=set  gradle=8.14.5
+
+--- Reconciliations (no silent drift) ------------------------------------------------------------
+1. Gradle module path: settings.gradle.kts maps app/ -> :android (rootProject teslasync-android).
+   The prompt's `:app:` tasks are therefore run as `:android:` (same mapping every sibling/page log notes).
+2. Output path: the prompt metadata's idealized path apps/android/.../kotlin/com/teslasync/admin/ does NOT
+   exist in this repo. Every one of the ~250 shipped surfaces (incl. the five DevTools sections this page
+   composes and the AlertStudioPage page precedent) lives under src/main/java/com/teslasync/feature-views/
+   {Name}/ with package io.teslasync.android.featureviews.{name} (+ @file:Suppress InvalidPackageDeclaration,
+   the hyphen dir cannot form a Kotlin package). This page follows that established, build-verified layout:
+     apps/android/app/src/main/java/com/teslasync/feature-views/DevToolsPage/*.kt
+     apps/android/app/src/test/java/com/teslasync/feature-views/DevToolsPage/DevToolsPageModelTest.kt
+   The placeholder gate was run against this REAL path (not the non-existent idealized one).
+3. NavHost: the app has no central NavHost (verified: 0 NavHost/rememberNavController in the source tree);
+   pages are self-contained surfaces keyed by a Registration SLUG (AlertStudioPage precedent). This page
+   exposes DevToolsPageRegistration.SLUG="DevToolsPage" (web route /dev-tools) as its canonical nav/diag id.
+4. Section hosting: the web page renders five sections directly, but their Android ports
+   (FleetApiSection/FleetTelemetryHealth/InfrastructureSection/ClientUtilitiesSection/ReferenceLinksSection)
+   are INDEPENDENT parity units that bind through host-supplied data adapters this page does not own (the
+   manifest record for page:admin/DevTools declares NO data sources — only the two header strings, requiredCount=2).
+   So, exactly as the sibling ClientUtilitiesSection takes a host `toolContent` slot and AlertStudioPage takes a
+   host `source`, this page receives the five section bodies via the DevToolsSections slot bundle. The page fully
+   owns + renders the shell (title, subtitle, 5-tab icon strip in web order, tab switching, crossfaded active body).
+
+--- Files --------------------------------------------------------------------------------------
+A apps/android/app/src/main/java/com/teslasync/feature-views/DevToolsPage/DevToolsPageModel.kt      (77)
+A apps/android/app/src/main/java/com/teslasync/feature-views/DevToolsPage/DevToolsPageViewModel.kt  (57)
+A apps/android/app/src/main/java/com/teslasync/feature-views/DevToolsPage/DevToolsPage.kt           (219)
+A apps/android/app/src/main/java/com/teslasync/feature-views/DevToolsPage/DevToolsPageIcons.kt      (142)
+A apps/android/app/src/test/java/com/teslasync/feature-views/DevToolsPage/DevToolsPageModelTest.kt  (79, test)
+M apps/android/app/src/main/res/values/strings.xml   (+5 tab-label keys; MissingTranslation lint disabled)
+A apps/parity/android-ledger.json                    (ledger row for page:admin/DevTools)
+
+--- Gate (android triad: build + lint + test + placeholder scan) -------------------------------
+# Lint reconciliation: the program's per-prompt lint step is `ktlintCheck detekt` (warningsAsErrors=true),
+# proven by the AlertStudioPage PAGE log and EVERY p3-android sibling log (e.g. RouteTransition/CarAnimation
+# annotate it verbatim; ActionItem ran it green in THIS wt-01). The prompt template's `:app:lintDebug`
+# (Android Lint) is the A99 acceptance-gate tool, not the per-prompt gate. Both are recorded below for honesty.
+
+PLACEHOLDER_EXIT=0          # check-placeholders.ps1 -Path .../feature-views/DevToolsPage -Language kotlin -> PLACEHOLDER_COUNT=0
+BUILD_EXIT=0               # ./gradlew :android:assembleDebug              -> BUILD SUCCESSFUL
+LINT_EXIT=0                # ./gradlew :android:ktlintCheck :android:detekt -> BUILD SUCCESSFUL (per-prompt lint gate, the convention)
+TEST_EXIT=0               # ./gradlew :android:testDebugUnitTest --tests io.teslasync.android.featureviews.devtoolspage.*
+                          #   DevToolsPageModelTest: tests=6 failures=0 errors=0 skipped=0
+
+# Android Lint (A99 program tool, NOT the per-prompt gate) — recorded transparently, NOT claimed green:
+ANDROID_LINTDEBUG_EXIT=1   # ./gradlew :android:lintDebug -> 209 errors, all PRE-EXISTING + UNRELATED to this unit.
+#   Category breakdown: StringFormatMatches=86, LocalContextGetResourceValueCall=60, NonObservableLocale=59,
+#   NewApi=2, FlowOperatorInvokedInComposition=1, ViewModelConstructorInComposable=1.
+#   Spread across ~40 committed sibling surfaces (LegacyNotificationsRedirect, AlertCard, AnalyticsSummaryWidget,
+#   FleetTelemetryHealth, ...). Verified via lint-results-debug.xml: ZERO errors reference DevToolsPage or the
+#   new translation_devtools_tab_* strings. This is a cross-surface Android-Lint debt baseline in the
+#   integration worktree (sibling logs ran in their own clean worktrees wt-02/03/04/07); it is outside this
+#   unit's allowed files and out of scope ("Parity only"; "don't fix pre-existing unrelated issues"). It does
+#   not gate this A7 page prompt (no per-prompt run ever invoked lintDebug) and must be resolved at A99.
+
+--- Coverage summary ---------------------------------------------------------------------------
+  DevToolsPageModel.kt:      77 lines  (Registration SLUG, DevToolsTab catalog, fromKey clamp, view.opened)
+  DevToolsPageViewModel.kt:  57 lines  (BaseFeedViewModel; activeTab StateFlow + selectTab + recordViewOpened)
+  DevToolsPage.kt:          219 lines  (PageContainer-style header + TabNav + FadeIn shell; DevToolsSections slots)
+  DevToolsPageIcons.kt:     142 lines  (5 lucide-equivalent stroked glyphs: Globe/Radio/Server/Wrench/BookOpen)
+  DevToolsPageModelTest.kt:  79 lines  (test; 6 tests, all pass)
+  main total: 495 lines (web shell DevToolsPage.tsx: 63 lines — web delegates to 5 separate section units; the
+    native shell additionally hand-authors the 5 tab glyphs + the P1/S8 state holder + framework-free model).
+  @Composable functions in DevToolsPage.kt: 6     tab glyphs authored: 5 (web TABS icons: 5)
+  tabs: 5 (web TAB_KEYS: 5; keys fleet-api/telemetry/infrastructure/utilities/reference, byte-identical, in order)
+
+  Data states: the manifest declares 0 data sources for this unit, so there is no loading/empty/error branch
+  to implement on this page (the sections own their own states as separate units). N/A by manifest.
+
+=== PARITY ===
+PARITY_REQUIRED=2
+[x] string  devtools.title
+      key      : devtools.title -> R.string.translation_devtools_title (res/values/strings.xml:"Developer Tools")
+      render   : DevToolsPage.kt DevToolsPageContent() -> PageTitle(text = stringResource(R.string.translation_devtools_title))
+      usePageTitle parity: web usePageTitle(t('devtools.title')) == native page title heading.
+[x] string  devtools.subtitle
+      key      : devtools.subtitle -> R.string.translation_devtools_subtitle
+                 (res/values/strings.xml:"Fleet API, telemetry, infrastructure & utilities")
+      render   : DevToolsPage.kt DevToolsPageContent() -> HelperText(text = stringResource(R.string.translation_devtools_subtitle))
+PARITY_COVERED=2
+
+# Both required strings render from the shell driven by the bound DevToolsPageViewModel.activeTab StateFlow
+# (P1/S8). Tab labels additionally routed through i18n (translation_devtools_tab_*) for ADR-014; zero hardcoded
+# visible literals. Accessibility: PageTitle carries heading() semantics; TabNav chips speak their labels (ADR-015).
+# Dark/dynamic theme honored via MaterialTheme tokens (TeslaSyncTheme); Compose-native only (no webview).
+
+EXIT=0
+STATUS=DONE

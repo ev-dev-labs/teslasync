@@ -3068,6 +3068,11 @@
   <string name="translation_devtools_partnerKey_verify">Verify</string>
   <string name="translation_devtools_searchTools">Search tools...</string>
   <string name="translation_devtools_subtitle">Fleet API, telemetry, infrastructure &amp; utilities</string>
+  <string name="translation_devtools_tab_fleetApi">Fleet API</string>
+  <string name="translation_devtools_tab_infrastructure">Infrastructure</string>
+  <string name="translation_devtools_tab_reference">Reference</string>
+  <string name="translation_devtools_tab_telemetry">Telemetry</string>
+  <string name="translation_devtools_tab_utilities">Utilities</string>
   <string name="translation_devtools_title">Developer Tools</string>
   <string name="translation_devtools_uploadIdle">Upload a public key to see results</string>
   <string name="translation_devtools_utils_base64">Base64</string>
