@@ -21,7 +21,7 @@
     private enum AnomalyInlineRowPreviewData {
         static let now = Date(timeIntervalSince1970: 1_717_000_000)
 
-        static func entry(signal: String, severity: AnomalySeverity, minutesAgo: Double) -> AnomalyEntryItem {
+        static func entry(signal: String, severity: AnomalyInlineRowSeverity, minutesAgo: Double) -> AnomalyEntryItem {
             AnomalyEntryItem(
                 signal: signal,
                 type: .zScore,
@@ -34,8 +34,8 @@
             )
         }
 
-        static func data(count: Int, severity: AnomalySeverity, signal: String, minutesAgo: Double) -> AnomalyData {
-            AnomalyData(
+        static func data(count: Int, severity: AnomalyInlineRowSeverity, signal: String, minutesAgo: Double) -> AnomalyInlineRowData {
+            AnomalyInlineRowData(
                 anomalies: [entry(signal: signal, severity: severity, minutesAgo: minutesAgo)],
                 signalsMonitored: 42,
                 anomaliesLast7d: count + 4,
@@ -86,7 +86,7 @@
                         )
                     )
                     anomalyInlineRowPreview(
-                        AnomalyInlineRowUpdate(status: .loaded, data: AnomalyData(anomalies: [], anomaliesLast24h: 0))
+                        AnomalyInlineRowUpdate(status: .loaded, data: AnomalyInlineRowData(anomalies: [], anomaliesLast24h: 0))
                     )
                     anomalyInlineRowPreview(AnomalyInlineRowUpdate(status: .failed("Request timed out")))
                 }

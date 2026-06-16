@@ -70,13 +70,13 @@ public enum AnomalyInlineRowConnection: Sendable, Equatable {
 /// available to query), the live-state freshness, and the last-updated stamp.
 public struct AnomalyInlineRowUpdate: Sendable, Equatable {
     public var status: AnomalyInlineRowLoadStatus
-    public var data: AnomalyData?
+    public var data: AnomalyInlineRowData?
     public var connection: AnomalyInlineRowConnection
     public var updatedAt: Date?
 
     public init(
         status: AnomalyInlineRowLoadStatus = .loading,
-        data: AnomalyData? = nil,
+        data: AnomalyInlineRowData? = nil,
         connection: AnomalyInlineRowConnection = .live,
         updatedAt: Date? = nil
     ) {

@@ -45,7 +45,7 @@ public enum AnomalyInlineRowSurface {
 
 /// The anomaly severity carried by an `AnomalyEntry` (web union
 /// `'critical' | 'warning' | 'info'`).
-public enum AnomalySeverity: String, CaseIterable, Sendable, Equatable {
+public enum AnomalyInlineRowSeverity: String, CaseIterable, Sendable, Equatable {
     case critical
     case warning
     case info
@@ -73,7 +73,7 @@ public enum AnomalyHealthStatus: String, CaseIterable, Sendable, Equatable {
 
     /// The web `SEVERITY_TO_STATUS` map: `critical → unhealthy`, `warning → degraded`,
     /// `info → unknown`.
-    public init(severity: AnomalySeverity) {
+    public init(severity: AnomalyInlineRowSeverity) {
         switch severity {
         case .critical: self = .unhealthy
         case .warning: self = .degraded
@@ -106,7 +106,7 @@ public enum AnomalyHealthStatus: String, CaseIterable, Sendable, Equatable {
     }
 }
 
-// MARK: - Domain shape (web `AnomalyEntry` / `AnomalyData`)
+// MARK: - Domain shape (web `AnomalyEntry` / `AnomalyInlineRowData`)
 
 /// One detected anomaly — the native parity of the web `AnomalyEntry`. `detectedAt` is
 /// pre-parsed (`nil` when the source timestamp was unparseable, matching the web
@@ -114,7 +114,7 @@ public enum AnomalyHealthStatus: String, CaseIterable, Sendable, Equatable {
 public struct AnomalyEntryItem: Sendable, Equatable {
     public let signal: String
     public let type: AnomalyDetectorType
-    public let severity: AnomalySeverity
+    public let severity: AnomalyInlineRowSeverity
     public let value: Double
     public let baseline: Double
     public let zScore: Double
@@ -124,7 +124,7 @@ public struct AnomalyEntryItem: Sendable, Equatable {
     public init(
         signal: String,
         type: AnomalyDetectorType,
-        severity: AnomalySeverity,
+        severity: AnomalyInlineRowSeverity,
         value: Double = 0,
         baseline: Double = 0,
         zScore: Double = 0,
@@ -142,10 +142,10 @@ public struct AnomalyEntryItem: Sendable, Equatable {
     }
 }
 
-/// The anomalies summary payload — the native parity of the web `AnomalyData`
+/// The anomalies summary payload — the native parity of the web `AnomalyInlineRowData`
 /// (`/analytics/anomalies` response). The inline row reads `anomaliesLast24h` + the
 /// first entry; the rest is modeled for parity with the source shape.
-public struct AnomalyData: Sendable, Equatable {
+public struct AnomalyInlineRowData: Sendable, Equatable {
     public let anomalies: [AnomalyEntryItem]
     public let healthSummary: [String: String]
     public let signalsMonitored: Int
@@ -282,7 +282,7 @@ public enum AnomalyInlineRowProjection {
     /// `if (!top) return null`. Cached so the parity with the web null decision is
     /// explicit and unit-tested; the view shows a friendly empty state where the web
     /// renders nothing.
-    public static func webRendersRow(_ data: AnomalyData?) -> Bool {
+    public static func webRendersRow(_ data: AnomalyInlineRowData?) -> Bool {
         guard let data, data.anomaliesLast24h != 0 else { return false }
         return data.anomalies.first != nil
     }
@@ -290,7 +290,7 @@ public enum AnomalyInlineRowProjection {
     /// Builds the resolved `HealthRow` content from a payload, or `nil` when the web
     /// would render nothing (no 24h anomalies / no first entry).
     public static func content(
-        from data: AnomalyData,
+        from data: AnomalyInlineRowData,
         now: Date,
         localize: (String, String) -> String
     ) -> AnomalyInlineRowContent? {
@@ -313,7 +313,7 @@ public enum AnomalyInlineRowProjection {
     /// no cached row shows the error state.
     public static func resolvePhase(
         status: AnomalyInlineRowLoadStatus,
-        data: AnomalyData?,
+        data: AnomalyInlineRowData?,
         now: Date,
         localize: (String, String) -> String
     ) -> AnomalyInlineRowPhase {

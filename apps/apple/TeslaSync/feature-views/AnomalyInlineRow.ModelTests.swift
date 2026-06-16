@@ -26,7 +26,7 @@
 
         static func entry(
             signal: String = "battery_temp",
-            severity: AnomalySeverity = .critical,
+            severity: AnomalyInlineRowSeverity = .critical,
             secondsAgo: TimeInterval = 300
         ) -> AnomalyEntryItem {
             AnomalyEntryItem(
@@ -38,8 +38,8 @@
             )
         }
 
-        static func data(count: Int = 3) -> AnomalyData {
-            AnomalyData(anomalies: [entry()], anomaliesLast24h: count)
+        static func data(count: Int = 3) -> AnomalyInlineRowData {
+            AnomalyInlineRowData(anomalies: [entry()], anomaliesLast24h: count)
         }
     }
 
