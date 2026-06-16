@@ -3213,6 +3213,7 @@
   <string name="translation_driveDetail_section_temperatureFailed">Temperature section failed to load</string>
   <string name="translation_driveDetail_section_timelineFailed">Drive timeline failed to load</string>
   <string name="translation_driveDetail_section_tirePressureFailed">Tire pressure section failed to load</string>
+  <string name="translation_driveDetail_section_whyEndedFailed">Why-ended diagnostic failed to load</string>
   <string name="translation_driveDetail_share">Share</string>
   <string name="translation_driveDetail_soc">SOC</string>
   <string name="translation_driveDetail_socOverTime">SOC % Over Time</string>

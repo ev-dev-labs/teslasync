@@ -1,0 +1,151 @@
+================================================================================
+P3-ANDROID · A7 · page:driving/DriveDetail — evidence log
+Native Jetpack Compose / Material 3 port of web DriveDetailPage
+Source: web/src/features/driving/pages/DriveDetailPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/driving/**
+Package: io.teslasync.android.driving.drivedetail
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts:
+                 include(":android"); project(":android").projectDir = file("app").
+                 The prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract
+                 and the sibling ChargingCurve/BatteryHealth A7 logs).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 YearReview parameterized + ChargingCurve precedents)
+  DriveDetailPageModel.kt      framework-free: DriveDetailPageRegistration (ROUTE_ID
+                               "driveDetail", WEB_PATH "/drives/:id", ARG_ID "id", SLUG),
+                               hasMeaningfulDriveStats (web no-telemetry envelope),
+                               recordDriveDetailPageOpened (view.opened diagnostic), and
+                               the page-local DriveDetailRepository : CachingRepository<Drive>
+                               (GET /drives/{id}, cache-then-network, SI-verbatim, keyed
+                               detail:{id} in the existing drives cache domain).
+  DriveDetailPageSource.kt     seam over DriveDetailRepository.drive(id) (web useDrive),
+                               VehiclesStore.vehicles() (web useVehicle), unitFormatter (web useUnits).
+  DriveDetailPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<Drive>> gated on the
+                               route drive id (null id → hard error feed); vehicleName combine over
+                               the Vehicles feed; formatter re-exposed; refresh/retry; view.opened.
+  DriveDetailPage.kt           stateful entry (keyed by drive id) + stateless content; loading
+                               skeleton / hard-error retry / loaded content; page title chrome.
+  DriveDetailPageSections.kt   DriveDetailLoaded composes all 19 web sections in web order, each
+                               wrapped in DriveDetailSection (SectionErrorBoundary carrying the
+                               localized failure title); the no-telemetry AlertBanner; SI formatting
+                               at the display boundary via UnitFormatter; StatCard / KVList / EmptyState.
+  DriveDetailPageHost.kt       DriveDetailRoute(entry) reads ARG_ID via entry.arguments + register()
+                               for the `driveDetail` /drives/:id destination (Destinations.kt L68).
+  TeslaSyncApplication.kt      DriveDetailPageHost.register() wired into onCreate (NavHost registration).
+  res/values/strings.xml       added translation_driveDetail_section_whyEndedFailed (the 1 parity
+                               string missing from the catalog; lint disables MissingTranslation so
+                               the default catalog suffices — build.gradle.kts L114).
+
+DATA SOURCE (bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  The manifest record (apps/parity/parity-manifest.json:10010) extracts NO API data source for this
+  unit — the web page is a composition root whose panels are separate sub-component parity units — so
+  the contract is the 2 declared states + 23 strings (requiredCount 25). The native surface still
+  binds a real read (no stub, ADR-011): the drive itself.
+  useDrive(id) → DriveDetailPageViewModel.state (StateFlow<UiState<Drive>>)
+      ← DriveDetailPageSource.drive ← DriveDetailRepository.drive(id)
+        (page-local CachingRepository<Drive> over the shared resilient client + offline cache;
+         GET /drives/{id}; SI verbatim, ADR-013).
+
+=== PARITY ===
+PARITY_REQUIRED=25
+  [1]  state  loading                                   DriveDetailPage.kt:108 if (state.isLoading) → DriveDetailLoading L109/L138
+  [2]  state  error                                     DriveDetailPage.kt:124 state.isError → DriveDetailError L125/L160
+                                                         (VM hard-error feed: DriveDetailPageViewModel MISSING_ID_FEED + Resource.Error→UiPhase.Error)
+  [3]  string driveDetail.noTelemetryBody               DriveDetailPageSections.kt:186 R.string.translation_driveDetail_noTelemetryBody
+  [4]  string driveDetail.noTelemetryTitle              DriveDetailPageSections.kt:188 R.string.translation_driveDetail_noTelemetryTitle
+  [5]  string driveDetail.section.aiCoachingFailed      DriveDetailPageSections.kt:270 R.string.translation_driveDetail_section_aiCoachingFailed
+  [6]  string driveDetail.section.aiSpeedProfileInsightsFailed DriveDetailPageSections.kt:518 R.string.translation_driveDetail_section_aiSpeedProfileInsightsFailed
+  [7]  string driveDetail.section.costSavingsFailed     DriveDetailPageSections.kt:340 R.string.translation_driveDetail_section_costSavingsFailed
+  [8]  string driveDetail.section.elevationChartFailed  DriveDetailPageSections.kt:467 R.string.translation_driveDetail_section_elevationChartFailed
+  [9]  string driveDetail.section.energySummaryFailed   DriveDetailPageSections.kt:313 R.string.translation_driveDetail_section_energySummaryFailed
+  [10] string driveDetail.section.headerFailed          DriveDetailPageSections.kt:159 R.string.translation_driveDetail_section_headerFailed
+  [11] string driveDetail.section.heroGaugesFailed      DriveDetailPageSections.kt:198 R.string.translation_driveDetail_section_heroGaugesFailed
+  [12] string driveDetail.section.journeyDetailsFailed  DriveDetailPageSections.kt:400 R.string.translation_driveDetail_section_journeyDetailsFailed
+  [13] string driveDetail.section.moreDetailsFailed     DriveDetailPageSections.kt:284 R.string.translation_driveDetail_section_moreDetailsFailed
+  [14] string driveDetail.section.overviewChartFailed   DriveDetailPageSections.kt:425 R.string.translation_driveDetail_section_overviewChartFailed
+  [15] string driveDetail.section.powerProfileFailed    DriveDetailPageSections.kt:533 R.string.translation_driveDetail_section_powerProfileFailed
+  [16] string driveDetail.section.routeMapFailed        DriveDetailPageSections.kt:365 R.string.translation_driveDetail_section_routeMapFailed
+  [17] string driveDetail.section.socChartFailed        DriveDetailPageSections.kt:446 R.string.translation_driveDetail_section_socChartFailed
+  [18] string driveDetail.section.speedHistogramFailed  DriveDetailPageSections.kt:507 R.string.translation_driveDetail_section_speedHistogramFailed
+  [19] string driveDetail.section.statCardsFailed       DriveDetailPageSections.kt:245 R.string.translation_driveDetail_section_statCardsFailed
+  [20] string driveDetail.section.temperatureFailed     DriveDetailPageSections.kt:480 R.string.translation_driveDetail_section_temperatureFailed
+  [21] string driveDetail.section.timelineFailed        DriveDetailPageSections.kt:217 R.string.translation_driveDetail_section_timelineFailed
+  [22] string driveDetail.section.tirePressureFailed    DriveDetailPageSections.kt:552 R.string.translation_driveDetail_section_tirePressureFailed
+  [23] string driveDetail.section.whyEndedFailed        DriveDetailPageSections.kt:562 R.string.translation_driveDetail_section_whyEndedFailed (added to strings.xml)
+  [24] string driveDetail.title                         DriveDetailPage.kt:121 R.string.translation_driveDetail_title
+  [25] string driveDetail.vehicle                       DriveDetailPageSections.kt:161 R.string.translation_driveDetail_vehicle (header vehicle-name fallback)
+PARITY_COVERED=25
+
+EXTRA WEB-PARITY (beyond the manifest's 25-item states+strings contract; no scope narrowing)
+  Every web <SectionErrorBoundary>-wrapped region is reproduced in the same data + grouping + order
+  (web DriveDetailPage.tsx L82-206), each guarded by its own SectionErrorBoundary carrying the
+  localized fallback title, so one failing section never blanks the page:
+    Header            DriveDetailPageSections.kt:157  (web DriveDetailHeader; vehicle name + start/destination)
+    NoTelemetryBanner DriveDetailPageSections.kt:184  (web AlertBanner when !hasMeaningfulDriveStats)
+    HeroGauges        DriveDetailPageSections.kt:196  (web HeroGauges; distance/duration/avg+max speed)
+    Timeline          DriveDetailPageSections.kt:215  (web DriveTimeline; start/end timestamps)
+    StatCards         DriveDetailPageSections.kt:243  (web DriveStatCards; energy/power/battery)
+    AiCoaching        DriveDetailPageSections.kt:268  (web AIDriveCoaching intro; title/desc/badge)
+    MoreDetails       DriveDetailPageSections.kt:282  (web MoreDetailsPanel; temps + battery range)
+    EnergySummary     DriveDetailPageSections.kt:311  (web EnergySummaryPanel; consumed/recovered/net)
+    CostSavings       DriveDetailPageSections.kt:338  (web CostSavingsPanel; gated on energy)
+    RouteMap          DriveDetailPageSections.kt:363  (web RouteMapSection; start/dest + distance / no-route)
+    JourneyDetails    DriveDetailPageSections.kt:398  (web JourneyDetailsPanel; addresses)
+    OverviewChart     DriveDetailPageSections.kt:423  (web DriveOverviewChart; distance/duration/speed summary)
+    SocChart          DriveDetailPageSections.kt:444  (web SocChart; start→end SOC / empty)
+    ElevationChart    DriveDetailPageSections.kt:465  (web ElevationChart; web-faithful empty for no time-series)
+    Temperature       DriveDetailPageSections.kt:478  (web TemperatureSection; avg cabin/ambient / empty)
+    SpeedHistogram    DriveDetailPageSections.kt:505  (web SpeedHistogramChart; web-faithful empty for no samples)
+    AiSpeedProfile    DriveDetailPageSections.kt:516  (web AISpeedProfileInsights intro; title/desc/badge)
+    PowerProfile      DriveDetailPageSections.kt:531  (web PowerProfileChart; avg power / empty)
+    TirePressure      DriveDetailPageSections.kt:550  (web TirePressureSection; web-faithful empty for no samples)
+    WhyEnded          DriveDetailPageSections.kt:560  (web WhyEndedPanel; recorded end status)
+  The chart-shaped sections render their available drive aggregate (the shared Drive read-model carries
+  aggregates only, no per-sample telemetry/positions arrays) and the web-faithful EmptyState where a
+  time series would be needed — matching the web comment "charts gate themselves internally on empty
+  chartData". SI stays SI; display conversion is the UnitFormatter boundary (P1/S5). No webview clone.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin
+    PLACEHOLDER_ALLOWED=1   (durationS.toDouble() Long→Double widening; "toDo" substring is not a TODO
+                             stub — marked // parity:allow, exactly as the ChargingCurve precedent)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 4m 56s (compileDebugKotlin clean; the only
+                                          warning is a pre-existing LocalClipboardManager deprecation in
+                                          the unrelated admin/ApiLogsPage.kt)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 18s (abortOnError=true; lint-results-
+                                          debug.html written, no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 5s
+  TEST_EXIT=0
+
+  STYLE (not part of the A7 gate triad, recorded for completeness):
+  ./gradlew :android:ktlintMainSourceSetCheck → PASSED (no violations in driving/**).
+  ./gradlew :android:detekt → FAILED with 25 weighted issues — ALL in pre-existing sibling A7 files
+    (admin/ApiLogsPage, admin/FeedbackQueuePage, automations/*PageModel, charging/TeslaChargingSessionsMapPageModel,
+     analytics/LifetimeStats*, analytics/StatisticsPageModel, analytics/YearReviewPageModel,
+     battery/BatteryHealthPageModel, battery/EnergyProducts*, charging/ChargingCurvePageModel). ZERO issues
+    in com/teslasync/driving/** — this surface introduces no new detekt findings; the failure is the
+    repo's pre-existing baseline (detekt is not in the assemble+lint+test gate the A7 prompts contract,
+    consistent with every prior A7 page log).
+
+ACCEPTANCE
+  [x] Every named panel implemented; every anonymous region from the web source reproduced (20 regions, web order).
+  [x] All 25 parity items render from the bound StateFlow state holder (DriveDetailPageViewModel.state).
+  [x] loading / error implemented for the data source (DriveDetailPage.kt:108/124); empty folded into content
+      (a drive is never empty — the no-telemetry banner covers the zero-aggregate envelope, web parity).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; SI units at the display boundary (UnitFormatter); Compose-native (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (25).
+  [x] android ledger row for page:driving/DriveDetail set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
