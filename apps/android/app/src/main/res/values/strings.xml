@@ -6027,6 +6027,8 @@
   <string name="translation_settings_totp_openMode_message">Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload.</string>
   <string name="translation_settings_totp_status_active">Active</string>
   <string name="translation_settings_totp_status_notEnrolled">Not enrolled</string>
+  <string name="translation_settings_subtitle">Configure TeslaSync preferences and Tesla account connection</string>
+  <string name="translation_settings_title">Settings</string>
   <string name="translation_settings_totp_subtitle">TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.</string>
   <string name="translation_settings_totp_title">Two-factor authentication</string>
   <string name="translation_settings_totp_toasts_backupRegenerated">Backup codes regenerated.</string>

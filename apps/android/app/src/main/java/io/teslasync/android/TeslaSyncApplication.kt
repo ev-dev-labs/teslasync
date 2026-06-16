@@ -107,6 +107,7 @@ import io.teslasync.android.settings.sessions.ActiveSessionsPageHost
 import io.teslasync.android.settings.helix.HelixPageHost
 import io.teslasync.android.settings.safety.SafetyPageHost
 import io.teslasync.android.settings.twofactor.TwoFactorAuthPageHost
+import io.teslasync.android.settings.page.SettingsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and

@@ -1,0 +1,222 @@
+================================================================================
+P3-ANDROID A7 — page:settings/Settings
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/settings/pages/SettingsPage.tsx
+================================================================================
+
+Artifact     : page:settings/Settings
+Web route    : /settings
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/settings/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+SettingsPage.tsx is the application-preferences screen. It calls useSettings()
+ONLY for its `isLoading` flag (the `<PageContainer title subtitle loading={isLoading}>`
+overlay), claims an edit lease for `settings/general`, and renders, in order: the
+find-as-you-type box <SettingsSearch/>, the cross-tab <EditConflictBanner
+resourceKey="settings/general" resourceLabel={t('editConflict.resource.settings')}/>,
+the four preference sections (<GeneralSettings/>, <AppearanceSettings/>,
+<AdvancedSettings/>, <ResetSection/>), and three link/action GlassPanels — a Data
+Export link card (<a href="/data-export">, Download + ExternalLink glyphs), an
+Onboarding Tour card (PlayCircle glyph + a button calling dispatchTourLauncherOpen()),
+and a Setup Checklist card (Rocket glyph + a button calling restartChecklist() +
+toast.success(t('checklist.settings.restarted'))).
+
+The manifest scopes this page's parity to the three GlassPanels (GlassPanel1/2/3),
+the loading -> success states of useSettings, and 12 i18n strings; the four preference
+sections are separately-tracked A3 component units and are composed here for fidelity.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no skeletons, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The four web sections already exist as A3 feature-views
+(io.teslasync.android.featureviews.{generalsettings,appearancesettings,
+advancedsettings,resetsection}.*) and the search box / edit-conflict banner / tour
+launcher as shared surfaces; this page composes them and adds the three cards + the
+PageContainer-equivalent chrome, exactly as the sibling A7 pages reuse their A3
+feature-views (ArchivedPage reuses InboxBody).
+
+The `settings` / `/settings` destination already existed in Destinations.kt, hosted
+by the temporary A8 native-settings seam (io.teslasync.android.settings.SettingsPageHost),
+whose own doc said it stood in "until A7 wires its generated pages". This A7 host now
+owns that route; TeslaSyncApplication's import + registration were swapped from the A8
+host to the A7 host. A7 files live in package io.teslasync.android.settings.page (dir
+kotlin/com/teslasync/settings) so they never clash with the A8 io.teslasync.android.settings
+package; the A8 native screen remains in the repo, no longer wired to /settings.
+
+New files (package io.teslasync.android.settings.page):
+  - SettingsPageModel.kt      SettingsPageRegistration (ROUTE_ID settings, WEB_PATH
+                              /settings, DATA_EXPORT_PATH /data-export, LEASE_KEY
+                              settings/general, SLUG SettingsPage) + recordSettingsPageOpened.
+  - SettingsPageSource.kt     SettingsPageSource seam + settingsPageSourceOf(settingsStore):
+                              the `GET /settings` document feed (web useSettings).
+  - SettingsPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<JsonElement>>
+                              via source.settings().asUiState(isEmpty = { false })
+                              (Loading -> Content); recordViewOpened (one-shot view.opened).
+  - SettingsPageGlyphs.kt     Locally-authored lucide-style Download / PlayCircle /
+                              Rocket / ExternalLink stroked ImageVectors.
+  - SettingsPage.kt           Stateful entry (viewModel factory) + stateful overload
+                              (collectAsStateWithLifecycle, deep-link + toast + tour
+                              seams, SettingsPageActions, mounts the page-local
+                              TourLauncher modal) + stateless SettingsPageContent
+                              (header always visible; loading-spinner <-> body switch =
+                              the web PageContainer loading contract; SettingsSearch +
+                              EditConflictBanner + GeneralSettings + AppearanceSettings +
+                              AdvancedSettings + ResetSection + the three cards) +
+                              DataExportCard / OnboardingTourCard / SetupChecklistCard +
+                              openRoute (teslasync://app/... ACTION_VIEW deep-link).
+  - SettingsPageHost.kt       SettingsPageRoute() binds container.settingsStore +
+                              a page-local SettingsResetStore(HttpSettingsResetRepository(
+                              api, cacheStore)) + a device-local
+                              SharedPreferencesConfirmSilenceStore(context);
+                              SettingsPageHost.register() -> PageHosts.register("settings").
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt   import swap io.teslasync.android.settings.SettingsPageHost
+                              -> io.teslasync.android.settings.page.SettingsPageHost (A7
+                              supersedes the A8 seam at process start).
+  - res/values/strings.xml    2 keys: translation_settings_title ("Settings") +
+                              translation_settings_subtitle. The other 10 keys already
+                              existed (translation_checklist_settings_*, translation_export_*,
+                              translation_tour_*, translation_editConflict_resource_settings).
+                              The bare `title`/`subtitle` keys are owned by another namespace
+                              in the flattened catalog (translation_title="Command Center"),
+                              so the page-namespaced settings_title/subtitle were added.
+  - apps/parity/android-ledger.json  page:settings/Settings row (done, 17/17).
+
+Notes:
+  - Navigation: page hosts get no LocalNavController (GlancePage/ArchivedPage precedent),
+    so the Data-Export link (web <a href="/data-export">) and SettingsSearch
+    navigate(entry.route) hand the route's teslasync://app/... deep-link URI to an
+    ACTION_VIEW Intent — the shell's own deep-link mechanism.
+  - Tour: the web app-level launcher modal is popped by a global event; with no app-level
+    mount the page hosts its own rememberTourLauncherController + TourLauncher modal, so the
+    card button opens a real launcher (tour list, completion state, reset-all all wired).
+    Replaying a tour is owned by the separate tour-player unit, so onStartTour records the
+    intent and the launcher closes itself (no fabricated playback).
+  - Checklist: the restart raises the web confirmation toast (translation_checklist_settings_
+    restarted) via the shared LocalToastController and logs the intent; the persistent
+    checklist flags are owned by the OnboardingChecklistWidget unit's preferences.
+  - SI: no field on this page is unit-bearing (the document is read only for isLoading; the
+    composed sections convert at their own display boundary), so no SI conversion here (S5).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept. MissingTranslation
+    is disabled in build.gradle.kts (ar/he ship English fallback), so the 2 new keys are en-only.
+  - a11y: PageTitle heading + BodyText subtitle; the Data-Export panel is a clickable target with an
+    onClickLabel; the card glyphs are decorative (null contentDescription, the title/label carries
+    meaning); Buttons carry their localized labels (ADR-015).
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/settings -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 17m 38s (combined assemble+lint+test run; assemble alone 2m 17s)
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL
+TEST_EXIT=0
+
+(compile sanity: ./gradlew :android:compileDebugKotlin BUILD SUCCESSFUL.
+ ktlint: ./gradlew :android:ktlintMainSourceSetCheck reports zero violations for the
+ com.teslasync.settings files — non-gated, but kept clean.)
+
+=== PARITY ===
+PARITY_REQUIRED=17
+
+[1] panel  : GlassPanel1 (Data Export)
+    EVIDENCE: DataExportCard (SettingsPage.kt) — GlassPanel(clickable onClick=onOpenDataExport)
+              with IconBox(Success)+SettingsPageGlyphs.Download, PanelTitle(translation_export_title),
+              Caption(translation_export_subtitle), trailing SettingsPageGlyphs.ExternalLink; the tap
+              deep-links to /data-export via openRoute. COVERED.
+
+[2] panel  : GlassPanel2 (Onboarding Tour)
+    EVIDENCE: OnboardingTourCard (SettingsPage.kt) — GlassPanel with IconBox(Primary)+
+              SettingsPageGlyphs.PlayCircle, PanelTitle(translation_tour_title),
+              Caption(translation_tour_description), and a Ghost Button(translation_tour_restart)
+              whose onClick pops the page-local TourLauncher (tourController::open). COVERED.
+
+[3] panel  : GlassPanel3 (Setup Checklist)
+    EVIDENCE: SetupChecklistCard (SettingsPage.kt) — GlassPanel with IconBox(Primary)+
+              SettingsPageGlyphs.Rocket, PanelTitle(translation_checklist_settings_title),
+              Caption(translation_checklist_settings_description), and a Ghost
+              Button(translation_checklist_settings_restart) whose onClick raises the toast. COVERED.
+
+[4] state  : loading data state
+    EVIDENCE: SettingsPageViewModel.state (SettingsPageViewModel.kt) = source.settings().asUiState(
+              isEmpty = { false }); SettingsPageContent (SettingsPage.kt) renders Spinner(size=Lg)
+              while state.isLoading (UiPhase.Loading), the native PageContainer loading overlay. COVERED.
+
+[5] state  : success data state
+    EVIDENCE: when state is not Loading, SettingsPageContent renders the full settings body
+              (SettingsSearch + EditConflictBanner + GeneralSettings + AppearanceSettings +
+              AdvancedSettings + ResetSection + the three cards) — UiPhase.Content (success). COVERED.
+
+[6] string : checklist.settings.description
+    EVIDENCE: R.string.translation_checklist_settings_description rendered by Caption(...) in
+              SetupChecklistCard (SettingsPage.kt). COVERED.
+
+[7] string : checklist.settings.restart
+    EVIDENCE: R.string.translation_checklist_settings_restart rendered by Button(label=...) in
+              SetupChecklistCard (SettingsPage.kt). COVERED.
+
+[8] string : checklist.settings.restarted
+    EVIDENCE: R.string.translation_checklist_settings_restarted resolved in the stateful
+              SettingsPage overload and raised via LocalToastController.success(...) by
+              SettingsPageActions.onRestartChecklist (SettingsPage.kt). COVERED.
+
+[9] string : checklist.settings.title
+    EVIDENCE: R.string.translation_checklist_settings_title rendered by PanelTitle(...) in
+              SetupChecklistCard (SettingsPage.kt). COVERED.
+
+[10] string : editConflict.resource.settings
+    EVIDENCE: R.string.translation_editConflict_resource_settings passed as resourceLabel to
+              EditConflictBanner(resourceKey = LEASE_KEY, resourceLabel = ...) in
+              SettingsPageContent (SettingsPage.kt). COVERED.
+
+[11] string : export.subtitle
+    EVIDENCE: R.string.translation_export_subtitle rendered by Caption(...) in DataExportCard
+              (SettingsPage.kt). COVERED.
+
+[12] string : export.title
+    EVIDENCE: R.string.translation_export_title rendered by PanelTitle(...) in DataExportCard
+              (SettingsPage.kt) (also the clickable onClickLabel). COVERED.
+
+[13] string : subtitle
+    EVIDENCE: R.string.translation_settings_subtitle rendered by BodyText(...) in the
+              SettingsPageContent header (SettingsPage.kt); value "Configure TeslaSync
+              preferences and Tesla account connection" added to res/values/strings.xml. COVERED.
+
+[14] string : title
+    EVIDENCE: R.string.translation_settings_title rendered by PageTitle(...) in the
+              SettingsPageContent header (SettingsPage.kt); value "Settings" added to
+              res/values/strings.xml. COVERED.
+
+[15] string : tour.description
+    EVIDENCE: R.string.translation_tour_description rendered by Caption(...) in OnboardingTourCard
+              (SettingsPage.kt). COVERED.
+
+[16] string : tour.restart
+    EVIDENCE: R.string.translation_tour_restart rendered by Button(label=...) in OnboardingTourCard
+              (SettingsPage.kt). COVERED.
+
+[17] string : tour.title
+    EVIDENCE: R.string.translation_tour_title rendered by PanelTitle(...) in OnboardingTourCard
+              (SettingsPage.kt). COVERED.
+
+PARITY_COVERED=17
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================

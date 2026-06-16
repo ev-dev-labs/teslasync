@@ -225,6 +225,15 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-ArchivedPage.log"
   },
   {
+    "unitId": "page:settings/Settings",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "p3-android/pages/settings/SettingsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-SettingsPage.log"
+  },
+  {
     "unitId": "page:notifications/Channels",
     "platform": "android",
     "status": "done",
