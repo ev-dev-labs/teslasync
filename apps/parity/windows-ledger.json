@@ -13984,5 +13984,473 @@
     "requiredCount": 12,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalLogViewerPage.log"
+  },
+  {
+    "unitId": "api:admin/RbacMatrix#diffMatrices",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "api:admin/RbacMatrix#isRbacOpenMode",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "api:admin/RbacMatrix#useRbacMatrix",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "api:admin/RbacMatrix#useUpsertRbacCells",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "page:admin/RbacMatrix",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "panel:admin/RbacMatrix#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "panel:admin/RbacMatrix#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "panel:admin/RbacMatrix#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "string-group:admin/RbacMatrix",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "api:admin/IngestXRay#useIngestXRay",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "api:admin/IngestXRay#useVehicles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "page:admin/IngestXRay",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "panel:admin/IngestXRay#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "panel:admin/IngestXRay#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "panel:admin/IngestXRay#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "panel:admin/IngestXRay#GlassPanel4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "string-group:admin/IngestXRay",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-IngestXRayPage.log"
+  },
+  {
+    "unitId": "api:admin/DLQInspector#useDLQAudit",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "api:admin/DLQInspector#useDLQEntry",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "api:admin/DLQInspector#useDLQList",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "api:admin/DLQInspector#useDLQReplay",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "panel:admin/DLQInspector#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "panel:admin/DLQInspector#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "string-group:admin/DLQInspector",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 10,
+    "requiredCount": 10,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "api:admin/FeatureFlags#useDeleteFlag",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "api:admin/FeatureFlags#useFlagChanges",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "api:admin/FeatureFlags#useFlags",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "api:admin/FeatureFlags#useSetFlag",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "panel:admin/FeatureFlags#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "panel:admin/FeatureFlags#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "string-group:admin/FeatureFlags",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 11,
+    "requiredCount": 11,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "api:system/TeslaAccount#useRefreshTeslaProfile",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "api:system/TeslaAccount#useTeslaUserProfile",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "page:system/TeslaAccount",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "panel:system/TeslaAccount#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "string-group:system/TeslaAccount",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 11,
+    "requiredCount": 11,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "api:analytics/YearReview#useVehicles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-YearReviewPage.log"
+  },
+  {
+    "unitId": "api:analytics/YearReview#useYearReview",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-YearReviewPage.log"
+  },
+  {
+    "unitId": "page:analytics/YearReview",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-YearReviewPage.log"
+  },
+  {
+    "unitId": "string-group:analytics/YearReview",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-YearReviewPage.log"
+  },
+  {
+    "unitId": "page:automations/AutomationCard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AutomationCard.log"
+  },
+  {
+    "unitId": "panel:automations/AutomationCard#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AutomationCard.log"
+  },
+  {
+    "unitId": "string-group:automations/AutomationCard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 19,
+    "requiredCount": 19,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AutomationCard.log"
+  },
+  {
+    "unitId": "page:system/NotFound",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-NotFoundPage.log"
+  },
+  {
+    "unitId": "panel:system/NotFound#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-NotFoundPage.log"
+  },
+  {
+    "unitId": "string-group:system/NotFound",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-NotFoundPage.log"
+  },
+  {
+    "unitId": "page:automations/ConflictWarnings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 3,
+    "requiredCount": 3,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ConflictWarnings.log"
+  },
+  {
+    "unitId": "string-group:automations/ConflictWarnings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ConflictWarnings.log"
+  },
+  {
+    "unitId": "panel:automations/AutomationActivityFeed#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AutomationActivityFeed.log"
+  },
+  {
+    "unitId": "string-group:automations/AutomationActivityFeed",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AutomationActivityFeed.log"
+  },
+  {
+    "unitId": "string-group:admin/TeslaOrders",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "string-group:admin/TeslaRegion",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-TeslaRegionPage.log"
   }
 ]

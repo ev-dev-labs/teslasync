@@ -38,6 +38,8 @@ for (const { f, us, n } of files.slice(0, limit)) {
   for (const m of txt.matchAll(/GetString\([^,]+,\s*"([^"]+)"/g)) native.add(m[1]);
   // Robust: capture EVERY C# string literal (handles multi-line GetString + commas/escapes inside the string).
   for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) native.add(m[1].replace(/\\"/g, '"'));
+  // Native i18n keys carry a "translation." namespace prefix the manifest's keys omit — add the stripped form.
+  for (const k of [...native]) if (k.startsWith('translation.')) native.add(k.slice('translation.'.length));
   const sg = us.find(u => u.kind === 'string-group');
   const reqStr = sg ? (sg.strings || []) : [];
   const missStr = reqStr.filter(k => !native.has(k));
