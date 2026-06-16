@@ -901,6 +901,24 @@
       "requiredCount": 12,
       "promptId": "p4-apple/P7/page:analytics/YearReview",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-YearReviewPage.log"
+    },
+    {
+      "unitId": "page:automations/TriggerConfigurator",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 23,
+      "requiredCount": 23,
+      "promptId": "p4-apple/P7/page:automations/TriggerConfigurator",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log"
+    },
+    {
+      "unitId": "page:automations/TriggerConfigurator",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 23,
+      "requiredCount": 23,
+      "promptId": "p4-apple/P7/page:automations/TriggerConfigurator",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-TriggerConfigurator.log"
     }
   ]
 }
