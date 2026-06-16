@@ -8609,4 +8609,20 @@
   <string name="translation_powerDashboards_panels_intro">These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.</string>
   <string name="translation_powerDashboards_panels_title">Curated panel catalog</string>
   <string name="translation_powerDashboards_title">Dashboard Composer</string>
+  <!-- P3-ANDROID A7 page:system/StatusApiDocs — en fallback (placeholder locale, ADR-014). -->
+  <string name="translation_statusApiDocs_title">Status API</string>
+  <string name="translation_statusApiDocs_subtitle">Stable contract for external integrations</string>
+  <string name="translation_statusApiDocs_back">Back to System Status</string>
+  <string name="translation_statusApiDocs_overviewTitle">Overview</string>
+  <string name="translation_statusApiDocs_overviewBody1">All endpoints are mounted under /api/v1/status and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth &#8212; otherwise pass an API key in the standard Authorization: Bearer &#8230; header.</string>
+  <string name="translation_statusApiDocs_overviewBody2">Designed for: Grafana (JSON datasource), Uptime Kuma (HTTP(s) JSON Query monitor), Home Assistant (REST sensor), Healthchecks.io (synthetic monitor), or any other system that consumes JSON over HTTP.</string>
+  <string name="translation_statusApiDocs_additiveNote">The shape is additive-only &#8212; new fields may appear, but existing field types and names won&#8217;t change without a major version bump.</string>
+  <string name="translation_statusApiDocs_exampleResponse">Example response</string>
+  <string name="translation_statusApiDocs_footer">Need an additional endpoint or field? Open an issue on the project repo &#8212; the API surface is intentionally small, but additive changes are welcome.</string>
+  <string name="translation_statusApiDocs_overallDescription">Overall snapshot &#8212; answers &#8216;is it healthy right now?&#8217; in a single round-trip. Includes counts, version, resources, maintenance, and a list of active incidents.</string>
+  <string name="translation_statusApiDocs_componentsDescription">Per-component health array &#8212; useful for surfacing individual subsystem status (database, mqtt, tesla, telemetry, etc.) in your own dashboard.</string>
+  <string name="translation_statusApiDocs_resourcesDescription">Runtime resources only (goroutines, uptime, Go version). Light enough to poll at high frequency.</string>
+  <string name="translation_statusApiDocs_uptimeDescription">Uptime percentage over the requested window. Until per-component heartbeat history is wired, the percentage is derived from the current snapshot &#8212; the historical_source field signals which is in play.</string>
+  <string name="translation_statusApiDocs_incidentsDescription">Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL.</string>
+  <string name="translation_statusApiDocs_liveDescription">Server-Sent Events stream. Pushes a `status` event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don&#8217;t garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer.</string>
 </resources>

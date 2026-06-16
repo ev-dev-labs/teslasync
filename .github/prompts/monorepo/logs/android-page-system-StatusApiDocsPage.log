@@ -1,0 +1,125 @@
+================================================================================
+P3-ANDROID A7 — page:system/StatusApiDocs  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/system/pages/StatusApiDocsPage.tsx
+promptId: p3-android/pages/system/StatusApiDocsPage
+web route: /docs/status-api
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present; resolves without local.properties)
+JDK         : OpenJDK 21.0.9
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (NOT BLOCKED). Baseline :android:assembleDebug verified GREEN before edits.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/system/StatusApiDocsPage.kt           (@Composable screen: StatusApiDocsPage + StatusApiDocsPageContent + sections)
+apps/android/app/src/main/kotlin/com/teslasync/system/StatusApiDocsPageViewModel.kt  (Hilt-free AndroidX ViewModel; StateFlow<UiState>; refresh()/retry(); view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/system/StatusApiDocsPageModel.kt      (framework-free model: registration, StatusEndpoint catalog (method/path/query/json), snapshot + Resource projection, recorder)
+apps/android/app/src/main/kotlin/com/teslasync/system/StatusApiDocsPageIcons.kt      (lucide glyph ports: Server / ArrowLeft / Code)
+apps/android/app/src/main/kotlin/com/teslasync/system/StatusApiDocsPageHost.kt       (PageHosts.register(statusApiDocs){ StatusApiDocsRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt           (NavHost wiring: + import + StatusApiDocsPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                     (+15 translation_statusApiDocs_* surface keys)
+apps/android/app/src/main/res/values-ar/strings.xml                                  (+15 keys, en fallback — placeholder locale)
+apps/android/app/src/main/res/values-he/strings.xml                                  (+15 keys, en fallback — placeholder locale)
+apps/parity/android-ledger.json                                                       (ledger row page:system/StatusApiDocs)
+.github/prompts/monorepo/logs/android-page-system-StatusApiDocsPage.log              (this log)
+
+Strings: the web page is NOT i18n-wired (it hardcodes its prose), so NO source keys exist. 15 new
+         translation_statusApiDocs_* keys were hand-added directly to res/values*/strings.xml — the
+         file the prompt allowed-files explicitly whitelists. The canonical i18n generator
+         (apps/shared/i18n/generators/gen-i18n.ts) reads web/src/i18n/{en,ar,he}.json and rewrites
+         Android+Apple+Windows resources; running it is out-of-scope (it would rewrite all 11 platform
+         resource files). NOTE (no silent drift): gen-i18n --check ALREADY reports DRIFT on all 11
+         files at baseline (committed resources are 281 keys behind the web catalog, 7781 vs 8062) —
+         this is PRE-EXISTING tech debt, not introduced or masked here. The 3 reused keys
+         (translation_common_noData / translation_error_loadFailed / translation_error_retry) already exist.
+Nav    : Destinations 'statusApiDocs' -> /docs/status-api PRE-EXISTING (Destinations.kt:161; count unchanged);
+         host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+         web <Link to="/system-status"> mapped to the system back-dispatcher (LocalOnBackPressedDispatcherOwner) —
+         the sanctioned page-host nav seam (no LocalNavController is exposed to hosts; CommandHistoryPage precedent).
+Data   : NO API data source. The web page renders a hardcoded <Endpoint> catalog; the native port mirrors this with
+         a static framework-free catalog (statusApiDocsCatalog) projected through the shared UiState surface by
+         StatusApiDocsPageViewModel (loading -> empty -> success). The HTTP method, paths, query specs and example
+         JSON bodies are protocol tokens carried verbatim as model data (web props), not localizable copy.
+SI/units: page carries no unit-bearing fields (doc prose + protocol tokens only) — no SI conversion applies.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/system -Language kotlin
+  PLACEHOLDER_ALLOWED=4   (all 4 opt-outs are in PRE-EXISTING sibling files; the 5 StatusApiDocs* files add 0)
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 3m 08s (:android:compileDebugKotlin executed)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 9m 16s (abortOnError=true; lint-results-debug.html, 0 errors)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 07s (:android:testDebugUnitTest executed)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=4
+--------------------------------------------------------------------------------
+# panels (3) — Material 3 GlassPanel (Surface) ; bound state holder = StatusApiDocsPageViewModel.uiState : StateFlow<UiState<StatusApiDocsSnapshot>>
+[COVERED] panel  GlassPanel1  -> StatusApiDocsPage.kt:218 OverviewPanel() GlassPanel(PanelPadding.Md){ Server heading + 2 contract paragraphs + Code additive-only note }   (web Overview <GlassPanel>, source L57-82)
+[COVERED] panel  GlassPanel2  -> StatusApiDocsPage.kt:267 EndpointCard() GlassPanel(PanelPadding.Md){ method Badge + path + ?query + description + Example-response disclosure }, rendered x6 via StaggerContainer (StatusApiDocsPage.kt:177-181)   (web <Endpoint> component, source L23-42; six instances L84-168)
+[COVERED] panel  GlassPanel3  -> StatusApiDocsPage.kt:334 FooterPanel() GlassPanel(PanelPadding.Md){ HelperText footer }   (web closing <GlassPanel>, source L170-173)
+
+# data states (1 declared: success ; loading/empty/error seams also implemented) — bound to StatusApiDocsPageViewModel.uiState
+[COVERED] state  success      -> StatusApiDocsPage.kt:175 StatusApiDocsPageContent when else -> { FadeIn OverviewPanel ; StaggerContainer{ EndpointCard x6 } ; FadeIn FooterPanel } — UiPhase.Content via asUiState(isEmpty)
+# (+ full data-state matrix implemented for the bound source, per spec)
+#   loading -> StatusApiDocsPage.kt:172 StatusApiDocsLoading() (StatusApiDocsPage.kt:362, shimmer Skeleton x4)
+#   error   -> StatusApiDocsPage.kt:173 StatusApiDocsError(onRetry) (StatusApiDocsPage.kt:351, ErrorDisplay + Retry -> viewModel.retry)
+#   empty   -> StatusApiDocsPage.kt:174 StatusApiDocsEmpty() (StatusApiDocsPage.kt:342, EmptyState) — UiPhase.Empty via asUiState(isEmpty={ it.isEmpty })
+
+PARITY_COVERED=4
+
+--------------------------------------------------------------------------------
+=== STRINGS (15 new + 3 reused) — every visible literal via stringResource(R.string.translation_*) ===
+--------------------------------------------------------------------------------
+[COVERED] statusApiDocs.title                 -> StatusApiDocsPage.kt:197 PageTitle             "Status API"
+[COVERED] statusApiDocs.subtitle              -> StatusApiDocsPage.kt:199 BodyText              "Stable contract for external integrations"
+[COVERED] statusApiDocs.back                  -> StatusApiDocsPage.kt:204 Button(leadingIcon=ArrowLeft)  "Back to System Status"
+[COVERED] statusApiDocs.overviewTitle         -> StatusApiDocsPage.kt:231 PanelTitle (Server heading)    "Overview"
+[COVERED] statusApiDocs.overviewBody1         -> StatusApiDocsPage.kt:234 BodyText              (mount/auth paragraph)
+[COVERED] statusApiDocs.overviewBody2         -> StatusApiDocsPage.kt:238 BodyText              (designed-for paragraph)
+[COVERED] statusApiDocs.additiveNote          -> StatusApiDocsPage.kt:253 BodyText (Code icon, warning tint)  (additive-only note)
+[COVERED] statusApiDocs.exampleResponse       -> StatusApiDocsPage.kt:298 Caption (disclosure summary)   "Example response"
+[COVERED] statusApiDocs.footer                -> StatusApiDocsPage.kt:336 HelperText            (need-an-endpoint footer)
+[COVERED] statusApiDocs.overallDescription    -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Overall)    (StatusApiDocsPage.kt:381)
+[COVERED] statusApiDocs.componentsDescription -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Components)  (StatusApiDocsPage.kt:382)
+[COVERED] statusApiDocs.resourcesDescription  -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Resources)   (StatusApiDocsPage.kt:383)
+[COVERED] statusApiDocs.uptimeDescription     -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Uptime)      (StatusApiDocsPage.kt:384)
+[COVERED] statusApiDocs.incidentsDescription  -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Incidents)   (StatusApiDocsPage.kt:385)
+[COVERED] statusApiDocs.liveDescription       -> StatusApiDocsPage.kt:286 BodyText via endpointDescriptionRes(Live)        (StatusApiDocsPage.kt:386)
+[REUSED ] common.noData / error.loadFailed / error.retry -> empty + error seams (StatusApiDocsPage.kt:342/351)
+Protocol tokens (NOT localized, web hardcodes them as props): method "GET", paths /api/v1/status[...], query specs,
+example JSON bodies — carried verbatim in StatusApiDocsPageModel.kt (statusApiDocsCatalog).
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : none (static contract docs). StatusApiDocsPageViewModel projects the framework-free static
+               statusApiDocsCatalog through the shared lifecycle-aware UiState (loading -> empty -> success); the
+               composable is a thin render layer with no HTTP and no business logic.
+a11y/theme   : pane title via Modifier.semantics{ paneTitle }; Overview/EndpointCard panels carry contentDescription;
+               Overview heading row marked semantics{ heading() }; decorative glyphs pass contentDescription=null; the
+               Example-response disclosure is a clickable Caption with a content description; Material 3 >=48dp targets
+               on the Button; dynamic-color + dark theme via MaterialTheme (A2 tokens); Compose-native (no webview).
+nav          : Destinations 'statusApiDocs' -> /docs/status-api (pre-existing) wired to StatusApiDocsRoute() via
+               PageHosts.register; web <Link to="/system-status"> mapped to the system back-dispatcher seam.
+placeholder  : PLACEHOLDER_COUNT=0 (the 5 StatusApiDocs* files contribute 0 violations and 0 opt-outs).
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(4) == PARITY_REQUIRED(4)
+[PASS] all android triad gates green; parity 4/4; android ledger row page:system/StatusApiDocs status=done.
+EXIT=0
+STATUS=DONE

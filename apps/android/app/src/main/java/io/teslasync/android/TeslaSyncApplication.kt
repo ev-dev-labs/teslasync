@@ -124,6 +124,7 @@ import io.teslasync.android.system.incidenttimeline.IncidentTimelinePageHost
 import io.teslasync.android.system.scheduledexports.ScheduledExportsPanelPageHost
 import io.teslasync.android.system.systemstatus.SystemStatusPageHost
 import io.teslasync.android.system.statemachinedebugger.StateMachineDebuggerPageHost
+import io.teslasync.android.system.statusapidocs.StatusApiDocsPageHost
 import io.teslasync.android.telemetry.livesignalmonitor.LiveSignalMonitorPageHost
 import io.teslasync.android.telemetry.signalexplorer.SignalExplorerPageHost
 import io.teslasync.android.telemetry.mqttinspector.MQTTInspectorPageHost
@@ -324,6 +325,8 @@ class TeslaSyncApplication : Application() {
         IncidentTimelinePageHost.register()
         ScheduledExportsPanelPageHost.register()
         SystemStatusPageHost.register()
+        // Register the native Status-API docs system screen for the /docs/status-api route (P3/A7). Idempotent.
+        StatusApiDocsPageHost.register()
         // Register the native DB-health system screen for the /db-health route (P3/A7). Idempotent.
         DBHealthPageHost.register()
         StateMachineDebuggerPageHost.register()
