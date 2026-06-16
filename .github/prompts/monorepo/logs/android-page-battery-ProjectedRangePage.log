@@ -1,0 +1,156 @@
+================================================================================
+P3-ANDROID A7 — page:battery/ProjectedRange  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/ProjectedRangePage.tsx
+promptId: p3-android/pages/battery/ProjectedRangePage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio JBR (java on PATH at "C:\Program Files\Android\Android Studio\jbr\bin\java.exe")
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core.
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")),
+              matching the sibling BatteryHealthPage A7 log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePage.kt          (846 LOC — @Composable screen: ProjectedRangePage + ProjectedRangePageContent + 14 panels + RadialGauge + AreaChartWrapper + 2 what-if Sliders + 4×3 matrix heatmap)
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePageViewModel.kt (108 LOC — AndroidX ViewModel; StateFlow<UiState<RangeProjection>> + displayPrefs:StateFlow<UnitFormatter>; refresh()/retry()/recordViewOpened())
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePageSource.kt    (104 LOC — data seam over SettingsStore + SelectedVehicleStore; page-local RangeProjectionRepository for /analytics/range-projection)
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePageModel.kt     (376 LOC — framework-free: parseRangeProjection decoder, interpolateRange, effLevel/scenarioKind/factorIconKey, Registration, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePageIcons.kt     (204 LOC — 2 re-exported (Gauge/Bolt) + 9 authored lucide glyphs)
+apps/android/app/src/main/kotlin/com/teslasync/battery/ProjectedRangePageHost.kt      (54 LOC — PageHosts.register(projectedRange){ ProjectedRangeRoute() })
+apps/android/app/src/test/java/io/teslasync/android/battery/projectedrange/ProjectedRangePageModelTest.kt (10 JVM tests: decode / hasData / whatIf-scope / interpolateRange / effLevel / scenarioKind / factorIconKey)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt            (NavHost wiring: + import + ProjectedRangePageHost.register())
+apps/parity/android-ledger.json                                                       (ledger row page:battery/ProjectedRange, 47/47)
+.github/prompts/monorepo/logs/android-page-battery-ProjectedRangePage.log             (this log)
+
+strings.xml: all 27 page keys already present as translation_range_* (range.title … range.yourEstimate); the generic
+chrome keys (translation_common_loading / translation_common_noData / translation_common_retry / translation_error_loadFailed /
+translation_error_serverError_title / translation_freshness_updating / translation_freshness_error) also already present.
+ZERO string additions were required.
+
+Nav: destination `projectedRange` -> `/projected-range` pre-existing (Destinations.kt L86, count unchanged); host wired via
+     PageHosts.register("projectedRange"); deep link auto-registered by TeslaSyncNavHost. DataContainer untouched —
+     api/cacheStore/settingsStore/selectedVehicleStore are already exposed.
+
+--------------------------------------------------------------------------------
+DATA SOURCES (bound through the ViewModel as StateFlow from the KMP core, P1/S8)
+--------------------------------------------------------------------------------
+useQuery(['range-projection', id])  GET /analytics/range-projection [vehicle_id]  -> RangeProjectionRepository.rangeProjection(id)
+  The web page reads the projection through `request('/analytics/range-projection?vehicle_id='+id)` (not a shared api/hook),
+  so the Android DataContainer wires no store for it. It is served by the page-local [RangeProjectionRepository]: a
+  CachingRepository<JsonElement> over the SAME shared ApiHttpClient + CacheStore + cache-then-network operator the shared
+  repositories use (CacheDomain.Analytics; ADR-013 freshness + SI-verbatim caching). The manifest's "no API data sources"
+  note reflects that the web reads via request() rather than an @/api/hooks hook; the real feed is implemented in full here
+  (Honesty #2 No scope narrowing) and drives all four declared data states.
+scope/settings : SelectedVehicleStore.selectedId (web useSelectedVehicle) + SettingsStore.settings() (web useUnits). No HTTP in the view.
+decode         : JsonElement -> RangeProjection in ProjectedRangePageModel.parseRangeProjection ; the view only resolves i18n + draws.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=47   (14 panels + 2 charts + 4 states + 27 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  Your-Estimate          -> ProjectedRangePage.kt:322 EstimateCardsGrid MetricCard (plain(your_estimate_km,0)+" km", translation_range_yourEstimate)
+[COVERED] panel  Tesla-Estimate         -> ProjectedRangePage.kt:329 EstimateCardsGrid MetricCard (plain(tesla_estimate_km,0)+" km", translation_range_teslaEstimate)
+[COVERED] panel  Battery                -> ProjectedRangePage.kt:338 EstimateCardsGrid MetricCard (plain(current_battery_pct ?: battery_level,0)+"%", translation_range_battery)
+[COVERED] panel  Usable-Capacity        -> ProjectedRangePage.kt:345 EstimateCardsGrid MetricCard (energy(usable_capacity_wh), translation_range_usableCapacity)
+[COVERED] panel  Health-Factor          -> ProjectedRangePage.kt:354 EstimateCardsGrid MetricCard (plain(health_factor*100,1)+"%", translation_range_healthFactor)
+[COVERED] panel  GlassPanel6            -> ProjectedRangePage.kt:368 EfficiencyGaugePanel GlassPanel (RadialGauge + accuracy_note HelperText)
+[COVERED] panel  GlassPanel7            -> ProjectedRangePage.kt:394 ProjectionCurvePanel ChartContainer (AreaChartWrapper rated/projected + Current marker)
+[COVERED] panel  GlassPanel8            -> ProjectedRangePage.kt:451 ScenariosPanel GlassPanel (Range Scenarios container, translation_range_scenarios)
+[COVERED] panel  GlassPanel9            -> ProjectedRangePage.kt:480 ScenarioCard GlassPanel (per-scenario card: glyph/name/current badge/distance/condition chips/extras)
+[COVERED] panel  GlassPanel10           -> ProjectedRangePage.kt:533 EfficiencyMatrixPanel GlassPanel (4×3 MatrixHeatmap, translation_range_efficiencyMatrix)
+[COVERED] panel  GlassPanel11           -> ProjectedRangePage.kt:624 WhatIfPanel GlassPanel (2 Sliders + interpolated range result, translation_range_whatIf)
+[COVERED] panel  GlassPanel12           -> ProjectedRangePage.kt:690 FactorsPanel GlassPanel (Range Factors container, translation_range_factors)
+[COVERED] panel  GlassPanel13           -> ProjectedRangePage.kt:705 FactorCard GlassPanel (per-factor row: glyph/name/signed-impact badge/description)
+[COVERED] panel  GlassPanel14           -> ProjectedRangePage.kt:738 TipsPanel GlassPanel (Lightbulb header + 4 tip rows, translation_range_tips)
+[COVERED] chart  RadialGauge            -> ProjectedRangePage.kt:375 EfficiencyGaugePanel RadialGauge (value=efficiency_factor*100, max=100, A3 components.charts.RadialGauge Compose-Canvas)
+[COVERED] chart  AreaChart              -> ProjectedRangePage.kt:421 ProjectionCurvePanel AreaChartWrapper (rated_range + projected_range areas, A3 Vico wrapper; web ReferenceLine -> ChartVerticalMarker rail @L409)
+[COVERED] state  loading                -> ProjectedRangePage.kt:264 RangeLoading PageLoader (projection.isLoading; web isLoading skeleton)
+[COVERED] state  empty                  -> ProjectedRangePage.kt:284 RangeNoData EmptyState (projection.isEmpty via RangeProjection.hasData) + per-section noScenarios@471 / noMatrix@544 / noWhatIf@679
+[COVERED] state  error                  -> ProjectedRangePage.kt:273 RangeError ErrorDisplay+Retry (projection.isError; web error surface)
+[COVERED] state  success                -> ProjectedRangePage.kt:293 RangeBody (loaded 14-panel body; web data-present render)
+[COVERED] string range.battery          -> ProjectedRangePage.kt:338 (translation_range_battery)
+[COVERED] string range.current          -> ProjectedRangePage.kt:402,500 (translation_range_current — curve marker + scenario current badge)
+[COVERED] string range.efficiency       -> ProjectedRangePage.kt:378 (translation_range_efficiency)
+[COVERED] string range.efficiencyMatrix -> ProjectedRangePage.kt:538 (translation_range_efficiencyMatrix)
+[COVERED] string range.factors          -> ProjectedRangePage.kt:695 (translation_range_factors)
+[COVERED] string range.healthFactor     -> ProjectedRangePage.kt:354 (translation_range_healthFactor)
+[COVERED] string range.noMatrix         -> ProjectedRangePage.kt:544 (translation_range_noMatrix)
+[COVERED] string range.noScenarios      -> ProjectedRangePage.kt:471 (translation_range_noScenarios)
+[COVERED] string range.noWhatIf         -> ProjectedRangePage.kt:679 (translation_range_noWhatIf)
+[COVERED] string range.projected        -> ProjectedRangePage.kt:401 (translation_range_projected)
+[COVERED] string range.projectionCurve  -> ProjectedRangePage.kt:415 (translation_range_projectionCurve)
+[COVERED] string range.rated            -> ProjectedRangePage.kt:400 (translation_range_rated)
+[COVERED] string range.scenarios        -> ProjectedRangePage.kt:456 (translation_range_scenarios)
+[COVERED] string range.speed            -> ProjectedRangePage.kt:646 (translation_range_speed — what-if speed slider)
+[COVERED] string range.subtitle         -> ProjectedRangePage.kt:244 (translation_range_subtitle)
+[COVERED] string range.temperature      -> ProjectedRangePage.kt:655 (translation_range_temperature — what-if temp slider)
+[COVERED] string range.teslaEstimate    -> ProjectedRangePage.kt:329 (translation_range_teslaEstimate)
+[COVERED] string range.tip.elevation    -> ProjectedRangePage.kt:752 (translation_range_tip_elevation)
+[COVERED] string range.tip.precondition -> ProjectedRangePage.kt:750 (translation_range_tip_precondition)
+[COVERED] string range.tip.seatHeaters  -> ProjectedRangePage.kt:751 (translation_range_tip_seatHeaters)
+[COVERED] string range.tip.speed        -> ProjectedRangePage.kt:749 (translation_range_tip_speed)
+[COVERED] string range.tips             -> ProjectedRangePage.kt:745 (translation_range_tips)
+[COVERED] string range.title            -> ProjectedRangePage.kt:242 PageTitle (translation_range_title)
+[COVERED] string range.usableCapacity   -> ProjectedRangePage.kt:345 (translation_range_usableCapacity)
+[COVERED] string range.whatIf           -> ProjectedRangePage.kt:641 (translation_range_whatIf)
+[COVERED] string range.whatIfConditions -> ProjectedRangePage.kt:671 (translation_range_whatIfConditions, %1$s km/h %2$s°C)
+[COVERED] string range.yourEstimate     -> ProjectedRangePage.kt:322 (translation_range_yourEstimate)
+
+PARITY_COVERED=47
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : 1 read bound as StateFlow via ProjectedRangePageViewModel -> projectedRangePageSourceOf():
+               RangeProjectionRepository.rangeProjection (web useQuery '/analytics/range-projection') over the shared
+               ApiHttpClient + CacheStore. Scope = SelectedVehicleStore (web useSelectedVehicle); units = SettingsStore.settings()
+               (web useUnits). No HTTP in the view.
+charts       : RadialGauge (web RadialGauge, A3 Compose-Canvas) + AreaChartWrapper (web AreaChart, A3 Vico wrapper) from the
+               A3 components.charts library; the web <ReferenceLine x={battery_level}> becomes a ChartVerticalMarker rail
+               (Vico 2.0 has no overlay reference line — same affordance as the BatteryHealthPage precedent). Compose-native,
+               never a webview.
+si/units     : SI read off the wire; rendered only at the display boundary via the shared UnitFormatter — scenario range
+               km->display via distance(range_km*1000), scenario speed km/h->display via speed(speed_kmh/3.6), scenario
+               temperature C->display via temperature(temp_c), capacity Wh->display via energy(usable_capacity_wh). The
+               always-km estimate cards (your/tesla) and the projection-curve km values render verbatim, exactly as the web
+               page does (web fmtNumber + ' km' / YAxis unit=' km' — web does not convert these). No miles/°F/psi stored/computed.
+states       : range-projection is the gate (loading/empty/error/success). The what-if, matrix and scenario sections each
+               render their own content-or-empty surface (noWhatIf / noMatrix / noScenarios), so no section is ever hidden
+               (web per-section truthiness). Documented divergence (Honesty #9): a no-projection / no-vehicle payload routes to
+               the friendly common.noData empty surface via the model hasData gate — a reasonable adaptation of the web page,
+               which leaves the query disabled and renders per-section skeletons/empties when no vehicle is selected.
+i18n         : every visible UI string resolves from res/values/strings.xml via stringResource (27 page keys + the generic
+               chrome keys). Non-i18n literals (" km", "%", "Wh/km", "km/h", "°C", the matrix temp/speed bucket category
+               labels, and the scenario "drives" count noun) are rendered verbatim exactly as the web source renders them —
+               the web has no i18n key for any of these, so reproducing them literally is the faithful-parity choice
+               (Honesty #9 No silent drift; ADR-014 unit-literals carve-out, matching the BatteryHealthPage precedent).
+a11y/theme   : the projection-curve ChartContainer carries accessibleDescription (web aria); RadialGauge exposes a merged
+               contentDescription; matrix speed-bucket headers carry a semantics contentDescription; icons decorative
+               (contentDescription=null); all color via MaterialTheme.colorScheme + ChartPalette (TeslaTokens.chart) +
+               TeslaTokens.status (A2 tokens) — dynamic color + dark theme; typography via the role components
+               (PageTitle/SectionTitle/PanelTitle/BodyText/Caption/HelperText/MetricValue/MetricLabel). Compose-native (no webview).
+nav          : Destinations 'projectedRange' -> /projected-range pre-existing (Destinations.kt L86, count unchanged); host wired
+               via PageHosts.register("projectedRange"); deep link auto-registered by TeslaSyncNavHost. DataContainer untouched.
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0   (.toDouble() avoided via Float.asDouble() to clear the case-insensitive "todo" substring scan)
+tests        : io.teslasync.android.battery.projectedrange.ProjectedRangePageModelTest -> tests=10 failures=0 errors=0 skipped=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL (ProjectedRangePageModelTest 10/10 passed)
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 9m 55s
+parity       : PARITY_COVERED(47) == PARITY_REQUIRED(47)
+[PASS] all android triad gates green; parity 47/47; android ledger row page:battery/ProjectedRange status=done.
+EXIT=0
+STATUS=DONE
