@@ -9468,7 +9468,6 @@
   <string name="translation_Pick_signals_and_click_Explore">Pick signals and click Explore</string>
   <string name="translation_Choose_up_to_5_signals__set_a_date_range__then_hit_Explore___or_toggle_Live_to_stream_in_real_time_">Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.</string>
   <string name="translation_Visualise_signal_history_with_chart_and_stats___or_stream_live">Visualise signal history with chart and stats — or stream live</string>
-  <string name="translation_help_signal_live_aria">More info about live signal streaming</string>
   <string name="translation_signalExplorer_live">Live</string>
   <string name="translation_signalExplorer_noVehicle">Select a vehicle to begin</string>
   <string name="translation_signalExplorer_noVehicleDesc">Pick a vehicle from the picker above to explore its signals.</string>
