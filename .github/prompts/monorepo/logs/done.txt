@@ -985,3 +985,4 @@ p3-android/pages/trips/TripReplayPage.prompt.md
 p3-android/pages/admin/DiskForecastPage.prompt.md
 p3-android/pages/admin/ApiPlaygroundPage.prompt.md
 p3-android/pages/admin/BackupRestorePage.prompt.md
+p3-android/pages/system/DBHealthPage.prompt.md
