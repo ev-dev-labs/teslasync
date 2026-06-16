@@ -124,6 +124,7 @@ import io.teslasync.android.telemetry.signalexplorer.SignalExplorerPageHost
 import io.teslasync.android.telemetry.mqttinspector.MQTTInspectorPageHost
 import io.teslasync.android.telemetry.signaldiff.SignalDiffPageHost
 import io.teslasync.android.analytics.AnalyticsPageHost
+import io.teslasync.android.trips.tripdetail.TripDetailPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -308,6 +309,7 @@ class TeslaSyncApplication : Application() {
         MQTTInspectorPageHost.register()
         SignalDiffPageHost.register()
         AnalyticsPageHost.register()
+        TripDetailPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

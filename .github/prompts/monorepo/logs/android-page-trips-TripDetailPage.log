@@ -1,0 +1,133 @@
+================================================================================
+P3-ANDROID · A7 · page:trips/TripDetail — evidence log
+Native Jetpack Compose / Material 3 port of web TripDetailPage
+Source: web/src/features/trips/pages/TripDetailPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/trips/**
+Package: io.teslasync.android.trips.tripdetail
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR, JAVA_HOME = C:\Program Files\Android\Android Studio\jbr)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / SharedDrive precedents)
+  TripDetailPageModel.kt      framework-free: registration ids (tripDetail / /trips/:id / id arg /
+                              SLUG); TripDetailDisplayPrefs (web useUnits + useFormatting — distance
+                              unit, currency symbol, decimal precision, locale); deriveTripDetailView
+                              (the verbatim SI→display fold of the four StatCard values + the six
+                              KVList row values, incl. the web whPerKm efficiency + KM_PER_MILE
+                              imperial lift); formatTripDate (web formatDate, FormatStyle.MEDIUM);
+                              tripFallbackLabel ("Trip #id").
+  TripDetailPageSource.kt     seam over TripsRepository.trip(id) (web useTrip → GET /trips/{id}) +
+                              SettingsStore.settings (web useUnits/useFormatting source).
+  TripDetailPageViewModel.kt  BaseFeedViewModel; tripState: StateFlow<UiState<Trip>> over the
+                              cache-then-network feed via asUiState; displayPrefs StateFlow; refresh/retry.
+  TripDetailPage.kt           stateful entry + stateless content rendered inside the shared PageContainer
+                              chrome (web <PageContainer>); loading / empty(notFound) / error / success;
+                              the four summary StatCards in a responsive 2/4-col grid; the GlassPanel KVList.
+  TripDetailPageHost.kt       TripDetailRoute(entry reads id) + TripDetailPageHost.register() for the
+                              `tripDetail` / `/trips/:id` destination (Destinations.kt L66; registered
+                              in TeslaSyncApplication.kt).
+
+DATA SOURCES (bound through the ViewModel's StateFlow over the KMP core, P1/S8)
+  useTrip  → TripsRepository.trip(id)  (GET /trips/{id})  → tripState
+  (web useUnits/useFormatting) → SettingsStore.settings() → displayPrefs
+
+NOTE — web useTrip is @deprecated: the backend registers only GET /trips (list), not GET /trips/{id}
+  (internal/api/router.go). The call resolves to a 404 that surfaces through Resource.Error → the
+  PageContainer error surface — the same graceful path the web page renders. The port reproduces this
+  contract unchanged (TripsRepository.trip KDoc).
+
+SCOPE NOTE — the web page also renders <AIAutoTripNameSuggestion>. That component is NOT part of this
+  parity unit (the manifest page:trips/TripDetail enumerates exactly the 4 StatCards + the GlassPanel =
+  5 panels, requiredCount 21; the AI suggestion is a separate component parity unit). It is intentionally
+  not stubbed here (ADR-011: no placeholders, no scope drift).
+
+SI BOUNDARY (P1/S5)
+  The model stays SI end to end (meters, Wh). Display conversion happens only at the render boundary via
+  TripDetailDisplayPrefs (convertDistanceFromSI + the Wh/km→Wh/mi efficiency factor the web keeps because
+  the shared units module ships no energy-per-distance helper) and the ChartFormat-backed number/currency
+  formatters. The cache stays SI (ADR-013); no non-SI value is stored or computed.
+
+=== PARITY ===
+PARITY_REQUIRED=21
+
+PANELS (5) — the four summary StatCards + the trip-facts GlassPanel
+  [01] panel  Distance      TripDetailPage.kt:178  StatCard(label=translation_trips_detail_distance,
+                                                     value=view.distance, unit=view.distanceUnit) via TripStatGrid(L172)
+  [02] panel  Energy-Used   TripDetailPage.kt:179  StatCard(label=translation_trips_detail_energy, unit="Wh")
+  [03] panel  Efficiency    TripDetailPage.kt:180  StatCard(label=translation_trips_detail_efficiency, unit=Wh/{mi|km})
+  [04] panel  Cost          TripDetailPage.kt:181  StatCard(label=translation_trips_detail_cost, value=currency)
+  [05] panel  GlassPanel5   TripDetailPage.kt:227  GlassPanel + KVList (TripDetailFacts, L223)
+
+DATA STATES (4) — for the useTrip source
+  [06] state  loading   TripDetailPage.kt:137  PageContainer(loading = state.isLoading) → centred spinner
+  [07] state  empty     TripDetailPage.kt:145  EmptyState(message = translation_trips_detail_notFound) (no trip)
+  [08] state  error     TripDetailPage.kt:138  PageContainer(error = fetchError) on state.isError → error + retry
+  [09] state  success   TripDetailPage.kt:143  TripDetailLoaded(view) (panels) when the trip is present
+
+STRINGS (12) — every visible literal resolves from res/values/strings.xml; key names match web
+  [10] string trips.detail.charges     TripDetailPage.kt:239  translation_trips_detail_charges
+  [11] string trips.detail.cost        TripDetailPage.kt:181  translation_trips_detail_cost
+  [12] string trips.detail.distance    TripDetailPage.kt:178  translation_trips_detail_distance
+  [13] string trips.detail.drives      TripDetailPage.kt:238  translation_trips_detail_drives
+  [14] string trips.detail.efficiency  TripDetailPage.kt:180  translation_trips_detail_efficiency
+  [15] string trips.detail.ended       TripDetailPage.kt:237  translation_trips_detail_ended
+  [16] string trips.detail.energy      TripDetailPage.kt:179  translation_trips_detail_energy
+  [17] string trips.detail.name        TripDetailPage.kt:235  translation_trips_detail_name
+  [18] string trips.detail.notFound    TripDetailPage.kt:145  translation_trips_detail_notFound
+  [19] string trips.detail.started     TripDetailPage.kt:236  translation_trips_detail_started
+  [20] string trips.detail.title       TripDetailPage.kt:135  translation_trips_detail_title
+  [21] string trips.detail.tripId      TripDetailPage.kt:234  translation_trips_detail_tripId
+
+PARITY_COVERED=21
+
+STRING CATALOG
+  All 12 keys already existed in res/values/strings.xml (translation_trips_detail_*, generated from the
+  shared i18n catalog with the verbatim web inline-default values). No string edits were required, so the
+  catalog was left unchanged. Unit symbols ("Wh", "km"/"mi", "Wh/mi"/"Wh/km", currency symbol) and the
+  "Trip #id" name fallback are reproduced verbatim from the web source, which likewise does not
+  internationalize them (no i18n key exists for them on the web or in the required string set).
+
+A11Y / THEME / UNITS (ADR-015)
+  - Each StatCard carries a merged TalkBack content description ("<label> <value> <unit>") via
+    clearAndSetSemantics; the KVList rows stay individually accessible label/value pairs.
+  - Colours/typography come from MaterialTheme (P1/S9 tokens) — dark + dynamic colour honoured; no
+    hardcoded colours. Touch targets use the shared component sizing (≥48dp).
+  - The stat grid is responsive: 2 columns on a phone, 4 on a ≥840dp window (web cols.default/cols.lg).
+  - SI values are converted only at the display boundary (TripDetailDisplayPrefs); the page is
+    Compose-native — no webview, no charts/maps (the web page has none).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/trips -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 1m 56s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m (lint-results-debug.html written; abortOnError default true; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 39s
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (Distance, Energy-Used, Efficiency, Cost StatCards + the GlassPanel
+      KVList); every region of the web source reproduced (PageContainer chrome with title + name/"Trip #id"
+      subtitle + breadcrumb override, the 2/4-col stat grid, the six-row facts panel, the not-found empty
+      state). The AI name-suggestion component is a separate parity unit and is correctly out of scope.
+  [x] All 21 parity items render from the bound StateFlow state holder (tripState + displayPrefs), folded
+      by the framework-free deriveTripDetailView.
+  [x] loading / empty / error / success implemented for the useTrip data source.
+  [x] All visible strings sourced from strings.xml; key names match web; zero hardcoded UI copy (unit
+      symbols + the "Trip #id" fallback mirror the web's own non-internationalized literals).
+  [x] Dark/dynamic theme via MaterialTheme; ≥48dp targets; merged StatCard semantics + accessible KVList
+      rows (a11y); SI units honoured at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (21).
+  [x] android ledger row for page:trips/TripDetail set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
