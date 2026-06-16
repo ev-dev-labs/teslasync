@@ -1,0 +1,163 @@
+================================================================================
+P3-ANDROID · A7 · page:dashboard/Dashboard — evidence log
+Native Jetpack Compose / Material 3 port of web DashboardPage (Command Center)
+Source: web/src/features/dashboard/pages/DashboardPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/dashboard/**
+Package: io.teslasync.android.dashboard.dashboard
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present; platforms android-34/35/36)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = Android Studio JBR (java on PATH)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts; the prompt's literal
+                 ":app:" is the generic placeholder — this single-module build addresses ":android:"
+                 per the README gate contract, exactly as the sibling A7 page logs record).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 Powershare / ApiLogs / GasPriceAutoPoll precedents — 5-file surface)
+  DashboardPageModel.kt       framework-free: registration ids (ROUTE_ID=dashboard, WEB_PATH=/,
+                              SLUG=DashboardPage), authenticatedOrDefault (1:1 web `auth?.authenticated
+                              ?? false` onboarding guard), recordDashboardPageOpened view.opened diag.
+  DashboardPageSource.kt      seam over the shared S8 SettingsStore.authStatus() (web useAuthStatus,
+                              GET /auth/status) + VehiclesStore.syncVehicles() (web useSyncVehicles,
+                              POST /vehicles/sync); dashboardPageSourceOf binds both shared holders.
+  DashboardPageViewModel.kt   BaseFeedViewModel; state: StateFlow<UiState<AuthStatus>> via
+                              refreshTrigger.flatMapLatest{ source.authStatus() }.asUiState(isEmpty={false});
+                              syncing flow (web isPending); syncVehicles() fold→emitEvent(CommandOutcome)
+                              + refresh on success; refresh/retry; recordViewOpened; recordChromeAction.
+  DashboardPage.kt            stateful entry + stateless content; header (title/subtitle); view/edit action
+                              toolbars; theme/load-error/auth/customize banners + edit hint; GlassPanel 1
+                              (onboarding: connected ⇒ Sync title/desc/Sync action, disconnected ⇒ Welcome
+                              title/desc/Connect action) with loading-skeleton / error-retry / content per
+                              the bound auth state; GlassPanel 2 (×4 capability tiles); reset confirm dialog.
+  DashboardPageHost.kt        DashboardRoute + DashboardPageHost.register() for the `dashboard` / `/`
+                              destination (Destinations.kt L48); binds over container.settingsStore +
+                              container.vehiclesStore from LocalDataContainer; no HTTP in the view.
+  TeslaSyncApplication.kt     DashboardPageHost.register() wired into onCreate (NavHost registration).
+  res/values/strings.xml      NO changes — all 36 parity keys already existed in the catalog (auth.* /
+                              dashboard.* / onboarding.* / theme.firstRun* / error.loadFailed /
+                              layout.resetMessage / title / subtitle). Verified present before wiring.
+
+I18N RESOLUTION (why bare `title`/`subtitle` map to translation_title / translation_subtitle)
+  The web DashboardPage uses `useTranslation('dashboard')`, but the app's i18n (web/src/i18n/index.ts)
+  registers a single `translation` namespace only — so the requested `dashboard` ns has no resources and
+  every bare `t('title', 'Command Center')` / `t('subtitle', 'Real-time fleet intelligence and control')`
+  resolves to its inline default. Those defaults equal the catalog's translation_title="Command Center" /
+  translation_subtitle="Real-time fleet intelligence and control" (NOT translation_dashboard_title=
+  "Dashboard"). The fully-qualified calls (`t('dashboard.addWidget')`, `t('onboarding.title')`,
+  `t('auth.*')`, `t('theme.*')`) resolve verbatim to their translation_<ns>_<key> catalog rows.
+
+DATA SOURCES (bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useAuthStatus  → DashboardPageViewModel.state (StateFlow<UiState<AuthStatus>>)
+      ← DashboardPageSource.authStatus()  ← SettingsStore.authStatus()  (GET /auth/status, cache-then-network)
+  useSyncVehicles → DashboardPageViewModel.syncVehicles() / syncing (StateFlow<Boolean>)
+      ← DashboardPageSource.syncVehicles() ← VehiclesStore.syncVehicles() (POST /vehicles/sync; refreshes
+        the ['vehicles'] family on success, web hook invalidation parity). Outcome surfaced as a one-shot
+        UiEvent.CommandOutcome (never cached as if applied, ADR-013).
+  Units: no SI/display conversion at this surface — the bound data is the auth-status boolean + the sync
+  mutation outcome; no non-SI value is stored or computed (SI converters not applicable here).
+
+SCOPE BOUNDARY (honest, deliberate — recorded so the gate is not over-claimed)
+  The web DashboardPage's full layout/widget/grid/kiosk/undo-redo/templates engine and the cross-page
+  connect navigation are NOT part of this parity unit. The manifest distils the page to its first-run
+  onboarding/auth surface — two GlassPanels + the page-chrome strings (parity-manifest.json record:
+  panels=GlassPanel1/GlassPanel2, data-sources=useAuthStatus/useSyncVehicles). The toolbar renders the
+  chrome strings for header + structure parity; the edit-mode toggle, the Sync action, and the reset
+  confirm dialog are functional; undo/redo are correctly disabled (web `disabled={!canUndo/!canRedo}`
+  with no edits applied); the remaining layout-affordance + connect taps emit a PII-safe diagnostic
+  (recordChromeAction). No stub copy, no "coming soon", no blank region — every state renders content.
+
+=== PARITY ===
+PARITY_REQUIRED=41
+  -- panels (2) --
+  [1]  panel  GlassPanel1 (onboarding)        DashboardPage.kt:375 DashboardOnboardingPanel → GlassPanel L387
+  [2]  panel  GlassPanel2 (feature tile ×4)   DashboardPage.kt:482 DashboardFeatureTile → GlassPanel L487
+                                              (rendered ×4 from DashboardFeatureTiles L451)
+  -- data states (3), driven by DashboardPageViewModel.state UiState<AuthStatus> --
+  [3]  state  loading                         DashboardPage.kt:392 state.isLoading -> OnboardingSkeleton (L504)
+  [4]  state  error                           DashboardPage.kt:393 state.isError -> OnboardingError (L518)
+                                              + LoadErrorBanner L316 (state.hasError); retry → ViewModel.retry
+  [5]  state  success                         DashboardPage.kt:394 else -> OnboardingContent (L405)
+  -- strings (36), every visible literal from res/values/strings.xml (key names match web) --
+  [6]  string title                           DashboardPage.kt:235 R.string.translation_title
+  [7]  string subtitle                        DashboardPage.kt:237 R.string.translation_subtitle
+  [8]  string dashboard.undo                  DashboardPage.kt:262 R.string.translation_dashboard_undo
+  [9]  string dashboard.redo                  DashboardPage.kt:263 R.string.translation_dashboard_redo
+  [10] string dashboard.addWidget             DashboardPage.kt:264 R.string.translation_dashboard_addWidget
+  [11] string dashboard.autoArrange           DashboardPage.kt:265 R.string.translation_dashboard_autoArrange
+  [12] string dashboard.templates             DashboardPage.kt:266 R.string.translation_dashboard_templates
+  [13] string dashboard.newDashboard          DashboardPage.kt:267 R.string.translation_dashboard_newDashboard
+  [14] string dashboard.reset                 DashboardPage.kt:268 R.string.translation_dashboard_reset (+L537)
+  [15] string dashboard.done                  DashboardPage.kt:269 R.string.translation_dashboard_done
+  [16] string dashboard.customize             DashboardPage.kt:271 R.string.translation_dashboard_customize
+  [17] string dashboard.kiosk                 DashboardPage.kt:272 R.string.translation_dashboard_kiosk
+  [18] string dashboard.printSnapshot         DashboardPage.kt:273 R.string.translation_dashboard_printSnapshot
+  [19] string theme.firstRunBody              DashboardPage.kt:307 R.string.translation_theme_firstRunBody
+  [20] string theme.firstRunTitle             DashboardPage.kt:309 R.string.translation_theme_firstRunTitle
+  [21] string theme.firstRunOpen              DashboardPage.kt:310 R.string.translation_theme_firstRunOpen
+  [22] string theme.firstRunLater             DashboardPage.kt:311 R.string.translation_theme_firstRunLater
+  [23] string error.loadFailed                DashboardPage.kt:320 R.string.translation_error_loadFailed (+L520)
+  [24] string auth.connectPrompt              DashboardPage.kt:332 R.string.translation_auth_connectPrompt
+  [25] string auth.settings                   DashboardPage.kt:333 R.string.translation_auth_settings
+  [26] string auth.toStart                    DashboardPage.kt:334 R.string.translation_auth_toStart
+  [27] string auth.notConnected               DashboardPage.kt:338 R.string.translation_auth_notConnected
+  [28] string dashboard.customizeHint         DashboardPage.kt:349 R.string.translation_dashboard_customizeHint
+  [29] string dashboard.customizeHintCta      DashboardPage.kt:351 R.string.translation_dashboard_customizeHintCta
+  [30] string dashboard.editHint              DashboardPage.kt:361 R.string.translation_dashboard_editHint
+  [31] string onboarding.syncTitle            DashboardPage.kt:414 R.string.translation_onboarding_syncTitle (+L383)
+  [32] string onboarding.title                DashboardPage.kt:416 R.string.translation_onboarding_title (+L385)
+  [33] string onboarding.syncDesc             DashboardPage.kt:423 R.string.translation_onboarding_syncDesc
+  [34] string onboarding.desc                 DashboardPage.kt:425 R.string.translation_onboarding_desc
+  [35] string onboarding.sync                 DashboardPage.kt:431 R.string.translation_onboarding_sync
+  [36] string onboarding.connect              DashboardPage.kt:439 R.string.translation_onboarding_connect
+  [37] string onboarding.tracking             DashboardPage.kt:458 R.string.translation_onboarding_tracking
+  [38] string onboarding.drives               DashboardPage.kt:463 R.string.translation_onboarding_drives
+  [39] string onboarding.charging             DashboardPage.kt:468 R.string.translation_onboarding_charging
+  [40] string onboarding.control              DashboardPage.kt:473 R.string.translation_onboarding_control
+  [41] string layout.resetMessage             DashboardPage.kt:538 R.string.translation_layout_resetMessage
+PARITY_COVERED=41
+
+EXTRA STATE COVERAGE (spec "loading / empty / error per source")
+  empty    not applicable — useAuthStatus always resolves to a present boolean (web hook never empties);
+           ViewModel asUiState(isEmpty={false}) so the onboarding panel always selects connected/disconnected
+           copy. The onboarding panel itself is the web's first-run "empty fleet" surface, always rendered.
+  loading  DashboardPage.kt:392 OnboardingSkeleton (heading/body/action skeleton bars) — UiPhase.Loading.
+  error    DashboardPage.kt:393 OnboardingError → ErrorDisplay + Retry (UiPhase.Error, no cache) AND the
+           top-of-page LoadErrorBanner (L316) whenever state.hasError. Retry → ViewModel.retry → refreshTrigger.
+  Onboarding panel + feature tiles stay visible across every state (ADR-011, no blank region).
+
+A11Y / THEME / UNITS (ADR-005 / ADR-014 / ADR-015)
+  GlassPanel 1 carries Modifier.semantics { contentDescription = <onboarding section title> }; each feature
+  tile carries contentDescription = <tile label> (TalkBack); decorative glyphs use contentDescription = null.
+  All color/typography from MaterialTheme + TeslaTokens (no hardcoded colors); feature-tile tints map the web
+  hex accents onto semantic tokens (status.info / colorScheme.primary / status.success / status.danger).
+  Material 3 enforces ≥48dp touch targets on every Button; dark/dynamic theme inherited. Every visible string
+  via stringResource (zero hardcoded literals). Compose-native only — no webview.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/dashboard -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0     (the 5 new dashboard files add zero violations)
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 3m 20s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 24s (lint-results-debug.html; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 26s (compileDebugUnitTestKotlin clean)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 onboarding, GlassPanel2 feature tiles ×4); the web
+      onboarding/auth region reproduced (connected Sync path + disconnected Connect path + capability tiles).
+  [x] All 41 parity items render from the bound StateFlow state holder (DashboardPageViewModel.state).
+  [x] loading / empty(n-a) / error / success implemented for the auth source; onboarding panel + tiles
+      stay visible in every state.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme + a11y semantics + ≥48dp targets honored; Compose-native only (no webview);
+      no non-SI compute at this surface.
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (41).
+  [x] android ledger row for page:dashboard/Dashboard set covered (41/41, status done).
+
+EXIT=0
+STATUS=DONE

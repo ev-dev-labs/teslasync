@@ -77,6 +77,7 @@ import io.teslasync.android.charging.teslacharginghistory.TeslaChargingHistoryPa
 import io.teslasync.android.charging.charginglist.ChargingListPageHost
 import io.teslasync.android.charging.smartcharge.SmartChargePageHost
 import io.teslasync.android.charging.teslachargingsessions.TeslaChargingSessionsPageHost
+import io.teslasync.android.dashboard.dashboard.DashboardPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
