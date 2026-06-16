@@ -1,0 +1,135 @@
+================================================================================
+p3-android  A7  page:battery/VampireDrain  (Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/VampireDrainPage.tsx
+================================================================================
+artifact      : page:battery/VampireDrain   (kind=page, web route /charging/vampire-drain ; nav /vampire-drain)
+web source    : web/src/features/battery/pages/VampireDrainPage.tsx
+output dir    : apps/android/app/src/main/kotlin/com/teslasync/battery/
+package       : io.teslasync.android.battery.vampiredrain
+                (mandated surface dir com/teslasync/battery diverges from the io.teslasync.android.*
+                 package -> @file:Suppress("InvalidPackageDeclaration"), as the sibling BatteryHealthPage)
+
+data sources  : the manifest record lists no API data source, but the web page IS data-bound — it reads
+                useVampireDrainStats (GET /vampire-drain/stats?vehicle_id={id}), already exposed by the shared
+                S8 EnergyStore. So the port binds that single feed (+ SettingsStore locale + the app-scoped
+                SelectedVehicleStore) through a ViewModel exposing StateFlow<UiState>. The view performs NO HTTP
+                (ADR-002/ADR-004). The /vampire-drain/stats route is a legacy endpoint whose fields are
+                percentages + an already-kWh figure (NOT SI watt-hours), so — exactly like the web — no SI scaling
+                is applied; percentages/legacy kWh render verbatim (unit-conversion.instructions).
+  - useVampireDrainStats  GET /vampire-drain/stats?vehicle_id={id}  -> EnergyStore.vampireDrainStats(id)
+                          seam: VampireDrainPageSource.vampireDrainStats (VampireDrainPageSource.kt L33)
+
+files created :
+  VampireDrainPageModel.kt      framework-free: VampireDrainPageRegistration, VampireDrainEntry/Daily/Stats,
+                                parseVampireStats, VampireDisplayPrefs (rate/energyKwh/percent/score/duration +
+                                locale number/date fmt), drainScoreTier/drainLossTier, sortVampireEntries,
+                                recordVampireDrainOpened, mapData. JVM-unit-testable.
+  VampireDrainPageSource.kt     seam + vampireDrainPageSourceOf(energyStore, settingsStore, selectedVehicleStore).
+  VampireDrainPageViewModel.kt  BaseFeedViewModel: stats StateFlow<UiState<VampireDrainStats>> (flatMapLatest over
+                                the selected vehicle), displayPrefs, refresh/retry/recordViewOpened.
+  VampireDrainPageIcons.kt      VampireGlyphs: reuse Bolt(Zap)/Clock from the shared data-display catalog; author
+                                Activity/BatteryWarning/Lightbulb/ShieldAlert locally as 24x24 stroked vectors.
+  VampireDrainPage.kt           stateless Compose render layer: chrome (title/subtitle/freshness/VehicleSelect) +
+                                stats-gated body (loader/error/9 panels) + RadialGauge + Line/Bar chart wrappers +
+                                sortable DataTable + tips.
+  VampireDrainPageHost.kt       PageHosts.register("vampireDrain") for the /vampire-drain destination.
+  res/values/vampire_drain_strings.xml  app-owned literal-key labels absent from the generated translation_*
+                                catalog (web renders the i18next fallback in every locale); English-only in values/
+                                so ar/he fall back to it, reproducing the web exactly (preset_gallery precedent).
+  test/.../VampireDrainPageModelTest.kt  10 JVM tests: decode, tiers, sort, formatters, registration identity.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=45   (9 panels + 3 charts + 3 states + 30 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  Avg-Drain-Rate      -> VampireDrainPage.kt:265 SummaryMetricsGrid MetricCard (avg_drain_rate, prefs.rate, vampire_drain_avg_rate)
+[COVERED] panel  Total-Phantom-Loss  -> VampireDrainPage.kt:272 SummaryMetricsGrid MetricCard (total_energy_lost, prefs.energyKwh, vampire_drain_total_loss)
+[COVERED] panel  Worst-Session       -> VampireDrainPage.kt:281 SummaryMetricsGrid MetricCard (worst_drain_pct, prefs.percent1, vampire_drain_worst_session)
+[COVERED] panel  Drain-Score         -> VampireDrainPage.kt:288 SummaryMetricsGrid MetricCard (drain_score, prefs.score, vampire_drain_score_card)
+[COVERED] panel  GlassPanel5         -> VampireDrainPage.kt:301 DrainScoreGaugePanel GlassPanel (web gauge <GlassPanel> L180)
+[COVERED] panel  GlassPanel6         -> VampireDrainPage.kt:335 DrainRateTrendPanel ChartContainer/GlassPanel (web trend <GlassPanel> L195)
+[COVERED] panel  GlassPanel7         -> VampireDrainPage.kt:382 DailyDrainPanel ChartContainer/GlassPanel (web daily <GlassPanel> L216)
+[COVERED] panel  GlassPanel8         -> VampireDrainPage.kt:444 DrainSessionsPanel GlassPanel (web sessions <GlassPanel> L239)
+[COVERED] panel  GlassPanel9         -> VampireDrainPage.kt:546 DrainTipsPanel GlassPanel (web tips <GlassPanel glow="green"> L261)
+[COVERED] chart  RadialGauge         -> VampireDrainPage.kt:307 DrainScoreGaugePanel RadialGauge (A3 native Compose-canvas; drain_score swept, scoreTierColor)
+[COVERED] chart  LineChart           -> VampireDrainPage.kt:356 DrainRateTrendPanel LineChartWrapper (A3 Vico; entries drain_rate_pct_hr)
+[COVERED] chart  BarChart            -> VampireDrainPage.kt:411 DailyDrainPanel BarChartWrapper (A3 Vico; daily drain_pct + hours_parked)
+[COVERED] state  loading             -> VampireDrainPage.kt:177 stats.isLoading -> VampireDrainLoading PageLoader (L218)
+[COVERED] state  error               -> VampireDrainPage.kt:178 stats.isError -> VampireDrainError ErrorDisplay + retry (L227)
+[COVERED] state  success             -> VampireDrainPage.kt:179 else -> VampireDrainBody (L238 renders the 9 panels) ; empty surfaces via ChartStatus.Empty (L346,L394) + DataTable emptyText (L472)
+[COVERED] string Analyze phantom energy loss while your vehicle is parked         -> VampireDrainPage.kt:196 vampire_drain_subtitle
+[COVERED] string Avg Drain Rate                                                   -> VampireDrainPage.kt:265 vampire_drain_avg_rate
+[COVERED] string Avoid opening the app frequently — each wake cycle costs battery.-> VampireDrainPage.kt:560 vampire_drain_tip_app_frequency
+[COVERED] string Daily Drain While Parked                                         -> VampireDrainPage.kt:392 vampire_drain_daily_title
+[COVERED] string Date                                                             -> VampireDrainPage.kt:483 translation_Date (generated catalog; also chart tables L348/L398)
+[COVERED] string Disable Sentry Mode when parked at home to save 1–2 % per day.   -> VampireDrainPage.kt:558 vampire_drain_tip_sentry
+[COVERED] string Drain %                                                          -> VampireDrainPage.kt:388 vampire_drain_legend_drain_pct
+[COVERED] string Drain Rate                                                       -> VampireDrainPage.kt:341 vampire_drain_series_rate
+[COVERED] string Drain Rate Trend                                                 -> VampireDrainPage.kt:344 vampire_drain_trend_title
+[COVERED] string Drain Score                                                      -> VampireDrainPage.kt:288 vampire_drain_score_card
+[COVERED] string Drain Sessions                                                   -> VampireDrainPage.kt:459 vampire_drain_sessions_title
+[COVERED] string Duration                                                         -> VampireDrainPage.kt:489 translation_Duration (generated catalog)
+[COVERED] string Enable energy-saving mode in vehicle settings for better standby.-> VampireDrainPage.kt:561 vampire_drain_tip_energy_saving
+[COVERED] string End %                                                            -> VampireDrainPage.kt:501 vampire_drain_col_end
+[COVERED] string Loss %                                                           -> VampireDrainPage.kt:507 vampire_drain_col_loss
+[COVERED] string No drain sessions recorded yet.                                  -> VampireDrainPage.kt:472 vampire_drain_empty_sessions
+[COVERED] string Off                                                              -> VampireDrainPage.kt:529 translation_Off (generated catalog)
+[COVERED] string On                                                               -> VampireDrainPage.kt:529 translation_On (generated catalog)
+[COVERED] string Parked Hours                                                     -> VampireDrainPage.kt:389 vampire_drain_legend_parked_hours
+[COVERED] string Rate %/hr                                                        -> VampireDrainPage.kt:513 vampire_drain_col_rate
+[COVERED] string Reduce third-party app polling intervals to let the car sleep faster. -> VampireDrainPage.kt:559 vampire_drain_tip_polling
+[COVERED] string Score                                                            -> VampireDrainPage.kt:310 translation_Score (generated catalog; RadialGauge label)
+[COVERED] string Sentry                                                           -> VampireDrainPage.kt:519 translation_Sentry (generated catalog)
+[COVERED] string Start %                                                          -> VampireDrainPage.kt:495 vampire_drain_col_start
+[COVERED] string Tips to Reduce Vampire Drain                                     -> VampireDrainPage.kt:554 vampire_drain_tips_title
+[COVERED] string Total Phantom Loss                                               -> VampireDrainPage.kt:272 vampire_drain_total_loss
+[COVERED] string Vampire Drain                                                    -> VampireDrainPage.kt:194 vampire_drain_title (web PageContainer title t('Vampire Drain'))
+[COVERED] string Worst Session                                                    -> VampireDrainPage.kt:281 vampire_drain_worst_session
+[COVERED] string sessions                                                         -> VampireDrainPage.kt:461 translation_sessions (generated catalog; session-count chip)
+[COVERED] string vampire.title                                                    -> VampireDrainPage.kt:164/170 translation_vampire_title (web usePageTitle -> Compose paneTitle semantics, ADR-015)
+--------------------------------------------------------------------------------
+PARITY_COVERED=45
+================================================================================
+
+panel map    : the 9 manifest panels = 4 web <MetricCard> tiles (named Avg-Drain-Rate / Total-Phantom-Loss /
+               Worst-Session / Drain-Score) + 5 web <GlassPanel> usages (anonymous -> GlassPanel5 gauge L180,
+               GlassPanel6 trend L195, GlassPanel7 daily L216, GlassPanel8 sessions L239, GlassPanel9 tips L261).
+               All 4 MetricCards always render (0/em-dash before data) and every panel always shows -> no hidden
+               sections (ADR-011 #6). The optional web AIVampireDrainExplanation narrator is conditionally null
+               (withAiFeature) and never a deterministic panel, so it is not a parity unit (out of scope).
+charts       : 3 native chart wrappers, never a webview — RadialGauge (Compose canvas) swept to drain_score colored
+               by the score health tier (web scoreColor good/fair/poor -> theme status colors); LineChartWrapper
+               (Vico) for the per-session drain-rate trend; BarChartWrapper (Vico) for the per-day drain% + parked
+               hours. The web dual-y-axis bar collapses to one Vico axis (exact figures in the accessible data
+               table) — an accepted A3 platform adaptation.
+states       : the single stats feed drives loading(PageLoader)/error(ErrorDisplay+retry)/success(panels). Within
+               success each chart shows its own empty surface (ChartStatus.Empty) and the table its emptyText, so
+               loading/empty/error are all implemented and no region is ever blank (ADR-011). isEmpty={false} keeps
+               zero/empty stats as content so the panels always render with internal empty surfaces (web parity).
+units        : drain rate %/hr, drain %, battery % and the legacy total_energy_lost kWh render verbatim — the
+               /vampire-drain/stats endpoint is non-SI percentages + a legacy kWh figure, so no SI scaling applies,
+               exactly like the web fmtNumber (unit-conversion.instructions; only locale grouping is applied).
+i18n         : every visible literal via stringResource (ADR-014); web key names kept. 8 keys reuse the generated
+               res/values catalog (translation_Date/Duration/Sentry/sessions/Score/On/Off + translation_vampire_title
+               for vampire.title); the remaining literal-key labels (web i18next-fallback-only, absent from
+               web/src/i18n/*.json) live in the app-owned res/values/vampire_drain_strings.xml, English-only so ar/he
+               fall back to values/ — reproducing the web's missing-key fallback in every locale (preset_gallery
+               precedent). lint MissingTranslation/ExtraTranslation disabled (app/build.gradle.kts L114).
+a11y         : Compose semantics paneTitle for the screen title (vampire.title), accessibleDescription on both
+               charts + the RadialGauge component description, >=48dp Material 3 targets, dynamic-color + dark theme
+               via MaterialTheme tokens; no hardcoded colors/typography (ADR-005/ADR-015).
+nav          : Destinations 'vampireDrain' -> /vampire-drain pre-existing (Destinations.kt L85, count unchanged);
+               RouteTable already maps the alias /charging/vampire-drain -> vampireDrain (RouteTableTest L163). Host
+               wired via PageHosts.register("vampireDrain") in TeslaSyncApplication.onCreate; deep links
+               auto-registered by the NavHost. DataContainer untouched (EnergyStore/SettingsStore/SelectedVehicleStore
+               already wired).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 1m 09s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 13m 20s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 26s  (VampireDrainPageModelTest 10 tests, 0 failures; suite 16525 tests, 0 failures/errors/skipped)
+parity       : PARITY_COVERED(45) == PARITY_REQUIRED(45)
+[PASS] all android triad gates green; parity 45/45; android ledger row page:battery/VampireDrain status=done.
+EXIT=0
+STATUS=DONE

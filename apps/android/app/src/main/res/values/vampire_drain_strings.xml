@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  App-owned strings for the VampireDrainPage parity surface (not part of the auto-generated i18n
+  translation_* catalog).
+
+  The web VampireDrainPage (web/src/features/battery/pages/VampireDrainPage.tsx) renders most of its
+  copy via literal-key calls — t('Avg Drain Rate'), t('Total Phantom Loss'), t('Drain Rate Trend'),
+  the four tip sentences, etc. Those keys do NOT exist in the web react-i18next catalog, so the web
+  app renders the i18next *fallback* string (the English key itself) in every locale (including
+  ar/he). The neutral P1/S10 catalog (apps/shared/i18n, generated into the translation_* resources)
+  therefore has no matching key to bind, and that catalog is auto-generated — it must never be
+  hand-edited.
+
+  To keep the native surface free of hardcoded English while reproducing the web verbatim, those
+  labels live here as app-owned resources, mirroring the established preset_gallery_strings /
+  nav_strings / auth_strings pattern. They are English-only in values/ on purpose: Android falls
+  back to values/ for ar/he, which reproduces the web's missing-key fallback (English shown in every
+  locale) exactly. (MissingTranslation is disabled in app/build.gradle.kts for the same reason.)
+
+  The eight strings the web shares with the generated catalog — Date, Duration, Sentry, sessions,
+  Score, On, Off, and vampire.title (→ translation_vampire_title "Vampire Drain") — are bound from
+  the generated strings.xml directly and are intentionally NOT duplicated here.
+
+  Strings carrying a literal '%' are marked formatted="false" so the active StringFormatInvalid lint
+  (path-scoped to the generated strings.xml only) does not read the percent as a format specifier.
+-->
+<resources>
+    <!-- PageContainer title (web t('Vampire Drain')); the page-title/diagnostics key vampire.title
+         binds the generated translation_vampire_title with the same value. -->
+    <string name="vampire_drain_title">Vampire Drain</string>
+    <string name="vampire_drain_subtitle">Analyze phantom energy loss while your vehicle is parked</string>
+
+    <!-- Summary metric tiles -->
+    <string name="vampire_drain_avg_rate">Avg Drain Rate</string>
+    <string name="vampire_drain_total_loss">Total Phantom Loss</string>
+    <string name="vampire_drain_worst_session">Worst Session</string>
+    <string name="vampire_drain_score_card">Drain Score</string>
+
+    <!-- Drain-rate trend line chart -->
+    <string name="vampire_drain_trend_title">Drain Rate Trend</string>
+    <string name="vampire_drain_series_rate">Drain Rate</string>
+
+    <!-- Daily parked-drain bar chart -->
+    <string name="vampire_drain_daily_title">Daily Drain While Parked</string>
+    <string name="vampire_drain_legend_drain_pct" formatted="false">Drain %</string>
+    <string name="vampire_drain_legend_parked_hours">Parked Hours</string>
+
+    <!-- Drain-sessions table -->
+    <string name="vampire_drain_sessions_title">Drain Sessions</string>
+    <string name="vampire_drain_col_start" formatted="false">Start %</string>
+    <string name="vampire_drain_col_end" formatted="false">End %</string>
+    <string name="vampire_drain_col_loss" formatted="false">Loss %</string>
+    <string name="vampire_drain_col_rate" formatted="false">Rate %/hr</string>
+    <string name="vampire_drain_empty_sessions">No drain sessions recorded yet.</string>
+
+    <!-- Recommendations panel -->
+    <string name="vampire_drain_tips_title">Tips to Reduce Vampire Drain</string>
+    <string name="vampire_drain_tip_sentry" formatted="false">Disable Sentry Mode when parked at home to save 1\u20132 % per day.</string>
+    <string name="vampire_drain_tip_polling">Reduce third-party app polling intervals to let the car sleep faster.</string>
+    <string name="vampire_drain_tip_app_frequency">Avoid opening the app frequently \u2014 each wake cycle costs battery.</string>
+    <string name="vampire_drain_tip_energy_saving">Enable energy-saving mode in vehicle settings for better standby.</string>
+</resources>
