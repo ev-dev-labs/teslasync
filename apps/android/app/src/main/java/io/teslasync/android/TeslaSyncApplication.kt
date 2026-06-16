@@ -78,6 +78,7 @@ import io.teslasync.android.charging.charginglist.ChargingListPageHost
 import io.teslasync.android.charging.smartcharge.SmartChargePageHost
 import io.teslasync.android.charging.teslachargingsessions.TeslaChargingSessionsPageHost
 import io.teslasync.android.dashboard.dashboard.DashboardPageHost
+import io.teslasync.android.dashboard.quickstats.QuickStatsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -218,6 +219,7 @@ class TeslaSyncApplication : Application() {
         ChargingListPageHost.register()
         SmartChargePageHost.register()
         TeslaChargingSessionsPageHost.register()
+        QuickStatsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

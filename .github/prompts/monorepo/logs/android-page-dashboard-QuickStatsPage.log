@@ -1,0 +1,124 @@
+================================================================================
+P3-ANDROID · A7 · page:dashboard/QuickStats — evidence log
+Native Jetpack Compose / Material 3 port of web QuickStatsPage
+Source: web/src/features/dashboard/pages/QuickStatsPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/dashboard/**
+Package: io.teslasync.android.dashboard.quickstats
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  ANDROID_SDK_ROOT = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21.0.9 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 LifetimeStats / Statistics analytics precedents)
+  QuickStatsPageModel.kt      framework-free: registration ids, QuickVehicle / QuickStatsSummary /
+                              QuickStats DTOs, QuickStatsDisplayPrefs (web useUnits/useFormatting),
+                              parseQuickStatsSummary (web AnalyticsSummary decode, dual snake/camel),
+                              vehicleStateLabelOf (web `?? 'offline'`), mergeQuickStats (web isLoading||/
+                              error|| + vehicles?.[0] → loading/empty/error/success), view.opened diagnostic.
+  QuickStatsPageSource.kt     seam over VehiclesStore.vehicles() (web useVehicles), VehiclesStore.vehicleState()
+                              (web useVehicleState), AnalyticsStore.analyticsSummary(30) (web useAnalyticsSummary),
+                              SettingsStore.settings(). Scopes to the FIRST enrolled vehicle (web `vehicles?.[0]`),
+                              NOT the global selection — so SelectedVehicleStore is deliberately not bound.
+  QuickStatsPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<QuickStats>> = combine(vehicles, analytics)
+                              ▸ mergeQuickStats; vehicleStateLabel: StateFlow<String> chained off the first vehicle id
+                              (web useVehicleState(vehicle?.id ?? 0)); displayPrefs: StateFlow; refresh/retry.
+  QuickStatsPage.kt           stateful entry + stateless content; centered max-w-md card; title, vehicle GlassPanel
+                              (card / noVehicle EmptyState), 2x2 MetricCards, footer + Open Dashboard deep link;
+                              loading/empty/error/success; SI→display only at the boundary (prefs.fromKm/integer/currency).
+  QuickStatsPageHost.kt       QuickStatsRoute + QuickStatsPageHost.register() for the `quickStats` /quick-stats
+                              destination (Destinations.kt L49 `standalone("quickStats", "/quick-stats", …)`).
+  TeslaSyncApplication.kt     register() wired into onCreate (NavHost registration).
+  res/values/strings.xml      ALL 9 quickStats.* keys already present (translation_quickStats_* L5154-5162);
+                              no string additions required.
+
+DATA SOURCES (each bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useAnalyticsSummary GET /analytics/fleet [days=30]
+      → QuickStatsPageViewModel.state (QuickStatsPageViewModel.kt:57, the merged StateFlow<UiState<QuickStats>>)
+      ← QuickStatsPageSource.analyticsSummary  (QuickStatsPageSource.kt:68)
+      ← io.teslasync.shared.core.presentation.analytics.AnalyticsStore.analyticsSummary(30)
+        (HttpAnalyticsRepository over the shared resilient client + offline cache; SI verbatim, ADR-013).
+        Fields: total_distance_km / total_drives / total_energy_kwh / total_cost
+        (internal/api/analytics/queries.go L575-579; dual snake/camel read, AnalyticsSummaryWidget parity).
+  useVehicles GET /vehicles
+      → QuickStatsPageViewModel.state (merged; first element = QuickStats.vehicle, web vehicles?.[0])
+      ← QuickStatsPageSource.vehicles  (QuickStatsPageSource.kt:64)
+      ← io.teslasync.shared.core.presentation.vehicles.VehiclesStore.vehicles()
+  useVehicleState GET /vehicles/{id}/state
+      → QuickStatsPageViewModel.vehicleStateLabel (QuickStatsPageViewModel.kt:73, StateFlow<String>)
+      ← QuickStatsPageSource.vehicleState  (QuickStatsPageSource.kt:66)
+      ← io.teslasync.shared.core.presentation.vehicles.VehiclesStore.vehicleState(id)
+  (web useUnits/useFormatting) GET /settings
+      → QuickStatsPageViewModel.displayPrefs ← QuickStatsPageSource.settings ← SettingsStore.settings()
+
+=== PARITY ===
+PARITY_REQUIRED=18
+  [1]  panel  GlassPanel1                  QuickStatsPage.kt:206 VehiclePanel → GlassPanel (card vehicle / noVehicle EmptyState)
+  [2]  panel  unit-Driven                  QuickStatsPage.kt:261 MetricsGrid → QuickMetric/MetricCard, label translation_quickStats_distance L262, value prefs.fromKm→integer L263
+  [3]  panel  Drives                       QuickStatsPage.kt:266 QuickMetric/MetricCard, label translation_quickStats_drives L267, value prefs.integer(totalDrives) L268
+  [4]  panel  kWh-Used                     QuickStatsPage.kt:276 QuickMetric/MetricCard, label translation_quickStats_energy L277, value prefs.integer(totalEnergyKwh) L278
+  [5]  panel  Total-Cost                   QuickStatsPage.kt:281 QuickMetric/MetricCard, label translation_quickStats_cost L282, value prefs.currency(totalCost,0) L283
+  [6]  state  loading                      QuickStatsPageModel.kt:238 mergeQuickStats → UiState.loading(); render QuickStatsPage.kt:151 isLoading -> QuickStatsLoading (PageLoader L173)
+  [7]  state  empty                        QuickStatsPageModel.kt:254 mergeQuickStats → UiPhase.Empty (vehicle==null); render QuickStatsPage.kt:208 EmptyState(noVehicle)
+  [8]  state  error                        QuickStatsPageModel.kt:243 mergeQuickStats → UiPhase.Error; render QuickStatsPage.kt:152 isError -> QuickStatsError (ErrorDisplay+retry L183)
+  [9]  state  success                      QuickStatsPageModel.kt:254 mergeQuickStats → UiPhase.Content (vehicle!=null); render QuickStatsPage.kt:153 else -> QuickStatsBody
+  [10] string quickStats.cost              QuickStatsPage.kt:282 R.string.translation_quickStats_cost
+  [11] string quickStats.defaultName       QuickStatsPage.kt:212 R.string.translation_quickStats_defaultName (vehicle.displayName.ifBlank)
+  [12] string quickStats.distance          QuickStatsPage.kt:262 R.string.translation_quickStats_distance (arg = prefs.distanceLabel)
+  [13] string quickStats.drives            QuickStatsPage.kt:267 R.string.translation_quickStats_drives
+  [14] string quickStats.energy            QuickStatsPage.kt:277 R.string.translation_quickStats_energy
+  [15] string quickStats.footer            QuickStatsPage.kt:317 R.string.translation_quickStats_footer
+  [16] string quickStats.noVehicle         QuickStatsPage.kt:208 R.string.translation_quickStats_noVehicle
+  [17] string quickStats.openDashboard     QuickStatsPage.kt:319 R.string.translation_quickStats_openDashboard (LocalUriHandler → teslasync://app/)
+  [18] string quickStats.title             QuickStatsPage.kt:148 R.string.translation_quickStats_title (web PageContainer h1)
+PARITY_COVERED=18
+
+NOTES (web fidelity, no scope narrowing)
+  - The web page gates the WHOLE surface on combined vehicles+analytics loading/error (isLoading =
+    vehiclesLoading || analyticsLoading, error = vehiclesError || analyticsError) and reads vehicle = vehicles?.[0].
+    mergeQuickStats (QuickStatsPageModel.kt:231) folds the two cache-then-network Resources into one UiState exactly
+    so: either first-loading → Loading, either hard error → Error, otherwise Content (or Empty when no first vehicle).
+  - The four metric cards always render their (possibly zero) fleet totals from the independent analytics feed in BOTH
+    the Empty and Content phases — exactly like the web, which renders the grid regardless of the noVehicle panel.
+  - Empty-state divergence (Honesty Covenant #9, documented): the web shows the noVehicle EmptyState inside the vehicle
+    GlassPanel; the native surface routes that case to UiPhase.Empty so the panel shows the same friendly empty-state
+    (QuickStatsPage.kt:208) while the metric grid still renders — making all 4 declared states genuinely reachable.
+  - SI-canonical: total_distance_km is bridged km→m (×1000) before convertDistanceFromSI at the display boundary
+    (QuickStatsDisplayPrefs.fromKm); energy (kWh), cost and counts are raw on the wire and rendered verbatim — web parity.
+  - 'offline' (vehicleStateLabelOf fallback) is a raw Tesla vehicle-state value the web hard-codes as the `?? 'offline'`
+    data fallback for stateData?.state?.state, not a UI string — it is correctly NOT among the 9 localized keys.
+  - a11y: merged-descendant semantics + contentDescription on the vehicle panel (QuickStatsPage.kt:226) and each metric
+    card (QuickStatsPage.kt:300); the footer link is a Material 3 Button (automatic ≥48dp target). Dark/dynamic theme +
+    SI honored; Compose-native only (no webview).
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/dashboard -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 9m 45s (compileDebugKotlin compiled the new sources;
+                                          only pre-existing unrelated LocalClipboardManager deprecation warnings)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 10m 58s (lint-results-debug.html written; no QuickStats
+                                          references in the report — zero new lint findings in the surface)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 18s (existing suite incl. RouteTableTest green;
+                                          RouteTableTest already asserts /quick-stats → quickStats, no regression)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 + the 4 metric cards); the web footer region reproduced.
+  [x] All 18 parity items render from the bound StateFlow state holder (QuickStatsPageViewModel.state/vehicleStateLabel/displayPrefs).
+  [x] loading / empty / error / success implemented for the combined data source (mergeQuickStats).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web (quickStats.*).
+  [x] Dark/dynamic theme + accessibility + SI units honored; Compose-native only (no webview cloning).
+  [x] build + lint + test + placeholder gates green; PARITY_COVERED==PARITY_REQUIRED (18).
+  [x] android ledger row for page:dashboard/QuickStats set covered (coveredCount=18, requiredCount=18, status=done).
+
+EXIT=0
+STATUS=DONE
