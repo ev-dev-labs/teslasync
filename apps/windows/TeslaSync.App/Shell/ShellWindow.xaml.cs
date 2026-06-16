@@ -1095,6 +1095,12 @@ public sealed partial class ShellWindow : Window
             new FeatureViews.VehicleSystems.SafetySettingsPage(
                 new FeatureViews.VehicleSystems.SafetySettingsClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
 
+        // RouteTable exposes the same page under two nav keys: "SafetySettings" (Vehicle Systems group) and
+        // "SafetySettingsPage" (Settings group, web /settings/safety). Register the second key so neither nav item is dead.
+        _viewModel.PageFactory.Register("SafetySettingsPage", () =>
+            new FeatureViews.VehicleSystems.SafetySettingsPage(
+                new FeatureViews.VehicleSystems.SafetySettingsClientFeed(_data.Api, _data.PrimaryVehicleId), _data.Localizer));
+
         _viewModel.PageFactory.Register("Maintenance", () =>
             new FeatureViews.VehicleSystems.MaintenancePage(
                 new FeatureViews.VehicleSystems.MaintenanceClientFeed(_data.Api), _data.Localizer));
