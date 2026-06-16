@@ -49,6 +49,10 @@ import io.teslasync.shared.core.data.repo.HttpTelemetryRepository
 import io.teslasync.shared.core.presentation.telemetry.TelemetryStore
 import io.teslasync.shared.core.data.repo.HttpRbacRepository
 import io.teslasync.shared.core.presentation.rbacmatrix.RbacMatrixStore
+import io.teslasync.shared.core.data.repo.HttpSystemQueuesRepository
+import io.teslasync.shared.core.data.repo.HttpSystemRepository
+import io.teslasync.shared.core.presentation.system.SystemStore
+import io.teslasync.shared.core.presentation.systemqueues.SystemQueuesStore
 
 /**
  * Manual DI graph for the Android data layer (ADR-013), the analogue of the auth `AuthContainer`. It
@@ -167,6 +171,10 @@ class DataContainer(
     val telemetryStore = TelemetryStore(telemetryRepository, scope)
     private val rbacRepository = HttpRbacRepository(api, cacheStore, clock)
     val rbacMatrixStore = RbacMatrixStore(rbacRepository, scope)
+    private val systemRepository = HttpSystemRepository(api, cacheStore, clock)
+    private val systemQueuesRepository = HttpSystemQueuesRepository(api, cacheStore, clock)
+    val systemStore = SystemStore(systemRepository, scope)
+    val systemQueuesStore = SystemQueuesStore(systemQueuesRepository, scope)
 
     /**
      * The live display-unit formatter, derived from the user's settings document — the single SI ->

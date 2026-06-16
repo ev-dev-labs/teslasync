@@ -6149,6 +6149,7 @@
   <string name="translation_sudo_title">Confirm your identity</string>
   <string name="translation_sudo_totpLabel">Authenticator code</string>
   <string name="translation_sudo_typedConfirmationLabel">Type %1$s to confirm</string>
+  <string name="translation_system_page_subtitle">Operator dashboard for the throttles and budgets that bound this TeslaSync deployment.</string>
   <string name="translation_system_page_title">System budgets</string>
   <string name="translation_system_workers_a11y_groupStatus">%1$s status: %2$s</string>
   <string name="translation_system_workers_a11y_instanceStatus">instance status: %1$s</string>
