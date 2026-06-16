@@ -2407,12 +2407,14 @@
   <string name="translation_comparison_costDiff">Charging Cost</string>
   <string name="translation_comparison_currentStatus">Current Status</string>
   <string name="translation_comparison_drivesPerMonth">Drives per Month</string>
+  <string name="translation_comparison_drivesPerMonth_aria">Drives per month bar chart comparing two vehicles</string>
   <string name="translation_comparison_efficiencyDiff">Avg Efficiency</string>
   <string name="translation_comparison_highlights">Key Highlights</string>
   <string name="translation_comparison_lifetimeNote">Statistics shown are lifetime totals across all tracked data.</string>
   <string name="translation_comparison_locked">Locked</string>
   <string name="translation_comparison_metric">Metric</string>
   <string name="translation_comparison_monthlyDistance">Monthly Distance</string>
+  <string name="translation_comparison_monthlyDistance_aria">Monthly distance comparison line chart between two vehicles</string>
   <string name="translation_comparison_needTwoVehicles">You need at least 2 vehicles in your fleet to use the comparison dashboard.</string>
   <string name="translation_comparison_noDrivesData">No drive data available yet</string>
   <string name="translation_comparison_noMonthlyData">No monthly data available yet</string>

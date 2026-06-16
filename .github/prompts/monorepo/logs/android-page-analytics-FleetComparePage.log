@@ -1,0 +1,173 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/FleetCompare  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/FleetComparePage.tsx
+promptId: p3-android/pages/analytics/FleetComparePage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME present)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePage.kt           (@Composable screen: FleetComparePage + FleetComparePageContent + all panels/charts/table/highlights)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePageViewModel.kt  (Hilt-free AndroidX ViewModel; eight StateFlow<UiState> feeds + interaction + displayPrefs; refresh()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePageSource.kt      (S8 data seam over VehiclesStore + AnalyticsStore + DrivingStore + SettingsStore)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePageModel.kt       (framework-free model: decode, mergeMonthly, comparisonRows+getWinner, vehicleStatus, highlights, deriveData)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePageIcons.kt       (15 local stroked glyphs for the web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/FleetComparePageHost.kt        (PageHosts.register(fleetCompare){ FleetCompareRoute() })
+apps/android/app/src/test/java/io/teslasync/android/analytics/fleetcompare/FleetComparePageModelTest.kt  (14 off-device tests: decode/merge/rows/winner/status/highlights/prefs)
+apps/android/app/src/main/java/io/teslasync/android/data/DataContainer.kt               (NavHost/DI wiring: + analyticsStore + drivingStore — the sanctioned A7 widening seam, documented on the class)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt             (NavHost wiring: + FleetComparePageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                        (+ 2 missing aria keys: comparison.monthlyDistance.aria / comparison.drivesPerMonth.aria; other 41 keys pre-existed)
+apps/parity/android-ledger.json                                                          (ledger row page:analytics/FleetCompare -> done 63/63)
+
+Destination 'fleetCompare' -> /vehicle-comparison already exists in Destinations.kt (pre-existing metadata); host now wired.
+DataContainer widening is the documented A7 seam ("the single seam A7 page prompts widen (register their store + ViewModel)");
+every prior admin A7 page added its store there. analyticsStore/drivingStore added the same way; no feature page touched.
+
+--------------------------------------------------------------------------------
+DATA SOURCES — bound through FleetComparePageViewModel : StateFlow<UiState> from the KMP core (P1/S8)
+--------------------------------------------------------------------------------
+useVehicles        GET /vehicles                  -> VehiclesStore.vehicles()                      -> vehiclesState
+useVehicleState    GET /vehicles/{id}/state        -> VehiclesStore.vehicleState(id)  (A & B)        -> stateA / stateB
+useDrivingStats    GET /drives/stats               -> DrivingStore.drivingStats(id)   (A & B)        -> drivingStatsA / drivingStatsB
+useCostBreakdown   GET /analytics/tco              -> AnalyticsStore.costBreakdown(id) (A & B)       -> costA / costB
+useMonthlyMileage  GET /mileage/monthly            -> AnalyticsStore.monthlyMileage(id) (A & B)      -> monthlyA / monthlyB
+useUnits/useFormatting GET /settings               -> SettingsStore.settings()                       -> displayPrefs (units + currency)
+Hooks ported (same Kotlin call-site names): useVehicles, useVehicleState, useDrivingStats, useCostBreakdown, useMonthlyMileage.
+Auto-select (web useEffect): FleetComparePageViewModel.autoSelectFrom() fills the first two enrolled vehicles. No HTTP in the view.
+Wire shapes verified against the Go handlers: /drives/stats (internal/api/drives/listing.go) + /analytics/tco (internal/api/tco/handler.go)
+serve snake_case; the KMP store returns raw JsonElement (no camelCaseKeys), so parseDrivingStats/parseCostSummary read snake_case.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=63
+--------------------------------------------------------------------------------
+
+# panels (12) — each a Material 3 GlassPanel / Card / ChartContainer; web source order preserved
+[COVERED] panel GlassPanel1  Status-card loading  -> FleetComparePage.kt:452 VehicleStatusCard() isLoading branch -> GlassPanel:459 + SkeletonLines(lines=5):461  (web VehicleStatusCard <Skeleton lines={5}/>)
+[COVERED] panel GlassPanel2  Status-card empty    -> FleetComparePage.kt:452 VehicleStatusCard() vehicle==null branch -> GlassPanel:459 + EmptyState(icon=Car, message=comparison.selectVehicle)  (web !vehicle EmptyState)
+[COVERED] panel GlassPanel3  Status-card content  -> FleetComparePage.kt:474 VehicleStatusContent() inside GlassPanel:459 -> header+battery+range+temp+security+status pill  (web VehicleStatusCard body)
+[COVERED] panel GlassPanel4  Single-vehicle guard -> FleetComparePage.kt:247 SingleVehicleGuard() GlassPanel(Lg):249 + EmptyState:250 (title/body/cta)  (web vehicleList.length<2 guard)
+[COVERED] panel GlassPanel5  Vehicle selectors    -> FleetComparePage.kt:359 VehicleSelectors() GlassPanel(Md):384 -> Select A + ArrowLeftRight + Select B (cross-disabled)  (web <Select>x2)
+[COVERED] panel Monthly-Distance -> FleetComparePage.kt:626 MonthlyDistanceChart() ChartContainer:638  (web Monthly Distance ChartContainer)
+[COVERED] panel Drives-per-Month -> FleetComparePage.kt:663 DrivesPerMonthChart() ChartContainer:675  (web Drives per Month ChartContainer)
+[COVERED] panel GlassPanel8  Lifetime table       -> FleetComparePage.kt:700 LifetimeComparisonTable() GlassPanel(Md):737 -> Info note + header row:746 + winner rows:769  (web lifetime DataTable)
+[COVERED] panel Battery-Level  -> FleetComparePage.kt:811 StatCard(label=comparison.batteryDiff, value=batteryHighlightValue, icon=Battery)  (web StatCard Battery Level)
+[COVERED] panel Avg-Efficiency -> FleetComparePage.kt:818 StatCard(label=comparison.efficiencyDiff, unit=Wh/{mi|km}, icon=Zap)  (web StatCard Avg Efficiency)
+[COVERED] panel Charging-Cost  -> FleetComparePage.kt:828 StatCard(label=comparison.costDiff, value=costHighlightValue, icon=DollarSign)  (web StatCard Charging Cost)
+[COVERED] panel CO-Saved       -> FleetComparePage.kt:834 StatCard(label=comparison.co2Diff, unit=kg, icon=Leaf)  (web StatCard CO2 Saved)
+
+# charts (4) — A3 native Vico wrappers via ChartContainer; never a webview
+[COVERED] chart ChartContainer (monthly) -> FleetComparePage.kt:638 ChartContainer(status=chartStatus(...), accessibleDescription=monthlyDistance.aria, onRetry)
+[COVERED] chart LineChart                 -> FleetComparePage.kt:648 LineChartWrapper(series=[distA(nameA),distB(nameB)], xLabels=year-month)  (web <LineChart>/<Line>x2)
+[COVERED] chart ChartContainer (drives)  -> FleetComparePage.kt:675 ChartContainer(status=chartStatus(...), accessibleDescription=drivesPerMonth.aria, onRetry)
+[COVERED] chart BarChart                  -> FleetComparePage.kt:685 BarChartWrapper(series=[drivesA(nameA),drivesB(nameB)], xLabels=year-month)  (web <BarChart>/<Bar>x2)
+# series merged by year-month in FleetComparePageModel.mergeMonthly (web monthlyChartData/drivesChartData); distances stay km (web parity).
+
+# data states (4 required) — bound to FleetComparePageViewModel feeds : StateFlow<UiState<...>>
+[COVERED] state loading -> PageContainer(loading=vehiclesState.isLoading) spinner; VehicleStatusCard SkeletonLines:461; chartStatus->ChartStatus.Loading (FleetComparePage.kt:856); table SkeletonLines(8); StatCard(loading=...)
+[COVERED] state empty   -> SingleVehicleGuard EmptyState:250 (vehicles<2); VehicleStatusCard EmptyState (no vehicle); chartStatus->ChartStatus.Empty (FleetComparePage.kt:860, comparison.no{Monthly|Drives}Data)
+[COVERED] state error   -> PageContainer(error=FleetCompareLoadError) when vehiclesState.isError (+onRetry); chartStatus->ChartStatus.Error (FleetComparePage.kt:859) with retryLabel+onRetry per chart
+[COVERED] state success -> PageContainer content; chart Ready renders Line/Bar; LifetimeComparisonTable winner rows; KeyHighlights StatCards (FleetComparePage.kt:769/811-834)
+# every region renders a non-blank surface; FleetComparePageModel.deriveData preserves loading/error/refreshing/stale/offline; verified by the 14 unit tests below.
+
+# strings (43) — every visible literal via stringResource(R.string.translation_*); web key names preserved; zero hardcoded literals (placeholder gate PLACEHOLDER_COUNT=0)
+[COVERED] string comparison.avgEfficiency        -> FleetComparePage.kt ComparisonLabels(avgEfficiency=translation_comparison_avgEfficiency) :719
+[COVERED] string comparison.avgSpeed             -> FleetComparePage.kt ComparisonLabels(avgSpeed=translation_comparison_avgSpeed) :720
+[COVERED] string comparison.banner.toPeriodCta    -> FleetComparePage.kt:343 DisambiguationBanner BannerAction(label=translation_comparison_banner_toPeriodCta)
+[COVERED] string comparison.banner.toPeriodPrefix -> FleetComparePage.kt:343 DisambiguationBanner AlertBanner(message=translation_comparison_banner_toPeriodPrefix)
+[COVERED] string comparison.battery              -> FleetComparePage.kt StatusRow(label=translation_comparison_battery) (VehicleStatusContent)
+[COVERED] string comparison.batteryDiff          -> FleetComparePage.kt:812 StatCard(label=translation_comparison_batteryDiff)
+[COVERED] string comparison.chargeSessions       -> FleetComparePage.kt ComparisonLabels(chargeSessions=translation_comparison_chargeSessions) :728
+[COVERED] string comparison.chargingCost         -> FleetComparePage.kt ComparisonLabels(chargingCost=translation_comparison_chargingCost) :726
+[COVERED] string comparison.co2Diff              -> FleetComparePage.kt:835 StatCard(label=translation_comparison_co2Diff)
+[COVERED] string comparison.co2Saved             -> FleetComparePage.kt ComparisonLabels(co2Saved=translation_comparison_co2Saved) :725
+[COVERED] string comparison.costDiff             -> FleetComparePage.kt:829 StatCard(label=translation_comparison_costDiff)
+[COVERED] string comparison.currentStatus        -> FleetComparePage.kt CurrentStatusSection Subhead(translation_comparison_currentStatus)
+[COVERED] string comparison.drivesPerMonth       -> FleetComparePage.kt:675 ChartContainer(title=translation_comparison_drivesPerMonth)
+[COVERED] string comparison.drivesPerMonth.aria   -> FleetComparePage.kt:679 ChartContainer(accessibleDescription=translation_comparison_drivesPerMonth_aria)  [NEW key added to strings.xml]
+[COVERED] string comparison.efficiencyDiff       -> FleetComparePage.kt:819 StatCard(label=translation_comparison_efficiencyDiff)
+[COVERED] string comparison.highlights           -> FleetComparePage.kt KeyHighlights Subhead(translation_comparison_highlights)
+[COVERED] string comparison.lifetimeNote         -> FleetComparePage.kt LifetimeComparisonTable Caption(translation_comparison_lifetimeNote)
+[COVERED] string comparison.locked               -> FleetComparePage.kt VehicleStatusContent security Caption(translation_comparison_locked)
+[COVERED] string comparison.metric               -> FleetComparePage.kt:746 ComparisonHeaderRow Caption(translation_comparison_metric)
+[COVERED] string comparison.monthlyDistance      -> FleetComparePage.kt:638 ChartContainer(title=translation_comparison_monthlyDistance)
+[COVERED] string comparison.monthlyDistance.aria  -> FleetComparePage.kt:642 ChartContainer(accessibleDescription=translation_comparison_monthlyDistance_aria)  [NEW key added to strings.xml]
+[COVERED] string comparison.noDrivesData         -> FleetComparePage.kt:675 ChartContainer/BarChartWrapper(emptyMessage=translation_comparison_noDrivesData)
+[COVERED] string comparison.noMonthlyData        -> FleetComparePage.kt:638 ChartContainer/LineChartWrapper(emptyMessage=translation_comparison_noMonthlyData)
+[COVERED] string comparison.range               -> FleetComparePage.kt StatusRow(label=translation_comparison_range)
+[COVERED] string comparison.regenRatio          -> FleetComparePage.kt ComparisonLabels(regenRatio=translation_comparison_regenRatio) :724
+[COVERED] string comparison.security            -> FleetComparePage.kt StatusRow(label=translation_comparison_security)
+[COVERED] string comparison.selectVehicle       -> FleetComparePage.kt VehicleStatusCard EmptyState(message=translation_comparison_selectVehicle)
+[COVERED] string comparison.sentry             -> FleetComparePage.kt VehicleStatusContent Caption(translation_comparison_sentry)
+[COVERED] string comparison.status             -> FleetComparePage.kt StatusRow(label=translation_comparison_status)
+[COVERED] string comparison.subtitle           -> FleetComparePage.kt FleetComparePageContent PageContainer(subtitle=translation_comparison_subtitle)
+[COVERED] string comparison.temp              -> FleetComparePage.kt StatusRow(label=translation_comparison_temp)
+[COVERED] string comparison.title             -> FleetComparePage.kt FleetComparePageContent PageContainer(title=translation_comparison_title)
+[COVERED] string comparison.topSpeed          -> FleetComparePage.kt ComparisonLabels(topSpeed=translation_comparison_topSpeed) :723
+[COVERED] string comparison.totalDistance     -> FleetComparePage.kt ComparisonLabels(totalDistance=translation_comparison_totalDistance) :718
+[COVERED] string comparison.totalDrives       -> FleetComparePage.kt ComparisonLabels(totalDrives=translation_comparison_totalDrives) :717
+[COVERED] string comparison.totalEnergy       -> FleetComparePage.kt ComparisonLabels(totalEnergy=translation_comparison_totalEnergy) :727
+[COVERED] string comparison.unknown           -> FleetComparePage.kt StatusPill(text= ... ?: translation_comparison_unknown)
+[COVERED] string comparison.unlocked          -> FleetComparePage.kt VehicleStatusContent security Caption(translation_comparison_unlocked)
+[COVERED] string comparison.vehicleA          -> FleetComparePage.kt VehicleSelectors Select(label=translation_comparison_vehicleA) + nameA fallback
+[COVERED] string comparison.vehicleB          -> FleetComparePage.kt VehicleSelectors Select(label=translation_comparison_vehicleB) + nameB fallback
+[COVERED] string fleetCompare.singleVehicle.body  -> FleetComparePage.kt:250 SingleVehicleGuard EmptyState(message=translation_fleetCompare_singleVehicle_body)
+[COVERED] string fleetCompare.singleVehicle.cta   -> FleetComparePage.kt:250 SingleVehicleGuard EmptyState(action.label=translation_fleetCompare_singleVehicle_cta)
+[COVERED] string fleetCompare.singleVehicle.title -> FleetComparePage.kt:250 SingleVehicleGuard EmptyState(title=translation_fleetCompare_singleVehicle_title)
+
+PARITY_COVERED=63
+
+--------------------------------------------------------------------------------
+UNIT TESTS (off-device JVM gate) — FleetComparePageModelTest : 14 tests, 0 failures, 0 errors, 0 skipped
+--------------------------------------------------------------------------------
+parseDrivingStatsReadsSnakeCaseFields, parseDrivingStatsCollapsesMissingAndNonObjectToZero, parseCostSummaryReadsExpectedFields,
+parseMonthlyBucketsDecodesArrayWithDriveCount, parseMonthlyBucketsNonArrayCollapsesToEmpty, mergeMonthlyAlignsAndSortsByMonth,
+computeWinnerHonorsSemantics, comparisonRowsProducesTenRowsWithWinnerSidesAndMetricFormatting, comparisonRowsConvertsToImperialWhenMiles,
+highlightValuesPairBothVehicles, batteryToneAndFractionFollowThresholds, vehicleStatusProjectsOnlineCardFromSiState,
+vehicleStatusFallsBackWhenStateAbsent, displayPrefsResolveCurrencyAndPrecisionFromSettings
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test)
+--------------------------------------------------------------------------------
+check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin -> PLACEHOLDER_ALLOWED=0 PLACEHOLDER_COUNT=0 (EXIT=0)
+./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 2m 59s   BUILD_EXIT=0
+./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 11m 38s  LINT_EXIT=0
+./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 15s   TEST_EXIT=0  (FleetComparePageModelTest 14/14 pass)
+ktlint    :android:ktlintCheck (my files) -> 0 violations in com/teslasync/analytics/** (filename rule suppressed on Icons/Source as the single-decl files; line-length/import-order fixed)
+NOTE: app module Gradle path is :android (settings.gradle.kts), so :app:* in the generic gate contract maps to :android:*.
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : FleetComparePageViewModel binds shared S8 VehiclesStore + AnalyticsStore + DrivingStore + SettingsStore via
+               fleetCompareSourceOf(); eight per-vehicle feeds (state/stats/cost/monthly x A&B) + vehicles + settings; auto-select
+               first two vehicles (web useEffect); no HTTP in the view; refresh()/retry() re-collect the cache-then-network feeds.
+si/units     : all values read SI from the API; conversion is display-only at the render boundary via the shared converters
+               (convertDistanceFromSI/convertSpeedFromSI/formatDistance/formatTemperature/formatEnergy) + FleetCompareDisplayPrefs
+               from /settings (distance/speed/energy unit + currency symbol + precision + locale). km/km·h⁻¹/Wh·km⁻¹ stats and SI-metre
+               ranges, °C temps, Wh energy never stored converted; imperial path unit-tested (1.609344 km == 1 mi, 100 Wh/km == 160.93 Wh/mi).
+a11y/theme   : ChartContainer accessibleDescription on both charts (aria keys); Icon contentDescription on decorative vs labelled glyphs;
+               MaterialTheme dynamic-color + dark theme via A2 tokens; Compose-native Vico charts (no webview); >=48dp interactive targets.
+nav          : Destinations 'fleetCompare' -> /vehicle-comparison (pre-existing metadata) wired to FleetCompareRoute() via
+               PageHosts.register in FleetComparePageHost; TeslaSyncApplication.onCreate() calls FleetComparePageHost.register();
+               deep link /vehicle-comparison auto-registered by TeslaSyncNavHost.
+di seam      : DataContainer widened with analyticsStore + drivingStore — the documented A7 widening seam (every prior admin A7 page
+               added its store the same way). No feature page touched; FleetCompareSource binds the shared holders verbatim.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(63) == PARITY_REQUIRED(63)
+[PASS] all android triad gates green; parity 63/63; android ledger row page:analytics/FleetCompare status=done.
+EXIT=0
+STATUS=DONE
