@@ -2063,6 +2063,11 @@
   <string name="translation_charging_heatmap_totalCost">Total Cost</string>
   <string name="translation_charging_heatmap_totalEnergy">Total Energy</string>
   <string name="translation_charging_heatmap_totalSessions">Total Sessions</string>
+  <string name="translation_charging_heatmap_cell">%1$s %2$s · %3$s · %4$s</string>
+  <string name="translation_charging_heatmap_favorite_value">%1$s at %2$s</string>
+  <string name="translation_charging_heatmap_grid_aria">Weekly charging heatmap by day of week and hour of day</string>
+  <string name="translation_charging_heatmap_sessions_axis">Sessions</string>
+  <string name="translation_charging_heatmap_sessions_count">%1$s sessions</string>
   <string name="translation_charging_invoice">Invoice</string>
   <string name="translation_charging_list_empty">No charging sessions yet</string>
   <string name="translation_charging_list_emptyDescription">Charging data will appear here once your vehicle records a session.</string>

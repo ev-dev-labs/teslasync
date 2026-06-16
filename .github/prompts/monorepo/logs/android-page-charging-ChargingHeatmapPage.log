@@ -1,0 +1,110 @@
+================================================================================
+p3-android  A7  page:charging/ChargingHeatmap  (Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/charging/pages/ChargingHeatmapPage.tsx
+================================================================================
+artifact      : page:charging/ChargingHeatmap   (kind=page, web route /charging-heatmap)
+web source    : web/src/features/charging/pages/ChargingHeatmapPage.tsx
+output dir    : apps/android/app/src/main/kotlin/com/teslasync/charging/
+package       : io.teslasync.android.charging.chargingheatmap
+                (mandated surface dir com/teslasync/charging diverges from the io.teslasync.android.*
+                 package -> @file:Suppress("InvalidPackageDeclaration"), as the sibling BatteryHealthPage)
+
+data sources  : the single web hook bound through the shared KMP core. The view performs NO HTTP (ADR-002/ADR-004).
+  - useChargingSessionsPaginated  GET /charging?vehicle_id=&limit=2000&offset=0[&start][&end]
+        -> ChargingRepository.sessionsPaginated(vehicleId, 2000, 0, start, end) : Flow<Resource<List<ChargingSession>>>
+  web hook name kept verbatim at the Kotlin seam: ChargingHeatmapPageSource.chargingSessionsPaginated
+  (ChargingHeatmapPageSource.kt L41-45). The Android DataContainer wires no shared ChargingStore (S8), so the
+  host binds the shared-core S7 HttpChargingRepository (the same KMP port of the web useCharging hook domain)
+  built from the DataContainer's resilient ApiHttpClient + offline CacheStore, exactly as the sibling
+  BatteryHealthPage does; the view-model projects it onto the lifecycle-aware UiState (the S8-equivalent render
+  projection). The typed SI ChargingSession DTO (started_at, ended_at, total_energy_added_wh, cost_decimal,
+  start_place) is read directly. (Honesty Covenant #9 — documented, not silent.)
+
+files created :
+  ChargingHeatmapPageModel.kt      framework-free: Registration, HeatCell/HeatGrid/HeatStats/LocationCount,
+                                   dayAndHour/buildGrid (web buildGrid), computeStats (web stats), durationMinutes,
+                                   topLocations (web locationData), heatLevel (web heatColor tiers), dayName/hourLabel,
+                                   recordChargingHeatmapOpened, ChargingHeatmapDisplayPrefs (Wh->kWh + s->min + locale
+                                   number fmt). JVM-unit-testable (java.time + shared units only).
+  ChargingHeatmapPageIcons.kt      ChargingHeatmapGlyphs.Activity (web lucide Activity empty-state icon), authored
+                                   locally as a 24x24 stroked vector (BatteryHealthPageIcons precedent).
+  ChargingHeatmapPageSource.kt     seam + chargingHeatmapPageSourceOf(charging, settingsStore, selectedVehicleStore).
+  ChargingHeatmapPageViewModel.kt  BaseFeedViewModel: sessions StateFlow<UiState<List<ChargingSession>>> scoped to the
+                                   global active vehicle (web useSelectedVehicle) + refresh trigger, displayPrefs
+                                   StateFlow (web useUnits), refresh/retry/recordViewOpened.
+  ChargingHeatmapPage.kt           stateless Compose render layer: chrome + sessions-gated body (loader/error/loaded);
+                                   4 summary cards + favorite panel + 7x24 heatmap grid (tap-to-inspect + legend) +
+                                   top-locations bar chart.
+  ChargingHeatmapPageHost.kt       PageHosts.register("chargingHeatmap") for the /charging-heatmap destination.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=24   (7 panels + 1 chart + 4 states + 12 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1   -> ChargingHeatmapPage.kt:251 StatCardsSection/StatCard GlassPanel (Total Sessions, prefs.integer(count), translation_charging_heatmap_totalSessions)
+[COVERED] panel  GlassPanel2   -> ChargingHeatmapPage.kt:258 StatCardsSection/StatCard GlassPanel (Total Energy, prefs.energy(totalEnergyWh) Wh->kWh, translation_charging_heatmap_totalEnergy)
+[COVERED] panel  GlassPanel3   -> ChargingHeatmapPage.kt:267 StatCardsSection/StatCard GlassPanel (Total Cost, shared Currency surface, translation_charging_heatmap_totalCost)
+[COVERED] panel  GlassPanel4   -> ChargingHeatmapPage.kt:278 StatCardsSection/StatCard GlassPanel (Avg Duration, prefs.duration(avgDurationSeconds) s->min, translation_charging_heatmap_avgDuration)
+[COVERED] panel  GlassPanel5   -> ChargingHeatmapPage.kt:313 FavoritePanel GlassPanel (favorite day+hour+session count; empty -> common.noData; web favorite <GlassPanel> L191)
+[COVERED] panel  GlassPanel6   -> ChargingHeatmapPage.kt:342 HeatmapGridPanel GlassPanel (7x24 day x hour grid + tap detail + legend; web heatmap <GlassPanel> L203)
+[COVERED] panel  GlassPanel7   -> ChargingHeatmapPage.kt:501 TopLocationsPanel GlassPanel (top-locations chart-or-empty; web top-locations <GlassPanel> L257)
+[COVERED] chart  BarChart      -> ChargingHeatmapPage.kt:511 TopLocationsPanel BarChartWrapper (A3 Vico native column chart, no webview; series=location counts; web <BarChart layout=vertical> L263)
+[COVERED] state  loading       -> ChargingHeatmapPage.kt:163 ChargingHeatmapPageContent when sessions.isLoading -> HeatmapLoading()/PageLoader (UiPhase.Loading; web isLoading skeleton L116)
+[COVERED] state  empty         -> ChargingHeatmapPage.kt:165 sessions.isEmpty (UiPhase.Empty) -> HeatmapBody draws every panel zeroed: all-cold grid + FavoritePanel common.noData (L331) + TopLocationsPanel EmptyState (L526); never blank (ADR-011)
+[COVERED] state  error         -> ChargingHeatmapPage.kt:164 ChargingHeatmapPageContent when sessions.isError -> HeatmapErrorSurface(onRetry) (UiPhase.Error + retry; web PageContainer error L147)
+[COVERED] state  success       -> ChargingHeatmapPage.kt:165 ChargingHeatmapPageContent else -> HeatmapBody(sessions.data) (UiPhase.Content)
+[COVERED] string charging.heatmap.avgDuration   -> ChargingHeatmapPage.kt:278 translation_charging_heatmap_avgDuration
+[COVERED] string charging.heatmap.favorite      -> ChargingHeatmapPage.kt:318 translation_charging_heatmap_favorite
+[COVERED] string charging.heatmap.gridTitle     -> ChargingHeatmapPage.kt:351 translation_charging_heatmap_gridTitle
+[COVERED] string charging.heatmap.less          -> ChargingHeatmapPage.kt:472 translation_charging_heatmap_less
+[COVERED] string charging.heatmap.more          -> ChargingHeatmapPage.kt:482 translation_charging_heatmap_more
+[COVERED] string charging.heatmap.subtitle      -> ChargingHeatmapPage.kt:182 translation_charging_heatmap_subtitle
+[COVERED] string charging.heatmap.title         -> ChargingHeatmapPage.kt:180 translation_charging_heatmap_title
+[COVERED] string charging.heatmap.topLocations  -> ChargingHeatmapPage.kt:508 translation_charging_heatmap_topLocations
+[COVERED] string charging.heatmap.totalCost     -> ChargingHeatmapPage.kt:267 translation_charging_heatmap_totalCost
+[COVERED] string charging.heatmap.totalEnergy   -> ChargingHeatmapPage.kt:258 translation_charging_heatmap_totalEnergy
+[COVERED] string charging.heatmap.totalSessions -> ChargingHeatmapPage.kt:251 translation_charging_heatmap_totalSessions
+[COVERED] string common.noData                  -> ChargingHeatmapPage.kt:527 translation_common_noData (also FavoritePanel empty L331)
+--------------------------------------------------------------------------------
+PARITY_COVERED=24
+================================================================================
+
+panel map    : the 7 manifest GlassPanels = web's 4 stat <GlassPanel> tiles (Total Sessions/Energy/Cost/Avg
+               Duration, L163-185) + the favorite <GlassPanel> (L191) + the heatmap <GlassPanel> (L203) + the
+               top-locations <GlassPanel> (L257). All 7 always render -> no hidden panels (ADR-011 #6): the web
+               hides the favorite panel when maxCount==0, the native port keeps it visible with a common.noData
+               note; the heatmap grid always draws its 7x24 cells (all-cold when empty, web parity).
+chart        : single BarChart = the A3 BarChartWrapper (Vico cartesian column chart, native Compose, no webview)
+               over the >=2-session top-ten locations; web ResponsiveContainer>BarChart layout="vertical".
+               Orientation differs (Vico native columns vs web horizontal bars) — the A3 wrapper, not pixel cloning.
+states       : the single useChargingSessionsPaginated feed drives loading/empty/error/success via UiState; no
+               selection or an empty list resolves to Empty so the page draws every panel in its empty form.
+units (SI)   : total_energy_added_wh(Wh)->kWh via prefs.energy/formatEnergy; per-session duration(s)->min via
+               prefs.duration/formatDuration; cost rendered verbatim through the shared Currency surface. Day-of-week
+               + hour read in the device time zone (web new Date().getDay()/getHours()). SI never stored converted
+               (Phase-48 SI-canonical / unit-conversion.instructions).
+i18n         : every visible literal via stringResource (ADR-014); web key names kept. The 11 charging.heatmap.* keys
+               + common.noData already in the generated res/values catalog (all locales). 5 native-port helper keys
+               ADDED to res/values/strings.xml for the composed favorite line / heatmap cell detail / chart series /
+               grid a11y (web composes these inline in English): translation_charging_heatmap_favorite_value,
+               _sessions_count, _cell, _sessions_axis, _grid_aria. lint MissingTranslation/ExtraTranslation disabled.
+a11y         : Compose semantics content descriptions on every heat cell (day/hour/sessions/kWh), the bar chart
+               (grid_aria), and tap-to-inspect detail; >=48dp Material 3 targets; dynamic-color + dark theme via
+               MaterialTheme tokens (heat tiers map to TeslaTokens.status.* with computed alpha); no hardcoded colors.
+range        : the web optional date RangePicker resolves to its default 'all' preset (undefined start/end -> whole
+               history); that picker is a separate shared surface outside this page's allowed-files scope, so the
+               feed reads the same all-time window the web default requests (Honesty Covenant #9 — documented).
+nav          : Destinations 'chargingHeatmap' -> /charging-heatmap pre-existing (Destinations.kt L59, count unchanged);
+               host wired via PageHosts.register("chargingHeatmap") in TeslaSyncApplication.onCreate; deep link
+               auto-registered by the NavHost. DataContainer untouched (ApiHttpClient/CacheStore/SettingsStore/
+               SelectedVehicleStore already exposed).
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 7m 31s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 9m 18s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 34s
+parity       : PARITY_COVERED(24) == PARITY_REQUIRED(24)
+[PASS] all android triad gates green; parity 24/24; android ledger row page:charging/ChargingHeatmap status=done.
+EXIT=0
+STATUS=DONE
