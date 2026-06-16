@@ -44,6 +44,7 @@ import io.teslasync.android.admin.fleettelemetry.FleetTelemetryCoveragePageHost
 import io.teslasync.android.admin.fleetapi.FleetAPIPageHost
 import io.teslasync.android.admin.livesignals.LiveSignalInspectorPageHost
 import io.teslasync.android.admin.livelogs.LiveLogsPageHost
+import io.teslasync.android.admin.rbac.RbacMatrixPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -151,6 +152,7 @@ class TeslaSyncApplication : Application() {
         FleetAPIPageHost.register()
         LiveSignalInspectorPageHost.register()
         LiveLogsPageHost.register()
+        RbacMatrixPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

@@ -1,0 +1,133 @@
+P3-ANDROID A7 — page:admin/RbacMatrix — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/RbacMatrixPage.tsx  (web route: (unrouted) — not wired in App.tsx)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/
+             RbacMatrixPage.kt (screen) + RbacMatrixPageViewModel.kt (S8 state holder) +
+             RbacMatrixPageModel.kt (framework-free model) + RbacMatrixPageSource.kt (data seam) +
+             RbacMatrixPageHost.kt (PageHosts route) + RbacMatrixPageIcons.kt (ShieldCheck/Lock/Unlock glyphs)
+Wiring     : DataContainer.rbacMatrixStore (S8 RbacMatrixStore over HttpRbacRepository) ;
+             TeslaSyncApplication -> RbacMatrixPageHost.register("RbacMatrixPage") ;
+             TeslaSyncNavHost composable("RbacMatrixPage") -> PageHosts.hostFor (unrouted parity surface)
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty, no predecessor bypass): the P1/S8 shared RbacMatrixStore + its S7
+RbacRepository/HttpRbacRepository + the RbacMatrixResponse(Open|Session)/RbacRole/RbacPermission/
+RbacUpsertCell models + the RbacMatrixDerivations (matrix parse / isOpenMode / diffMatrices) ALREADY
+exist on this branch with their own commonTest coverage (RbacMatrixStoreTest, RbacMatrixGoldenTest,
+RbacRepositoryContractTest). The page binds the real shared holder end to end via
+container.rbacMatrixStore.asRbacMatrixSource(); no predecessor was stubbed or bypassed and no shared
+file under apps/shared/** was edited.
+
+NAV NOTE (honesty, no silent drift): the web page is UNROUTED in web/src/App.tsx (no canonical web
+path). It is therefore NOT added to Destinations.kt — that registry mirrors web's 137 canonical pages
+and DestinationsTest asserts that exact count, which stays green (137, untouched). Per the prompt's
+"add a composable("RbacMatrixPage") destination to the NavHost", the surface is registered directly in
+TeslaSyncNavHost as composable(route = "RbacMatrixPage") whose content is supplied by PageHosts (the
+same registry every routed A7 page uses); the host is wired at process start by TeslaSyncApplication ->
+RbacMatrixPageHost.register(). No deep link is mapped (the page is unrouted).
+
+WIRING NOTE: DataContainer is the sanctioned A7 seam ("the single seam A7 page prompts widen — register
+their store + ViewModel"); rbacRepository = HttpRbacRepository(api, cacheStore, clock) and
+rbacMatrixStore = RbacMatrixStore(rbacRepository, scope) were added there exactly as the sibling
+FeedbackQueue A7 added feedbackRepository/feedbackStore.
+
+STRINGS NOTE: all 23 visible literals already exist as translation_rbac_* in res/values/strings.xml
+(generated i18n catalog) and across values-ar/ values-he/, so NO string-catalog edit was required. Every
+visible literal resolves via stringResource(R.string.translation_rbac_*); web key names are preserved
+1:1. The permission-category section labels reuse the existing translation_rbac_category_* keys with a
+fallback to the server-supplied category string (server data, not a hardcoded English literal).
+
+UNITS NOTE: no RBAC field is display-unit-bearing (ids, names, a category string, booleans), so there is
+no SI conversion at this surface (S5) — values round-trip verbatim, exactly as the shared model documents.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/, and
+states every P3/A* gate addresses ':android:'); the prompt snippet's ':app:' is the same single app
+module, so the gate was run as :android:assembleDebug / :android:lintDebug / :android:testDebugUnitTest.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding gate (the prompt
+gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, the same triad the sibling A7 pages
+were accepted on). For full transparency: :android:detekt fails with 4 weighted issues, ALL PRE-EXISTING
+and ALL in sibling files (ApiLogsPage.kt x3 — MatchingDeclarationName/ReturnCount/MaxLineLength,
+FeedbackQueuePage.kt x1 — MatchingDeclarationName). The six NEW RbacMatrix* files are detekt-CLEAN
+(0 issues): an earlier run flagged 3 in the new files (RbacMatrixPage MatchingDeclarationName,
+RbacMatrixPageModel MaxLineLength, RbacMatrixPageViewModel ReturnCount) and all three were fixed
+(file-level @Suppress for the Actions-data-class co-location, line wrap, if/else over a third return) and
+re-verified clean. The 4 sibling issues are out of scope for this prompt and were left untouched.
+
+=== GATE ===
+# & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 1m 57s
+BUILD_EXIT=0
+# ./gradlew :android:lintDebug   (abortOnError=true; StringFormatMatches stays ACTIVE for com/teslasync/admin)
+BUILD SUCCESSFUL in 13m 10s
+LINT_EXIT=0
+# ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL (full suite green; Destinations/RouteTable unit tests unaffected — Destinations.all stays 137)
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=30
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (RbacMatrixPage.kt screen unless noted)
+
+# data sources (4) — bound through RbacMatrixPageViewModel exposing StateFlow from the KMP core (P1/S8); web hook names preserved
+#   useRbacMatrix       -> RbacMatrixPageSource.useRbacMatrix() = store.matrix (StateFlow<Resource<RbacMatrixResponse>>) ; VM.data/VM.interaction project it
+#   useUpsertRbacCells  -> RbacMatrixPageSource.useUpsertRbacCells() = store.upsertCells ; RbacMatrixPageViewModel.save()
+#   isRbacOpenMode      -> RbacMatrixPageModel.isRbacOpenMode() (delegates RbacMatrixDerivations.isOpenMode) ; RbacDataState.openMode
+#   diffMatrices        -> RbacMatrixPageSource.diffMatrices() = store.diffMatrices ; VM.interaction dirtyCount + save()
+
+# panels (3) — each a Material 3 GlassPanel
+[COVERED] panel GlassPanel1 -> RbacMatrixPage.kt:RbacOpenModePanel()    GlassPanel(padding = PanelPadding.Lg)  (AUTH_MODE_OPEN forward-auth notice)
+[COVERED] panel GlassPanel2 -> RbacMatrixPage.kt:RbacSummaryPanel()     GlassPanel(padding = PanelPadding.Md)  (roles/effective pills + groups-header + edit controls)
+[COVERED] panel GlassPanel3 -> RbacMatrixPage.kt:RbacMatrixGridPanel()  GlassPanel(padding = PanelPadding.None) (role x permission grid)
+
+# charts (0) — none ; maps (0) — none
+
+# data states (4) — implemented for the matrix source; no data region is ever blank (ADR-011)
+[COVERED] state loading -> RbacMatrixPage.kt:RbacLoadingState()  Spinner(size = SpinnerSize.Md)   (gated on data.ui.isLoading)
+[COVERED] state empty   -> RbacMatrixPage.kt:RbacEmptyState()    EmptyState(icon=ShieldCheck,title,message) (gated on session.hasNoRoles)
+[COVERED] state error   -> RbacMatrixPage.kt:RbacErrorState()    AlertBanner(tone=Tone.Danger)+BannerAction Retry (gated on data.ui.hasError)
+[COVERED] state success -> RbacMatrixPage.kt:RbacMatrixSuccess() GlassPanel2 summary + GlassPanel3 grid (+ save-error AlertBanner)
+
+# strings (23) — every visible literal via stringResource(R.string.translation_rbac_*); web key names preserved 1:1
+[COVERED] string rbac.title              -> RbacMatrixPageContent() PageTitle(stringResource(translation_rbac_title))
+[COVERED] string rbac.subtitle           -> RbacMatrixPageContent() Caption(stringResource(translation_rbac_subtitle))
+[COVERED] string rbac.openMode.title     -> RbacOpenModePanel() SectionTitle(stringResource(translation_rbac_openMode_title))
+[COVERED] string rbac.openMode.message   -> RbacOpenModePanel() HelperText(stringResource(translation_rbac_openMode_message))
+[COVERED] string rbac.errors.loadTitle   -> RbacErrorState() AlertBanner(title = stringResource(translation_rbac_errors_loadTitle))
+[COVERED] string rbac.errors.loadGeneric -> RbacErrorState() AlertBanner(message = code ?: stringResource(translation_rbac_errors_loadGeneric))
+[COVERED] string rbac.actions.retry      -> RbacErrorState() BannerAction(label = stringResource(translation_rbac_actions_retry))
+[COVERED] string rbac.empty.title        -> RbacEmptyState() EmptyState(title = stringResource(translation_rbac_empty_title))
+[COVERED] string rbac.empty.message      -> RbacEmptyState() EmptyState(message = stringResource(translation_rbac_empty_message))
+[COVERED] string rbac.errors.saveGeneric -> RbacMatrixSuccess() AlertBanner(message = submitError.code ?: stringResource(translation_rbac_errors_saveGeneric))
+[COVERED] string rbac.groupsHeader.label -> RbacSummaryPanel() Caption(stringResource(translation_rbac_groupsHeader_label, groupsHeader))
+[COVERED] string rbac.myRoles.none       -> MyRolesPill() Badge(text = stringResource(translation_rbac_myRoles_none))
+[COVERED] string rbac.myRoles.label      -> MyRolesPill() Badge(text = stringResource(translation_rbac_myRoles_label, joinedRoles))
+[COVERED] string rbac.effective.tooltip  -> EffectivePill() Modifier.semantics{ contentDescription = stringResource(translation_rbac_effective_tooltip) }
+[COVERED] string rbac.effective.count    -> EffectivePill() Badge(text = stringResource(translation_rbac_effective_count, allowed, total))
+[COVERED] string rbac.actions.edit       -> RbacEditControls() Button(label = stringResource(translation_rbac_actions_edit))
+[COVERED] string rbac.actions.cancel     -> RbacEditControls() Button(label = stringResource(translation_rbac_actions_cancel))
+[COVERED] string rbac.actions.saving     -> RbacEditControls() Save Button(label = stringResource(translation_rbac_actions_saving))
+[COVERED] string rbac.actions.save       -> RbacEditControls() Save Button(label = stringResource(translation_rbac_actions_save, dirtyCount))
+[COVERED] string rbac.permissionColumn   -> RbacGridHeader() Caption(stringResource(translation_rbac_permissionColumn))
+[COVERED] string rbac.cell.toggle        -> RbacCell() Checkbox Modifier.semantics{ contentDescription = stringResource(translation_rbac_cell_toggle, role, perm) }
+[COVERED] string rbac.cell.allowed       -> RbacCell() read-cell Modifier.semantics{ contentDescription = stringResource(translation_rbac_cell_allowed) }
+[COVERED] string rbac.cell.denied        -> RbacCell() read-cell Modifier.semantics{ contentDescription = stringResource(translation_rbac_cell_denied) }
+
+PARITY_COVERED=30
+
+=== SUMMARY ===
+data sources : RbacMatrixPageViewModel binds the shared S8 RbacMatrixStore via asRbacMatrixSource(); data:StateFlow<RbacDataState> (cache-then-network UiState<RbacMatrixSession> + open-mode + load-error code) and interaction:StateFlow<RbacInteractionState> (editing/draft/saving/dirtyCount/submitError). save() PUTs only diffMatrices(snapshot, draft) off the UI thread; the store refreshes the feed on success. No HTTP in the view.
+nav          : web (unrouted) -> native composable("RbacMatrixPage") in TeslaSyncNavHost resolved via PageHosts (RbacMatrixPageHost.register at app start). Destinations.kt untouched (137 web-canonical pages invariant preserved; DestinationsTest green).
+states       : loading (Spinner) / open-mode (GlassPanel1) / hard-error (AlertBanner + Retry) / empty (EmptyState) / content (GlassPanel2 + GlassPanel3). Read cells show a ✓/– mark (semantics allowed/denied); edit mode flips every cell to a Checkbox (semantics "Toggle role/perm"); Save shows "Save (N)" / "Saving…" and is disabled at 0 dirty cells; a save failure renders an inline danger AlertBanner. No region is ever blank (ADR-011).
+a11y/theme   : per-cell + pill + loading content descriptions (Modifier.semantics); Checkbox/Buttons carry the Material >=48dp touch target; every color via MaterialTheme.colorScheme / TeslaTokens.status (dark + dynamic theme, ADR-005/ADR-015). Compose-native only — no webview.
+diagnostics  : page records the one-shot PII-safe view.opened (surface="RbacMatrixPage", P1/S11) via RbacMatrixPageViewModel.recordViewOpened(); save outcomes log rbacMatrix.saved / rbacMatrix.saveFailed with no matrix content.
+placeholder  : PLACEHOLDER_COUNT=0 (com/teslasync/admin, kotlin)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+detekt       : NEW RbacMatrix* files detekt-clean; 4 remaining detekt issues are PRE-EXISTING sibling debt (out of the binding gate).
+parity       : PARITY_COVERED(30) == PARITY_REQUIRED(30)
+[PASS] all android triad gates green; parity 30/30; android ledger row page:admin/RbacMatrix status=done.
+EXIT=0
+STATUS=DONE
