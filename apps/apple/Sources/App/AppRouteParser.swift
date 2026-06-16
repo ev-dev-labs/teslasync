@@ -20,6 +20,7 @@ public enum AppRouteParser {
         "/anomaly-detection": .diagnostics,
         "/tco": .tco,
         "/location": .maps,
+        "/navigation": .maps,
         "/alerts": .notifications,
         "/automations/list": .automationsList,
         "/signals": .telemetry,

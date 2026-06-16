@@ -1369,6 +1369,24 @@
       "requiredCount": 55,
       "promptId": "p4-apple/P7/page:maps/MapOverview",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-maps-MapOverviewPage.log"
+    },
+    {
+      "unitId": "page:maps/NavigationRoute",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 79,
+      "requiredCount": 79,
+      "promptId": "p4-apple/P7/page:maps/NavigationRoute",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-maps-NavigationRoutePage.log"
+    },
+    {
+      "unitId": "page:maps/NavigationRoute",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 79,
+      "requiredCount": 79,
+      "promptId": "p4-apple/P7/page:maps/NavigationRoute",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-maps-NavigationRoutePage.log"
     }
   ]
 }
