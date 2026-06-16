@@ -891,3 +891,4 @@ p3-android/pages/system/CommandsPage.prompt.md
 p3-android/pages/system/DiagnosticPage.prompt.md
 p3-android/pages/system/SearchPage.prompt.md
 p3-android/pages/system/TeslaAccountPage.prompt.md
+p3-android/pages/telemetry/SignalGapDetectorPage.prompt.md
