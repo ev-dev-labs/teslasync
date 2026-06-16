@@ -1,0 +1,88 @@
+P3-ANDROID A7 — page:admin/DiskForecast — Jetpack Compose / Material 3 parity port — artifact log
+
+Parity unit : page:admin/DiskForecast
+Web source  : web/src/features/admin/pages/DiskForecastPage.tsx  (route /admin/disk-forecast)
+Web hook    : useDiskForecast → GET /admin/observability/disk-forecast
+Output      : apps/android/app/src/main/kotlin/com/teslasync/admin/DiskForecastPage*.kt
+              (package io.teslasync.android.admin.diskforecast)
+ADR refs    : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+Files authored (mandated surface dir com/teslasync/admin/**):
+  DiskForecastPageModel.kt      — registration, DiskSeverityTone, DiskFleetTotals, DiskForecastView, isSubsystemMissing, view.opened
+  DiskForecastPageSource.kt     — DiskForecastSource seam + OperatorConfidenceStore.asDiskForecastSource()
+  DiskForecastPageViewModel.kt  — StateFlow<UiState<DiskForecastResponse>> via BaseFeedViewModel.asUiState (P1/S8)
+  DiskForecastPageIcons.kt      — Database + AlertCircle glyphs; DiskSeverityTone.badgeVariant() (web SEVERITY_VARIANT)
+  DiskForecastPage.kt           — stateless @Composable screen: header, subsystem banner, 4 fleet tiles, table panel + 4 states
+  DiskForecastPageHost.kt       — DiskForecastRoute() + DiskForecastPageHost.register() (NavHost host wiring)
+Wiring:
+  TeslaSyncApplication.kt       — import + DiskForecastPageHost.register() (process-start host registration)
+  res/values/strings.xml        — 22 admin.diskForecast.* + 3 severity labels (admin.subsystem.unavailableTitle pre-existing)
+  apps/parity/android-ledger.json — page:admin/DiskForecast row (32/32, status done)
+Test:
+  app/src/test/java/io/teslasync/android/admin/diskforecast/DiskForecastPageModelTest.kt (9 tests)
+Pre-existing nav (NOT authored here, already present): Destinations.kt page("adminDiskForecast","/admin/disk-forecast",NavGroup.Admin);
+  NavStrings.kt adminDiskForecast→nav_admin_disk_forecast; RouteTableTest expects /admin/disk-forecast→adminDiskForecast.
+
+Predecessor note (generated client, P1/S2-S3, ADR-004):
+  The shared KMP core depends on the OpenAPI-generated package io.teslasync.shared.core.api.generated.* which is
+  git-ignored (.gitignore: apps/**/generated/). In a fresh worktree it must be produced before any :android build.
+  Regenerated verbatim via the committed generator (no hand-edit):
+    pwsh apps/tools/codegen/gen-clients.ps1  →  "[GEN] wrote 10 Kotlin + 10 C# files"  GEN_EXIT=0
+  No backend/spec/generator change was made — the generated client was materialized, not modified.
+
+=== PARITY ===
+PARITY_REQUIRED=32
+
+[panel  1] Total-disk        — DiskForecastPage.kt ▸ DiskForecastStatsGrid (StatCard label=fleetTotal, value=formats.bytes(totals.totalBytes), sublabel=tableCount)
+[panel  2] Uncompressed      — DiskForecastPage.kt ▸ DiskForecastStatsGrid (StatCard label=fleetUncompressed, value=formats.bytes(totals.uncompressedBytes), sublabel=percentSublabel(uncompressedPercent))
+[panel  3] Compressed        — DiskForecastPage.kt ▸ DiskForecastStatsGrid (StatCard label=fleetCompressed, value=formats.bytes(totals.compressedBytes), sublabel=percentSublabel(compressedPercent))
+[panel  4] Growth-per-day    — DiskForecastPage.kt ▸ DiskForecastStatsGrid (StatCard label=fleetGrowth, value=formats.bytesPerDay(totals.growthBytesPerDay), sublabel=growthSub)
+[panel  5] GlassPanel5       — DiskForecastPage.kt ▸ DiskForecastTablePanel (GlassPanel padding=None, PanelTitle=tableTitle, per-hypertable DiskForecastRow incl. all six web columns)
+[state  6] loading           — DiskForecastPage.kt ▸ DiskForecastLoadingState (Spinner) gated by UiState.isLoading
+[state  7] empty             — DiskForecastPage.kt ▸ DiskForecastBigEmptyState (EmptyState) + DiskForecastCompactEmpty; ViewModel asUiState(isEmpty={hypertables.isEmpty()})
+[state  8] error             — DiskForecastPage.kt ▸ DiskForecastErrorState (AlertCircle + ErrorText + Retry) gated by UiState.isError; retry → ViewModel.retry()
+[state  9] success           — DiskForecastPage.kt ▸ DiskForecastTablePanel else-branch (rows) + DiskForecastStatsGrid; DiskForecastView.from(state.data)
+[string 10] admin.diskForecast.chunkCount        — strings.xml translation_admin_diskForecast_chunkCount ▸ DiskForecastRow Caption
+[string 11] admin.diskForecast.colDays           — strings.xml translation_admin_diskForecast_colDays ▸ DiskForecastRow LabeledField(colDays)
+[string 12] admin.diskForecast.colGrowth         — strings.xml translation_admin_diskForecast_colGrowth ▸ DiskForecastRow LabeledField(colGrowth)
+[string 13] admin.diskForecast.colSeverity       — strings.xml translation_admin_diskForecast_colSeverity ▸ DiskSeverityCell Caption
+[string 14] admin.diskForecast.colSplit          — strings.xml translation_admin_diskForecast_colSplit ▸ DiskForecastRow LabeledField(colSplit)
+[string 15] admin.diskForecast.colTable          — strings.xml translation_admin_diskForecast_colTable ▸ DiskForecastRow Caption
+[string 16] admin.diskForecast.colTotal          — strings.xml translation_admin_diskForecast_colTotal ▸ DiskForecastRow LabeledField(colTotal)
+[string 17] admin.diskForecast.compressedSuffix  — strings.xml translation_admin_diskForecast_compressedSuffix ▸ DiskForecastRow colSplit detail
+[string 18] admin.diskForecast.emptyMessage      — strings.xml translation_admin_diskForecast_emptyMessage ▸ DiskForecastBigEmptyState
+[string 19] admin.diskForecast.emptyTable        — strings.xml translation_admin_diskForecast_emptyTable ▸ DiskForecastCompactEmpty
+[string 20] admin.diskForecast.emptyTitle        — strings.xml translation_admin_diskForecast_emptyTitle ▸ DiskForecastBigEmptyState
+[string 21] admin.diskForecast.fleetCompressed   — strings.xml translation_admin_diskForecast_fleetCompressed ▸ StatCard (Compressed)
+[string 22] admin.diskForecast.fleetGrowth       — strings.xml translation_admin_diskForecast_fleetGrowth ▸ StatCard (Growth-per-day)
+[string 23] admin.diskForecast.fleetTotal        — strings.xml translation_admin_diskForecast_fleetTotal ▸ StatCard (Total-disk)
+[string 24] admin.diskForecast.fleetUncompressed — strings.xml translation_admin_diskForecast_fleetUncompressed ▸ StatCard (Uncompressed)
+[string 25] admin.diskForecast.growthSub         — strings.xml translation_admin_diskForecast_growthSub ▸ StatCard (Growth-per-day) sublabel
+[string 26] admin.diskForecast.notConfigured     — strings.xml translation_admin_diskForecast_notConfigured ▸ AlertBanner (subsystem) body
+[string 27] admin.diskForecast.pageTitle         — strings.xml translation_admin_diskForecast_pageTitle ▸ DiskForecastHeader PageTitle
+[string 28] admin.diskForecast.percentSub        — strings.xml translation_admin_diskForecast_percentSub ▸ percentSublabel (uncompressed/compressed tiles)
+[string 29] admin.diskForecast.subtitle          — strings.xml translation_admin_diskForecast_subtitle ▸ DiskForecastHeader BodyText
+[string 30] admin.diskForecast.tableCount        — strings.xml translation_admin_diskForecast_tableCount ▸ StatCard (Total-disk) sublabel
+[string 31] admin.diskForecast.tableTitle        — strings.xml translation_admin_diskForecast_tableTitle ▸ DiskForecastTablePanel PanelTitle
+[string 32] admin.subsystem.unavailableTitle     — strings.xml translation_admin_subsystem_unavailableTitle ▸ AlertBanner (subsystem) title
+
+PARITY_COVERED=32
+
+Note on severity badge labels: web SEVERITY_LABEL is a hardcoded English map (ok/warn/critical/"—"). For ADR-014
+zero-hardcoded-text compliance these are i18n-sourced as translation_admin_diskForecast_severityOk/Warn/Critical
+(unknown → em-dash, web SEVERITY_LABEL.unknown). These 3 helper strings are additive and not part of the 32-item
+manifest count. Units (binary-prefix bytes / days-to-quota / share-of-total %) are formatted only at the display
+boundary (DiskForecastFormats), mirroring web formatBytes / fmtNumber — no non-SI value is stored or computed (S5).
+
+=== GATE ===
+predecessor: pwsh apps/tools/codegen/gen-clients.ps1                         → GEN_EXIT=0 (10 Kotlin + 10 C# files)
+placeholder: apps/tools/check-placeholders.ps1 -Path .../com/teslasync/admin → PLACEHOLDER_ALLOWED=6 PLACEHOLDER_COUNT=0  PLACEHOLDER_EXIT=0
+build      : ./gradlew :android:assembleDebug                               → BUILD SUCCESSFUL  BUILD_EXIT=0
+lint       : ./gradlew :android:lintDebug                                   → BUILD SUCCESSFUL (abortOnError=true)  LINT_EXIT=0
+test       : ./gradlew :android:testDebugUnitTest                           → BUILD SUCCESSFUL  TEST_EXIT=0
+             io.teslasync.android.admin.diskforecast.DiskForecastPageModelTest: tests=9 failures=0 errors=0 skipped=0
+
+PARITY_COVERED==PARITY_REQUIRED (32==32); placeholder+build+lint+test all green.
+
+EXIT=0
+STATUS=DONE

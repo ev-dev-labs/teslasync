@@ -549,7 +549,7 @@ private fun RedisSignalsTable(rows: List<SignalRow>) {
     val lastLabel = stringResource(R.string.translation_pagination_last)
     // Resolve the raw catalog format once at the composable boundary (ADR-014), then interpolate with String
     // args inside the non-composable Pagination callback — avoids a LocalContext resource read in the lambda and
-    // keeps the %s placeholders type-matched.
+    // keeps the %s format specifiers type-matched.
     val showingFormat = stringResource(R.string.translation_pagination_showing)
 
     DataTable(

@@ -39,6 +39,7 @@ import io.teslasync.android.system.search.SearchPageHost
 import io.teslasync.android.system.teslaaccount.TeslaAccountPageHost
 import io.teslasync.android.telemetry.signalgapdetector.SignalGapDetectorPageHost
 import io.teslasync.android.telemetry.signallogviewer.SignalLogViewerPageHost
+import io.teslasync.android.admin.diskforecast.DiskForecastPageHost
 import io.teslasync.android.admin.dlq.DLQInspectorPageHost
 import io.teslasync.android.admin.gdpr.GDPRExportPageHost
 import io.teslasync.android.admin.fleettelemetry.FleetTelemetryCoveragePageHost
@@ -247,6 +248,7 @@ class TeslaSyncApplication : Application() {
         RbacMatrixPageHost.register()
         RedisSignalViewerPageHost.register()
         SecretRotationPageHost.register()
+        DiskForecastPageHost.register()
         SecurityAccessPageHost.register()
         TeslaFeatureFlagsPageHost.register()
         SystemPageHost.register()

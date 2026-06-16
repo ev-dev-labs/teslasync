@@ -9021,6 +9021,35 @@
   <string name="translation_admin_secretRotation_kind_sessionJwk">Session JWK</string>
   <string name="translation_admin_secretRotation_kind_appSigningKey">App signing key</string>
   <string name="translation_admin_secretRotation_kind_authentikSecret">Authentik client secret</string>
+  <!-- P3/A7 admin/DiskForecastPage parity strings — web admin.diskForecast.* + admin.subsystem.unavailableTitle
+       (web/src/features/admin/pages/DiskForecastPage.tsx). The severity badge labels (web SEVERITY_LABEL, a
+       hardcoded map on web) are i18n-sourced here so the native surface carries zero hardcoded text (ADR-014).
+       Count/percent placeholders use positional %1$s args (web i18next {{count}}/{{pct}} interpolation). -->
+  <string name="translation_admin_diskForecast_pageTitle">Disk Forecast</string>
+  <string name="translation_admin_diskForecast_subtitle">Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.</string>
+  <string name="translation_admin_diskForecast_notConfigured">TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.</string>
+  <string name="translation_admin_diskForecast_fleetTotal">Total disk</string>
+  <string name="translation_admin_diskForecast_fleetUncompressed">Uncompressed</string>
+  <string name="translation_admin_diskForecast_fleetCompressed">Compressed</string>
+  <string name="translation_admin_diskForecast_fleetGrowth">Growth (per day)</string>
+  <string name="translation_admin_diskForecast_tableCount">%1$s hypertables</string>
+  <string name="translation_admin_diskForecast_percentSub">%1$s%% of total</string>
+  <string name="translation_admin_diskForecast_growthSub">Sum across all hypertables</string>
+  <string name="translation_admin_diskForecast_tableTitle">Hypertables</string>
+  <string name="translation_admin_diskForecast_colTable">Hypertable</string>
+  <string name="translation_admin_diskForecast_colTotal">Total</string>
+  <string name="translation_admin_diskForecast_colSplit">Uncompressed / compressed</string>
+  <string name="translation_admin_diskForecast_colGrowth">Growth (per day)</string>
+  <string name="translation_admin_diskForecast_colDays">Days to quota</string>
+  <string name="translation_admin_diskForecast_colSeverity">Severity</string>
+  <string name="translation_admin_diskForecast_chunkCount">%1$s chunks</string>
+  <string name="translation_admin_diskForecast_compressedSuffix">compressed</string>
+  <string name="translation_admin_diskForecast_emptyTitle">No hypertables</string>
+  <string name="translation_admin_diskForecast_emptyMessage">No hypertables found in this database. The disk forecast surfaces TimescaleDB hypertables only.</string>
+  <string name="translation_admin_diskForecast_emptyTable">No hypertables</string>
+  <string name="translation_admin_diskForecast_severityOk">OK</string>
+  <string name="translation_admin_diskForecast_severityWarn">Warn</string>
+  <string name="translation_admin_diskForecast_severityCritical">Critical</string>
   <!-- BatteryDegradationPage (P3-ANDROID A7) parity literals — web t('…') keys the i18n source does not
        carry as explicit entries (i18next returns the key as its own default on web). Names follow the
        gen-i18n androidName() convention so a future canonical-source add regenerates identical names. -->
