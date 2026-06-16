@@ -793,3 +793,5 @@ p4-apple/pages/automations/AutomationListPage.prompt.md
 p4-apple/pages/analytics/YearReviewPage.prompt.md
 p4-apple/pages/automations/TriggerConfigurator.prompt.md
 p4-apple/pages/automations/ConflictWarnings.prompt.md
+p4-apple/pages/analytics/PeriodComparePage.prompt.md
+p4-apple/pages/battery/EnergyPage.prompt.md
