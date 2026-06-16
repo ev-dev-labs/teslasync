@@ -3861,6 +3861,7 @@
   <string name="translation_exports_aiRedaction_noTypeHint">Pick an export type to enable Helix.</string>
   <string name="translation_exports_aiRedaction_title">Plan PII redactions before sharing</string>
   <string name="translation_exportsList_bulk_delete">Delete</string>
+  <string name="translation_exportsList_bulk_deleteConfirm_body">Selected jobs and their downloadable artifacts will be permanently removed.</string>
   <string name="translation_exportsList_bulk_deleteConfirm_title">Delete export jobs?</string>
   <string name="translation_exportsList_col_created">Created</string>
   <string name="translation_exportsList_col_format">Format</string>
@@ -3868,10 +3869,12 @@
   <string name="translation_exportsList_col_status">Status</string>
   <string name="translation_exportsList_col_type">Type</string>
   <string name="translation_exportsList_download">Download</string>
+  <string name="translation_exportsList_empty_body">Your future exports will appear here for download or deletion.</string>
   <string name="translation_exportsList_empty_title">No exports yet</string>
   <string name="translation_exportsList_noun_one">export</string>
   <string name="translation_exportsList_noun_other">exports</string>
   <string name="translation_exportsList_selectExport">Select export %1$s</string>
+  <string name="translation_exportsList_subtitle">Manage your past export jobs. Select rows to delete in bulk.</string>
   <string name="translation_exportsList_title">Exports</string>
   <string name="translation_fahrenheit">Fahrenheit</string>
   <string name="translation_featureConfig_details">Details</string>
