@@ -25,7 +25,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// routes. Each carries its canonical path, title, icon, and sidebar group; one enum
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
+    case dashboard, glance, vehicles, charging, powershare, trips, energy, energyFlow, driving, analytics, maps
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation,
          sleepEfficiency, tco, yearReview
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
@@ -51,6 +51,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells: "battery-cells"
         case .batteryDegradation: "battery-degradation"
         case .sleepEfficiency: "sleep-efficiency"
+        case .energyFlow: "energy-flow"
         case .powerUser: "power-user"
         case .apiKeys: "api-keys"
         case .apiPlayground: "api-playground"
@@ -98,6 +99,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .powershare: "bolt.house.fill"
         case .trips: "map.fill"
         case .energy: "battery.100"
+        case .energyFlow: "powerplug.fill"
         case .batteryCells: "square.grid.3x3.fill"
         case .batteryDegradation: "chart.line.downtrend.xyaxis"
         case .sleepEfficiency: "moon.zzz.fill"
@@ -160,6 +162,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .dashboard, .glance, .explore, .search: .overview
         case .vehicles, .charging, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
+        case .energyFlow: .energy
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,

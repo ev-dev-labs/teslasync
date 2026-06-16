@@ -507,6 +507,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyPage.log"
     },
     {
+      "unitId": "page:battery/EnergyFlow",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 74,
+      "requiredCount": 74,
+      "promptId": "p4-apple/P7/page:battery/EnergyFlow",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyFlowPage.log"
+    },
+    {
+      "unitId": "page:battery/EnergyFlow",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 74,
+      "requiredCount": 74,
+      "promptId": "p4-apple/P7/page:battery/EnergyFlow",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyFlowPage.log"
+    },
+    {
       "unitId": "page:battery/SleepEfficiency",
       "platform": "apple-macos",
       "status": "done",
