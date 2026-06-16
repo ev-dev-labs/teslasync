@@ -5061,6 +5061,9 @@
   <string name="translation_notifications_inbox_row_select">Select notification</string>
   <string name="translation_notifications_inbox_row_unarchive">Restore</string>
   <string name="translation_notifications_inbox_selectAll">Select all visible</string>
+  <string name="translation_notifications_inbox_subtitle">Recent notifications from your alert rules.</string>
+  <string name="translation_notifications_inbox_title">Inbox</string>
+  <string name="translation_notifications_inbox_viewArchived">View archived</string>
   <string name="translation_notifications_log_filterLabel_search">Search</string>
   <string name="translation_notifications_markAllRead_action">Mark all read</string>
   <string name="translation_notifications_markAllRead_success">All notifications marked as read</string>

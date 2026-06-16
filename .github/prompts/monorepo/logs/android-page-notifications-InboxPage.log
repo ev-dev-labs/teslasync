@@ -1,0 +1,151 @@
+================================================================================
+P3-ANDROID A7 — page:notifications/Inbox
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/notifications/pages/InboxPage.tsx
+================================================================================
+
+Artifact     : page:notifications/Inbox
+Web route    : /notifications/inbox
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/notifications/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+InboxPage.tsx is the top-level notifications inbox scoped to the active (non-
+archived) items. It calls useVehicles() + useAlertRules(), renders a
+PageContainer (title "Inbox", subtitle, copyLink, "View archived" action linking
+to /notifications/archived) and reuses <InboxBody archived={false} vehicles rules />
+so the bulk-action set offers Archive (not Restore) and the grouped/flat toggle is
+available. The web InboxBody owns the notification-log feeds (useNotificationLogs /
+useNotificationGroups) + the inbox mutations, auto-marks-read on open (markOnOpen),
+exposes the empty-state CTA "Configure alert rules" -> /notifications/studio, and
+builds ruleMap (rule.id->rule) + vehicleMap (vehicle.id->vehicle) from the two
+props to label rows and decide drill-through (rule = ruleMap[log.alert_id];
+vehicle = vehicleMap[rule.vehicle_id]).
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 InboxBody feature-view already exists
+(io.teslasync.android.featureviews.inboxbody.InboxBody) and owns every inbox data
+state (loading skeleton / hard-error+retry / inbox empty / content / stale-offline)
+for its flat + grouped feeds, the bulk toolbar, the per-row context menu, the
+select-all tri-state, and the delete confirmation. This page is its active host: it
+binds the feeds (archived=false), joins rows with the page's two web hooks, renders
+the PageContainer-equivalent header, enables markOnOpen, and wires the mutations +
+the empty-state CTA. The row-join (ruleMap/vehicleMap) is the SAME framework-free
+logic the sibling ArchivedPage authored (the web shares it inside InboxBody.tsx for
+both routes), so it is reused via import rather than duplicated (DRY) — no
+out-of-scope edit to ArchivedPage.
+
+New files (package io.teslasync.android.notifications.inbox):
+  - InboxPageModel.kt      Registration(ROUTE_ID notificationsInbox, WEB_PATH
+                           /notifications/inbox, ARCHIVED_PATH /notifications/archived,
+                           STUDIO_PATH /notifications/studio, SLUG InboxPage,
+                           archivedDeepLink/studioDeepLink), INBOX_FILTERS
+                           (archived=false), recordInboxPageOpened. Reuses
+                           toInboxNotifications/toInboxGroups/mapData from the sibling
+                           …notifications.archived package (DRY).
+  - InboxPageSource.kt     InboxPageSource seam + inboxPageSourceOf(repo,
+                           vehiclesStore): active notificationLogs/groups, alertRules,
+                           vehicles + the 6 inbox mutations.
+  - InboxPageViewModel.kt  BaseFeedViewModel; flatState/groupState as
+                           StateFlow<UiState<…>> via refreshTrigger ▸ flatMapLatest ▸
+                           combine(logs, alertRules, vehicles) ▸ mapData ▸ asUiState;
+                           refresh/retry; the 7 mutation callbacks (each refreshes the
+                           family on success); recordViewOpened.
+  - InboxPageIcons.kt      InboxPageGlyphs.Archive — a 24×24 stroked vector (web lucide
+                           Archive) for the "View archived" action leading icon, since
+                           TeslaGlyphs ships none (mirrors GlancePageIcons precedent).
+  - InboxPage.kt           Stateful entry (viewModel factory) + stateful overload
+                           (collectAsStateWithLifecycle, DeepLinkRouter seams for
+                           "View archived" + the studio CTA, InboxPageActions) +
+                           stateless InboxPageContent (header + InboxBody archived=false,
+                           markOnOpen=true, onConfigureRules) + InboxPageHeader
+                           (PageTitle + subtitle + copy-link IconButton + View-archived
+                           Button with the Archive glyph).
+  - InboxPageHost.kt       InboxRoute() binds HttpNotificationsRepository (shared
+                           resilient client + offline cache) + the shared S8
+                           VehiclesStore; InboxPageHost.register() ->
+                           PageHosts.register("notificationsInbox").
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt   import + InboxPageHost.register() at process start.
+  - res/values/strings.xml    3 keys (translation_notifications_inbox_{title,subtitle,
+                              viewArchived}); copy-link reuses the existing
+                              translation_common_copyLink_action.
+  - apps/parity/android-ledger.json  page:notifications/Inbox row (done, 4/4).
+
+Notes:
+  - SI: no notification field is unit-bearing (ids, ISO timestamps, free text, a
+    severity enum) — no SI conversion; date/locale formatting is at the render
+    boundary inside InboxBody (S5).
+  - States: InboxBody renders loading / empty(inbox) / error+retry / content /
+    stale-offline for the bound feeds (verified by the shared InboxBodyUiTest).
+  - i18n: every visible literal via stringResource (ADR-014); web key names kept.
+  - a11y: PageTitle heading, copy-link IconButton contentDescription, Button label;
+    InboxBody supplies row/select/archive/freshness content descriptions (ADR-015).
+  - Nav: "View archived" + the empty-state "Configure alert rules" CTA route through
+    the DeepLinkRouter — the sanctioned page-host seam (no LocalNavController is
+    exposed to hosts), the same bridge AppScaffold.NotificationDeepLinkHandler feeds
+    into Navigation-Compose; callbacks are hoisted so the surface stays unit-testable.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 4m 9s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 9m 31s
+LINT_EXIT=0
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 20s
+TEST_EXIT=0
+
+(compile sanity: ./gradlew :android:compileDebugKotlin BUILD SUCCESSFUL — the only
+ warning is the LocalClipboardManager deprecation at InboxPage.kt:201, identical to
+ the shipped hand-written ArchivedPage.kt:187 / admin/ApiLogsPage.kt:385; accepted
+ precedent, not an error.)
+
+=== PARITY ===
+PARITY_REQUIRED=4
+
+[1] state  : success data state
+    EVIDENCE: InboxPageViewModel.flatState (InboxPageViewModel.kt) —
+              refreshTrigger ▸ flatMapLatest ▸ combine(source.notificationLogs(),
+              source.alertRules(), source.vehicles()) ▸ logsRes.mapData {
+              toInboxNotifications(...) } ▸ asUiState(isEmpty = { it.isEmpty() }),
+              which resolves to UiPhase.Content; rendered by InboxPageContent ▸
+              InboxBody(archived = false, flatState = …) (InboxPage.kt). COVERED.
+
+[2] string : notifications.inbox.subtitle
+    EVIDENCE: R.string.translation_notifications_inbox_subtitle rendered by
+              BodyText(...) in InboxPageHeader (InboxPage.kt); value
+              "Recent notifications from your alert rules." in res/values/strings.xml.
+              COVERED.
+
+[3] string : notifications.inbox.title
+    EVIDENCE: R.string.translation_notifications_inbox_title rendered by
+              PageTitle(...) in InboxPageHeader (InboxPage.kt); value "Inbox" in
+              res/values/strings.xml. COVERED.
+
+[4] string : notifications.inbox.viewArchived
+    EVIDENCE: R.string.translation_notifications_inbox_viewArchived rendered by
+              Button(label = …) in InboxPageHeader (InboxPage.kt); value
+              "View archived" in res/values/strings.xml. COVERED.
+
+PARITY_COVERED=4
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
