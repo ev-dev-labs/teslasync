@@ -36,6 +36,7 @@ import io.teslasync.android.system.commands.CommandsPageHost
 import io.teslasync.android.system.diagnostic.DiagnosticPageHost
 import io.teslasync.android.system.search.SearchPageHost
 import io.teslasync.android.system.teslaaccount.TeslaAccountPageHost
+import io.teslasync.android.telemetry.signalgapdetector.SignalGapDetectorPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -133,6 +134,8 @@ class TeslaSyncApplication : Application() {
         SearchPageHost.register()
         // Register the native Tesla-account profile screen for the /tesla-account route (P3/A7). Idempotent.
         TeslaAccountPageHost.register()
+        // Register the native signal-gap-detector telemetry screen for the /signal-gaps route (P3/A7). Idempotent.
+        SignalGapDetectorPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

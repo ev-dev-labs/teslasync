@@ -6046,6 +6046,8 @@
   <string name="translation_signalGap_neverReceived">Never Received</string>
   <string name="translation_signalGap_noData">No signal data available</string>
   <string name="translation_signalGap_noMatch">No signals match current filters</string>
+  <string name="translation_signalGap_noVehicle">Select a vehicle to begin</string>
+  <string name="translation_signalGap_noVehicleDesc">Pick a vehicle from the picker above to inspect its signal freshness.</string>
   <string name="translation_signalGap_refreshInterval">Refreshes every 5s</string>
   <string name="translation_signalGap_signal">Signal</string>
   <string name="translation_signalGap_stale">Stale (&gt;5min)</string>
