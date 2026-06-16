@@ -1,0 +1,195 @@
+================================================================================
+P3-ANDROID · A7 · page:charging/ChargingList — evidence log
+Native Jetpack Compose / Material 3 port of web ChargingListPage
+Source: web/src/features/charging/pages/ChargingListPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/charging/**
+Package: io.teslasync.android.charging.charginglist
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 ChargingCurve / BatteryHealth precedents)
+  ChargingListPageModel.kt       framework-free: ChargingListPageRegistration (route "charging",
+                                 "/charging", slug, limit 500, page size 50, thresholds), the
+                                 interaction enums + ChargingListInteraction, the full aggregation
+                                 port (getChargerCategory, durationMinutes, avgPowerW, costPerKwh,
+                                 batteryFriendlyScore, computeChargingPeriodStats, priorPeriod,
+                                 localDayKey, detectChargingAnomalies, detectNotableSessions,
+                                 dailyChargingTrend, collectionCounts/filterByCollection,
+                                 sortSessions/paginate/groupByDay, computeAcDcBreakdown/
+                                 computeStartLevelDist/computeEfficiencyStats/computeChargerSpecs,
+                                 parseSearchQuery/matchesSessionTokens/compareNumeric/
+                                 parseDurationToken/matchesYmdPrefix, fmt* formatters), the
+                                 deriveChargingList fold, and the view.opened diagnostic.
+  ChargingListPageSource.kt      seam over ChargingRepository.sessionsPaginated (web
+                                 useChargingSessionsPaginated, limit 500) + chargingOptimizer (web
+                                 useChargingOptimizer) + bulkDeleteCharging (web useBulkDeleteCharging)
+                                 + SelectedVehicleStore (web useSelectedVehicle).
+  ChargingListPageViewModel.kt   BaseFeedViewModel; sessionsState + optimizerState as
+                                 StateFlow<UiState<…>> gated on the active vehicle; the 30-day window
+                                 + priorRange; setSearch/setCollection/setSort*/setDensity/setPage/
+                                 setTrendMetric/toggleBulk/clearBulk/deleteCharging/refresh.
+  ChargingListPage.kt            stateful entry + stateless content; loading/empty/error/success;
+                                 LazyColumn + PageHeaderSticky; KpiOverviewCard(6 MetricCards) or
+                                 GlassPanel7; MetricSwitcherChart; PillFilterBar collections; the
+                                 conditional A3 feature views (AcDcStatsPanel, BatteryLevelChart,
+                                 EfficiencyPanel, ChargerSpecsPanel, OptimizerSection) +
+                                 EmptyStateThreshold gates; SortControl + DensityToggle + ListExport;
+                                 BulkActionsToolbar + DateGroupedList(ChargingSessionCard) + Pagination.
+  ChargingListPageHost.kt        ChargingListRoute + ChargingListPageHost.register() for the
+                                 "charging" route; registered at process start in
+                                 TeslaSyncApplication.kt (the "/charging" destination already exists
+                                 in Destinations.kt L56, so only the host is wired).
+  strings.xml                    59 new translation_charging_* / translation_bulk_* parity strings
+                                 added (lint disables MissingTranslation so the default catalog
+                                 suffices); the other 8 keys already existed.
+
+DATA SOURCES (each bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useChargingSessionsPaginated → ChargingListPageViewModel.sessionsState (StateFlow<UiState<List<ChargingSession>>>)
+      ← ChargingListPageSource.sessionsPaginated ← ChargingRepository.sessionsPaginated (limit 500)
+  useChargingOptimizer         → ChargingListPageViewModel.optimizerState (StateFlow<UiState<JsonElement>>)
+      ← ChargingListPageSource.chargingOptimizer ← ChargingRepository.chargingOptimizer
+      → decoded to UiState<ChargingOptimizerData> (ChargingListPage.kt:990 mapOptimizer) and bound to
+        OptimizerSection(state=…, onRetry) (ChargingListPage.kt:675) which renders its own
+        loading / empty / error / content matrix → the optimizer source's 4 data states.
+  useBulkDeleteCharging        → ChargingListPageViewModel.deleteCharging (suspend) ← ChargingListPageSource
+      .bulkDeleteCharging ← ChargingRepository.bulkDeleteCharging; wired to the BulkActionsToolbar
+        delete action (ChargingListPage.kt:752-766) with its pending / success states.
+
+=== PARITY ===
+PARITY_REQUIRED=79
+
+  [ 1] panel  Sessions          ChargingListPage.kt:412 MetricCard (label L413 translation_charging_totalSessions) in KpiOverviewCard
+  [ 2] panel  Energy-kWh        ChargingListPage.kt:418 MetricCard (label L419 translation_charging_totalEnergy)
+  [ 3] panel  Cost              ChargingListPage.kt:424 MetricCard (label L425 translation_charging_totalCost)
+  [ 4] panel  Avg-rate-kW       ChargingListPage.kt:430 MetricCard (label L431 translation_charging_avgRate)
+  [ 5] panel  Avg-duration      ChargingListPage.kt:436 MetricCard (label L437 translation_charging_avgDuration)
+  [ 6] panel  Avg-power-kW      ChargingListPage.kt:442 MetricCard (label L443 translation_charging_avgPower)
+  [ 7] panel  GlassPanel7       ChargingListPage.kt:377 ChargingListOverview no-stats GlassPanel + EmptyState(noStatsRange) L379
+  [ 8] chart  MetricSwitcherChart ChargingListPage.kt:542 MetricSwitcherChart(series=derived.trendSeries, metrics x4, activeMetric)
+  [ 9] state  loading           ChargingListPage.kt:218 if (sessionsState.isLoading) -> ChargingListLoading (skeletons L800+)
+  [10] state  empty             ChargingListPage.kt:377 stats.count<=0 -> GlassPanel7(noStatsRange); list empty L738 ChargingListEmpty (sessionsState.isEmpty)
+  [11] state  error             ChargingListPage.kt:243 if (sessionsState.isError) -> ChargingListError(onRetry)
+  [12] state  success           ChargingListPage.kt:223 sessions=sessionsState.data.orEmpty() -> KpiOverviewCard L402 + grouped list (content path)
+  [13] string bulk.actions.delete                ChargingListPage.kt:752 R.string.translation_bulk_actions_delete
+  [14] string bulk.deleteConfirmDescription      ChargingListPage.kt:759 R.string.translation_bulk_deleteConfirmDescription
+  [15] string bulk.deleteConfirmTitle            ChargingListPage.kt:755 R.string.translation_bulk_deleteConfirmTitle
+  [16] string bulk.noun.session_one              ChargingListPage.kt:767 R.string.translation_bulk_noun_session_one
+  [17] string bulk.noun.session_other            ChargingListPage.kt:768 R.string.translation_bulk_noun_session_other
+  [18] string charging.allSessions               ChargingListPage.kt:706 R.string.translation_charging_allSessions
+  [19] string charging.anomalyCount              ChargingListPage.kt:484 R.string.translation_charging_anomalyCount
+  [20] string charging.anomaly_one               ChargingListPage.kt:480 R.string.translation_charging_anomaly_one
+  [21] string charging.anomaly_other             ChargingListPage.kt:482 R.string.translation_charging_anomaly_other
+  [22] string charging.avgDuration               ChargingListPage.kt:437 R.string.translation_charging_avgDuration
+  [23] string charging.avgPower                  ChargingListPage.kt:443 R.string.translation_charging_avgPower
+  [24] string charging.avgRate                   ChargingListPage.kt:431 R.string.translation_charging_avgRate
+  [25] string charging.avgScore                  ChargingListPage.kt:898 R.string.translation_charging_avgScore
+  [26] string charging.batteryScore              ChargingListPage.kt:464 R.string.translation_charging_batteryScore
+  [27] string charging.byType                    ChargingListPage.kt:456 R.string.translation_charging_byType
+  [28] string charging.coll.all                  ChargingListPage.kt:568 R.string.translation_charging_coll_all
+  [29] string charging.coll.anomalies            ChargingListPage.kt:598 R.string.translation_charging_coll_anomalies
+  [30] string charging.coll.dc                   ChargingListPage.kt:586 R.string.translation_charging_coll_dc
+  [31] string charging.coll.free                 ChargingListPage.kt:592 R.string.translation_charging_coll_free
+  [32] string charging.coll.home                 ChargingListPage.kt:574 R.string.translation_charging_coll_home
+  [33] string charging.coll.notable              ChargingListPage.kt:604 R.string.translation_charging_coll_notable
+  [34] string charging.coll.supercharger         ChargingListPage.kt:580 R.string.translation_charging_coll_supercharger
+  [35] string charging.coll.tagged               ChargingListPage.kt:610 R.string.translation_charging_coll_tagged
+  [36] string charging.collections.aria          ChargingListPage.kt:620 R.string.translation_charging_collections_aria
+  [37] string charging.empty.cta                 ChargingListPage.kt:855 R.string.translation_charging_empty_cta
+  [38] string charging.emptyForCollection        ChargingListPage.kt:843 R.string.translation_charging_emptyForCollection
+  [39] string charging.emptyForCollection.msg    ChargingListPage.kt:849 R.string.translation_charging_emptyForCollection_msg
+  [40] string charging.emptyMessage              ChargingListPage.kt:851 R.string.translation_charging_emptyMessage
+  [41] string charging.emptyTitle                ChargingListPage.kt:845 R.string.translation_charging_emptyTitle
+  [42] string charging.filterLabel.collection    ChargingListPage.kt:351 R.string.translation_charging_filterLabel_collection
+  [43] string charging.filterLabel.search        ChargingListPage.kt:341 R.string.translation_charging_filterLabel_search
+  [44] string charging.freeCount                 ChargingListPage.kt:461 R.string.translation_charging_freeCount
+  [45] string charging.itemNoun                  ChargingListPage.kt:648 R.string.translation_charging_itemNoun (reused L667/L683)
+  [46] string charging.list.subtitle             ChargingListPage.kt:289 R.string.translation_charging_list_subtitle
+  [47] string charging.list.title                ChargingListPage.kt:287 R.string.translation_charging_list_title
+  [48] string charging.metric.cost               ChargingListPage.kt:525 R.string.translation_charging_metric_cost
+  [49] string charging.metric.energy             ChargingListPage.kt:516 R.string.translation_charging_metric_energy
+  [50] string charging.metric.power              ChargingListPage.kt:534 R.string.translation_charging_metric_power
+  [51] string charging.metric.sessions           ChargingListPage.kt:507 R.string.translation_charging_metric_sessions
+  [52] string charging.mostCommon                ChargingListPage.kt:466 R.string.translation_charging_mostCommon
+  [53] string charging.noPriorData               ChargingListPage.kt:395 R.string.translation_charging_noPriorData
+  [54] string charging.noStatsRange              ChargingListPage.kt:379 R.string.translation_charging_noStatsRange
+  [55] string charging.overTime                  ChargingListPage.kt:543 R.string.translation_charging_overTime
+  [56] string charging.overTime.aria             ChargingListPage.kt:544 R.string.translation_charging_overTime_aria
+  [57] string charging.overTime.empty            ChargingListPage.kt:549 R.string.translation_charging_overTime_empty
+  [58] string charging.overview                  ChargingListPage.kt:405 R.string.translation_charging_overview
+  [59] string charging.priorPeriod               ChargingListPage.kt:389 R.string.translation_charging_priorPeriod
+  [60] string charging.results                   ChargingListPage.kt:895 R.string.translation_charging_results
+  [61] string charging.searchPlaceholder         ChargingListPage.kt:329 R.string.translation_charging_searchPlaceholder
+  [62] string charging.section.batteryDist       ChargingListPage.kt:647 R.string.translation_charging_section_batteryDist
+  [63] string charging.section.batteryDistDesc   ChargingListPage.kt:649 R.string.translation_charging_section_batteryDistDesc
+  [64] string charging.section.optimizer         ChargingListPage.kt:681 R.string.translation_charging_section_optimizer
+  [65] string charging.section.optimizerDesc     ChargingListPage.kt:683 R.string.translation_charging_section_optimizerDesc
+  [66] string charging.section.specs             ChargingListPage.kt:667 R.string.translation_charging_section_specs
+  [67] string charging.sort.cost                 ChargingListPage.kt:714 R.string.translation_charging_sort_cost
+  [68] string charging.sort.date                 ChargingListPage.kt:712 R.string.translation_charging_sort_date
+  [69] string charging.sort.duration             ChargingListPage.kt:715 R.string.translation_charging_sort_duration
+  [70] string charging.sort.energy               ChargingListPage.kt:713 R.string.translation_charging_sort_energy
+  [71] string charging.sort.power                ChargingListPage.kt:716 R.string.translation_charging_sort_power
+  [72] string charging.stickyBar.aria            ChargingListPage.kt:274 R.string.translation_charging_stickyBar_aria
+  [73] string charging.totalCost                 ChargingListPage.kt:425 R.string.translation_charging_totalCost
+  [74] string charging.totalEnergy               ChargingListPage.kt:419 R.string.translation_charging_totalEnergy
+  [75] string charging.totalSessions             ChargingListPage.kt:413 R.string.translation_charging_totalSessions
+  [76] string charging.viewAnomalies             ChargingListPage.kt:485 R.string.translation_charging_viewAnomalies
+  [77] string common.delete                      ChargingListPage.kt:760 R.string.translation_common_delete
+  [78] string common.noData                      ChargingListPage.kt:300 R.string.translation_common_noData
+  [79] string filter.pending                     ChargingListPage.kt:333 R.string.translation_filter_pending (transient "Filtering…" status, web isSearchPending)
+PARITY_COVERED=79
+
+ADDITIONAL WEB-PARITY REGIONS (every anonymous region reproduced; no scope narrowing)
+  Header + subtitle (PageContainer)         ChargingListPage.kt:285 ChargingListHeader
+  Sticky summary bar (PageHeaderSticky)     ChargingListPage.kt:268 + chargingStickySummary L889
+  Query error banner (QueryError)           ChargingListPage.kt:243/297 ChargingListError
+  Search field + active filter chips        ChargingListPage.kt:319 Input + L358 ActiveFilterChips
+  Overview KPI card (web KpiOverviewCard)   ChargingListPage.kt:402 KpiOverviewCard(secondary L455, anomaly footer L473 InlineCallout)
+  Collections pills (web PillFilterBar)     ChargingListPage.kt:559 ChargingListCollections (8 pills, tagged disabled)
+  AC/DC overview (AcDcStatsPanel)           ChargingListPage.kt:642 (threshold >=1)
+  Battery start-level (BatteryLevelChart)   ChargingListPage.kt:646 (threshold >=5) / EmptyStateThreshold L650
+  Efficiency panel (EfficiencyPanel)        ChargingListPage.kt:661
+  Charger specs (ChargerSpecsPanel)         ChargingListPage.kt:665 (threshold >=5) / EmptyStateThreshold L668
+  Optimizer + threshold (OptimizerSection)  ChargingListPage.kt:675 (threshold >=10) / EmptyStateThreshold L678
+  List controls (Sort + Density + Export)   ChargingListPage.kt:697 SortControl + L720 DensityToggle (+ common.noData empty L702)
+  Bulk actions toolbar                      ChargingListPage.kt:746 ChargingListBulkBar (delete + confirm)
+  Date-grouped list of ChargingSessionCard  ChargingListPage.kt:777 ChargingListGroups (DateGroupedList + ChargingSessionCard, density + anomaly badge)
+  Pagination                                ChargingListPage.kt:813 ChargingListPagination
+  List empty state + reset CTA              ChargingListPage.kt:835 ChargingListEmpty
+  Loading skeleton                          ChargingListPage.kt:798 ChargingListLoading
+  Structured search (charger:/cost:/kwh:/power:/dur:/in:/at:/free) ChargingListPageModel.kt matchesSessionTokens
+  SI boundary: energy stays Wh / power W in the model; the page divides by 1000 only at the render boundary;
+  each feature view converts at its own display boundary. No non-SI is stored or computed.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin
+    PLACEHOLDER_ALLOWED=2  (searchPlaceholder i18n key name + the ChargingCurve toDouble false positive, each // parity:allow)
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL
+    BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (lint-results-debug.html written, no errors)
+    LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL (ChargingListPageModelTest, 20 cases)
+    TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (6 MetricCards + GlassPanel7); every anonymous region reproduced.
+  [x] All 79 parity items render from the bound StateFlow state holders.
+  [x] loading / empty / error / success implemented for the sessions read; the optimizer read renders its
+      4 states via OptimizerSection(state=…); the bulk-delete mutation surfaces pending/success.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark / dynamic theme via MaterialTheme; ≥48dp targets + content descriptions via the A3 surfaces;
+      SI units honored at the display boundary; Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (79).
+  [x] android ledger row for page:charging/ChargingList set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

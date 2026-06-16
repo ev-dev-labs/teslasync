@@ -74,6 +74,7 @@ import io.teslasync.android.battery.vampiredrain.VampireDrainPageHost
 import io.teslasync.android.charging.chargingdetail.ChargingDetailPageHost
 import io.teslasync.android.charging.chargingheatmap.ChargingHeatmapPageHost
 import io.teslasync.android.charging.teslacharginghistory.TeslaChargingHistoryPageHost
+import io.teslasync.android.charging.charginglist.ChargingListPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -211,6 +212,7 @@ class TeslaSyncApplication : Application() {
         ChargingDetailPageHost.register()
         ChargingHeatmapPageHost.register()
         TeslaChargingHistoryPageHost.register()
+        ChargingListPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
