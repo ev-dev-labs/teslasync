@@ -385,5 +385,14 @@
     "requiredCount": 42,
     "promptId": "p3-android/pages/vehicle-systems/MediaPlayerPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "page:vehicles/DigitalTwin",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 45,
+    "requiredCount": 45,
+    "promptId": "p3-android/pages/vehicles/DigitalTwinPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicles-DigitalTwinPage.log"
   }
 ]
