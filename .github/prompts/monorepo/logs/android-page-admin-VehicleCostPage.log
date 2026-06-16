@@ -1,0 +1,159 @@
+================================================================================
+P3-ANDROID A7 — page:admin/VehicleCost  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/admin/pages/VehicleCostPage.tsx
+promptId: p3-android/pages/admin/VehicleCostPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : Android Studio jbr (JAVA_HOME present)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK present => gate executed (not BLOCKED).
+Note: the prompt gate text addresses ':app:'; this repo's single app module's Gradle path is ':android'
+      (settings.gradle.kts: include(":android"); project(":android").projectDir = file("app")), so the
+      canonical ':android:' tasks are invoked, exactly as every prior P3/A7 android page gate did.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPage.kt          (@Composable screen: VehicleCostPage + VehicleCostPageContent + totals strip + breakdown panel/table/states)
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState>; setWindow/refresh()/retry(); window->since clock seam)
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPageSource.kt    (S8 data seam over OperatorConfidenceStore.vehicleCost(sinceIso, limit))
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPageModel.kt     (framework-free model: window enum/options, vehicleCostSinceIso, isEmptyVehicles, isDlqElevated, displayNameOrNull, parseEpochMillis, view.opened)
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPageIcons.kt     (Wallet / AlertCircle glyphs — web lucide icons)
+apps/android/app/src/main/kotlin/com/teslasync/admin/VehicleCostPageHost.kt      (PageHosts.register(adminVehicleCost){ VehicleCostRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt       (NavHost wiring: + VehicleCostPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                 (+28 page keys; admin.subsystem.unavailableTitle pre-existing/reused)
+apps/android/app/src/main/res/values-ar/strings.xml                              (+28 page keys, EN fallback per existing admin pattern)
+apps/android/app/src/main/res/values-he/strings.xml                              (+28 page keys, EN fallback per existing admin pattern)
+apps/parity/android-ledger.json                                                  (ledger row page:admin/VehicleCost 33/33)
+.github/prompts/monorepo/logs/android-page-admin-VehicleCostPage.log             (this log)
+
+Data   : single read — VehicleCostPageViewModel binds shared S8 OperatorConfidenceStore.vehicleCost(sinceIso, limit)
+         (web useVehicleCost ▸ GET /admin/observability/vehicle-cost?limit&since) via asVehicleCostSource(); no HTTP in the view.
+         The observation window lives in the VehicleCostInteraction snapshot; setWindow recomputes the `since`
+         lower bound from the wall clock (web useMemo([windowDays]) ▸ new Date(Date.now()-days*86400000).toISOString()),
+         re-keying the shared feed (combine ▸ flatMapLatest); an ordinary refresh keeps the same `since`, the web
+         refetchInterval. HTTP 503 SUBSYSTEM_NOT_CONFIGURED (ingest-x-ray / signal_log not populated) preserved
+         through UiState.httpStatus -> subsystem-unavailable banner (and the totals strip is hidden, exactly as
+         the web `{totals && …}` is, since the 503 carries no data).
+Strings: 28 page keys added to res/values/strings.xml (+ values-ar / values-he); web key names preserved
+         (admin.vehicleCost.* -> translation_admin_vehicleCost_* ; admin.subsystem.unavailableTitle ->
+         translation_admin_subsystem_unavailableTitle, pre-existing). The 24 manifest strings PLUS the 4 web
+         WINDOW_OPTIONS labels (window1d/window7d/window30d/window90d, the web `t(opt.labelKey)` calls the
+         manifest under-counts) PLUS the web "ID {id}" caption (idLabel) all resolve via stringResource; zero
+         hardcoded literals. Relative last-seen uses Android's localized DateUtils span (no hardcoded phrasing);
+         byte units B/KB/MB/GB are the SI symbols the web `formatBytes` emits verbatim.
+Nav    : Destinations 'adminVehicleCost' -> /admin/vehicle-cost pre-existing (RouteTableTest L121; count
+         unchanged); host wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+  # first pass flagged 1 false positive: VehicleCostPage.kt `.toDouble()` contains the substring "toDo"
+  # (case-insensitive "TODO"); rewritten as `value / BYTES_PER_STEP` (Long/Double -> Double, same value).
+  # Re-run: PLACEHOLDER_COUNT=0. No parity:allow opt-out used.
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 4m 52s
+  # :android:compileDebugKotlin executed (my new sources compiled); only a pre-existing ApiLogsPage.kt
+  # LocalClipboardManager deprecation warning, none in the VehicleCost surface. The 3 "Multiple substitutions"
+  # res warnings are pre-existing (battery/rateLimit strings), not the vehicleCost keys.
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 8m 14s (0 errors)
+  # clean; Locale.ROOT used as the locale fallback (SlowQueries/FeedbackQueue precedent) so the locale is read
+  # from LocalConfiguration at the render boundary; the 3 unnamed/windowSub/idLabel format strings are valid
+  # single-arg formats (%1$s/%1$d) present in all three values* catalogs (no MissingTranslation/StringFormat).
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 6s
+  # full JVM unit suite recompiled + ran (incl. navigation RouteTableTest); 0 failures, 0 errors.
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=33
+--------------------------------------------------------------------------------
+# panels (5) — Material 3 Cards/Surfaces ; all bound to VehicleCostPageViewModel.state
+[COVERED] panel  GlassPanel1         -> VehicleCostPage.kt:343 VehicleBreakdownPanel() -> :354 GlassPanel(PanelPadding.Md){ PanelTitle "Per-vehicle breakdown" + window Select + 6-col table }  (web <GlassPanel className="p-6">)
+[COVERED] panel  Total-rows          -> VehicleCostPage.kt:271 TotalRowsCard() -> :278 StatCard(label=totalRows, value=count(total_rows), sublabel=windowSub)  (web FleetTotalsCards 1st StatCard)
+[COVERED] panel  Total-bytes-est     -> VehicleCostPage.kt:288 TotalBytesCard() -> :294 StatCard(label=totalBytes, value=bytes(total_bytes_est), sublabel=bytesSub)  (web 2nd StatCard)
+[COVERED] panel  Rate-rows-min-24h   -> VehicleCostPage.kt:304 TotalRateCard() -> :310 StatCard(label=totalRate, value=rate(total_rate_per_minute_24h), sublabel=rateSub)  (web 3rd StatCard)
+[COVERED] panel  DLQ-failures-24h    -> VehicleCostPage.kt:320 TotalFailuresCard() -> :326 StatCard(label=totalFailures, value=count(total_failures_24h), sublabel=failuresSub)  (web 4th StatCard)
+# (+ web 503 subsystem-unavailable banner reproduced: VehicleCostPage.kt:238 SubsystemUnavailableBanner() AlertBanner(Tone.Warning); totals strip hidden on 503 as web {totals && …})
+
+# data states (4 required) — bound to VehicleCostPageViewModel.state : StateFlow<UiState<VehicleCostResponse>>
+[COVERED] state  loading             -> VehicleCostPage.kt:372 state.isLoading -> VehicleCostLoadingState() Spinner (and totals strip skeletons via StatCard loading=true) ; asUiState -> UiState.loading()
+[COVERED] state  empty               -> VehicleCostPage.kt:374 state.isEmpty -> VehicleCostEmptyState() (Wallet/title/message) ; UiPhase.Empty via VehicleCostPageModel.isEmptyVehicles (web vehicles.length===0)
+[COVERED] state  error               -> VehicleCostPage.kt:373 state.isError -> VehicleCostErrorState(onRetry=actions.onRetry) ; VehicleCostPageViewModel.retry()
+[COVERED] state  success             -> VehicleCostPage.kt:375 else -> VehicleCostTable(rows=vehicles) ; UiPhase.Content (6-column table)
+
+# strings (24) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string admin.subsystem.unavailableTitle  -> VehicleCostPage.kt:242 AlertBanner(title=...unavailableTitle)
+[COVERED] string admin.vehicleCost.bytesSub        -> VehicleCostPage.kt:296 StatCard sublabel (Total bytes)
+[COVERED] string admin.vehicleCost.colBytes        -> VehicleCostPage.kt:457 HeaderCell(colBytes)
+[COVERED] string admin.vehicleCost.colFailures     -> VehicleCostPage.kt:459 HeaderCell(colFailures)
+[COVERED] string admin.vehicleCost.colLastSeen     -> VehicleCostPage.kt:460 HeaderCell(colLastSeen)
+[COVERED] string admin.vehicleCost.colRate         -> VehicleCostPage.kt:458 HeaderCell(colRate)
+[COVERED] string admin.vehicleCost.colRows         -> VehicleCostPage.kt:456 HeaderCell(colRows)
+[COVERED] string admin.vehicleCost.colVehicle      -> VehicleCostPage.kt:455 HeaderCell(colVehicle)
+[COVERED] string admin.vehicleCost.emptyMessage    -> VehicleCostPage.kt:598 EmptyState(message=...emptyMessage)
+[COVERED] string admin.vehicleCost.emptyTable      -> VehicleCostPage.kt:426 VehicleCostTable empty -> BodyText(...emptyTable)  (web DataTable emptyMessage)
+[COVERED] string admin.vehicleCost.emptyTitle      -> VehicleCostPage.kt:600 EmptyState(title=...emptyTitle)
+[COVERED] string admin.vehicleCost.failuresSub     -> VehicleCostPage.kt:328 StatCard sublabel (DLQ failures)
+[COVERED] string admin.vehicleCost.notConfigured   -> VehicleCostPage.kt:240 AlertBanner(message=...notConfigured)
+[COVERED] string admin.vehicleCost.pageTitle       -> VehicleCostPage.kt:228 PageTitle(...pageTitle)
+[COVERED] string admin.vehicleCost.rateSub         -> VehicleCostPage.kt:312 StatCard sublabel (Rate)
+[COVERED] string admin.vehicleCost.subtitle        -> VehicleCostPage.kt:230 BodyText(...subtitle)
+[COVERED] string admin.vehicleCost.tableTitle      -> VehicleCostPage.kt:351 PanelTitle(...tableTitle)
+[COVERED] string admin.vehicleCost.totalBytes      -> VehicleCostPage.kt:294 StatCard label (Total bytes)
+[COVERED] string admin.vehicleCost.totalFailures   -> VehicleCostPage.kt:326 StatCard label (DLQ failures)
+[COVERED] string admin.vehicleCost.totalRate       -> VehicleCostPage.kt:310 StatCard label (Rate)
+[COVERED] string admin.vehicleCost.totalRows       -> VehicleCostPage.kt:278 StatCard label (Total rows)
+[COVERED] string admin.vehicleCost.unnamed         -> VehicleCostPage.kt:492 VehicleIdentityCell name fallback (Vehicle #{id})
+[COVERED] string admin.vehicleCost.windowLabel     -> VehicleCostPage.kt:397 Caption(...windowLabel) + window Select
+[COVERED] string admin.vehicleCost.windowSub       -> VehicleCostPage.kt:280 StatCard sublabel (Window: {days}d)
+
+# (+ web WINDOW_OPTIONS labels + the "ID {id}" caption, also localized, not part of the 33-item manifest count)
+[EXTRA]   string admin.vehicleCost.window1d        -> VehicleCostPage.kt:389 SelectOption(D1)
+[EXTRA]   string admin.vehicleCost.window7d        -> VehicleCostPage.kt:390 SelectOption(D7)
+[EXTRA]   string admin.vehicleCost.window30d       -> VehicleCostPage.kt:391 SelectOption(D30)
+[EXTRA]   string admin.vehicleCost.window90d       -> VehicleCostPage.kt:392 SelectOption(D90)
+[EXTRA]   string admin.vehicleCost.idLabel         -> VehicleCostPage.kt:498 VehicleIdentityCell Caption(ID {id})
+
+PARITY_COVERED=33
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : VehicleCostPageViewModel binds shared S8 OperatorConfidenceStore.vehicleCost(sinceIso, limit)
+               (web useVehicleCost) via asVehicleCostSource(); typed VehicleCostResponse round-trips; no HTTP in
+               the view. The observation window is the VehicleCostInteraction snapshot; setWindow recomputes the
+               `since` lower bound from the clock seam (web useMemo([windowDays]) ▸ toISOString()), re-keying the
+               shared feed (combine ▸ flatMapLatest); refresh keeps the same `since` (web refetchInterval). The
+               503 SUBSYSTEM_NOT_CONFIGURED branch (web error.status===503) is carried through UiState.httpStatus.
+si/units     : vehicle-cost payload carries no SI-unit-bearing fields (row counts, the byte estimate the backend
+               already computed, a per-minute rate, DLQ counts, an ISO stamp) — round-trips verbatim, no SI
+               conversion; locale formatting at the render boundary (VehicleCostFormats: grouped integers for
+               rows/DLQ/id, 1-dp rate, B/KB/MB/GB byte roll-up = the web formatBytes, DateUtils localized relative
+               last-seen = the web formatRelative).
+a11y/theme   : shared components supply semantics content descriptions (panel semantics{contentDescription},
+               StatCard/EmptyState/AlertBanner built-ins), >=48dp targets (Material Button/Select), dynamic-color
+               + dark theme via MaterialTheme + TeslaTokens.status.warning for the elevated-DLQ cell (A2 tokens,
+               no hardcoded color); Compose-native (no webview). Table scrolls horizontally so all six columns
+               stay legible on a phone.
+nav          : Destinations 'adminVehicleCost' -> /admin/vehicle-cost (pre-existing, RouteTableTest L121) wired to
+               VehicleCostRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(33) == PARITY_REQUIRED(33)
+[PASS] all android triad gates green; parity 33/33; android ledger row page:admin/VehicleCost status=done.
+EXIT=0
+STATUS=DONE
