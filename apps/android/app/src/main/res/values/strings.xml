@@ -5078,6 +5078,8 @@
   <string name="translation_notifications_quietHours_aiSuggestion_previewWeekdays">Weekday bitmask: %1$s</string>
   <string name="translation_notifications_quietHours_aiSuggestion_previewWindow">Window: %1$s → %2$s (%3$s)</string>
   <string name="translation_notifications_quietHours_aiSuggestion_title">Suggest a quiet-hours window from your notification history</string>
+  <string name="translation_notifications_quietHours_subtitle">Suppress non-critical notifications during a configurable window.</string>
+  <string name="translation_notifications_quietHours_title">Quiet hours</string>
   <string name="translation_notifications_stats_activeChannels">Active Channels</string>
   <string name="translation_notifications_stats_failed">Failed</string>
   <string name="translation_notifications_stats_pending">Pending</string>

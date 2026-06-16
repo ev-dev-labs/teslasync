@@ -1,0 +1,152 @@
+================================================================================
+P3-ANDROID A7 — page:notifications/QuietHours
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/notifications/pages/QuietHoursPage.tsx
+================================================================================
+
+Artifact     : page:notifications/QuietHours
+Web route    : /notifications/quiet-hours
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/notifications/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+QuietHoursPage.tsx is the dedicated /notifications/quiet-hours wrapper. It is a
+thin composition surface: it renders a PageContainer (title, subtitle, copyLink)
+and stacks two already-built shared surfaces —
+  <AIQuietHoursSuggestion onApplyDraft={handleApplyDraft} />
+  <QuietHoursPanel seedDraft={pendingSeed} onSeedConsumed={handleSeedConsumed} />
+The page owns ONE piece of state: useState<QuietHoursWindowInput | null>
+(pendingSeed). The AI advisor proposes a window; handleApplyDraft stores it as
+pendingSeed; QuietHoursPanel consumes it as a one-shot create-form seed and fires
+handleSeedConsumed, which clears the pointer back to null. The advisor is
+propose-only (ADR-015 §I8) — the panel keeps the sole canonical Save button.
+No API feed is fetched by the page itself; the manifest declares the unit as
+scaffold-only (requiredCount=2: notifications.quietHours.title + .subtitle).
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+Both shared A3 surfaces already exist and own their own data states, so they are
+embedded verbatim, never re-implemented (DRY, ADR-006) — the same pattern the
+sibling TeslaRegionPage / GasPriceAutoPollPage wrappers use to host their shared
+feature view:
+
+  - io.teslasync.android.featureviews.quiethourspanel.QuietHoursPanel
+      Owns the windows feed (cache-then-network) + every state: loading skeleton,
+      empty state, hard-error+retry, stale-offline, content; the inline
+      create/edit form; the per-window rows; the toast queue; the canonical Save.
+      Accepts seedDraft + onSeedConsumed.
+  - io.teslasync.android.sharedsurfaces.aiquiethourssuggestion.AIQuietHoursSuggestion
+      Owns the AI draft stream (resting / loading / content / empty / error /
+      rate-limit / stale-offline), the captured-proposal preview, and the
+      per-feature AI-Off gate (renders nothing when closed — web withAiFeature).
+      Accepts onApplyDraft.
+
+This page is their notifications host: it renders the PageContainer-equivalent
+header, stacks the two surfaces in the web page's order, and owns the pending-seed
+hand-off between them (the verbatim native port of the web useState + handlers).
+
+New files (package io.teslasync.android.notifications.quiethours):
+  - QuietHoursPageModel.kt   Registration(ROUTE_ID notificationsQuietHours,
+                             WEB_PATH /notifications/quiet-hours, SLUG
+                             QuietHoursPage); recordQuietHoursPageOpened (one-shot
+                             PII-safe view.opened, P1/S11); quietHoursSuggestionEnabled
+                             (ai_mode + ai_features["quiet-hours-suggestion"] gate,
+                             web withAiFeature, fail-closed); AI_DRAFT_PATH/_BODY;
+                             splitSseFrames (the useAiStream blank-line frame split
+                             feeding parseSseFrame); AiQuietHoursWindowInput.toPanelInput
+                             (bridges the advisor's local seed type to the panel's
+                             shared-core QuietHoursWindowInput).
+  - QuietHoursPageSource.kt  ApiHttpClient.asAiQuietHoursStreamSource(): the AI
+                             draft seam over the shared resilient client (POST
+                             /ai/settings/quiet-hours/draft, body {}, non-throwing
+                             safeRequest -> splitSseFrames; transport fault ->
+                             terminal AiStreamEvent.StreamError). Mirrors the
+                             AISafetySettingExplainer asAiExplainStreamSource binding.
+  - QuietHoursPage.kt        Stateful entry (builds both view-models via
+                             viewModel(factory)) + stateful overload (records
+                             view.opened, owns pendingSeed, bridges onApplyDraft ->
+                             toPanelInput, clears on onSeedConsumed) + stateless
+                             QuietHoursPageContent (header + AIQuietHoursSuggestion +
+                             QuietHoursPanel, vertical scroll) + QuietHoursPageHeader
+                             (PageTitle + subtitle BodyText + copy-link IconButton).
+  - QuietHoursPageHost.kt    QuietHoursRoute() binds the panel to
+                             HttpNotificationsRepository (shared resilient client +
+                             offline cache), the advisor to api.asAiQuietHoursStreamSource(),
+                             the AI gate to settingsStore (quietHoursSuggestionEnabled),
+                             connectivity to the advisor's fail-open default;
+                             QuietHoursPageHost.register() -> PageHosts.register(
+                             "notificationsQuietHours").
+
+Edits (registration + string catalog + ledger only):
+  - app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt
+        + import QuietHoursPageHost; + QuietHoursPageHost.register() in onCreate.
+  - app/src/main/res/values/strings.xml
+        + translation_notifications_quietHours_title    = "Quiet hours"
+        + translation_notifications_quietHours_subtitle  =
+            "Suppress non-critical notifications during a configurable window."
+  - apps/parity/android-ledger.json
+        + page:notifications/QuietHours row (status done, covered 2 / required 2).
+
+The /notifications/quiet-hours destination already existed in Destinations.kt as a
+metadata-only route; this artifact attaches the host, so no new destination row was
+added.
+
+--------------------------------------------------------------------------------
+ADR / SPEC CONFORMANCE
+--------------------------------------------------------------------------------
+ADR-002  : view performs no HTTP; both view-models drive the data seams.
+ADR-004  : binds the shared KMP core (NotificationsRepository, ApiHttpClient,
+           SettingsStore) — no app-side networking or business logic added.
+ADR-005  : design tokens only (Spacing, MaterialTheme.colorScheme); no hardcoded
+           colors/typography (PageTitle / BodyText / IconButton from the A3 library).
+ADR-006  : both surfaces reused verbatim; zero re-implementation.
+ADR-011  : no placeholders / stubs (placeholder gate PLACEHOLDER_COUNT=0).
+ADR-013  : cache-then-network freshness preserved end to end by the embedded panel.
+ADR-014  : every visible literal via stringResource; web key names preserved.
+ADR-015  : dynamic-color + dark-theme inherited from the A2 theme; semantics +
+           >=48dp targets from the A3 components; propose-only seed contract honored.
+Compose-native only — no webview cloning.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+================================================================================
+
+[1] string : notifications.quietHours.title
+    EVIDENCE: R.string.translation_notifications_quietHours_title rendered by
+              PageTitle(...) in QuietHoursPageHeader (QuietHoursPage.kt); value
+              "Quiet hours" in res/values/strings.xml. COVERED.
+
+[2] string : notifications.quietHours.subtitle
+    EVIDENCE: R.string.translation_notifications_quietHours_subtitle rendered by
+              BodyText(text = …) in QuietHoursPageHeader (QuietHoursPage.kt); value
+              "Suppress non-critical notifications during a configurable window."
+              in res/values/strings.xml. COVERED.
+
+PARITY_COVERED=2
+
+================================================================================
+GATE (android triad: placeholder + build + lint + test)
+================================================================================
+check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/notifications -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+    PLACEHOLDER_EXIT=0
+
+./gradlew :android:assembleDebug           -> BUILD SUCCESSFUL    BUILD_EXIT=0
+./gradlew :android:lintDebug               -> BUILD SUCCESSFUL    LINT_EXIT=0
+./gradlew :android:testDebugUnitTest       -> BUILD SUCCESSFUL    TEST_EXIT=0
+
+(:android:compileDebugKotlin also verified green; the only warning on the new
+file is the LocalClipboardManager deprecation shared verbatim with the sibling
+ArchivedPage.kt copy-link header — not an error.)
+
+PARITY_REQUIRED=2  PARITY_COVERED=2  (equal)
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
