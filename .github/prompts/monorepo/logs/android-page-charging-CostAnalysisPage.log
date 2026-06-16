@@ -1,0 +1,120 @@
+================================================================================
+P3-ANDROID · A7 · page:charging/CostAnalysis — evidence log
+Native Jetpack Compose / Material 3 port of web CostAnalysisPage
+Source: web/src/features/charging/pages/CostAnalysisPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/charging/**
+Package: io.teslasync.android.charging.costanalysis
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+  Pre-step: the git-ignored shared-core API DTOs (apps/**/generated/, .gitignore L380) were
+            (re)materialised via `npx --yes tsx@4.22.4 apps/tools/codegen/gen-clients.ts`
+            (10 Kotlin files incl. ChargingSession) so the composite KMP build resolves
+            io.teslasync.shared.core.api.generated.* — environment setup, not a committed artifact.
+
+ARCHITECTURE (mirrors the A7 ChargingCurve / RegenEfficiency precedents)
+  CostAnalysisPageModel.kt      framework-free: registration ids, the cost-analysis constants
+                                (DEFAULT_GAS_PRICE/MPG, CO2/tree/gallon factors), deriveCostAnalysisData
+                                (the 1:1 port of the web useCostAnalysisData useMemo chain →
+                                coreStats / monthlyData / costPerKwhTrend / chargerTypeData / hourlyData +
+                                touInsights / lifetimeMetrics, each mapped onto the matching A3 feature-view
+                                input type), the session helpers (categorizeCharger / durationMinutes /
+                                distanceAddedM), the /analytics/cost-forecast JSON parsing
+                                (parseForecastSection + parseForecastDetails), view.opened diagnostic.
+  CostAnalysisPageSource.kt     seam over ChargingRepository.sessionsPaginated (web
+                                useChargingSessionsPaginated, limit 5000, start/end) + costForecast (web
+                                useCostForecast) + SettingsStore.settings() + SelectedVehicleStore.
+  CostAnalysisPageViewModel.kt  BaseFeedViewModel; sessionsState: StateFlow<UiState<List<ChargingSession>>>
+                                gated on the active vehicle + date range (web useSelectedVehicle/RangePicker);
+                                forecastState: StateFlow<UiState<JsonElement>> (always-render, never gated empty);
+                                displayPrefs (isMiles/distanceUnit/locale from /settings); setRange/refresh/retry.
+  CostAnalysisPage.kt           stateful entry + stateless content; loading/empty/error/success; composes the
+                                eleven existing A3 cost-analysis feature views via their web-parity overloads +
+                                the page chrome (title, subtitle, freshness, date-range filter) + the 2 page-level
+                                states (no-charging-data empty panel + full-page loading skeleton).
+  CostAnalysisPageHost.kt       CostAnalysisRoute + CostAnalysisPageHost.register() for the `costAnalysis`
+                                /cost-analysis destination (Destinations.kt L60, already present).
+  TeslaSyncApplication.kt       CostAnalysisPageHost.register() wired into onCreate (NavHost registration).
+  res/values/strings.xml        added translation_costAnalysis_empty_message (the REQUIRED parity string the
+                                i18n extractor missed on the web's multi-line t() call) + _charts_monthlyCost_aria;
+                                lint disables MissingTranslation/ExtraTranslation (build.gradle.kts L114) so the
+                                default values/ catalog suffices (ar/he ship as English fallback).
+
+DATA SOURCES (bound through a ViewModel exposing StateFlow from the KMP core, P1/S8)
+  useChargingSessionsPaginated → CostAnalysisPageViewModel.sessionsState (StateFlow<UiState<…>>)
+      ← CostAnalysisPageSource.sessionsPaginated ← ChargingRepository.sessionsPaginated
+        (HttpChargingRepository over the shared resilient client + offline cache; SI verbatim, ADR-013).
+  useCostForecast  GET /analytics/cost-forecast [vehicle_id, months]
+                              → CostAnalysisPageViewModel.forecastState (StateFlow<UiState<JsonElement>>)
+      ← CostAnalysisPageSource.costForecast ← ChargingRepository.costForecast.
+  Web hooks ported (same names at the Kotlin call sites): useChargingSessionsPaginated, useCostForecast.
+
+=== PARITY ===
+PARITY_REQUIRED=7
+  [1] state  loading                CostAnalysisPage.kt:170 if (sessionsState.isLoading) → CostAnalysisLoading (call L171; impl L361 full-page skeleton — header + 6-tile summary grid + 2 chart blocks + charger block + savings block + table)
+  [2] state  empty                  CostAnalysisPage.kt:187 sessionsState.isEmpty -> CostAnalysisEmptyPanel() (impl L244; web `!sessions || sessions.length === 0` branch — GlassPanel + EmptyState, never blank)
+  [3] state  success                CostAnalysisPage.kt:188 else -> CostAnalysisSuccess (fn L276; composes the 11 feature views from the bound sessions + forecast StateFlow state holders)
+  [4] string costAnalysis.empty.message  CostAnalysisPage.kt:250 R.string.translation_costAnalysis_empty_message (added to res/values/strings.xml)
+  [5] string costAnalysis.empty.title    CostAnalysisPage.kt:249 R.string.translation_costAnalysis_empty_title
+  [6] string costAnalysis.subtitle       CostAnalysisPage.kt:215 R.string.translation_costAnalysis_subtitle
+  [7] string costAnalysis.title          CostAnalysisPage.kt:213 R.string.translation_costAnalysis_title
+PARITY_COVERED=7
+
+EXTRA WEB-PARITY (every web panel reproduced; no scope narrowing)
+  The success body composes the full set of existing, tested A3 cost-analysis feature views, in web source
+  order, each threaded the exact prop bundle the web page threads (computed once by the framework-free model
+  from the single loaded `sessions` array + the parsed forecast JSON). Each feature view owns its own
+  loading/empty/error/content matrix:
+    CostSummaryCards     CostAnalysisPage.kt:291  (web <CostSummaryCards coreStats gasPrice distanceUnit isMiles/>)
+    MonthlyCostChart     CostAnalysisPage.kt:302  (web <MonthlyCostChart data={monthlyData} vehicleId/>)
+    CostPerKwhChart      CostAnalysisPage.kt:303  (web <CostPerKwhChart data={costPerKwhTrend}/>)
+    ChargerTypeBreakdown CostAnalysisPage.kt:309  (web <ChargerTypeBreakdown data totalCost={coreStats?.totalCost ?? 1}/>)
+    SavingsCalculator    CostAnalysisPage.kt:314  (web <SavingsCalculator gasComparison …/>; Android view owns its live assumptions)
+    MonthlyCostTable     CostAnalysisPage.kt:319  (web <MonthlyCostTable data={monthlyData}/>)
+    TimeOfUseAnalysis    CostAnalysisPage.kt:324  (web <TimeOfUseAnalysis hourlyData touInsights/>)
+    CostForecastSection  CostAnalysisPage.kt:329  (web <CostForecastSection> ▸ forecast chart + cost/kWh trend)
+    ForecastDetails      CostAnalysisPage.kt:334  (web <CostForecastSection> ▸ <ForecastDetails> breakdown donut + savings + insights)
+    LifetimeSummary      CostAnalysisPage.kt:340  (web <LifetimeSummary lifetimeMetrics coreStats/>)
+    EnvironmentalImpact  CostAnalysisPage.kt:341  (web <EnvironmentalImpact coreStats/>)
+  SI stays SI; energy (Wh→kWh) + distance (m→mi/km) conversion happens only at the model's display boundary,
+  reproducing the web convertEnergyFromSI / convertDistanceFromSI helpers + the page's toDistanceDisplay step.
+  Out of scope: the web AICostForecastNarration is a withAiFeature-gated, off-by-default AI surface (the P-AI
+  phase, not one of the two declared data sources) and has no A3 feature view; intentionally not composed.
+
+UNIT COVERAGE (off-device JVM, no Compose host / no network)
+  CostAnalysisPageModelTest      19 tests — coreStats / monthly / cost-per-kWh / charger-type / time-of-use /
+                                 lifetime / environmental derivations, the session helpers, the forecast JSON
+                                 parsing, the registration ids, and the PII-safe diagnostic. 0 failures.
+  CostAnalysisPageViewModelTest  8 tests — the sessions state matrix (content/empty/empty-no-vehicle/error+retry),
+                                 the always-rendered forecast feed, the date-range re-fetch, the settings-derived
+                                 display preference, and the once-only view.opened slug. 0 failures.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin
+    PLACEHOLDER_ALLOWED=8   (5 new: 4× Int/Long->Double `.toDouble()` "toDo" + 1× `startOdometerM` "tOdo" — each marked // parity:allow)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (no errors; MissingTranslation/ExtraTranslation disabled)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL (CostAnalysisPageModelTest 19/0, CostAnalysisPageViewModelTest 8/0)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented; every web region reproduced (11 A3 feature views, web source order).
+  [x] All 7 parity items render from the bound StateFlow state holders.
+  [x] loading / empty / error / success implemented for the sessions source; the forecast source always renders.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme via MaterialTheme; SI units honored at the model display boundary; Compose-native (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (7).
+  [x] android ledger row for page:charging/CostAnalysis set covered (7/7).
+
+EXIT=0
+STATUS=DONE
