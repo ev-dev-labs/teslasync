@@ -1,0 +1,144 @@
+================================================================================
+A7 — page:watch/WatchFace — native Jetpack Compose / Material 3 parity port
+================================================================================
+Prompt:   p3-android A7 — watch/WatchFacePage at web parity
+Web src:  web/src/features/watch/pages/WatchFacePage.tsx  (route /watch, chrome-less wearable)
+Output:   apps/android/app/src/main/kotlin/com/teslasync/watch/**  (package io.teslasync.android.watch.watchface)
+Module:   :android  (Gradle path per apps/android/settings.gradle.kts L33-34; the prompt's `:app:`
+          template resolves to `:android:` for this artifact — every P3/A* gate addresses `:android:`)
+Toolchain: Android SDK C:\Users\AtulM\AppData\Local\Android\Sdk + JDK 21 (Android Studio jbr) + Gradle
+          wrapper present and functional → gate runs → STATUS=DONE (NOT BLOCKED).
+
+--------------------------------------------------------------------------------
+FILES (all under the allowed surface dir com/teslasync/watch/, plus the allowed nav registration,
+the platform string catalog reuse, the parity ledger, and this log)
+--------------------------------------------------------------------------------
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePageModel.kt
+       - WatchFaceRegistration (ROUTE_ID="watchFace", WEB_PATH="/watch", SLUG="WatchFacePage")
+       - WatchFaceProjection.project()  : SI→display boundary (range_km→m, °C, time_to_full min→s)
+       - BatteryColorBand.forLevel()    : web getBatteryColor thresholds (>40 green, >20 amber, else red)
+       - WatchStateTone.forState()      : web watchStateVariant (driving→info, charging→success, else neutral)
+       - recordWatchFacePageOpened()    : one-shot PII-safe view.opened diagnostic (P1/S11)
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePageIcons.kt
+       - WatchFaceGlyphs: Bolt/Lock/Shield reused from shared DataDisplayGlyphs; Unlock + Thermometer
+         hand-authored 24×24 stroked vectors (web lucide Zap/Lock/Shield/Unlock/Thermometer)
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePageSource.kt
+       - WatchFacePageSource seam + watchFacePageSourceOf(api, cacheStore) over the shared-core S7
+         WatchRepository (HttpWatchRepository) — watchSummary (GET /watch/summary) + sendWatchCommand
+         (POST /watch/command). View performs NO HTTP.
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePageViewModel.kt
+       - BaseFeedViewModel (P1/S8). state: StateFlow<UiState<WatchSummary>> (loading→content→empty→error,
+         + stale/offline); sending: StateFlow<Boolean>; sendCommand()→UiEvent.CommandOutcome; refresh/retry;
+         recordViewOpened(); factory(source, logger, vehicleId).
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePage.kt
+       - @Composable WatchFacePage(...) stateful entry + stateless WatchFacePageContent(...). Chrome-less
+         WatchShell (themed full-screen Surface), central battery RadialGauge, charging indicator, state
+         Badge, 3 quick-action icons (lock/unlock toggle, climate toggle w/ cabin temp, sentry indicator),
+         vehicle name, last-updated relative age; loading Spinner; "No vehicle found" + Retry; command-outcome
+         snackbar; 30s auto-refresh + stale revalidate; 4 @Preview states. SI via UnitFormatter; i18n via
+         stringResource; a11y semantics + ≥48dp targets.
+NEW  apps/android/app/src/main/kotlin/com/teslasync/watch/WatchFacePageHost.kt
+       - WatchFaceRoute() resolves LocalDataContainer, builds source, renders page; WatchFacePageHost.register()
+         → PageHosts.register("watchFace") { WatchFaceRoute() }.
+EDIT apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt   (NavHost registration)
+       - import io.teslasync.android.watch.watchface.WatchFacePageHost ; WatchFacePageHost.register()
+       - (destination standalone("watchFace","/watch",NavGroup.Watch,auth=Public) already exists in
+         Destinations.kt L183 — only the host content is wired here.)
+NEW  apps/android/app/src/test/java/io/teslasync/android/watch/watchface/WatchFacePageViewModelTest.kt
+       - 15 tests: loading/content/empty/error/offline phases, command success/reject/transport-failure +
+         sending flag, refresh/retry re-fetch, view.opened once w/ slug, projection SI + battery bands +
+         state tone + last-updated parse.
+EDIT apps/parity/android-ledger.json   - added row page:watch/WatchFace (status=done, covered 2/2).
+
+--------------------------------------------------------------------------------
+STRINGS (ADR-014) — zero hardcoded literals. The Android res/values*/strings.xml catalog is GENERATED
+from web/src/i18n (gen-i18n.ts, with a --check drift gate); web i18n is outside this artifact's allowed
+files, so ONLY pre-existing generated keys are referenced (no new keys, no drift). Keys used:
+  glance.noVehicle ("No vehicle found")    glance.action.lock / glance.action.unlock
+  glance.action.climateOn / climateOff     common.sentry            a11y.loading
+  widget.charging   widget.timeToFull      widget.commandSuccess / widget.commandFailed   common.retry
+  freshness.justNow / seconds / minutes / hours / days / weeks   (last-updated relative age)
+The coarse state shown in the badge is backend DATA (data.state), rendered verbatim as on the web — not a
+UI literal. SI display values come from the shared UnitFormatter (P1/S5), never hardcoded units.
+
+--------------------------------------------------------------------------------
+PARITY-SCOPE NOTES (honesty covenant #2 — no scope narrowing)
+--------------------------------------------------------------------------------
+- Data sources bound (manifest page:watch/WatchFace): useWatchSummary (GET /watch/summary, the glance feed,
+  loading→success→empty→error) and useWatchCommand (POST /watch/command, the lock/climate quick-action
+  dispatch with an outcome snackbar). Both route through the shared S7 WatchRepository (P1/S2-S3, ADR-004).
+- Panels/charts/maps: the manifest extracts NONE (the web page renders no <GlassPanel>/chart/map). Every
+  region of the chrome-less <WatchShell> is reproduced in the same data + grouping + order: vehicle name →
+  battery gauge (+ charging + state badge) → quick actions (lock/climate/sentry) → last-updated.
+- The web page also renders an OPT-IN Helix narrator <AIWatchFaceNLResponse /> as a sibling that returns
+  null in the default AI-off mode (the wearable invariant). That narrator binds the `useAiStream` data
+  source — NOT one of THIS unit's data sources — and is a SEPARATE shared-surface parity unit
+  (com/teslasync/shared-surfaces/AIWatchFaceNLResponse, with its own tests). It is therefore covered there,
+  not embedded here; the chrome-less shell is the canonical baseline every user sees, exactly as web off-mode.
+
+--------------------------------------------------------------------------------
+GATE  (apps/tools/check-placeholders.ps1 + :android:assembleDebug + :android:lintDebug + :android:testDebugUnitTest)
+--------------------------------------------------------------------------------
+$ pwsh apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/watch -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug --console=plain
+BUILD SUCCESSFUL in 57s
+62 actionable tasks: 6 executed, 56 up-to-date
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug --console=plain
+BUILD SUCCESSFUL in 13m 13s
+71 actionable tasks: 9 executed, 62 up-to-date
+LINT_EXIT=0
+(lint-results-debug.xml: no issue references com/teslasync/watch or WatchFacePage)
+
+$ ./gradlew :android:testDebugUnitTest --console=plain
+BUILD SUCCESSFUL in 1m 5s
+44 actionable tasks: 3 executed, 41 up-to-date
+TEST_EXIT=0
+(full module unit suite: suites=1320 tests=16906 failures=0 errors=0;
+ io.teslasync.android.watch.watchface.WatchFacePageViewModelTest: tests=15 failures=0 errors=0)
+
+--------------------------------------------------------------------------------
+Baseline (pre-change) :android:compileDebugKotlin = BUILD SUCCESSFUL (repo green before edits).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=2
+--------------------------------------------------------------------------------
+[1] state — loading data state            COVERED
+    web:  WatchFacePage.tsx  `if (isLoading) { watchContent = <Spinner size="lg" /> }`
+    impl-render:  WatchFacePage.kt :: WatchFacePageContent  `when { state.isLoading -> WatchFaceLoading() }`
+                  WatchFacePage.kt :: WatchFaceLoading()  -> Spinner(size = SpinnerSize.Lg,
+                                       accessibleLabel = stringResource(R.string.translation_a11y_loading))
+    impl-state:   WatchFacePageViewModel.kt :: state: StateFlow<UiState<WatchSummary>>  (UiPhase.Loading via
+                  BaseFeedViewModel.asUiState over source.watchSummary)
+    test:         WatchFacePageViewModelTest.kt :: summaryLoadingIsLoadingPhase  (asserts UiPhase.Loading,
+                  !hasData)  — PASS
+
+[2] state — success data state            COVERED
+    web:  WatchFacePage.tsx  `else { … watchContent = (<> battery gauge + status + badge + actions … </>) }`
+    impl-render:  WatchFacePage.kt :: WatchFacePageContent  content branch → WatchFaceBody(display, …)
+                  WatchFacePage.kt :: WatchFaceBody()  -> vehicle name + BatteryGauge(RadialGauge) +
+                                       ChargingIndicator + state Badge + WatchQuickActions + last-updated
+    impl-state:   WatchFacePageViewModel.kt :: state  (UiPhase.Content) ;
+                  WatchFacePageModel.kt :: WatchFaceProjection.project()  (SI range/temp/duration, bands, tone)
+    test:         WatchFacePageViewModelTest.kt :: decodedSummaryIsContentPhase  (asserts UiPhase.Content,
+                  batteryLevel, hasData)  — PASS ;
+                  projectionConvertsSiAndFlagsForContent / batteryBandThresholdsMatchWebPage /
+                  stateToneMatchesWebVariant  — PASS
+--------------------------------------------------------------------------------
+PARITY_COVERED=2
+=== END PARITY ===
+================================================================================
+
+PLACEHOLDER_EXIT=0
+BUILD_EXIT=0
+LINT_EXIT=0
+TEST_EXIT=0
+
+EXIT=0
+STATUS=DONE

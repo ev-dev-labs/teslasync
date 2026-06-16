@@ -131,6 +131,7 @@ import io.teslasync.android.trips.tripdetail.TripDetailPageHost
 import io.teslasync.android.trips.triplist.TripListPageHost
 import io.teslasync.android.telemetry.signalsworkspace.SignalsWorkspacePageHost
 import io.teslasync.android.vehiclesystems.mediaplayer.MediaPlayerPageHost
+import io.teslasync.android.watch.watchface.WatchFacePageHost
 import io.teslasync.android.vehicles.digitaltwin.DigitalTwinPageHost
 
 /**
@@ -332,6 +333,8 @@ class TeslaSyncApplication : Application() {
         MediaPlayerPageHost.register()
         // Register the native digital-twin vehicles screen for the /digital-twin route (P3/A7). Idempotent.
         DigitalTwinPageHost.register()
+        // Register the native watch-face wearable screen for the /watch standalone route (P3/A7). Idempotent.
+        WatchFacePageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
