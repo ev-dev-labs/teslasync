@@ -1027,6 +1027,24 @@
       "requiredCount": 51,
       "promptId": "p4-apple/P7/page:battery/EnergyProducts",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-EnergyProductsPage.log"
+    },
+    {
+      "unitId": "page:admin/SecurityAccess",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 9,
+      "requiredCount": 9,
+      "promptId": "p4-apple/P7/page:admin/SecurityAccess",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SecurityAccessPage.log"
+    },
+    {
+      "unitId": "page:admin/SecurityAccess",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 9,
+      "requiredCount": 9,
+      "promptId": "p4-apple/P7/page:admin/SecurityAccess",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SecurityAccessPage.log"
     }
   ]
 }

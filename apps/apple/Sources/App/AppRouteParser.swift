@@ -37,6 +37,7 @@ public enum AppRouteParser {
         "/admin/rbac-matrix": .rbacMatrix,
         "/admin/users": .users,
         "/admin/system": .system,
+        "/admin/security-access": .securityAccess,
         "/subjects": .users,
         "/account": .settings
     ]
