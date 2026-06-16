@@ -1,0 +1,53 @@
+=== Windows Parity Loop — evidence log ===
+Source file: web/src/features/battery/pages/PowerFlowDashboardPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/PowerFlowDashboardPage/*
+Branch: feature/windows-systemic
+Gates (all green at record time):
+  - build:       dotnet build apps/windows/TeslaSync.sln -c Release  => 0 errors
+  - format:      dotnet format apps/windows/TeslaSync.sln --verify-no-changes => clean
+  - placeholder: pwsh apps/tools/check-placeholders.ps1 -Path apps/windows -Language csharp => COUNT=0
+  - test:        dotnet test TeslaSync.App.Tests => 31537 passed / 0 failed
+
+Per-unit evidence (coveredCount == requiredCount):
+
+api:battery/PowerFlowDashboard#useTeslaEnergyLiveStatus (req 1)
+  PowerFlowDashboardPage.Source.cs:33 FetchLiveStatusAsync -> OperationLiveStatus
+  = get_api_v1_tesla_energy_sites_siteID_live_status (Model.cs:657). Matches web GET /tesla/energy-sites/{siteId}/live-status.
+
+api:battery/PowerFlowDashboard#useTeslaEnergyLiveStatusHistory (req 1)
+  PowerFlowDashboardPage.Source.cs:44 FetchLiveStatusHistoryAsync -> OperationHistory
+  = get_api_v1_tesla_energy_sites_siteID_live_status_history (Model.cs:660). Matches web GET .../live-status/history.
+
+api:battery/PowerFlowDashboard#useRefreshTeslaEnergyLiveStatus (req 1)
+  PowerFlowDashboardPage.Source.cs:71 RefreshLiveStatusAsync -> OperationRefresh
+  = post_api_v1_tesla_energy_sites_siteID_live_status_refresh (Model.cs:663). Matches web POST .../live-status/refresh.
+
+chart:battery/PowerFlowDashboard#ChartContainer-1 (req 1) -> page.cs:81 _powerContainer (TsChartContainer)
+chart:battery/PowerFlowDashboard#AreaChart-2 (req 1)     -> page.cs:82 _powerChart (TsAreaChart, ShowLegend, Height 350)
+chart:battery/PowerFlowDashboard#ChartContainer-3 (req 1) -> page.cs:83 _socContainer (TsChartContainer)
+chart:battery/PowerFlowDashboard#LineChart-4 (req 1)     -> page.cs:84 _socChart (TsLineChart)
+
+panel:battery/PowerFlowDashboard#Solar-Production (req 1)        -> page.cs:51 _solarCard (TsStatCard)
+panel:battery/PowerFlowDashboard#Battery (req 1)                 -> page.cs:52 _batteryCard (TsStatCard)
+panel:battery/PowerFlowDashboard#Home-Consumption (req 1)        -> page.cs:53 _homeCard (TsStatCard)
+panel:battery/PowerFlowDashboard#Grid (req 1)                    -> page.cs:54 _gridCard (TsStatCard)
+panel:battery/PowerFlowDashboard#GlassPanel5 (req 1)             -> page.cs:57 _batteryPanel (TsGlassPanel) + empty state cs:61
+panel:battery/PowerFlowDashboard#Battery-State-of-Charge (req 1) -> page.cs:64 _socBar (TsMetricBar)
+panel:battery/PowerFlowDashboard#GlassPanel6 (req 1)             -> page.cs:71 _flowPanel (TsGlassPanel) + empty state cs:75
+panel:battery/PowerFlowDashboard#Power-Over-Time (req 1)         -> page.cs:81-82 _powerContainer/_powerChart history section
+
+page:battery/PowerFlowDashboard (req 48 = 8 panels + 4 charts + 3 states + 33 strings)
+  panels: 8 (see above). charts: 4 (see above).
+  states: loading (page.cs:40 _loadingPanel + skeletons cs:157-158), empty (cs:61 _batteryEmpty, cs:75 _flowEmpty),
+          success (cs:144 _contentPanel) [+ error cs:41 _errorState bonus]. VM: ViewModel.cs:32-37 _loading/_hasError/_live=Empty.
+  strings: 33 distinct GetString keys bound in the page (exact match to string-group), powerFlow.* namespace.
+
+route:/power-flow (req 1)
+  ShellWindow.xaml.cs:1282 PageFactory.Register("PowerFlowDashboard", data-backed) ;
+  RouteTable Page("PowerFlowDashboard","power-flow",RouteGroup.BatteryEnergy).
+
+string-group:battery/PowerFlowDashboard (req 33)
+  33 distinct i18n keys bound via GetString in PowerFlowDashboardPage*.cs (powerFlow.title/subtitle/solar/battery/
+  home/grid/.../socOverTimeDesc + shared error.loadFailed/Retry). Exact count match.
+
+=== PARITY === platform=windows file=PowerFlowDashboardPage.tsx units=18 status=done (all coveredCount==requiredCount, gates green)

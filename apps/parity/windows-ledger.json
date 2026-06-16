@@ -349,5 +349,167 @@
     "requiredCount": 2,
     "promptId": "p2-windows/W7/windows-page-watch-WatchFacePage",
     "evidenceLog": ".github/prompts/monorepo/logs/windows-page-watch-WatchFacePage.log"
+  },
+  {
+    "unitId": "api:battery/PowerFlowDashboard#useRefreshTeslaEnergyLiveStatus",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "api:battery/PowerFlowDashboard#useTeslaEnergyLiveStatus",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "api:battery/PowerFlowDashboard#useTeslaEnergyLiveStatusHistory",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "chart:battery/PowerFlowDashboard#AreaChart-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "chart:battery/PowerFlowDashboard#ChartContainer-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "chart:battery/PowerFlowDashboard#ChartContainer-3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "chart:battery/PowerFlowDashboard#LineChart-4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "page:battery/PowerFlowDashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Battery",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Battery-State-of-Charge",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#GlassPanel5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Grid",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Home-Consumption",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Power-Over-Time",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "panel:battery/PowerFlowDashboard#Solar-Production",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "route:/power-flow",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
+  },
+  {
+    "unitId": "string-group:battery/PowerFlowDashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 33,
+    "requiredCount": 33,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-PowerFlowDashboard.log"
   }
 ]
