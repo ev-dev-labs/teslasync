@@ -113,6 +113,7 @@ import io.teslasync.android.system.ChatbotPageHost
 import io.teslasync.android.system.commandhistory.CommandHistoryPageHost
 import io.teslasync.android.system.dataexport.DataExportPageHost
 import io.teslasync.android.system.datarepair.DataRepairPageHost
+import io.teslasync.android.system.help.HelpPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -286,6 +287,7 @@ class TeslaSyncApplication : Application() {
         CommandHistoryPageHost.register()
         DataExportPageHost.register()
         DataRepairPageHost.register()
+        HelpPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }

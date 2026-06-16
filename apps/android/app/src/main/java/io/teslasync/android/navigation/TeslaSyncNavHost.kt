@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
+import io.teslasync.android.system.help.HelpPageRegistration
 
 /**
  * Route key for the DiagnosticPage system surface (P3-A7 system/Diagnostic). The web page is UNROUTED (no
