@@ -1,0 +1,15 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/AnomalyDashboardPage/*
+Units: 10 (1 api, 1 chart, 7 panels, 1 string-group req=15). Verification-only; gates green.
+
+api useAnomalies: AnomaliesClientFeed (Source.cs:7-33) = C# port of web useAnomalies -> GET /analytics/anomalies
+   via AnomalyDashboardRegistration.AnomaliesOperation; endpoint get_api_v1_analytics_anomalies registered (ApiEndpoints.cs).
+chart BarChart-1: most-frequent-anomalies bar chart (GlassPanel7) — page.cs:26-27 doc + render.
+panels(7): Signals-Monitored / Anomalies-7d / Anomalies-24h / Health-Categories (4 stat tiles, cs:207-213),
+   GlassPanel5 system-health grid (cs:221-222 BuildHealthPanel), GlassPanel6 anomaly timeline, GlassPanel7 bar chart.
+string-group req=15: 15/15 required keys present among 18 native GetString keys (subset check: 0 missing).
+
+Gates (unchanged, green): build=0 · format=clean · placeholder=0 · test=31537 passed.
+
+=== PARITY === platform=windows file=AnomalyDashboardPage.tsx units=10 status=done (coveredCount==requiredCount each, gates green)

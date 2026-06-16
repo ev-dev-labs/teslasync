@@ -338,8 +338,8 @@
     "status": "done",
     "coveredCount": 27,
     "requiredCount": 27,
-    "promptId": "p2-windows/W7/windows-page-diagnostics-AnomalyDashboardPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/windows-page-diagnostics-AnomalyDashboardPage.log"
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
   },
   {
     "unitId": "page:watch/WatchFace",
@@ -690,7 +690,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
   },
   {
     "unitId": "route:/analytics/range",
@@ -717,7 +717,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
   },
   {
     "unitId": "route:/api-keys",
@@ -1942,5 +1942,95 @@
     "requiredCount": 20,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-GlancePage.log"
+  },
+  {
+    "unitId": "api:diagnostics/AnomalyDashboard#useAnomalies",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "chart:diagnostics/AnomalyDashboard#BarChart-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#Anomalies-24h",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#Anomalies-7d",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#GlassPanel5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#GlassPanel7",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#Health-Categories",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "panel:diagnostics/AnomalyDashboard#Signals-Monitored",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
+  },
+  {
+    "unitId": "string-group:diagnostics/AnomalyDashboard",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-AnomalyDashboard.log"
   }
 ]
