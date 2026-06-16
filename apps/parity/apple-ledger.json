@@ -865,6 +865,24 @@
       "requiredCount": 35,
       "promptId": "p4-apple/P7/page:analytics/Timeline",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-TimelinePage.log"
+    },
+    {
+      "unitId": "page:automations/AutomationList",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 27,
+      "requiredCount": 27,
+      "promptId": "p4-apple/P7/page:automations/AutomationList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationListPage.log"
+    },
+    {
+      "unitId": "page:automations/AutomationList",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 27,
+      "requiredCount": 27,
+      "promptId": "p4-apple/P7/page:automations/AutomationList",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-automations-AutomationListPage.log"
     }
   ]
 }

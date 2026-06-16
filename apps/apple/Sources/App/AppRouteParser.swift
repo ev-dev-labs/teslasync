@@ -16,6 +16,7 @@ public enum AppRouteParser {
         "/tco": .tco,
         "/location": .maps,
         "/alerts": .notifications,
+        "/automations/list": .automationsList,
         "/signals": .telemetry,
         "/devtools": .admin,
         "/admin/telemetry/coverage": .fleetTelemetryCoverage,

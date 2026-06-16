@@ -27,7 +27,7 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
     case fleetCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation, sleepEfficiency, tco
-    case vehicleSystems, automations, notifications, telemetry, diagnostics
+    case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
     case liveSignals, redisSignals, schemaDrift, slowQueries, secretRotation, vehicleCost, powerUser, system
@@ -42,6 +42,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var pathSegment: String {
         switch self {
         case .vehicleSystems: "vehicle-systems"
+        case .automationsList: "automations-list"
         case .fleetCompare: "vehicle-comparison"
         case .lifetimeStats: "lifetime-stats"
         case .batteryCells: "battery-cells"
@@ -107,6 +108,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .maps: "mappin.and.ellipse"
         case .vehicleSystems: "gearshape.2.fill"
         case .automations: "wand.and.stars"
+        case .automationsList: "checklist"
         case .notifications: "bell.fill"
         case .telemetry: "dot.radiowaves.left.and.right"
         case .diagnostics: "stethoscope"
@@ -156,7 +158,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
         case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage, .timeline: .insights
-        case .automations, .notifications, .diagnostics, .sharing, .watch: .operations
+        case .automations, .automationsList, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,
              .schemaDrift, .slowQueries, .secretRotation, .vehicleCost, .powerUser, .system, .backupRestore,
