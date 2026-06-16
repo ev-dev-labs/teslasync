@@ -982,3 +982,4 @@ p3-android/pages/trips/TripDetailPage.prompt.md
 p3-android/pages/telemetry/SignalsWorkspacePage.prompt.md
 p3-android/pages/notifications/AuditLogPage.prompt.md
 p3-android/pages/trips/TripReplayPage.prompt.md
+p3-android/pages/admin/DiskForecastPage.prompt.md
