@@ -25,7 +25,8 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// routes. Each carries its canonical path, title, icon, and sidebar group; one enum
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case dashboard, glance, vehicles, charging, powershare, trips, energy, energyFlow, driving, analytics, maps
+    case dashboard, glance, vehicles, charging, chargingHeatmap, powershare, trips, energy, energyFlow, driving
+    case analytics, maps
     case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryHealth, batteryCells,
          batteryDegradation, sleepEfficiency, tco, yearReview, energyProducts, projectedRange, vampireDrain
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
@@ -44,6 +45,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var pathSegment: String {
         switch self {
         case .vehicleSystems: "vehicle-systems"
+        case .chargingHeatmap: "charging-heatmap"
         case .automationsList: "automations-list"
         case .fleetCompare: "vehicle-comparison"
         case .periodCompare: "period-compare"
@@ -102,6 +104,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .glance: "eye.fill"
         case .vehicles: "car.2.fill"
         case .charging: "bolt.fill"
+        case .chargingHeatmap: "rectangle.grid.3x2.fill"
         case .powershare: "bolt.house.fill"
         case .trips: "map.fill"
         case .energy: "battery.100"
@@ -171,7 +174,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     public var group: AppRouteGroup {
         switch self {
         case .dashboard, .glance, .explore, .search: .overview
-        case .vehicles, .charging, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
+        case .vehicles, .charging, .chargingHeatmap, .powershare, .trips, .driving, .vehicleSystems, .maps: .vehicle
         case .energy: .energy
         case .batteryHealth, .batteryCells, .batteryDegradation: .energy
         case .energyFlow: .energy
