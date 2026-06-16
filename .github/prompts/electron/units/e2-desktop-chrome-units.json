@@ -1,0 +1,267 @@
+[
+  {
+    "id": "chrome:menu/AppMenu",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Native application menu (File/Edit/View/Window/Help)",
+    "intent": "First-class native menu bar with roles, accelerators, and app actions; macOS app menu.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/ui/CommandPalette.tsx", "web/src/components/layout/Layout.tsx"],
+    "allowedFiles": ["apps/electron/src/main/menu/**", "apps/electron/src/main/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "macOS app menu (About/Preferences/Services/Hide/Quit) with correct roles",
+      "File menu (New window, Export…, Print snapshot, Close)",
+      "Edit menu with standard roles (undo/redo/cut/copy/paste/selectAll)",
+      "View menu (Reload, Toggle DevTools in dev only, Zoom, Fullscreen, Theme)",
+      "Window menu (Minimize/Zoom/Front) and Help (Docs, Report bug, Shortcuts)",
+      "Accelerators wired and forwarded to web routes/actions via IPC",
+      "All labels localized via Strings/*"
+    ],
+    "requiredCount": 7
+  },
+  {
+    "id": "chrome:menu/ContextMenu",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Context menus (content + link + selection)",
+    "intent": "Right-click context menus for copy, open-link-externally, inspect (dev), and route actions.",
+    "route": "(app-global)",
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/src/main/menu/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Selection context menu (copy)",
+      "Link context menu (open externally, copy link)",
+      "Editable field context menu (cut/copy/paste/select all)",
+      "Inspect element only in dev builds",
+      "Localized labels"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:tray/SystemTray",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "System tray icon + quick actions",
+    "intent": "Tray presence with status, show/hide, and quick navigation actions.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/status-bar/ActiveVehicleSegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/tray/**", "apps/electron/resources/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Tray icon (theme-aware / template image on macOS) with tooltip",
+      "Context menu: Show/Hide app, Active vehicle, Quick routes, Quit",
+      "Click toggles window visibility (platform-correct behavior)",
+      "Live status reflected in tooltip/title (e.g. charging)",
+      "Localized labels"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:dock/TaskbarBadge",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Dock / taskbar badge, progress, and overlay",
+    "intent": "Surface notification counts and long-task progress on the dock/taskbar.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/api/hooks/useNotifications.ts", "web/src/components/layout/status-bar/BackgroundWorkSegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/resources/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Unread notification count → dock badge (macOS) / taskbar overlay (Windows)",
+      "Background work progress → setProgressBar",
+      "Badge clears when notifications are read",
+      "Count sourced from the same hook the web bell uses"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:notifications/Native",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Native OS notifications bridged from web events",
+    "intent": "Web Notification events become real OS notifications; clicking routes into the app.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/api/hooks/useNotifications.ts"],
+    "allowedFiles": ["apps/electron/src/main/notifications/**", "apps/electron/src/preload/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Web notification/alert events forwarded over IPC to main",
+      "Native Notification with title/body/icon/actions",
+      "Click → focus window + navigate to the relevant route",
+      "Respect OS Do-Not-Disturb / focus assist",
+      "Localized notification strings"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:jumplist/Recent",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Windows jump list / macOS dock menu (recent + tasks)",
+    "intent": "Quick tasks and recent routes from the taskbar/dock without opening the app first.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/sidebar/NotionSidebar.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Windows JumpList Tasks (New window, Dashboard, Charging, Settings)",
+      "macOS app.dock.setMenu with the same quick tasks",
+      "Recent vehicles/routes category populated from app state",
+      "Tasks deep-link via teslasync:// into the right route",
+      "Localized labels"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:autoupdate/UI",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Auto-update UI (available / downloading / ready)",
+    "intent": "User-facing update flow surfaced in desktop chrome; restart-to-apply.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/status-bar/VersionSegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/updater/**", "apps/electron/src/preload/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "electron-updater events surfaced (checking/available/progress/downloaded/error)",
+      "In-app banner/toast offering Restart to update",
+      "Manual 'Check for updates' menu action",
+      "Defer/snooze option",
+      "Localized strings; version shown matches VersionSegment"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:window/TitleBar",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Title bar / window controls (mac traffic lights, win controls overlay)",
+    "intent": "Native-feeling title bar consistent with the web header, per OS conventions.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/Layout.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "macOS hidden-inset title bar with traffic-light positioning",
+      "Windows titleBarOverlay (controls overlay) with theme colors",
+      "Draggable region + non-drag interactive zones defined",
+      "Double-click maximize and OS window menu still work",
+      "Title reflects active page (matches web page title)"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:globalshortcuts",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Global shortcuts + command palette bridge",
+    "intent": "System-wide shortcuts (show/hide, quick capture) and Ctrl/Cmd+K parity.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/ui/CommandPalette.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "globalShortcut to show/hide the app (configurable, conflict-safe)",
+      "Ctrl/Cmd+K focuses the window and opens the web command palette",
+      "Shortcuts unregistered on quit",
+      "User-configurable + disable option"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:powermonitor",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Power monitor (suspend/resume) handling",
+    "intent": "Pause live work on sleep, resume on wake, to save battery and avoid stale state.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/api/hooks"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "powerMonitor suspend → pause SSE + polling",
+      "resume → reconnect SSE + refetch",
+      "lock-screen/unlock handled where relevant",
+      "Forwarded to renderer so the UI shows a reconnecting state"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:filedialogs/Export",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Native save/open dialogs for export",
+    "intent": "Web export/download actions use native Save dialogs and write real files.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/api/hooks/useExports.ts"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "Export (CSV/PDF/JSON) routed through dialog.showSaveDialog",
+      "File written to the chosen path with correct mime/extension",
+      "Open-containing-folder / reveal-in-finder affordance",
+      "Errors surfaced in-app",
+      "Localized dialog titles/buttons"
+    ],
+    "requiredCount": 5
+  },
+  {
+    "id": "chrome:print/Snapshot",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Native print snapshot",
+    "intent": "The web 'Print snapshot' toolbar action uses native print/printToPDF.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/Layout.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "webContents.print with the native print dialog",
+      "printToPDF path with a native save dialog",
+      "Print-friendly styling preserved",
+      "Errors surfaced in-app"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:about/Panel",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Native About panel + licenses",
+    "intent": "Native About with version, build, and third-party licenses.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/status-bar/VersionSegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/resources/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "app.setAboutPanelOptions (mac) + custom About window (win/linux)",
+      "Version/build/commit shown (matches VersionSegment)",
+      "Third-party license list bundled",
+      "Localized"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:offline/Banner",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Offline / reconnect detection in desktop chrome",
+    "intent": "Detect network/online state at the OS level and surface a reconnect banner.",
+    "route": "(app-global)",
+    "sourceRefs": ["web/src/components/layout/status-bar/ConnectionSegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/preload/**", "apps/electron/Strings/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "net.isOnline / reachability of the API origin monitored",
+      "Offline → in-app banner; online → auto-clear + refetch",
+      "Matches the web ConnectionSegment semantics",
+      "Localized"
+    ],
+    "requiredCount": 4
+  },
+  {
+    "id": "chrome:crash/Reporter",
+    "kind": "desktop-chrome",
+    "phase": "e2",
+    "title": "Crash reporter wiring",
+    "intent": "Renderer/main crashes are captured per the P0 crash-analytics decision.",
+    "route": "(app-global)",
+    "sourceRefs": [".github/prompts/monorepo/p0-foundation/0010-crash-analytics-decision.prompt.md"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/**", ".github/prompts/electron/ledgers/e2-desktop-parity-ledger.json"],
+    "parityChecklist": [
+      "crashReporter.start with the decided backend (opt-in per decision)",
+      "render-process-gone + child-process-gone handlers with recovery",
+      "Minidump path configured; PII scrubbed",
+      "User opt-in/opt-out setting honored"
+    ],
+    "requiredCount": 4
+  }
+]

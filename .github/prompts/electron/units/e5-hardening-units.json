@@ -1,0 +1,228 @@
+[
+  {
+    "id": "e5:package/windows",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Windows packaging (NSIS + MSIX)",
+    "intent": "Produce installable Windows artifacts with icons and file/protocol associations.",
+    "dependsOn": [],
+    "sourceRefs": ["apps/electron/electron-builder.yml"],
+    "allowedFiles": ["apps/electron/electron-builder.yml", "apps/electron/build/**", "apps/electron/resources/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "NSIS installer (per-user + per-machine option) with icon + shortcuts",
+      "MSIX target configured for Store distribution",
+      "teslasync:// protocol association registered by the installer",
+      "Uninstaller removes app data appropriately",
+      "Artifacts produced and launchable"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "PACKAGE"]
+  },
+  {
+    "id": "e5:package/macos",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "macOS packaging (dmg + pkg, hardened runtime)",
+    "intent": "Produce macOS artifacts with hardened runtime + entitlements.",
+    "dependsOn": [],
+    "sourceRefs": ["apps/electron/electron-builder.yml"],
+    "allowedFiles": ["apps/electron/electron-builder.yml", "apps/electron/build/**", "apps/electron/resources/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "dmg + pkg targets with background + icon",
+      "Hardened runtime enabled; entitlements.plist (no debug entitlements in prod)",
+      "Universal (arm64 + x64) build",
+      "teslasync:// protocol + document types in Info.plist",
+      "Artifacts produced and launchable (note: notarization is a separate unit)"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "PACKAGE"]
+  },
+  {
+    "id": "e5:package/linux",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Linux packaging (AppImage + deb + rpm)",
+    "intent": "Cover the platform the native trio doesn't (the core rationale in DIVERGENCE.md).",
+    "dependsOn": [],
+    "sourceRefs": ["apps/electron/electron-builder.yml"],
+    "allowedFiles": ["apps/electron/electron-builder.yml", "apps/electron/build/**", "apps/electron/resources/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "AppImage, deb, and rpm targets",
+      ".desktop entry + icon theme integration",
+      "teslasync:// MIME/protocol handler registered",
+      "Sandbox/chrome-sandbox handled correctly",
+      "Artifacts produced and launchable"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "PACKAGE"]
+  },
+  {
+    "id": "e5:sign/windows",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Windows Authenticode signing",
+    "intent": "Sign installers + binaries so SmartScreen/AV trust them.",
+    "dependsOn": ["e5:package/windows"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/electron-builder.yml", "apps/electron/build/**", ".github/workflows/electron-*.yml", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Code-signing config (cert from secure secret, never committed)",
+      "All exe/dll + installer signed; signature verifies",
+      "Timestamp server configured",
+      "If no cert is available on this host → BLOCKED with reason (not done)"
+    ],
+    "requiredCount": 4,
+    "gates": ["PACKAGE"]
+  },
+  {
+    "id": "e5:sign/macos",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "macOS codesign + notarization + staple",
+    "intent": "Notarized, Gatekeeper-approved macOS build.",
+    "dependsOn": ["e5:package/macos"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/electron-builder.yml", "apps/electron/build/**", ".github/workflows/electron-*.yml", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "codesign with Developer ID + hardened runtime",
+      "notarytool submission + stapling",
+      "spctl/Gatekeeper assessment passes",
+      "Requires a macOS runner + Apple credentials → BLOCKED here if absent (not done)"
+    ],
+    "requiredCount": 4,
+    "gates": ["PACKAGE"]
+  },
+  {
+    "id": "e5:autoupdate/channels",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Auto-update feed + channels (electron-updater)",
+    "intent": "Signed update feed with stable/beta channels and staged rollout.",
+    "dependsOn": ["e5:sign/windows", "e5:sign/macos", "e5:package/linux"],
+    "sourceRefs": ["apps/electron/src/main/updater"],
+    "allowedFiles": ["apps/electron/src/main/updater/**", "apps/electron/electron-builder.yml", ".github/workflows/electron-*.yml", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Publish provider (generic/S3/GitHub Releases) with latest.yml per OS",
+      "Stable + beta channels selectable",
+      "Update signatures verified before install",
+      "Staged rollout / minimum-version support",
+      "End-to-end: an older build updates to a newer one"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "PACKAGE"]
+  },
+  {
+    "id": "e5:e2e/playwright",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "End-to-end suite (Playwright _electron)",
+    "intent": "Cover the critical desktop flows against the packaged app.",
+    "dependsOn": [],
+    "sourceRefs": ["apps/electron"],
+    "allowedFiles": ["apps/electron/e2e/**", "apps/electron/package.json", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Launch → auth → dashboard renders real data",
+      "SSE live update + offline/reconnect banner",
+      "Native menu + tray quick action navigates",
+      "Export via native save dialog writes a file",
+      "Deep link opens the correct route",
+      "Runs headless in CI on all three OSes"
+    ],
+    "requiredCount": 6,
+    "gates": ["BUILD", "E2E"]
+  },
+  {
+    "id": "e5:perf/budgets",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Performance budgets (startup, memory, bundle)",
+    "intent": "Measure and enforce desktop perf so the app stays snappy.",
+    "dependsOn": [],
+    "sourceRefs": ["web/vite.config.ts"],
+    "allowedFiles": ["apps/electron/**", ".github/workflows/electron-*.yml", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Cold start to interactive measured + budget enforced",
+      "Idle + active memory budget enforced",
+      "Renderer/main bundle size budget enforced",
+      "v8 snapshot / lazy-loading where it helps",
+      "Budget regressions fail CI"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TEST"]
+  },
+  {
+    "id": "e5:a11y/audit",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Accessibility audit (desktop shell)",
+    "intent": "Keyboard nav, screen reader, and contrast across the native chrome + embedded web.",
+    "dependsOn": [],
+    "sourceRefs": ["web/src/components"],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Full keyboard navigation incl. menus, tray actions, dialogs",
+      "Screen reader labels for native chrome (menu/tray/notifications)",
+      "Focus management on window/dialog open + deep-link nav",
+      "Contrast honored in light/dark title bar + chrome",
+      "No a11y regressions vs the web app"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TEST"]
+  },
+  {
+    "id": "e5:l10n/completeness",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Localization completeness (native chrome)",
+    "intent": "Every native string (menus, tray, notifications, dialogs, About) is localized.",
+    "dependsOn": [],
+    "sourceRefs": ["web/src/i18n", "apps/electron/Strings"],
+    "allowedFiles": ["apps/electron/Strings/**", "apps/electron/src/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "No hardcoded native strings (scan passes)",
+      "All locales the web app supports are covered for native chrome",
+      "Pluralization/format parity with web i18n",
+      "Locale switch updates native chrome without restart where possible"
+    ],
+    "requiredCount": 4,
+    "gates": ["BUILD", "PLACEHOLDER"]
+  },
+  {
+    "id": "e5:security/review",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Security review (Electronegativity + fuses + CSP + IPC)",
+    "intent": "Final pass: prove the app meets Electron security best practices.",
+    "dependsOn": [],
+    "sourceRefs": ["apps/electron/src/main", "apps/electron/src/preload"],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Electronegativity scan clean (no HIGH findings)",
+      "@electron/fuses verified on the packaged app",
+      "CSP audited; no unsafe-eval/inline beyond documented web needs",
+      "Every IPC channel validates sender + input",
+      "No secrets in the bundle; dependency CVE scan clean"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "SECURITY"]
+  },
+  {
+    "id": "e5:release/ga",
+    "kind": "hardening",
+    "phase": "e5",
+    "title": "Release workflow + GA gate",
+    "intent": "One workflow produces signed, notarized, auto-updatable releases for all three OSes.",
+    "dependsOn": ["e5:autoupdate/channels", "e5:e2e/playwright", "e5:perf/budgets", "e5:a11y/audit", "e5:l10n/completeness", "e5:security/review"],
+    "sourceRefs": [".github/workflows"],
+    "allowedFiles": [".github/workflows/electron-release.yml", "apps/electron/**", ".github/prompts/electron/ledgers/e5-hardening-ledger.json"],
+    "checklist": [
+      "Tag-triggered release builds win/mac/linux artifacts",
+      "Signing + notarization wired (or BLOCKED with documented missing creds)",
+      "Update feed published; changelog generated",
+      "All E5 ledger rows are status=done (or honestly blocked with reasons)",
+      "GA checklist (DIVERGENCE.md acknowledged) recorded in the log"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "PACKAGE", "E2E", "SECURITY"]
+  }
+]

@@ -1,0 +1,176 @@
+[
+  {
+    "id": "e0:scaffold/app",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Scaffold apps/electron (electron-vite + TypeScript + electron-builder)",
+    "intent": "Create the Electron app project that will embed the existing web/ React SPA as its renderer.",
+    "dependsOn": [],
+    "sourceRefs": ["web/package.json", "web/vite.config.ts", ".github/prompts/monorepo/p0-foundation/0001-apps-skeleton.prompt.md"],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "apps/electron/package.json with name, version locked to web app, type=module where appropriate",
+      "electron-vite (or Vite + electron-builder) config with main/preload/renderer entry points",
+      "TypeScript strict config (tsconfig) for main, preload, and shared",
+      "scripts: dev, build, lint, typecheck, test, package, e2e",
+      "Directory layout: src/main, src/preload, src/shared, plus renderer pointing at web/",
+      "electron-builder.yml with appId, productName, and win/mac/linux skeleton targets",
+      ".gitignore for dist/, out/, node_modules/, release/"
+    ],
+    "requiredCount": 7,
+    "gates": ["BUILD", "TYPECHECK", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:main/bootstrap",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Main process bootstrap + lifecycle + single-instance",
+    "intent": "App entry that creates the BrowserWindow, manages lifecycle, and enforces a single running instance.",
+    "dependsOn": ["e0:scaffold/app"],
+    "sourceRefs": ["web/src/main.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "app.whenReady → createWindow; quit on window-all-closed (except macOS)",
+      "macOS activate → re-create window if none",
+      "requestSingleInstanceLock; second-instance focuses the existing window",
+      "BrowserWindow with secure webPreferences (see e0:security/baseline)",
+      "Graceful shutdown: flush state, close SSE, before-quit hook",
+      "Window ready-to-show gating to avoid white flash"
+    ],
+    "requiredCount": 6,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:preload/contextbridge",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Preload with contextIsolation + typed contextBridge surface",
+    "intent": "Expose a minimal, typed, validated API to the renderer without leaking Node.",
+    "dependsOn": ["e0:scaffold/app"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/src/preload/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "contextBridge.exposeInMainWorld with a single namespaced object (window.teslasync)",
+      "TypeScript ambient types for the exposed API shared with the renderer",
+      "No remote module, no nodeIntegration, no direct ipcRenderer exposure",
+      "Each exposed method wraps ipcRenderer.invoke with channel + arg validation",
+      "Versioned API surface (api.version) for forward-compat"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:security/baseline",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Security baseline (CSP, sandbox, fuses, navigation + permission guards)",
+    "intent": "Lock the app down to Electron security best practices before any feature lands.",
+    "dependsOn": ["e0:main/bootstrap", "e0:preload/contextbridge"],
+    "sourceRefs": ["web/index.html", "web/nginx.conf"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/electron-builder.yml", "apps/electron/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "webPreferences: contextIsolation=true, sandbox=true, nodeIntegration=false, webSecurity=true",
+      "Content-Security-Policy header/meta restricting to app + API origin (no inline/eval except web build needs)",
+      "@electron/fuses: disable run-as-node, cookie encryption on, only-load-app-from-asar",
+      "will-navigate + setWindowOpenHandler deny external navigation (open externally instead)",
+      "session permission request handler: deny by default, allow only what the SPA needs",
+      "Disable or guard webview tag; block insecure content"
+    ],
+    "requiredCount": 6,
+    "gates": ["BUILD", "TYPECHECK", "SECURITY", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:ipc/contract",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Typed IPC contract (invoke/handle) with validation + error envelopes",
+    "intent": "One typed, validated IPC layer so renderer↔main calls are safe and discoverable.",
+    "dependsOn": ["e0:preload/contextbridge"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/src/main/ipc/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "Shared channel enum + request/response types for every IPC channel",
+      "ipcMain.handle wrappers with input validation (zod or equivalent)",
+      "Uniform error envelope {ok, data?, error?} returned to the renderer",
+      "Sender validation (event.senderFrame) to reject unexpected frames",
+      "Unit tests for at least one round-trip channel"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:build/tooling",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "Build tooling reusing the web/ renderer (dev + prod)",
+    "intent": "Dev loads the running web SPA; prod bundles the web build into the app.",
+    "dependsOn": ["e0:scaffold/app"],
+    "sourceRefs": ["web/vite.config.ts", "web/package.json"],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "Dev: main loads http://localhost:3000 (the running web dev server) with HMR",
+      "Prod: web build output is bundled and loaded via a custom app:// protocol or file://",
+      "Single source of truth for the web build (reuse web/dist; do not fork web/src)",
+      "Cross-platform build scripts (no shell-specific assumptions)",
+      "Sourcemaps in dev, stripped/secured in prod"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:ci/matrix",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "CI matrix (windows/macos/linux) build + lint + test + placeholder gate",
+    "intent": "Every push builds and gates the Electron app on all three desktop OSes.",
+    "dependsOn": ["e0:build/tooling"],
+    "sourceRefs": [".github/workflows", ".github/prompts/monorepo/p0-foundation/0004-ci-matrix-path-filters.prompt.md"],
+    "allowedFiles": [".github/workflows/electron-*.yml", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "Matrix os: [windows-latest, macos-latest, ubuntu-latest]",
+      "Steps: install → build → lint → typecheck → test → placeholder scan",
+      "Path filter so it only runs when apps/electron/** or web/** change",
+      "Artifact upload of unsigned --dir package for smoke",
+      "Concurrency cancel-in-progress per ref"
+    ],
+    "requiredCount": 5,
+    "gates": ["PLACEHOLDER"]
+  },
+  {
+    "id": "e0:tokens/theme",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "nativeTheme ↔ design tokens bridge (light/dark/system)",
+    "intent": "Desktop chrome honors the same light/dark theme the web app uses.",
+    "dependsOn": ["e0:main/bootstrap"],
+    "sourceRefs": ["web/src/lib/tokens.ts", "apps/design"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "nativeTheme.themeSource driven by the app's theme setting (light/dark/system)",
+      "Window background color set from tokens to avoid flash on launch",
+      "Theme change event forwarded to the renderer over IPC",
+      "Title bar / vibrancy follows theme where supported"
+    ],
+    "requiredCount": 4,
+    "gates": ["BUILD", "TYPECHECK", "PLACEHOLDER"]
+  },
+  {
+    "id": "e0:gate",
+    "kind": "foundation",
+    "phase": "e0",
+    "title": "E0 acceptance gate — app launches with a secure empty shell",
+    "intent": "Prove the foundation is real: the app starts, loads a blank secured window, passes all gates.",
+    "dependsOn": ["e0:scaffold/app", "e0:main/bootstrap", "e0:preload/contextbridge", "e0:security/baseline", "e0:ipc/contract", "e0:build/tooling", "e0:ci/matrix", "e0:tokens/theme"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e0-foundation-ledger.json"],
+    "checklist": [
+      "npm build + typecheck + lint + test + placeholder all EXIT=0",
+      "npm run package -- --dir produces a launchable unpacked app",
+      "Launched app opens a window with contextIsolation+sandbox verified (no Node in renderer)",
+      "@electron/fuses verification passes",
+      "All E0 ledger rows are status=done"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "SECURITY", "PACKAGE", "PLACEHOLDER"]
+  }
+]

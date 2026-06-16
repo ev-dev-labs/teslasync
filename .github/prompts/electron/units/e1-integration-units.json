@@ -1,0 +1,173 @@
+[
+  {
+    "id": "e1:renderer/embed",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "Embed the web SPA as the renderer (dev + prod)",
+    "intent": "The existing web/ React app renders inside the Electron window with correct routing and assets.",
+    "dependsOn": [],
+    "sourceRefs": ["web/src/main.tsx", "web/src/App.tsx", "web/index.html"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "Dev loads http://localhost:3000 with working HMR and React Router",
+      "Prod loads the bundled web build via app:// protocol with correct base path",
+      "Client-side routing (history) works without 404 on reload/deep paths",
+      "Static assets (fonts, images, map tiles, chart libs) load under CSP",
+      "No mixed-content or CSP violations in the console",
+      "Renderer crash → reload/recover handler"
+    ],
+    "requiredCount": 6,
+    "gates": ["BUILD", "TYPECHECK", "E2E", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:api/client",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "API client wiring for the desktop origin",
+    "intent": "request()/TanStack hooks reach /api/v1 + SSE from the desktop app with correct origin/cookies.",
+    "dependsOn": ["e1:renderer/embed"],
+    "sourceRefs": ["web/src/api/client.ts", "web/src/api/hooks"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "Configurable API base URL (env/settings) injected into the renderer",
+      "Cookies/credentials handled for the app:// or custom origin (session.cookies)",
+      "CORS/origin headers reconciled so /api/v1 calls succeed",
+      "No /api/v1 double-prefix; snake_case query params preserved",
+      "Connection failure surfaces the web QueryError UI, not a blank window"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "E2E", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:auth/oidc",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "Authentik / OIDC desktop auth flow",
+    "intent": "ForwardAuth-style login works in a desktop context via system browser + loopback/PKCE.",
+    "dependsOn": ["e1:api/client"],
+    "sourceRefs": ["web/src/api/hooks/useUser.ts", ".github/prompts/monorepo/p0-foundation/0009-authentik-native-clients-runbook.prompt.md"],
+    "allowedFiles": ["apps/electron/src/main/auth/**", "apps/electron/src/preload/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "Authorization Code + PKCE via the system browser (shell.openExternal), not an embedded login webview",
+      "Loopback or custom-scheme redirect captures the auth code",
+      "Token exchange in the main process; renderer never sees the client secret",
+      "Session/cookie established so /api/v1 ForwardAuth passes",
+      "Logout clears tokens + session cookies",
+      "Auth error + retry surfaced in-app"
+    ],
+    "requiredCount": 6,
+    "gates": ["BUILD", "TYPECHECK", "E2E", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:auth/token-storage",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "Secure token storage (safeStorage / OS keychain)",
+    "intent": "Refresh tokens are encrypted at rest via the OS, never in localStorage.",
+    "dependsOn": ["e1:auth/oidc"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/src/main/auth/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "safeStorage.encryptString/decryptString (or keytar) for refresh tokens",
+      "Tokens stored in userData, never in the renderer or localStorage",
+      "Graceful handling when OS encryption is unavailable (BLOCKED, not plaintext)",
+      "Token refresh loop in the main process",
+      "Clear-on-logout and clear-on-uninstall behavior"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:sse/live",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "SSE live data in the desktop app",
+    "intent": "EventSource live telemetry/SSE works with reconnect + staleness in the desktop context.",
+    "dependsOn": ["e1:api/client"],
+    "sourceRefs": ["web/src/api/hooks", "web/src/components/layout/status-bar/LiveTelemetrySegment.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "SSE EventSource connects with auth and survives token refresh",
+      "Automatic reconnect with backoff on drop",
+      ">2 min staleness indicator preserved (matches web StatusBar)",
+      "SSE paused on system suspend, resumed on wake (ties to chrome:powermonitor)",
+      "No leaked connections on window reload/close"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "E2E", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:deeplink/protocol",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "Deep-link protocol (teslasync://) → in-app routes",
+    "intent": "OS deep links open the app and navigate to the right route, single-instance safe.",
+    "dependsOn": ["e1:renderer/embed"],
+    "sourceRefs": ["web/src/App.tsx"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/electron-builder.yml", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "setAsDefaultProtocolClient('teslasync') registered per OS",
+      "open-url (macOS) + second-instance argv (win/linux) parse the deep link",
+      "Deep link mapped to a web route and forwarded to the renderer via IPC",
+      "Cold-start deep link queued until the window is ready",
+      "Malformed deep links rejected safely"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "E2E", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:window/state",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "Window state persistence (bounds, maximized, multi-monitor)",
+    "intent": "The window restores where the user left it, across monitors and DPI.",
+    "dependsOn": ["e1:renderer/embed"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "Persist + restore bounds, maximized, and fullscreen state",
+      "Clamp to the nearest visible display if the saved monitor is gone",
+      "Sensible default size honoring min width/height",
+      "Per-display DPI handled without misplacement"
+    ],
+    "requiredCount": 4,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:i18n/locale",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "OS locale → web i18n + native string bridge",
+    "intent": "The app picks up the OS locale and shares it with web i18n and native chrome.",
+    "dependsOn": ["e1:renderer/embed"],
+    "sourceRefs": ["web/src/i18n", "web/src/hooks"],
+    "allowedFiles": ["apps/electron/src/main/**", "apps/electron/src/shared/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "app.getLocale() seeds the renderer's i18n on first run",
+      "User language override forwarded to native menus/tray (E2 chrome)",
+      "Locale change without restart where possible",
+      "Fallback chain matches the web app"
+    ],
+    "requiredCount": 4,
+    "gates": ["BUILD", "TYPECHECK", "PLACEHOLDER"]
+  },
+  {
+    "id": "e1:gate",
+    "kind": "integration",
+    "phase": "e1",
+    "title": "E1 acceptance gate — authenticated SPA with live data in the desktop shell",
+    "intent": "Prove integration is real: login, the SPA renders, /api/v1 + SSE flow, deep links work.",
+    "dependsOn": ["e1:renderer/embed", "e1:api/client", "e1:auth/oidc", "e1:auth/token-storage", "e1:sse/live", "e1:deeplink/protocol", "e1:window/state", "e1:i18n/locale"],
+    "sourceRefs": [],
+    "allowedFiles": ["apps/electron/**", ".github/prompts/electron/ledgers/e1-integration-ledger.json"],
+    "checklist": [
+      "E2E: launch → login via system browser → dashboard renders real data",
+      "E2E: SSE live segment updates; staleness indicator behaves",
+      "E2E: teslasync:// deep link navigates to the target route",
+      "Window state persists across restart",
+      "All E1 ledger rows are status=done"
+    ],
+    "requiredCount": 5,
+    "gates": ["BUILD", "TYPECHECK", "TEST", "E2E", "PLACEHOLDER"]
+  }
+]
