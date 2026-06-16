@@ -139,6 +139,12 @@ struct TeslaSyncApp: App {
         registry = ChargingListRouteRegistration.registry(base: registry)
         registry = GlanceRouteRegistration.registry(base: registry, onOpenApp: { selection = .dashboard })
         registry = QuickStatsRouteRegistration.registry(base: registry, onOpenDashboard: { selection = .dashboard })
+        registry = DashboardRouteRegistration.registry(
+            base: registry,
+            onNavigate: { selection = $0 },
+            onPrint: { NotificationCenter.default.post(name: .teslaSyncPrintRequested, object: nil) },
+            onOpenThemePicker: { selection = .settings }
+        )
         registry = AutomationsListRouteRegistration.registry(base: registry)
         registry = AutomationListRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = AuditLogRouteRegistration.registry(base: registry)
