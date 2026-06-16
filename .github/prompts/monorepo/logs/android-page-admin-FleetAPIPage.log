@@ -1,0 +1,145 @@
+P3-ANDROID A7 — page:admin/FleetAPI — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/FleetAPIPage.tsx  (route /fleet-api)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (FleetAPIPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.settingsStore (S8 SettingsStore over HttpSettingsRepository), TeslaSyncApplication -> FleetAPIPageHost.register("fleetApi")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared SettingsStore
+(io.teslasync.shared.core.presentation.settings.SettingsStore) + its S7
+HttpSettingsRepository + the PollingConfig/CaptureStats/VersionInfo/ApiSuspendResult models
+already exist on this branch and expose EXACTLY the four reads + two mutations the web page
+uses (settings, polling-config, capture-stats, version; toggle-suspend, update-polling-config).
+DataContainer already exposes `settingsStore` (it also backs the live unit formatter), so NO
+DI-graph widening was needed — the page binds the real shared holder end to end. No predecessor
+was stubbed or bypassed; the view performs no HTTP.
+
+NAV NOTE: the `fleetApi` -> /fleet-api destination already exists in Destinations.kt (pre-existing
+metadata row, NavGroup.Admin); this prompt only attaches host content via PageHosts.register, and
+the deep link is auto-registered by TeslaSyncNavHost.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/);
+the prompt snippet's ':app:' is the same module.
+
+STRINGS NOTE (honesty, ADR-014 + no-silent-drift): the web page resolves 70 literal-key strings via
+t('Fleet API Settings') etc. 9 already existed in the generated res/values catalog
+(translation_Commands/Failed/Nearby_Charging/Recent_Alerts/Release_Notes/Service_Data/common_noData/
+enabled/vehicle). The remaining 61 were added to the platform string catalog — the explicit
+allowed-files target res/values*/strings.xml — in all three locales (values, values-ar, values-he;
+ar/he carry the English fallback exactly as the generator materializes placeholder locales), with
+XML-correct escaping (& -> &amp;, ' -> \'). Resource names use the generator's androidName rule
+(translation. + key, [^A-Za-z0-9_] -> _) so they match a future gen-i18n pass.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 1m 13s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 12m 20s
+LINT_EXIT=0
+BUILD SUCCESSFUL
+TEST_EXIT=0
+unit tests: FleetAPIPageModelTest 12/12, FleetAPIPageViewModelTest 11/11 (0 failures, 0 skipped)
+
+=== PARITY ===
+PARITY_REQUIRED=81
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (FleetAPIPage.kt screen, FleetAPIPageViewModel.kt, FleetAPIPageModel.kt, FleetAPIPageIcons.kt)
+
+# panels (8) — Material 3 Card/Surface (GlassPanel)
+[COVERED] panel GlassPanel1 -> FleetAPIPage.kt:EndpointToggleRow() GlassPanel(PanelPadding.Sm) label+desc+Toggle (web EndpointToggle sub-component)
+[COVERED] panel GlassPanel2 -> FleetAPIPage.kt:TeslaApiPollingPanel() GlassPanel(fillMaxWidth, PanelPadding.Md) suspend/resume toggle + status
+[COVERED] panel GlassPanel3 -> FleetAPIPage.kt:SuspendedBanner() GlassPanel(accent=Danger) paused notice (web bg-neon-red banner)
+[COVERED] panel GlassPanel4 -> FleetAPIPage.kt:ApiEndpointControlsPanel() GlassPanel(fillMaxWidth, PanelPadding.Md) Polling/On-Demand/Commands groups
+[COVERED] panel GlassPanel5 -> FleetAPIPage.kt:RetentionRow() GlassPanel(PanelPadding.Sm) retention-period Select
+[COVERED] panel GlassPanel6 -> FleetAPIPage.kt:SignalsCapturedChip() GlassPanel(accent=Info) captured-signal summary (web bg-neon-cyan chip)
+[COVERED] panel GlassPanel7 -> FleetAPIPage.kt:ApiEndpointsPanel() GlassPanel(fillMaxWidth, PanelPadding.Md) configured endpoints + version line
+[COVERED] panel GlassPanel8 -> FleetAPIPage.kt:ConfiguredEndpointRow() GlassPanel(PanelPadding.Sm) endpoint label + URL CodeText
+
+# data states (3) — bound to FleetAPIPageViewModel.{settings,pollingConfig,captureStats,version}: StateFlow<UiState<*>>
+[COVERED] state loading -> FleetAPIPage.kt:SectionLoading() Spinner (UiState.isLoading per feed; ResourceUiState.toUiState -> UiPhase.Loading)
+[COVERED] state empty   -> FleetAPIPage.kt:EndpointsEmptyState() EmptyState(common.noData) via version.isEmpty (VersionInfo.endpoints empty -> UiPhase.Empty); web <EmptyState message=t('common.noData')>
+[COVERED] state success -> FleetAPIPage.kt content else-branches (TeslaApiPollingPanel/ApiEndpointControlsPanel/ApiEndpointsPanel) UiPhase.Content
+
+# strings (70) — every visible literal via stringResource(R.string.translation_*); web key names preserved
+[COVERED] string 1 day                                              -> FleetAPIPage.kt:retentionDayLabel() (translation_1_day)
+[COVERED] string 14 days                                            -> FleetAPIPage.kt:retentionDayLabel() (translation_14_days)
+[COVERED] string 3 days                                             -> FleetAPIPage.kt:retentionDayLabel() (translation_3_days)
+[COVERED] string 30 days                                            -> FleetAPIPage.kt:retentionDayLabel() (translation_30_days)
+[COVERED] string 7 days                                             -> FleetAPIPage.kt:retentionDayLabel() (translation_7_days)
+[COVERED] string API (Internal)                                     -> FleetAPIPage.kt:configuredEndpointLabel() api (translation_API__Internal_)
+[COVERED] string API Endpoint Controls                              -> FleetAPIPage.kt:ApiEndpointControlsHeader() SectionTitle (translation_API_Endpoint_Controls)
+[COVERED] string API Endpoints                                      -> FleetAPIPage.kt:ApiEndpointsPanel() SectionTitle (translation_API_Endpoints)
+[COVERED] string API resumed                                        -> FleetAPIPage.kt:FleetApiToastBridge() ApiResumed (translation_API_resumed)
+[COVERED] string API suspended                                      -> FleetAPIPage.kt:FleetApiToastBridge() ApiSuspended (translation_API_suspended)
+[COVERED] string All Tesla API calls have been paused               -> FleetAPIPage.kt:FleetApiToastBridge() ApiSuspended detail (translation_All_Tesla_API_calls_have_been_paused)
+[COVERED] string All Tesla Fleet API calls are suspended            -> FleetAPIPage.kt:TeslaApiPollingPanel() Caption suspended (translation_All_Tesla_Fleet_API_calls_are_suspended)
+[COVERED] string Auto-delete captured signals after this many days  -> FleetAPIPage.kt:RetentionRow() HelperText (translation_Auto_delete_captured_signals_after_this_many_days)
+[COVERED] string Battery & charging data                            -> FleetAPIPage.kt:endpointDesc() charge_state (translation_Battery___charging_data)
+[COVERED] string Capture every fleet telemetry signal to MongoDB... -> FleetAPIPage.kt:TelemetryCaptureSection() Raw Signal Recording desc (translation_Capture_every_fleet_telemetry_signal_to_MongoDB_for_debugging)
+[COVERED] string Charge State                                       -> FleetAPIPage.kt:endpointLabel() charge_state (translation_Charge_State)
+[COVERED] string Climate & temperature data                        -> FleetAPIPage.kt:endpointDesc() climate_state (translation_Climate___temperature_data)
+[COVERED] string Climate State                                      -> FleetAPIPage.kt:endpointLabel() climate_state (translation_Climate_State)
+[COVERED] string Commands                                           -> FleetAPIPage.kt:ApiEndpointControlsPanel() EndpointGroup title (translation_Commands)
+[COVERED] string Configured Endpoints                               -> FleetAPIPage.kt:ApiEndpointsPanel() Subhead (translation_Configured_Endpoints)
+[COVERED] string Control Tesla Fleet API polling...                 -> FleetAPIPage.kt:FleetAPIPageContent() HelperText subtitle (translation_Control_Tesla_Fleet_API_polling__endpoint_toggles__and_telemetry_capture)
+[COVERED] string Could not toggle API suspension                    -> FleetAPIPage.kt:FleetApiToastBridge() SuspendFailed detail (translation_Could_not_toggle_API_suspension)
+[COVERED] string Drive State                                        -> FleetAPIPage.kt:endpointLabel() drive_state (translation_Drive_State)
+[COVERED] string Failed                                             -> FleetAPIPage.kt:FleetApiToastBridge() SuspendFailed title + SectionError() ErrorText (translation_Failed)
+[COVERED] string Failed to update polling config                    -> FleetAPIPage.kt:FleetApiToastBridge() PollingFailed (translation_Failed_to_update_polling_config)
+[COVERED] string Firmware release notes                             -> FleetAPIPage.kt:endpointDesc() release_notes (translation_Firmware_release_notes)
+[COVERED] string Fleet API                                          -> FleetAPIPage.kt:FleetAPIPageContent() Modifier.semantics{ paneTitle } (translation_Fleet_API)
+[COVERED] string Fleet API Settings                                 -> FleetAPIPage.kt:FleetAPIPageContent() PageTitle (translation_Fleet_API_Settings)
+[COVERED] string GPS coordinates                                    -> FleetAPIPage.kt:endpointDesc() location_data (translation_GPS_coordinates)
+[COVERED] string List vehicles from Tesla                           -> FleetAPIPage.kt:endpointDesc() vehicle_discovery (translation_List_vehicles_from_Tesla)
+[COVERED] string Location & speed data                              -> FleetAPIPage.kt:endpointDesc() drive_state (translation_Location___speed_data)
+[COVERED] string Location Data                                      -> FleetAPIPage.kt:endpointLabel() location_data (translation_Location_Data)
+[COVERED] string Lock, unlock, climate, etc.                        -> FleetAPIPage.kt:endpointDesc() commands (translation_Lock__unlock__climate__etc_)
+[COVERED] string Locks, doors, odometer                             -> FleetAPIPage.kt:endpointDesc() vehicle_state (translation_Locks__doors__odometer)
+[COVERED] string Model, trim, options                               -> FleetAPIPage.kt:endpointDesc() vehicle_config (translation_Model__trim__options)
+[COVERED] string MongoDB Connected                                  -> FleetAPIPage.kt:TelemetryCaptureSection() Badge (translation_MongoDB_Connected)
+[COVERED] string MongoDB Not Configured                             -> FleetAPIPage.kt:TelemetryCaptureSection() Badge (translation_MongoDB_Not_Configured)
+[COVERED] string Nearby Charging                                    -> FleetAPIPage.kt:endpointLabel() nearby_charging_sites (translation_Nearby_Charging)
+[COVERED] string OAuth Callback                                     -> FleetAPIPage.kt:configuredEndpointLabel() oauth_callback (translation_OAuth_Callback)
+[COVERED] string On-Demand Endpoints                                -> FleetAPIPage.kt:ApiEndpointControlsPanel() EndpointGroup title (translation_On_Demand_Endpoints)
+[COVERED] string Polling Endpoints                                  -> FleetAPIPage.kt:ApiEndpointControlsPanel() EndpointGroup title (translation_Polling_Endpoints)
+[COVERED] string Polling and commands are paused...                 -> FleetAPIPage.kt:SuspendedBanner() HelperText (translation_Polling_and_commands_are_paused__Token_refresh_continues_so_you_won_t_need_to_re_authenticate__Useful_when_your_vehicle_is_in_service_)
+[COVERED] string Polling config updated                             -> FleetAPIPage.kt:FleetApiToastBridge() PollingUpdated (translation_Polling_config_updated)
+[COVERED] string Raw Signal Recording                               -> FleetAPIPage.kt:TelemetryCaptureSection() EndpointToggleRow label (translation_Raw_Signal_Recording)
+[COVERED] string Recent Alerts                                      -> FleetAPIPage.kt:endpointLabel() recent_alerts (translation_Recent_Alerts)
+[COVERED] string Release Notes                                      -> FleetAPIPage.kt:endpointLabel() release_notes (translation_Release_Notes)
+[COVERED] string Retention Period                                   -> FleetAPIPage.kt:RetentionRow() BodyText (translation_Retention_Period)
+[COVERED] string Service Data                                       -> FleetAPIPage.kt:endpointLabel() service_data (translation_Service_Data)
+[COVERED] string Service history & status                           -> FleetAPIPage.kt:endpointDesc() service_data (translation_Service_history___status)
+[COVERED] string Set MONGODB_ENABLED=true and configure...          -> FleetAPIPage.kt:TelemetryCaptureSection() Raw Signal Recording desc (mongo off) (translation_Set_MONGODB_ENABLED_true_and_configure_MONGODB_URI_to_enable)
+[COVERED] string Supercharger locations                             -> FleetAPIPage.kt:endpointDesc() nearby_charging_sites (translation_Supercharger_locations)
+[COVERED] string Sync vehicles from Tesla                           -> FleetAPIPage.kt:endpointDesc() on_demand_vehicle_discovery (translation_Sync_vehicles_from_Tesla)
+[COVERED] string Telemetry Capture                                  -> FleetAPIPage.kt:TelemetryCaptureSection() Subhead (translation_Telemetry_Capture)
+[COVERED] string Tesla API Polling                                  -> FleetAPIPage.kt:TeslaApiPollingPanel() SectionTitle (translation_Tesla_API_Polling)
+[COVERED] string Tesla API polling has been re-enabled              -> FleetAPIPage.kt:FleetApiToastBridge() ApiResumed detail (translation_Tesla_API_polling_has_been_re_enabled)
+[COVERED] string Tesla Fleet API                                    -> FleetAPIPage.kt:configuredEndpointLabel() tesla_api (translation_Tesla_Fleet_API)
+[COVERED] string Toggle individual Tesla Fleet API endpoints...     -> FleetAPIPage.kt:ApiEndpointControlsHeader() Caption (translation_Toggle_individual_Tesla_Fleet_API_endpoints_on_or_off)
+[COVERED] string Vehicle Commands                                   -> FleetAPIPage.kt:endpointLabel() commands (translation_Vehicle_Commands)
+[COVERED] string Vehicle Config                                     -> FleetAPIPage.kt:endpointLabel() vehicle_config (translation_Vehicle_Config)
+[COVERED] string Vehicle Discovery                                  -> FleetAPIPage.kt:endpointLabel() vehicle_discovery (translation_Vehicle_Discovery)
+[COVERED] string Vehicle State                                      -> FleetAPIPage.kt:endpointLabel() vehicle_state (translation_Vehicle_State)
+[COVERED] string Vehicle alert history                              -> FleetAPIPage.kt:endpointDesc() recent_alerts (translation_Vehicle_alert_history)
+[COVERED] string Vehicle data is being polled from Tesla            -> FleetAPIPage.kt:TeslaApiPollingPanel() Caption active (translation_Vehicle_data_is_being_polled_from_Tesla)
+[COVERED] string Wake Up                                            -> FleetAPIPage.kt:endpointLabel() wake_up (translation_Wake_Up)
+[COVERED] string Wake vehicle from sleep                            -> FleetAPIPage.kt:endpointDesc() wake_up (translation_Wake_vehicle_from_sleep)
+[COVERED] string Web Frontend                                       -> FleetAPIPage.kt:configuredEndpointLabel() web (translation_Web_Frontend)
+[COVERED] string common.noData                                      -> FleetAPIPage.kt:EndpointsEmptyState() EmptyState message (translation_common_noData)
+[COVERED] string enabled                                            -> FleetAPIPage.kt:ApiEndpointControlsHeader() countSuffix (translation_enabled)
+[COVERED] string signals captured from                              -> FleetAPIPage.kt:SignalsCapturedChip() (translation_signals_captured_from)
+[COVERED] string vehicle                                            -> FleetAPIPage.kt:SignalsCapturedChip() (translation_vehicle)
+
+PARITY_COVERED=81
+
+=== SUMMARY ===
+data sources : FleetAPIPageViewModel binds the shared S8 SettingsStore via asFleetApiSource() — four cache-then-network reads projected onto UiState (settings doc -> FleetApiSettings.apiSuspended; PollingConfig; CaptureStats; VersionInfo with isEmpty=endpoints.isEmpty()), and the two non-throwing mutations (toggleApiSuspend -> web useToggleAPISuspend; updatePollingConfig -> web useUpdatePollingConfig). The store refreshes exactly the feeds the matching web hook invalidates (suspend -> settings; polling-config save -> polling-config + capture-stats), so the page self-updates. Per-endpoint toggle flip + enabled/total count + api_suspended parse live in the framework-free FleetAPIPageModel.kt. Toast outcomes (web toast.success/info/error) surface through a Material 3 Snackbar (FleetApiToastBridge). No HTTP in the view.
+nav          : Destinations 'fleetApi' -> /fleet-api (pre-existing) wired to FleetApiRoute() via PageHosts.register; TeslaSyncApplication.onCreate() calls FleetAPIPageHost.register(); deep link auto-registered by TeslaSyncNavHost.
+units        : no telemetry-unit-bearing field on this page (booleans, counts, a retention-day integer, version strings). The captured-signal count is locale-formatted at the render boundary (NumberFormat over the observable LocalConfiguration locale).
+a11y         : IconBox glyphs decorative (contentDescription=null); page accessible name via Modifier.semantics{ paneTitle }; switches are Material Toggle (Role.Switch, >=48dp). Dark/dynamic theme via MaterialTheme tokens only (no hardcoded color).
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(81) == PARITY_REQUIRED(81)
+[PASS] all android triad gates green; parity 81/81; android ledger row page:admin/FleetAPI status=done.
+EXIT=0
+STATUS=DONE
