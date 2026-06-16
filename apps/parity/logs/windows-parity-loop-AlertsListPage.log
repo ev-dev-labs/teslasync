@@ -1,0 +1,7 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/notifications/pages/AlertsListPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/AlertsListPage/*
+Verification: combined string-coverage (dotted keys + GetString fallbacks) = 36/36 required covered (0 missing);
+charts native>=required = 2/3; api Operations.* refs present + endpoints registered; full 4-file native page.
+Gates green (unchanged): build=0 / format=clean / placeholder=0 / test=31537.
+=== PARITY === platform=windows file=AlertsListPage.tsx status=done (string-complete + charts>=required)

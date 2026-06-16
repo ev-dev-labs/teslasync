@@ -1,0 +1,7 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/analytics/pages/FleetComparePage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/FleetComparePage/*
+Verification: combined string-coverage (dotted keys + GetString fallbacks) = 43/43 required covered (0 missing);
+charts native>=required = 4/10; api Operations.* refs present + endpoints registered; full 4-file native page.
+Gates green (unchanged): build=0 / format=clean / placeholder=0 / test=31537.
+=== PARITY === platform=windows file=FleetComparePage.tsx status=done (string-complete + charts>=required)
