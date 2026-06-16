@@ -304,5 +304,14 @@
     "requiredCount": 16,
     "promptId": "p3-android/pages/system/TeslaAccountPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-TeslaAccountPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalGapDetector",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p3-android/pages/telemetry/SignalGapDetectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalGapDetectorPage.log"
   }
 ]

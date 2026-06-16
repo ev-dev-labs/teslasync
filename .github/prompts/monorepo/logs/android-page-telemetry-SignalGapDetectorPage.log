@@ -1,0 +1,167 @@
+================================================================================
+P3-ANDROID A7 — page:telemetry/SignalGapDetector
+Native Jetpack Compose / Material 3 / Kotlin parity port of
+web/src/features/telemetry/pages/SignalGapDetectorPage.tsx
+================================================================================
+
+Artifact     : page:telemetry/SignalGapDetector
+Web route    : /signal-gaps
+Output dir   : apps/android/app/src/main/kotlin/com/teslasync/telemetry/
+Gradle module: :android  (settings.gradle.kts maps :android -> app/; gate uses :android:*)
+
+--------------------------------------------------------------------------------
+WHAT THE WEB PAGE IS
+--------------------------------------------------------------------------------
+SignalGapDetectorPage.tsx is a thin wrapper around the shared SignalCatalogPanel.
+It sets a PageContainer (title=signalGap.title, subtitle=signalGap.subtitle,
+actions=<VehicleSelect/>), reads the global useSelectedVehicle() store, and renders
+a ternary: when no vehicle is selected (!vehicleId || vehicleId <= 0) it shows an
+<EmptyState icon={<Activity/>} title=signalGap.noVehicle message=signalGap.noVehicleDesc/>;
+otherwise it embeds <SignalCatalogPanel vehicleId/>. The page itself declares no data
+of its own — the parity manifest records zero dataSources, zero panels, exactly one
+data state (empty) and four strings (requiredCount=5). The embedded SignalCatalogPanel
+owns the live-signals feed (useSignalGaps -> GET /signals/{id}/live) and all of its own
+loading/empty/error/content states.
+
+--------------------------------------------------------------------------------
+NATIVE IMPLEMENTATION (no placeholders, ADR-011; no delegation)
+--------------------------------------------------------------------------------
+The shared A3 SignalCatalogPanel feature-view already exists
+(io.teslasync.android.featureviews.signalcatalogpanel.SignalCatalogPanel) and owns the
+summary StatCards, search/filter/sort controls, the staleness table, and every
+cache-then-network state (loading / empty / filtered-empty / error+retry / content /
+stale / offline). The shared VehicleSelect surface
+(io.teslasync.android.sharedsurfaces.vehicleselect.VehicleSelect) is the store-bound
+vehicle-scope picker. This page is their host: it sets the PageContainer-equivalent
+header (title + subtitle + the VehicleSelect action), reads the resolved active-vehicle
+scope through a page ViewModel bound to the shared P1/S8 selection + fleet holders, and
+renders the web ternary — never re-implementing the catalog or the picker (DRY, ADR-006).
+This mirrors the sibling notifications/ChannelsPage (a wrapper embedding
+NotificationChannelsView) and driving/RegenEfficiencyPage (a host that builds a page-local
+Http*Repository because the Android DI graph wires no domain store yet).
+
+New files (package io.teslasync.android.telemetry.signalgapdetector):
+  - SignalGapDetectorPageModel.kt   Registration(ROUTE_ID signalGaps, WEB_PATH
+                                    /signal-gaps, SLUG SignalGapDetectorPage) +
+                                    SignalGapDetectorPageState(vehicleId, hasVehicle,
+                                    EMPTY) + recordSignalGapDetectorPageOpened (the one
+                                    PII-safe view.opened diagnostic, P1/S11). No
+                                    page-level feed — the embedded panel owns the data.
+  - SignalGapDetectorPageViewModel.kt  Binds SelectedVehicleStore.selectedId (web
+                                    useSelectedVehicleStore) + VehiclesStore.vehicles()
+                                    (web useVehicles), exposes StateFlow<SignalGapDetector
+                                    PageState>, and self-heals the selection to the first
+                                    vehicle (web useSelectedVehicle "default to first").
+                                    Extends BaseFeedViewModel; companion factory(...).
+  - SignalGapDetectorPage.kt        Stateful entry SignalGapDetectorPage(catalogSource,
+                                    logger): records view.opened, builds the page VM via
+                                    viewModel(key=SLUG, factory=…factory(selectedVehicle
+                                    Store, vehiclesStore, logger)), collects state;
+                                    stateless SignalGapDetectorPageContent (verticalScroll
+                                    Column: header + empty/catalog branch);
+                                    SignalGapDetectorHeader (PageTitle + subtitle BodyText
+                                    + VehicleSelect()); SignalGapDetectorEmpty (EmptyState
+                                    icon=NavGlyphs.Pulse, title/message).
+  - SignalGapDetectorPageHost.kt    SignalGapDetectorRoute() resolves LocalDataContainer,
+                                    builds the SignalCatalogPanel source over a page-local
+                                    HttpTelemetryRepository(container.api,
+                                    container.cacheStore).asSignalCatalogPanelSource();
+                                    SignalGapDetectorPageHost.register() ->
+                                    PageHosts.register("signalGaps"). Idempotent.
+
+Edits (registration + string catalog + ledger only):
+  - TeslaSyncApplication.kt  import + SignalGapDetectorPageHost.register() at process
+                             start (after TeslaAccountPageHost.register()).
+  - res/values/strings.xml (+ values-ar, values-he)  2 generated keys
+                             translation_signalGap_{noVehicle,noVehicleDesc} inserted in
+                             sorted position (between _noMatch and _refreshInterval),
+                             generator-identical format (no tokens, no escapable chars);
+                             ar/he carry the English fallback (placeholder locales). The
+                             other two parity strings (_subtitle, _title) already shipped
+                             in all three catalogs. _title="Signal Gaps".
+  - apps/parity/android-ledger.json  page:telemetry/SignalGapDetector row (done, 5/5).
+
+Notes:
+  - i18n catalog: signalGap.noVehicle / signalGap.noVehicleDesc are NOT in the web
+    canonical en.json — the web page resolves them from inline t() fallback defaults
+    ("Select a vehicle to begin" / "Pick a vehicle from the picker above to inspect its
+    signal freshness."). en.json is outside this artifact's allowed files and there is no
+    web catalog entry to mirror, so the Android catalog receives those exact inline-default
+    values (honest disclosure; no silent drift). MissingTranslation/ExtraTranslation are
+    disabled in the app lint config, so the ar/he English-fallback entries are accepted.
+  - Routing: the destination page("signalGaps","/signal-gaps",NavGroup.Telemetry) already
+    exists in Destinations.kt (metadata-only) with nav title nav_signal_gaps in NavStrings;
+    this artifact only attaches the host (no route-table change), so RouteTableTest stays
+    green.
+  - Data wiring: the Android DI graph (DataContainer) wires no TelemetryStore, so the host
+    builds a page-local HttpTelemetryRepository from the shared client + offline cache the
+    container exposes (the RegenEfficiencyPageHost HttpDrivingRepository precedent). The
+    view performs no HTTP.
+  - SI: this page renders no unit-bearing field of its own; the embedded SignalCatalogPanel
+    keeps raw SI and formats at its own boundary (Phase-42/48). No SI conversion here.
+  - a11y/theme: PageTitle heading + BodyText subtitle via MaterialTheme tokens; EmptyState,
+    VehicleSelect and SignalCatalogPanel supply their own content descriptions + dynamic/
+    dark theme (ADR-015). No hardcoded colors/typography.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test) — actual results
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/telemetry -Language kotlin
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+$ ./gradlew :android:assembleDebug
+BUILD SUCCESSFUL in 3m 6s
+BUILD_EXIT=0
+
+$ ./gradlew :android:lintDebug
+BUILD SUCCESSFUL in 10m 14s
+LINT_EXIT=0
+(lint-results-debug.html has zero findings referencing com/teslasync/telemetry or the
+ two new translation_signalGap_* keys. The only resource warnings are pre-existing
+ StringFormatInvalid on unrelated battery/rateLimit keys, suppressed via lint.xml.)
+
+$ ./gradlew :android:testDebugUnitTest
+BUILD SUCCESSFUL in 1m 40s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=5
+
+[1] state : empty (no vehicle selected)
+    EVIDENCE: SignalGapDetectorPage.kt -> SignalGapDetectorPageContent renders
+              SignalGapDetectorEmpty() when state.hasVehicle is false (mirrors web
+              "!vehicleId || vehicleId <= 0"). SignalGapDetectorEmpty draws
+              EmptyState(icon=NavGlyphs.Pulse, title=..noVehicle, message=..noVehicleDesc).
+              SignalGapDetectorPageState.hasVehicle/EMPTY (SignalGapDetectorPageModel.kt)
+              drives the branch; the StateFlow is produced by SignalGapDetectorPageView
+              Model.state. COVERED.
+
+[2] string : signalGap.noVehicle
+    EVIDENCE: R.string.translation_signalGap_noVehicle rendered as the EmptyState title in
+              SignalGapDetectorEmpty (SignalGapDetectorPage.kt); value "Select a vehicle to
+              begin" in res/values/strings.xml. COVERED.
+
+[3] string : signalGap.noVehicleDesc
+    EVIDENCE: R.string.translation_signalGap_noVehicleDesc rendered as the EmptyState
+              message in SignalGapDetectorEmpty (SignalGapDetectorPage.kt); value "Pick a
+              vehicle from the picker above to inspect its signal freshness." in
+              res/values/strings.xml. COVERED.
+
+[4] string : signalGap.subtitle
+    EVIDENCE: R.string.translation_signalGap_subtitle rendered by BodyText in
+              SignalGapDetectorHeader (SignalGapDetectorPage.kt); value "Identify signals
+              that have stopped arriving or have gaps" in res/values/strings.xml. COVERED.
+
+[5] string : signalGap.title
+    EVIDENCE: R.string.translation_signalGap_title rendered by PageTitle in
+              SignalGapDetectorHeader (SignalGapDetectorPage.kt); value "Signal Gaps" in
+              res/values/strings.xml. COVERED.
+
+PARITY_COVERED=5
+
+================================================================================
+EXIT=0
+STATUS=DONE
+================================================================================
