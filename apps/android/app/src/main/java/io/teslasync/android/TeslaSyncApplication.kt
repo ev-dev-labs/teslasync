@@ -134,6 +134,7 @@ import io.teslasync.android.telemetry.signaldiff.SignalDiffPageHost
 import io.teslasync.android.analytics.AnalyticsPageHost
 import io.teslasync.android.trips.tripdetail.TripDetailPageHost
 import io.teslasync.android.trips.triplist.TripListPageHost
+import io.teslasync.android.vehicles.vehicleaccess.VehicleAccessPageHost
 import io.teslasync.android.telemetry.signalsworkspace.SignalsWorkspacePageHost
 import io.teslasync.android.vehiclesystems.mediaplayer.MediaPlayerPageHost
 import io.teslasync.android.watch.watchface.WatchFacePageHost
@@ -347,6 +348,7 @@ class TeslaSyncApplication : Application() {
         AnalyticsPageHost.register()
         TripDetailPageHost.register()
         TripListPageHost.register()
+        VehicleAccessPageHost.register()
         SignalsWorkspacePageHost.register()
         // Register the native media-player vehicle-systems screen for the /media-player route (P3/A7). Idempotent.
         MediaPlayerPageHost.register()
