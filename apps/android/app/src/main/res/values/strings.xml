@@ -75,6 +75,7 @@
   <string name="translation_Chart">Chart</string>
   <string name="translation_Check_Fleet_Status">Check Fleet Status</string>
   <string name="translation_Check_fleet_status_for_all_vehicles">Check fleet status for all vehicles</string>
+  <string name="translation_Choose_one_or_more_signals__set_a_date_range__then_hit_Query_to_browse_signal_history_">Choose one or more signals, set a date range, then hit Query to browse signal history.</string>
   <string name="translation_Clean">Clean</string>
   <string name="translation_Client_Id">Client Id</string>
   <string name="translation_Code">Code</string>
@@ -243,6 +244,7 @@
   <string name="translation_Paused">Paused</string>
   <string name="translation_Pem_Placeholder">Pem Placeholder</string>
   <string name="translation_Pending">Pending</string>
+  <string name="translation_Per_Page">Per Page</string>
   <string name="translation_Period">Period</string>
   <string name="translation_Permissions">Permissions</string>
   <string name="translation_Playing">Playing</string>
@@ -262,6 +264,7 @@
   <string name="translation_Public_Key">Public Key</string>
   <string name="translation_Public_Key_Desc">Public Key Desc</string>
   <string name="translation_Query">Query</string>
+  <string name="translation_Query_signal_history_from_Postgres">Query signal history from Postgres</string>
   <string name="translation_Range">Range</string>
   <string name="translation_Read">Read</string>
   <string name="translation_Read_Write">Read-Write</string>
@@ -287,9 +290,12 @@
   <string name="translation_Scheduled">Scheduled</string>
   <string name="translation_Score">Score</string>
   <string name="translation_Select_Vehicle">Select Vehicle</string>
+  <string name="translation_Select_signals_and_click_Query">Select signals and click Query</string>
   <string name="translation_Sentry">Sentry</string>
   <string name="translation_Service_Data">Service Data</string>
   <string name="translation_Signal">Signal</string>
+  <string name="translation_Signal_Log">Signal Log</string>
+  <string name="translation_Signal_Log_Viewer">Signal Log Viewer</string>
   <string name="translation_Signals">Signals</string>
   <string name="translation_Size">Size</string>
   <string name="translation_Skipped">Skipped</string>
@@ -312,6 +318,7 @@
   <string name="translation_Telemetry_Sub_Desc">Telemetry Sub Desc</string>
   <string name="translation_Test">Test</string>
   <string name="translation_Time">Time</string>
+  <string name="translation_Time_Range">Time Range</string>
   <string name="translation_Timestamp">Timestamp</string>
   <string name="translation_Title">Title</string>
   <string name="translation_To">To</string>
@@ -6057,6 +6064,8 @@
   <string name="translation_signalGap_timeSince">Time Since</string>
   <string name="translation_signalGap_title">Signal Gaps</string>
   <string name="translation_signalGap_totalSignals">Total Signals</string>
+  <string name="translation_signalLog_noVehicle">Select a vehicle to begin</string>
+  <string name="translation_signalLog_noVehicleDesc">Pick a vehicle from the picker above to query its signal history.</string>
   <string name="translation_signalQuery_from">From</string>
   <string name="translation_signalQuery_preset_aria">%1$s time range</string>
   <string name="translation_signalQuery_query">Query</string>

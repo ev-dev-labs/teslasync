@@ -313,5 +313,14 @@
     "requiredCount": 5,
     "promptId": "p3-android/pages/telemetry/SignalGapDetectorPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalGapDetectorPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalLogViewer",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "p3-android/pages/telemetry/SignalLogViewerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalLogViewerPage.log"
   }
 ]
