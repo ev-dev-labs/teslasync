@@ -1,0 +1,118 @@
+================================================================================
+P3-ANDROID A7 — page:telemetry/SignalExplorer  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/telemetry/pages/SignalExplorerPage.tsx
+promptId: p3-android/pages/telemetry/SignalExplorerPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (sdk.dir in local.properties)
+JDK         : OpenJDK 21.0.9 (Android Studio jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/)
+SDK + Gradle runner present => gate executed (not BLOCKED).
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPage.kt          (@Composable screen: SignalExplorerPage + SignalExplorerPageContent + SignalExplorerControls)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPageViewModel.kt (Hilt-free AndroidX ViewModel; StateFlow<UiState>; owns page-local S8 SignalsStore; explore()/toggleLive()/retry())
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPageSource.kt    (S7/S8 data seam over SignalsRepository + SelectedVehicleStore)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPageModel.kt     (framework-free model: registration, interaction, MAX_SIGNALS/PER_PAGE, toSignalNames, mapData)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPageIcons.kt     (local lucide glyphs: Activity / Database / Radio)
+apps/android/app/src/main/kotlin/com/teslasync/telemetry/SignalExplorerPageHost.kt      (PageHosts.register(signalExplorer){ SignalExplorerRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt              (NavHost registration: + SignalExplorerPageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                        (+11 parity keys; gen-i18n.ts androidName transform)
+apps/parity/android-ledger.json                                                         (ledger row page:telemetry/SignalExplorer)
+.github/prompts/monorepo/logs/android-page-telemetry-SignalExplorerPage.log             (this log)
+
+Data binding : SignalExplorerPageViewModel owns a page-local S8 SignalsStore(HttpSignalsRepository(api,cache), viewModelScope)
+               — the DataContainer is NOT in this artifact's allowed files, so (exactly like the sibling Diagnostic/
+               Commands/SqlPlayground surfaces) the holder is constructed per-surface over the shared resilient client +
+               offline cache. signalsState : StateFlow<UiState<List<String>>> = selectedVehicleId.flatMapLatest ->
+               signalsStore.availableSignals(id).mapData(AvailableSignalsResponse::toSignalNames).asUiState (web useSignals,
+               which normalizes the rich catalog down to string[] of names). Selected vehicle = app-scoped
+               SelectedVehicleStore (web useSelectedVehicle); the shell owns the picker, so no in-page useVehicles source
+               (none is declared for this unit). No HTTP in the view.
+Scope note   : web chart/stats/history panels + useLiveSignalStream are NOT in this parity unit (manifest declares only
+               GlassPanel1 + useSignals). Explore/Live drive local interaction state; the connected/disconnected badge reads
+               interaction.liveConnected, which is false until the live SSE pipeline (P1/S4/S6) is wired in — an honest
+               "Disconnected", never a faked connection (covenant #1).
+Strings      : 4 of 15 keys already in res/values/strings.xml (translation_Explore, translation_error_loadFailed,
+               translation_liveMonitor_connected, translation_liveMonitor_disconnected); 11 added with the generator's exact
+               androidName(key)=key.replace(/[^a-zA-Z0-9_]/g,'_') transform so they match the web i18n keys.
+Nav          : Destinations 'signalExplorer' -> /signal-explorer pre-existing (NavGroup.Telemetry; count unchanged); host
+               wired via PageHosts.register; deep link auto-registered by TeslaSyncNavHost (RouteTable.deepLinkUris).
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/telemetry -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 4m 50s (compileDebugKotlin executed; only pre-existing deprecation warns in unrelated files)
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => BUILD SUCCESSFUL in 10m 47s (lint-results-debug.xml: errors=0, warnings=3103 [warningsAsErrors=false]; 0 issues cite com/teslasync/telemetry)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 1m 31s (tests=16515, failures=0, errors=0, suites=1287)
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=20
+--------------------------------------------------------------------------------
+# panel (1) — Material 3 GlassPanel (Surface) ; bound state holder = SignalExplorerPageViewModel
+[COVERED] panel  GlassPanel1   -> SignalExplorerPage.kt:182 SignalExplorerPageContent() GlassPanel(PanelPadding.Md){ SignalExplorerControls(...) }  (web SignalExplorerPage.tsx:212 <GlassPanel className="p-4 sm:p-5 space-y-4"><SignalSelector/><RangePicker/><Select/><Button Explore/><Button Live/><HelpTooltip/>)
+# (+ web header actions + the two EmptyState panels also reproduced: SignalExplorerPage.kt:171 no-vehicle GlassPanel, :195 "pick signals" GlassPanel)
+
+# data states (4) — bound to SignalExplorerPageViewModel.signalsState : StateFlow<UiState<List<String>>> (web useSignals)
+[COVERED] state  loading       -> SignalExplorerPage.kt:277 SignalExplorerControls() when(signalsState.isLoading) Spinner(SpinnerSize.Sm); VM SignalExplorerPageViewModel.kt asUiState -> UiState.loading() (web first-load skeleton)
+[COVERED] state  empty         -> SignalExplorerPage.kt:281 SignalSelector(options = signalsState.data ?: emptyList()) renders its friendly empty note when the catalog resolves empty (SignalSelector featureview: !hasOptions -> HelperText(noResults)); signalsState.isEmpty via asUiState(isEmpty={it.isEmpty()})  (web availableSignals ?? [] empty)
+[COVERED] state  error         -> SignalExplorerPage.kt:266 SignalExplorerControls() if(signalsState.hasError) AlertBanner(message=error.loadFailed, tone=Danger, action=Retry); covers hard-error + stale/offline cached tier  (web SignalExplorerPage.tsx:197 <AlertBanner variant="danger">error.loadFailed</AlertBanner>)
+[COVERED] state  success       -> SignalExplorerPage.kt:281 SignalSelector(options = populated names) in the else branch (signalsState.isContent)  (web populated <SignalSelector options={availableSignals}/>)
+
+# strings (15) — every visible literal via stringResource(R.string.translation_*); web key names preserved (androidName transform)
+[COVERED] string Signal Explorer                                                                   -> SignalExplorerPage.kt:223 PageTitle(translation_Signal_Explorer)
+[COVERED] string Visualise signal history with chart and stats — or stream live                    -> SignalExplorerPage.kt:226 BodyText(translation_Visualise_signal_history_with_chart_and_stats___or_stream_live)
+[COVERED] string liveMonitor.connected                                                             -> SignalExplorerPage.kt:235 Badge(translation_liveMonitor_connected)
+[COVERED] string liveMonitor.disconnected                                                          -> SignalExplorerPage.kt:237 Badge(translation_liveMonitor_disconnected)
+[COVERED] string signalExplorer.noVehicle                                                          -> SignalExplorerPage.kt:174 EmptyState title(translation_signalExplorer_noVehicle)
+[COVERED] string signalExplorer.noVehicleDesc                                                      -> SignalExplorerPage.kt:173 EmptyState message(translation_signalExplorer_noVehicleDesc)
+[COVERED] string Pick signals and click Explore                                                    -> SignalExplorerPage.kt:201 EmptyState title(translation_Pick_signals_and_click_Explore)
+[COVERED] string Choose up to 5 signals, set a date range, then hit Explore — or toggle Live ...   -> SignalExplorerPage.kt:199 EmptyState message(translation_Choose_up_to_5_signals__set_a_date_range__then_hit_Explore___or_toggle_Live_to_stream_in_real_time_)
+[COVERED] string error.loadFailed                                                                  -> SignalExplorerPage.kt:267 AlertBanner message(translation_error_loadFailed)
+[COVERED] string Time Range                                                                        -> SignalExplorerPage.kt:291 Caption(translation_Time_Range)
+[COVERED] string Per Page                                                                          -> SignalExplorerPage.kt:307 Select label(translation_Per_Page)
+[COVERED] string Explore                                                                           -> SignalExplorerPage.kt:319 Button label(translation_Explore)
+[COVERED] string signalExplorer.live                                                               -> SignalExplorerPage.kt:331 Button label(translation_signalExplorer_live)
+[COVERED] string signalExplorer.stopLive                                                           -> SignalExplorerPage.kt:329 Button label(translation_signalExplorer_stopLive)
+[COVERED] string help.signal.live.aria                                                             -> SignalExplorerPage.kt:340 HelpIcon contentDescription(translation_help_signal_live_aria)
+# (+ web help.signal.live tooltip content also wired: SignalExplorerPage.kt:339 HelpIcon text(translation_help_signal_live))
+
+PARITY_COVERED=20
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : SignalExplorerPageViewModel binds the web useSignals catalog read (GET /signals/{vehicleId}/available) via a
+               page-local S8 SignalsStore over the shared S7 HttpSignalsRepository, normalized to the flat string[] of names
+               (web useSignals queryFn); selected vehicle from the app-scoped SelectedVehicleStore (web useSelectedVehicle).
+               No HTTP in the view.
+si/units     : the available-signals catalog carries no unit-bearing fields (signal names + value_kind/unit_kind discriminators);
+               it round-trips verbatim, no SI conversion needed at this surface.
+a11y/theme   : EmptyState/Spinner/SignalSelector carry Modifier.semantics content descriptions; HelpIcon exposes the
+               help.signal.live.aria accessible name; Material 3 components enforce >=48dp targets; dynamic-color + dark theme
+               via MaterialTheme (A2 tokens); Compose-native (no webview).
+nav          : Destinations 'signalExplorer' -> /signal-explorer (pre-existing, NavGroup.Telemetry) wired to SignalExplorerRoute()
+               via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(20) == PARITY_REQUIRED(20)
+[PASS] all android triad gates green; parity 20/20; android ledger row page:telemetry/SignalExplorer status=done.
+EXIT=0
+STATUS=DONE
