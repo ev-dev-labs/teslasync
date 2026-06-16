@@ -1,0 +1,130 @@
+================================================================================
+P3-ANDROID A7 — page:notifications/AlertsList — Compose / Material 3 parity port
+================================================================================
+Artifact      : page:notifications/AlertsList
+Web source    : web/src/features/notifications/pages/AlertsListPage.tsx
+Web route     : /notifications/alerts
+Output        : apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPage.kt
+                apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPageViewModel.kt
+                apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPageSource.kt
+                apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPageModel.kt
+                apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPageIcons.kt
+                apps/android/app/src/main/kotlin/com/teslasync/notifications/AlertsListPageHost.kt
+NavHost reg.  : io/teslasync/android/TeslaSyncApplication.kt (AlertsListPageHost.register)
+                io/teslasync/android/navigation/Destinations.kt
+                  page("notificationsAlerts","/notifications/alerts",NavGroup.Notifications) [pre-existing]
+Strings       : res/values/strings.xml (+21 keys; 15 page keys reuse existing translation_* entries)
+ADR refs      : ADR-002, ADR-004, ADR-005, ADR-006, ADR-011, ADR-013, ADR-014, ADR-015
+
+Architecture  : stateless @Composable screen (AlertsListPage / AlertsListPageContent) driven by a
+                Hilt-free AndroidX ViewModel (AlertsListPageViewModel : BaseFeedViewModel) that binds
+                the shared KMP core (ADR-004) via the AlertsListPageSource seam:
+                  useAlerts             -> NotificationsRepository.alerts()        (cache-then-network Resource)
+                  useAlertRules         -> NotificationsRepository.alertRules()     (cache-then-network Resource)
+                  useAlertDetail        -> NotificationsRepository.alertDetail(id)  (cache-then-network Resource)
+                  usePinned('alert_rule')-> PinnedRepository.pinned(AlertRule)      (pinned-first ordering)
+                  useMarkAlertRead      -> NotificationsRepository.markAlertRead    (POST /alerts/{id}/read)
+                  useAcknowledgeAlert   -> NotificationsRepository.acknowledgeAlert (POST /alerts/{id}/ack)
+                  useReopenAlert        -> NotificationsRepository.reopenAlert      (POST /alerts/{id}/reopen)
+                The host builds page-local HttpNotificationsRepository + HttpPinnedRepository over the
+                SAME shared resilient ApiHttpClient + offline CacheStore the other repositories use
+                (the DataContainer wires no NotificationsStore yet — identical to the sibling DrivesList
+                / Statistics surfaces' page-local reads), so the ADR-013 freshness contract +
+                SI-verbatim caching are preserved with NO DataContainer change. Every panel is a
+                Material 3 Surface/Card (GlassPanel / KpiOverviewCard / MetricCard); both charts use the
+                A3 native chart layer (BarChartWrapper for the 7-day trend, a Compose-canvas donut +
+                legend for the by-type pie — never a webview); every string resolves from res/values via
+                stringResource (ADR-014); the success toasts ride a Material 3 SnackbarHost; the
+                quiet-hours window reuses the A6 QuietHours value at the display boundary. No field in
+                this domain is unit-bearing, so there is no SI conversion — only locale/timezone
+                formatting at the render boundary.
+
+--------------------------------------------------------------------------------
+GATE (android triad: placeholder + build + lint + test)
+--------------------------------------------------------------------------------
+PLACEHOLDER_EXIT=0     (check-placeholders.ps1 -Path .../notifications -Language kotlin; COUNT=0, ALLOWED=4)
+BUILD_EXIT=0           (./gradlew :android:assembleDebug — BUILD SUCCESSFUL in 4m 29s)
+LINT_EXIT=0            (./gradlew :android:lintDebug — BUILD SUCCESSFUL in 14m 31s, abortOnError=true;
+                        com/teslasync/notifications is NOT in the lint.xml generated-surface suppression
+                        roots, so StringFormatMatches / NonObservableLocale / FlowOperatorInvokedInComposition
+                        / ViewModelConstructorInComposable stayed ACTIVE on this page and passed)
+TEST_EXIT=0            (./gradlew :android:testDebugUnitTest — BUILD SUCCESSFUL in 2m 8s)
+Note: settings.gradle.kts maps the app module to Gradle path :android (projectDir app/); the
+README's :app: alias resolves to :android: per the module's own comment. Baseline (pre-change)
+:android:help was independently confirmed GREEN before authoring.
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=52
+--------------------------------------------------------------------------------
+-- panels (10) — Material 3 Card/Surface regions --
+[COVERED] panel  Total        -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_Total)
+[COVERED] panel  Critical     -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_Critical)
+[COVERED] panel  Warnings     -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_Warnings)
+[COVERED] panel  Info         -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_Info)
+[COVERED] panel  Unread       -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_Unread)
+[COVERED] panel  Read-rate    -> AlertsListPage.kt::OverviewCard (KpiOverviewCard MetricCard label=translation_alerts_readRate)
+[COVERED] panel  GlassPanel7  -> AlertsListPage.kt::NoDataPanel (GlassPanel + EmptyState, web no-alerts panel)
+[COVERED] panel  GlassPanel8  -> AlertsListPage.kt::TrendChartPanel (ChartContainer GlassPanel, web Alert-Trend panel)
+[COVERED] panel  GlassPanel9  -> AlertsListPage.kt::ByTypePanel (ChartContainer GlassPanel, web Alerts-by-Type panel)
+[COVERED] panel  GlassPanel10 -> AlertsListPage.kt::PinnedPanel (GlassPanel, web pinned "Watching" panel)
+-- charts (2) — A3 native chart wrappers, never a webview --
+[COVERED] chart  BarChart     -> AlertsListPage.kt::TrendChartPanel -> BarChartWrapper (critical/warning/info series over alertsByDay)
+[COVERED] chart  PieChart     -> AlertsListPage.kt::ByTypeChart -> Compose Canvas donut (drawArc) + LegendRow over alertsByType
+-- data states (4) — implemented for the alert/rule/pin/detail feeds --
+[COVERED] state  loading      -> AlertsListPage.kt::AlertsListPageContent (alerts.isLoading -> AlertsLoading PageLoader)
+[COVERED] state  empty        -> AlertsListPage.kt::NoDataPanel + AlertListEmpty (no-alerts / no-search-match) + ChartContainer ChartStatus.Empty + DetailModal EmptyState
+[COVERED] state  error        -> AlertsListPage.kt::AlertsError (alerts.isError -> ErrorDisplay + Retry -> viewModel.retry)
+[COVERED] state  success      -> AlertsListPage.kt::AlertsBody (deriveAlertsListData -> overview/charts/pinned/list content)
+-- strings (36) — every visible literal from res/values via stringResource; web key names kept --
+[COVERED] string Active Rules                                          -> AlertsListPage.kt::OverviewCard secondary (translation_Active_Rules)
+[COVERED] string Alert Trend (7 Days)                                  -> AlertsListPage.kt::TrendChartPanel title (translation_Alert_Trend_7_Days)
+[COVERED] string Alert marked as read                                 -> AlertsListPage.kt::AlertsListPage snackbar markReadText (translation_Alert_marked_as_read)
+[COVERED] string Alerts                                                -> AlertsListPage.kt::AlertsChrome PageTitle (translation_Alerts)
+[COVERED] string Alerts by Type                                        -> AlertsListPage.kt::ByTypePanel title (translation_Alerts_by_Type)
+[COVERED] string All                                                   -> AlertsListPage.kt::FilterBar TabNavItem (translation_All)
+[COVERED] string Critical                                              -> AlertsListPage.kt::OverviewCard/FilterBar/TrendChartPanel (translation_Critical)
+[COVERED] string Info                                                  -> AlertsListPage.kt::OverviewCard/TrendChartPanel (translation_Info)
+[COVERED] string Last 7 Days                                           -> AlertsListPage.kt::OverviewCard secondary (translation_Last_7_Days)
+[COVERED] string Most Common                                           -> AlertsListPage.kt::OverviewCard secondary (translation_Most_Common)
+[COVERED] string No alerts                                             -> AlertsListPage.kt::NoDataPanel/AlertListEmpty title (translation_No_alerts)
+[COVERED] string No alerts match your search.                         -> AlertsListPage.kt::AlertListEmpty (translation_No_alerts_match_your_search)
+[COVERED] string Quiet hours                                          -> AlertsListPage.kt::AlertsChrome Badge (translation_Quiet_hours)
+[COVERED] string Quiet hours active                                   -> AlertsListPage.kt::OverviewCard secondary (translation_Quiet_hours_active)
+[COVERED] string Total                                                 -> AlertsListPage.kt::OverviewCard/FilterBar (translation_Total)
+[COVERED] string Unread                                                -> AlertsListPage.kt::OverviewCard/FilterBar/AlertRow (translation_Unread)
+[COVERED] string Warning                                               -> AlertsListPage.kt::TrendChartPanel series label (translation_Warning)
+[COVERED] string Warnings                                              -> AlertsListPage.kt::OverviewCard (translation_Warnings)
+[COVERED] string Your fleet is running smoothly. Alerts will appear... -> AlertsListPage.kt::AlertListEmpty (translation_Your_fleet_is_running_smoothly_Alerts_will_appear_here)
+[COVERED] string alerts.ack.success                                   -> AlertsListPage.kt::AlertsListPage snackbar ackText (translation_alerts_ack_success)
+[COVERED] string alerts.ack.undo                                      -> AlertsListPage.kt::AlertsListPage snackbar actionLabel (translation_alerts_ack_undo)
+[COVERED] string alerts.criticalCallout                               -> AlertsListPage.kt::OverviewCard footer InlineCallout message (translation_alerts_criticalCallout, %1$d=count)
+[COVERED] string alerts.filterLabel.search                            -> AlertsListPage.kt::AlertActiveChips (translation_alerts_filterLabel_search)
+[COVERED] string alerts.filterLabel.status                            -> AlertsListPage.kt::AlertActiveChips (translation_alerts_filterLabel_status)
+[COVERED] string alerts.noAlertsInRange                               -> AlertsListPage.kt::NoDataPanel (translation_alerts_noAlertsInRange)
+[COVERED] string alerts.overview                                      -> AlertsListPage.kt::OverviewCard header PanelTitle (translation_alerts_overview)
+[COVERED] string alerts.readRate                                      -> AlertsListPage.kt::OverviewCard MetricCard label (translation_alerts_readRate)
+[COVERED] string alerts.rule                                          -> AlertsListPage.kt::PinnedPanel rule fallback name (translation_alerts_rule)
+[COVERED] string alerts.searchPlaceholder                             -> AlertsListPage.kt::FilterBar SearchInput hint (translation_alerts_searchPlaceholder)
+[COVERED] string alerts.subtitle                                      -> AlertsListPage.kt::AlertsChrome BodyText (translation_alerts_subtitle)
+[COVERED] string alerts.timeline.empty                                -> AlertsListPage.kt::DetailModal EmptyState (translation_alerts_timeline_empty)
+[COVERED] string alerts.timeline.title                                -> AlertsListPage.kt::AlertRowActions button + DetailModal title (translation_alerts_timeline_title)
+[COVERED] string alerts.viewCritical                                  -> AlertsListPage.kt::OverviewCard footer InlineCallout actionLabel (translation_alerts_viewCritical)
+[COVERED] string common.disabled                                      -> AlertsListPage.kt::PinnedPanel Badge (translation_common_disabled)
+[COVERED] string common.enabled                                       -> AlertsListPage.kt::PinnedPanel Badge (translation_common_enabled)
+[COVERED] string pinned.section.watching                              -> AlertsListPage.kt::PinnedPanel PanelTitle (translation_pinned_section_watching)
+--------------------------------------------------------------------------------
+PARITY_COVERED=52
+================================================================================
+
+ACCEPTANCE
+[x] Every named panel implemented; every anonymous GlassPanel region (7-10) from the web source reproduced.
+[x] All 52 parity items render from the bound StateFlow state holders (alerts/rules/pins/detail + interaction).
+[x] loading / empty / error / success implemented for the alert feeds; charts have ChartStatus.Empty; detail modal has loading + empty.
+[x] All visible strings from strings.xml; zero hardcoded literals; key names match web (dotted -> translation_a_b_c, literal -> translation_Words).
+[x] Dark/dynamic theme (MaterialTheme + TeslaTokens, no hardcoded colors) + accessibility (semantics content descriptions on the unread dot) + observable locale (ConfigurationCompat) honored; Compose-native only (no webview cloning); SI-free domain formatted at the render boundary.
+[x] build + lint + test + placeholder gates GREEN; PARITY_COVERED==PARITY_REQUIRED (52).
+[x] android ledger row for page:notifications/AlertsList set covered (52/52).
+
+EXIT=0
+STATUS=DONE

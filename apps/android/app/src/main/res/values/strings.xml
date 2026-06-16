@@ -9021,4 +9021,26 @@
   <string name="translation_nav_noActiveNav">No active navigation. Start a route in your vehicle to see details here.</string>
   <string name="translation_nav_noHistory">No location history available for this vehicle.</string>
   <string name="translation_nav_noSnapshots">No location snapshots recorded yet.</string>
+  <!-- p3-android A7 notifications/AlertsListPage parity strings -->
+  <string name="translation_alerts_overview">Overview</string>
+  <string name="translation_alerts_subtitle">Live alert events from your fleet</string>
+  <string name="translation_alerts_readRate">Read rate</string>
+  <string name="translation_alerts_criticalCallout">%1$d critical alerts need attention</string>
+  <string name="translation_alerts_noAlertsInRange">No alerts in this range. Your fleet is running smoothly.</string>
+  <string name="translation_alerts_viewCritical">View critical</string>
+  <string name="translation_alerts_relativeMinutes">%1$dm ago</string>
+  <string name="translation_alerts_relativeHours">%1$dh ago</string>
+  <string name="translation_alerts_relativeDays">%1$dd ago</string>
+  <string name="translation_Active_Rules">Active Rules</string>
+  <string name="translation_Alert_Trend_7_Days">Alert Trend (7 Days)</string>
+  <string name="translation_Alert_marked_as_read">Alert marked as read</string>
+  <string name="translation_Alerts_by_Type">Alerts by Type</string>
+  <string name="translation_Last_7_Days">Last 7 Days</string>
+  <string name="translation_Most_Common">Most Common</string>
+  <string name="translation_No_alerts">No alerts</string>
+  <string name="translation_No_alerts_match_your_search">No alerts match your search.</string>
+  <string name="translation_Quiet_hours">Quiet hours</string>
+  <string name="translation_Quiet_hours_active">Quiet hours active</string>
+  <string name="translation_Your_fleet_is_running_smoothly_Alerts_will_appear_here">Your fleet is running smoothly. Alerts will appear here.</string>
+  <string name="translation_Mark_read">Mark read</string>
 </resources>
