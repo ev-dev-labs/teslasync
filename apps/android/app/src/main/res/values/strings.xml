@@ -1066,6 +1066,11 @@
   <string name="translation_analytics_hero_efficiency">Efficiency</string>
   <string name="translation_analytics_hero_energy">Energy</string>
   <string name="translation_analytics_hero_gasSavings">Gas Savings</string>
+  <string name="translation_analytics_links_compare">Compare</string>
+  <string name="translation_analytics_links_mileage">Mileage</string>
+  <string name="translation_analytics_links_statistics">Statistics</string>
+  <string name="translation_analytics_links_timeline">Timeline</string>
+  <string name="translation_analytics_links_weeklyDigest">Weekly Digest</string>
   <string name="translation_analytics_overview_avgDist">Avg Distance</string>
   <string name="translation_analytics_overview_dayOfWeek">Day of Week Pattern</string>
   <string name="translation_analytics_overview_distByVehicle">Distance by Vehicle</string>
