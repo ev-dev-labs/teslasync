@@ -1,0 +1,231 @@
+================================================================================
+p4-apple · P7 · page:maps/MapOverview — SwiftUI / HIG parity
+Log: .github/prompts/monorepo/logs/apple-page-maps-MapOverviewPage.log
+Run: 2026-06-16  (Xcode 26.5 / Build 17F42, swiftlint 0.63.3, xcodegen, pwsh 7, JDK 17)
+Web source: web/src/features/maps/pages/MapOverviewPage.tsx  (web route /live)
+================================================================================
+
+HONESTY COVENANT (binding — acknowledged verbatim)
+  1 No red-as-green  2 No scope narrowing  3 No skip-and-assume  4 No stubs as final
+  5 No parity shortcuts  6 No delegation  7 No predecessor bypass  8 No commit on red
+  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+PATH RESOLUTION NOTE (no silent drift)
+--------------------------------------------------------------------------------
+The generated prompt's "Output" path `apps/apple/TeslaSync/Features/Maps/**` does
+NOT match this repository. The real, build-compiled convention (project.yml compiles
+`apps/apple/Sources/**`, and every sibling P7 page — ChargingList, ChargingHeatmap,
+DriveDetail, BatteryCells, EnergyPage — lives under `apps/apple/Sources/Features/<Domain>/`)
+is:
+
+    apps/apple/Sources/Features/Maps/**
+
+The page was implemented there so it actually compiles into the iOS + macOS app
+targets (verified below: every MapOverview*.swift appears as a SwiftCompile unit in the
+iOS-Simulator build and the macOS build). `apps/apple/TeslaSync/Features/Maps/` is NOT a
+compiled source root in project.yml; placing files there would produce dead, uncompiled
+code. Faithful interpretation of the artifact's intent ("the Maps feature directory"), not
+scope narrowing — identical to the sibling ChargingHeatmap / Powershare P7 resolutions.
+
+Native route: the page is registered on the existing AppRoute `.maps` (pathSegment "maps",
+group .vehicle), which is the canonical native owner of the web /live live-map screen and was
+previously unregistered. No AppRoute enum change was needed.
+
+--------------------------------------------------------------------------------
+IMPLEMENTATION (SwiftUI + @Observable + KMP-facade seam; adaptive macOS + iOS)
+--------------------------------------------------------------------------------
+New (apps/apple/Sources/Features/Maps/):
+  MapOverviewModels.swift              SI value types (vehicle/position/snapshot), phase enum,
+                                       quick-link enum, freshness threshold (ADR-013)
+  MapOverviewFormat.swift              render-boundary formatters: number/coordinate/dateTime/time/
+                                       heading + speed/odometer via shared Units + unit-suffix keys
+  MapOverviewPageModel.swift           @Observable model + MapOverviewDataSource seam (useVehicles port),
+                                       load/refresh/selectVehicle, staleness, trail/playback geometry
+  MapOverviewPageModel.Sample.swift    Sample/Empty/NoVehicles/Failing/Stale data-source doubles (SI fixtures)
+  MapOverviewPage.swift                View: header (VehicleSelect + freshness) + 4-state phase switch + body
+  MapOverviewPage.MapSection.swift     GlassPanel1 live map (layer switcher/marker/popup/polyline) +
+                                       GlassPanel2 TSRoutePlayback + loading skeleton
+  MapOverviewPage.StatusSection.swift  4 metric cards + location-details panel + quick-links panel
+  MapOverviewPage.HistorySection.swift GlassPanel9 recent-history TSDataTable (time/lat/lon/speed/heading)
+  MapsRouteRegistration.swift          registers .maps (web /live)
+  MapOverviewPage.Previews.swift       4 #Preview states (success / empty / no-vehicle / error)
+New (apps/apple/Tests/Unit/Features/Maps/):
+  MapOverviewPageModelTests.swift      20 XCTest cases (states / selection / staleness / geometry / format / route)
+Edited:
+  Sources/TeslaSyncApp.swift           +MapsRouteRegistration.registry(base:) (navigation registration)
+  Localization/Localizable.xcstrings   +35 keys (34 mapOverview.* manifest + mapOverview.noVehicle for the
+                                       page-level empty); error.loadFailed already present and reused
+  apps/parity/apple-ledger.json        +2 rows (apple-macos + apple-ios, covered==required==55)
+
+Data source (web parity, ADR-004 — no networking in the view):
+  Manifest-declared hook:  useVehicles -> GET /vehicles
+  The web header VehiclePicker is the source of truth; the Apple seam keeps the same name at
+  the call site as MapOverviewDataSource.loadVehicles() -> [MapOverviewVehicle]. The web page
+  also fires three inline useQuery reads, ported as the same seam's methods:
+    loadLatestPosition  <- useQuery(position-latest)  / GET /vehicles/{id}/positions?limit=1  (15 s poll)
+    loadHistory         <- useQuery(position-history) / GET /vehicles/{id}/positions?limit=50
+    loadLocationSnapshot<- useQuery(location-latest)  / GET /location-snapshots/latest?vehicle_id
+  All bound through MapOverviewPageModel. The registered default is SampleMapOverviewDataSource
+  (an API-response-shaped SI fixture) until the live KMP-backed source is injected at composition
+  time (P1/S8) — identical to the sibling ChargingList / DriveDetail seams. NOT a stub: every panel
+  renders its populated success state from the bound model.
+
+SI discipline (ADR-005): speed stored m/s, odometer m, power W; converted to the user's units ONLY
+at the render boundary via the shared Units engine (Units.convertSpeed / convertDistance) + the
+mapOverview.speedUnitValue / mapOverview.distanceUnitValue suffix keys. Nothing non-SI is stored.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=55
+--------------------------------------------------------------------------------
+PANELS (9/9) — every web region; each an always-rendered TSGlassPanel / card with its own empty (ADR-011)
+[x] panel GlassPanel1     MapOverviewPage.MapSection.swift :: MapOverviewMapSection (TSGlassPanel live map / TSEmptyState)
+[x] panel GlassPanel2     MapOverviewPage.MapSection.swift :: MapOverviewPlaybackSection (TSGlassPanel TSRoutePlayback / TSEmptyState)
+[x] panel Current-Speed   MapOverviewPage.StatusSection.swift :: MapOverviewStatusSection -> TSMetricCard("mapOverview.currentSpeed")
+[x] panel Heading         MapOverviewPage.StatusSection.swift :: MapOverviewStatusSection -> TSMetricCard("mapOverview.heading")
+[x] panel Lat-Lon         MapOverviewPage.StatusSection.swift :: MapOverviewStatusSection -> TSMetricCard("mapOverview.latLon")
+[x] panel Last-Updated    MapOverviewPage.StatusSection.swift :: MapOverviewStatusSection -> TSMetricCard("mapOverview.lastUpdated")
+[x] panel GlassPanel7     MapOverviewPage.StatusSection.swift :: MapOverviewLocationDetailsSection (home/work/HomeLink/odometer / empty)
+[x] panel GlassPanel8     MapOverviewPage.StatusSection.swift :: MapOverviewQuickLinksSection (nav buttons)
+[x] panel GlassPanel9     MapOverviewPage.HistorySection.swift :: MapOverviewHistorySection (TSDataTable / TSEmptyState)
+
+CHARTS (0/0) — none in the web source.
+
+MAPS (7/7) — all via the P3 MapKit wrappers (TSMapView / TSRoutePlayback), never a web view
+[x] map MapLayerSwitcher  MapOverviewPage.MapSection.swift :: MapOverviewMapSection.mapBody -> TSMapLayerSwitcher(style: styleBinding)
+[x] map MapContainer      MapOverviewPage.MapSection.swift :: MapOverviewMapSection.mapBody -> TSMapView(camera:annotations:route:style:)
+[x] map MapTileLayer      MapOverviewPage.MapSection.swift :: TSMapView style: model.mapStyle (TSMapStyle standard/hybrid/imagery)
+[x] map Marker            MapOverviewPage.MapSection.swift :: MapOverviewMapSection.annotations -> TSMapAnnotation(systemImage:"car.fill")
+[x] map Popup             MapOverviewPage.MapSection.swift :: MapOverviewMapSection.markerTitle (vehicle-name annotation callout)
+[x] map Polyline          MapOverviewPage.MapSection.swift :: TSMapView route: model.trailCoordinates
+[x] map RoutePlayback     MapOverviewPage.MapSection.swift :: MapOverviewPlaybackSection -> TSRoutePlayback(route: model.playbackCoordinates)
+
+STATES (4/4) — implemented for the vehicles + position sources; every panel also resolves its own empty
+[x] state loading  MapOverviewPage.swift phase==.loading -> MapOverviewSkeleton (TSSkeleton blocks; manifest loading->redacted/ProgressView)
+[x] state empty    MapOverviewPage.swift phase==.empty -> emptyView TSEmptyState("mapOverview.noVehicle") (ContentUnavailableView);
+                   plus per-panel TSEmptyState (map / playback / location-details / history) inside the success state
+[x] state error    MapOverviewPage.swift phase==.error -> errorView TSErrorDisplay(title:"error.loadFailed", onRetry:) + Retry
+[x] state success  MapOverviewPage.swift phase==.ready -> readyView (all 9 panels render from the bound @Observable model)
+
+STRINGS (35/35) — all resolve from Localization/Localizable.xcstrings; web key names verbatim; zero hardcoded literals
+[x] string error.loadFailed              MapOverviewPage.swift :: errorView TSErrorDisplay(title:)
+[x] string mapOverview.atHome            MapOverviewPage.StatusSection.swift :: homeRow
+[x] string mapOverview.atWork            MapOverviewPage.StatusSection.swift :: workRow
+[x] string mapOverview.autoRefresh       MapOverviewPage.StatusSection.swift :: lastUpdated TSMetricCard caption
+[x] string mapOverview.colHeading        MapOverviewPage.HistorySection.swift :: columns (heading)
+[x] string mapOverview.colLat            MapOverviewPage.HistorySection.swift :: columns (lat)
+[x] string mapOverview.colLon            MapOverviewPage.HistorySection.swift :: columns (lon)
+[x] string mapOverview.colSpeed          MapOverviewPage.HistorySection.swift :: columns (speed)
+[x] string mapOverview.colTime           MapOverviewPage.HistorySection.swift :: columns (time)
+[x] string mapOverview.currentSpeed      MapOverviewPage.StatusSection.swift :: TSMetricCard
+[x] string mapOverview.distanceUnitValue MapOverviewFormat.swift :: distanceUnitLabel (odometer suffix)
+[x] string mapOverview.geofences         MapOverviewModels.swift :: MapOverviewQuickLink.titleKey(.geofences)
+[x] string mapOverview.heading           MapOverviewPage.StatusSection.swift :: TSMetricCard
+[x] string mapOverview.homelinkNearby    MapOverviewPage.StatusSection.swift :: homelinkRow
+[x] string mapOverview.lastUpdated       MapOverviewPage.StatusSection.swift :: TSMetricCard
+[x] string mapOverview.latLon            MapOverviewPage.StatusSection.swift :: TSMetricCard
+[x] string mapOverview.locationDetails   MapOverviewPage.StatusSection.swift :: LocationDetails TSPanelTitle
+[x] string mapOverview.locations         MapOverviewModels.swift :: MapOverviewQuickLink.titleKey(.locations)
+[x] string mapOverview.navRoute          MapOverviewModels.swift :: MapOverviewQuickLink.titleKey(.navigationRoute)
+[x] string mapOverview.no                MapOverviewPage.StatusSection.swift :: triState / homelinkRow TSBadge
+[x] string mapOverview.noGps             MapOverviewPage.swift :: readyView GPS TSAlertBanner
+[x] string mapOverview.noHistory         MapOverviewPage.MapSection.swift (playback empty) + MapOverviewPage.HistorySection.swift (table empty)
+[x] string mapOverview.noLocation        MapOverviewPage.MapSection.swift (map empty) + MapOverviewPage.StatusSection.swift (details empty)
+[x] string mapOverview.odometer          MapOverviewPage.StatusSection.swift :: odometerRow
+[x] string mapOverview.pageTitle         MapOverviewPage.swift :: .navigationTitle + MapOverviewSkeleton a11y label
+[x] string mapOverview.playbackLabel     MapOverviewPage.MapSection.swift :: TSRoutePlayback .accessibilityLabel
+[x] string mapOverview.quickLinks        MapOverviewPage.StatusSection.swift :: QuickLinks TSPanelTitle
+[x] string mapOverview.recentHistory     MapOverviewPage.HistorySection.swift :: TSPanelTitle
+[x] string mapOverview.recentPlayback    MapOverviewPage.MapSection.swift :: MapOverviewPlaybackSection TSPanelTitle
+[x] string mapOverview.speedUnitValue    MapOverviewFormat.swift :: speedUnitLabel (speed suffix)
+[x] string mapOverview.subtitle          MapOverviewPage.swift :: titleBlock Text("mapOverview.subtitle")
+[x] string mapOverview.title             MapOverviewPage.swift :: titleBlock TSPageTitle + emptyView
+[x] string mapOverview.unknown           MapOverviewPage.StatusSection.swift :: triState TSBadge
+[x] string mapOverview.vehicle           MapOverviewPageModel.vehicleName + MapSection.markerTitle + Page vehicle-picker a11y
+[x] string mapOverview.yes               MapOverviewPage.StatusSection.swift :: triState / homelinkRow TSBadge
+--------------------------------------------------------------------------------
+PARITY_COVERED=55
+PARITY_REQUIRED=55
+PARITY_OK=(PARITY_COVERED==PARITY_REQUIRED)=true
+
+--------------------------------------------------------------------------------
+GATE — apple triad (lint + placeholder + build + test)
+--------------------------------------------------------------------------------
+$ cd apps/apple && swiftlint --strict   (scoped to the new files via the project rule set
+    with the config's `included:` override removed, so the path argument applies)
+    Sources/Features/Maps  Tests/Unit/Features/Maps
+  Done linting! Found 0 violations, 0 serious in 11 files.
+LINT_EXIT=0
+
+$ pwsh ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Maps -Language swift
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+  (also scanned Tests/Unit/Features/Maps -> PLACEHOLDER_COUNT=0)
+PLACEHOLDER_EXIT=0
+
+$ apps/shared/gradlew :core:assembleSharedXCFramework   (KMP core -> Shared.xcframework, ADR-004)
+  BUILD SUCCESSFUL in 20m 11s
+  Shared.xcframework staged -> apps/apple/Frameworks/Shared.xcframework (ios-arm64, ios-arm64-simulator, macos-arm64)
+SHARED_FRAMEWORK_EXIT=0
+
+$ xcodegen generate                              -> Created TeslaSync.xcodeproj
+$ xcodebuild -scheme TeslaSync -configuration Debug -destination 'generic/platform=iOS Simulator' \
+      ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=NO build
+  ** BUILD SUCCEEDED **
+  (iOS arm64: all 10 MapOverview*.swift + MapsRouteRegistration.swift compiled as SwiftCompile units,
+   INCLUDING the `#if os(iOS)` horizontalSizeClass / isCompact adaptive branch; TeslaSyncApp.swift clean;
+   zero diagnostics attributable to this change)
+BUILD_EXIT=0   (iOS-Simulator)
+
+$ xcodebuild -scheme TeslaSync ... test -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+      -only-testing:TeslaSyncTests/MapOverviewPageModelTests ARCHS=arm64 EXCLUDED_ARCHS=x86_64 CODE_SIGNING_ALLOWED=NO
+  Test Suite 'MapOverviewPageModelTests' passed.  Executed 20 tests, with 0 failures (0 unexpected)
+  ** TEST SUCCEEDED **
+TEST_EXIT=0
+
+$ xcodebuild -scheme TeslaSync-macOS -configuration Debug -destination 'platform=macOS,arch=arm64' \
+      ARCHS=arm64 CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" build
+  ** BUILD SUCCEEDED **
+  (macOS arm64: all 9 MapOverview*.swift compiled as SwiftCompile units in target TeslaSync-macOS,
+   the TeslaSync-macOS app linked; the macOS path of the `#if os(iOS)` adaptive branch (isCompact=false)
+   compiled clean; zero diagnostics attributable to this change)
+MACOS_BUILD_EXIT=0
+
+--------------------------------------------------------------------------------
+PRE-EXISTING ENVIRONMENT ISOLATION (full disclosure — NOT this change; NOT red-as-green)
+--------------------------------------------------------------------------------
+1) Full-project `swiftlint --strict` (config `included:` set) additionally reports TWO
+   line_length violations in apps/apple/TeslaSync/feature-views/AnomalyInlineRow.Previews.swift
+   (:37 and :89). That file is UNMODIFIED by this change (verified via `git status --porcelain`)
+   and is OUTSIDE this artifact's allowed-files scope (Maps/** + nav registration + xcstrings +
+   log). The scoped lint above proves the 11 new files are clean (0/0). Fixing the pre-existing
+   file would breach allowed-files scope, so it is left untouched.
+2) Code signing was disabled (CODE_SIGNING_ALLOWED=NO) because no development certificate exists
+   on this runner — an environment constraint unrelated to the page. The macOS app/widget targets
+   carry hardened-runtime entitlements that require a signing identity; CODE_SIGN_ENTITLEMENTS=""
+   lets the macOS app target build unsigned for verification.
+3) Shared runner: other parallel slots build the same project concurrently (load avg ~90), which
+   only slows wall-clock build time; it does not affect correctness.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:maps/MapOverview set covered for both targets
+  apple-macos  status=done coveredCount=55 requiredCount=55
+  apple-ios    status=done coveredCount=55 requiredCount=55
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      55/55 covered (panels 9, charts 0, maps 7, states 4, strings 35)
+LINT:        0 violations on the 11 new files (--strict, project rule set)
+PLACEHOLDER: 0 (ADR-011); 0 allowed
+BUILD:       iOS-Simulator app ** BUILD SUCCEEDED **; macOS app ** BUILD SUCCEEDED **; 0 diagnostics attributable to this change
+TEST:        20/20 passed (MapOverviewPageModelTests)
+The page deliverable is complete and independently verified green on BOTH iOS (build + test) and
+macOS (build) — the shared SwiftUI source (ADR-002) compiles clean on both platforms with zero
+diagnostics attributable to this change. All four gates (lint, placeholder, build, test) are green.
+
+EXIT=0
+STATUS=DONE

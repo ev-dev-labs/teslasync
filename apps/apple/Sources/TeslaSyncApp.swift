@@ -140,6 +140,7 @@ struct TeslaSyncApp: App {
         registry = ChargingHeatmapRouteRegistration.registry(base: registry)
         registry = ChargingListRouteRegistration.registry(base: registry)
         registry = LocationsRouteRegistration.registry(base: registry, onViewDrives: { selection = .driving })
+        registry = MapsRouteRegistration.registry(base: registry)
         registry = GlanceRouteRegistration.registry(base: registry, onOpenApp: { selection = .dashboard })
         registry = QuickStatsRouteRegistration.registry(base: registry, onOpenDashboard: { selection = .dashboard })
         registry = DashboardRouteRegistration.registry(
