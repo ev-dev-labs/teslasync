@@ -1,0 +1,138 @@
+================================================================================
+P3-ANDROID · A7 · page:driving/RouteEfficiency — evidence log
+Native Jetpack Compose / Material 3 port of web RouteEfficiencyPage
+Source: web/src/features/driving/pages/RouteEfficiencyPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/driving/**
+Package: io.teslasync.android.driving.routeefficiency
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 DrivesList / Statistics precedents)
+  RouteEfficiencyPageModel.kt      framework-free: registration ids; the decode of the
+                                   `/analytics/route-efficiency` `{ routes:[...] }` SI envelope
+                                   (parseRouteEfficiency, snake_case per internal/api/routeeff/
+                                   handler.go) into null-safe RouteSummary rows; the fleet
+                                   derivations (totalTrips, best/avg/worst across routes,
+                                   mostDriven); comparisonBars (web chartData: sort-by-avg,
+                                   slice(0,10), truncated start→end label, display-rounded);
+                                   efficiencyGrade (web efficiencyVariant); RouteEfficiencyDisplayPrefs
+                                   (web useUnits: distance unit + Wh/km↔Wh/mi + locale/precision);
+                                   RouteEfficiencyDateRange.trailingMonth (web default 30-day window);
+                                   mapData; recordRouteEfficiencyOpened (view.opened, P1/S11).
+  RouteEfficiencyPageSource.kt     seam over DrivingRepository.routeEfficiency (web useRouteEfficiency,
+                                   GET /analytics/route-efficiency [vehicle_id,start,end]) +
+                                   SettingsStore.settings + SelectedVehicleStore. No HTTP in the view.
+  RouteEfficiencyPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<RouteEfficiencyModel>>
+                                   gated on the active vehicle (web useSelectedVehicle, enabled:!!vehicleId)
+                                   and the date range; displayPrefs StateFlow; setRange / refresh / retry;
+                                   asUiState(isEmpty = routes empty) so loading/empty/error/success are all
+                                   reachable from the single source.
+  RouteEfficiencyPageIcons.kt      lucide ports (MapPin reused from DataDisplayGlyphs; ArrowRight /
+                                   TrendingUp / Activity authored as 24×24 stroked vectors).
+  RouteEfficiencyPage.kt           stateless Compose render layer: chrome (PageTitle/subtitle +
+                                   DataFreshness + VehicleSelect + DateRangeFilter), then the
+                                   loading/error/loaded switch and the four panels + the comparison
+                                   chart. SI→display conversion only here (prefs.distanceFromKm /
+                                   efficiencyDisplay / number / integer; Phase-48 SI-canonical).
+  RouteEfficiencyPageHost.kt       PageHosts.register("routeEfficiency"){ RouteEfficiencyRoute() },
+                                   wired once at process start by TeslaSyncApplication.onCreate.
+
+WIRING / ALLOWED FILES TOUCHED
+  apps/android/app/src/main/kotlin/com/teslasync/driving/RouteEfficiencyPage*.kt   (6 new files)
+  apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt      (host register call — NavHost registration)
+  apps/android/app/src/main/res/values/strings.xml        + values-he + values-ar  (added the one missing key
+                                   translation_routeEfficiency_comparison_aria; the other 18 keys already shipped)
+  apps/parity/android-ledger.json                                                  (page:driving/RouteEfficiency row → covered)
+  .github/prompts/monorepo/logs/android-page-driving-RouteEfficiencyPage.log       (this log)
+
+NOTE ON EMPTY-STATE FIDELITY (Honesty Covenant #9 — documented, not silent)
+  The web page never gates its whole body: it always renders the summary card (zeros), hides the
+  comparison chart below 2 routes, renders no route cards, and shows the Route-Metrics EmptyState.
+  The native surface keeps that contract — loading/error are the only full-body switches; otherwise
+  the body renders, the comparison ChartContainer shows its Empty surface (<2 routes), the route-cards
+  region is omitted (web renders none), and the Route-Metrics panel shows its EmptyState. So the
+  declared `empty` data state is genuinely reachable via two empty-state composables, never a blank
+  region. AI route-efficiency suggestions (web AIRouteEfficiencySuggestions) are a separate, withAiFeature
+  -gated parity unit and out of scope here (no panel/string for it in this manifest record).
+
+GATE (android triad: placeholder + build + lint + test)
+  ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/driving -Language kotlin
+      PLACEHOLDER_ALLOWED=4  (2 here: the toDouble()→"toDo" false positives are marked
+                              // parity:allow; 2 pre-existing in DrivesList) ; PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:compileDebugKotlin → BUILD SUCCESSFUL in 3m 30s (clean; only pre-existing
+      warnings: unrelated non-positional-format strings + an ApiLogsPage deprecation)
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 2m 35s
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 12m 12s (lint-results-debug.html written,
+      abortOnError=true, no errors; MissingTranslation/ExtraTranslation disabled per build.gradle.kts L114)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 1m 39s
+  TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=29
+
+PANELS (4) — every named panel as a Material 3 Card/Surface (GlassPanel)
+  [01] panel  GlassPanel1                  RouteEfficiencyPage.kt:412  RouteCard() GlassPanel — per-route card: IconBox+endpoints+ArrowRight, avg-efficiency Badge(efficiencyGrade), best→avg→worst EfficiencyBar, best/avg/worst values+labels
+  [02] panel  GlassPanel2                  RouteEfficiencyPage.kt:263  SummaryPanel() GlassPanel — Routes / Total-Trips / Best / Avg via AnimatedNumber (web summary GlassPanel)
+  [03] panel  Route-Efficiency-Comparison  RouteEfficiencyPage.kt:337  ComparisonChartPanel() ChartContainer(title=translation_routeEfficiency_comparison)
+  [04] panel  GlassPanel4                  RouteEfficiencyPage.kt:554  RouteMetricsPanel() GlassPanel — 4 MetricBars or the noData EmptyState
+
+CHARTS (2) — A3 native Vico wrappers, never a webview
+  [05] chart  ChartContainer  RouteEfficiencyPage.kt:337  ChartContainer(status=Ready/Empty, dataTable mirror, accessibleDescription)
+  [06] chart  BarChart        RouteEfficiencyPage.kt:381  BarChartWrapper(series=best/avg/worst, xLabels=route names) — web horizontal <BarChart>
+
+DATA STATES (4) — for the single useRouteEfficiency source (VM asUiState(isEmpty = routes empty))
+  [07] state  loading  RouteEfficiencyPage.kt:177  state.isLoading -> RouteEfficiencyLoading() → PageLoader (L225)
+  [08] state  empty    RouteEfficiencyPage.kt:341  comparison ChartStatus.Empty (L341) + RouteMetricsPanel EmptyState (L614) on the empty-routes feed
+  [09] state  error    RouteEfficiencyPage.kt:178  state.isError -> RouteEfficiencyError(onRetry) → ErrorDisplay+Retry (L234)
+  [10] state  success  RouteEfficiencyPage.kt:179  else -> RouteEfficiencyBody(state.data) (L245) — all four panels render
+
+STRINGS (19) — every visible literal resolves from res/values/strings.xml; key names match web
+  [11] string common.noData                  RouteEfficiencyPage.kt:342  translation_common_noData (also L615)
+  [12] string routeEfficiency.avg            RouteEfficiencyPage.kt:488  translation_routeEfficiency_avg
+  [13] string routeEfficiency.avgEfficiency  RouteEfficiencyPage.kt:293  translation_routeEfficiency_avgEfficiency
+  [14] string routeEfficiency.avgLabel       RouteEfficiencyPage.kt:335  translation_routeEfficiency_avgLabel (also L475, L587)
+  [15] string routeEfficiency.best           RouteEfficiencyPage.kt:334  translation_routeEfficiency_best (also L474)
+  [16] string routeEfficiency.bestEfficiency RouteEfficiencyPage.kt:287  translation_routeEfficiency_bestEfficiency
+  [17] string routeEfficiency.bestLabel      RouteEfficiencyPage.kt:579  translation_routeEfficiency_bestLabel
+  [18] string routeEfficiency.col.route      RouteEfficiencyPage.kt:346  translation_routeEfficiency_col_route
+  [19] string routeEfficiency.comparison     RouteEfficiencyPage.kt:339  translation_routeEfficiency_comparison
+  [20] string routeEfficiency.comparison.aria RouteEfficiencyPage.kt:340 translation_routeEfficiency_comparison_aria (key ADDED to res/values*/strings.xml)
+  [21] string routeEfficiency.metrics        RouteEfficiencyPage.kt:569  translation_routeEfficiency_metrics
+  [22] string routeEfficiency.mostDrivenLabel RouteEfficiencyPage.kt:605 translation_routeEfficiency_mostDrivenLabel
+  [23] string routeEfficiency.routes         RouteEfficiencyPage.kt:273  translation_routeEfficiency_routes
+  [24] string routeEfficiency.subtitle       RouteEfficiencyPage.kt:200  translation_routeEfficiency_subtitle
+  [25] string routeEfficiency.title          RouteEfficiencyPage.kt:198  translation_routeEfficiency_title
+  [26] string routeEfficiency.totalTrips     RouteEfficiencyPage.kt:279  translation_routeEfficiency_totalTrips
+  [27] string routeEfficiency.trips          RouteEfficiencyPage.kt:487  translation_routeEfficiency_trips (also L608)
+  [28] string routeEfficiency.worst          RouteEfficiencyPage.kt:336  translation_routeEfficiency_worst (also L476)
+  [29] string routeEfficiency.worstLabel     RouteEfficiencyPage.kt:597  translation_routeEfficiency_worstLabel
+
+PARITY_COVERED=29
+
+ACCEPTANCE
+  [x] Every named panel implemented (GlassPanel1 route card, GlassPanel2 summary, Route-Efficiency-Comparison,
+      GlassPanel4 metrics); every anonymous region from the web source reproduced (chrome title/subtitle,
+      vehicle scope picker, date range filter, gradient best→avg→worst efficiency bar, best/avg/worst figures).
+  [x] All 29 parity items render from the bound StateFlow state holder (state + displayPrefs + range), folded
+      by the framework-free model (parseRouteEfficiency / comparisonBars / RouteEfficiencyDisplayPrefs).
+  [x] loading / empty / error / success implemented for the useRouteEfficiency source.
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web (the one
+      missing key routeEfficiency.comparison.aria added to res/values*/strings.xml; lint clean).
+  [x] Dark/dynamic theme via MaterialTheme + TeslaTokens; ≥48dp targets; semantics content descriptions on the
+      comparison chart (accessibleDescription) + EmptyState; SI units honored at the display boundary
+      (prefs.distanceFromKm / efficiencyDisplay); Compose-native only (no webview).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (29).
+  [x] android ledger row for page:driving/RouteEfficiency set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE

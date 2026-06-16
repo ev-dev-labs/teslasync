@@ -5466,6 +5466,7 @@
   <string name="translation_routeEfficiency_bestLabel">Best Efficiency</string>
   <string name="translation_routeEfficiency_col_route">Route</string>
   <string name="translation_routeEfficiency_comparison">Route Efficiency Comparison</string>
+  <string name="translation_routeEfficiency_comparison_aria">Per-route best, average, and worst efficiency comparison bar chart</string>
   <string name="translation_routeEfficiency_metrics">Route Metrics</string>
   <string name="translation_routeEfficiency_mostDrivenLabel">Most Driven Route</string>
   <string name="translation_routeEfficiency_routes">Routes</string>
