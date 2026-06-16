@@ -42,6 +42,8 @@ public sealed partial class TsStatCard : ContentControl
     public TsStatCard()
     {
         IsTabStop = false;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalContentAlignment = HorizontalAlignment.Stretch;
         Rebuild();
     }
 
@@ -128,6 +130,8 @@ public sealed partial class TsMetricCard : ContentControl
     public TsMetricCard()
     {
         IsTabStop = false;
+        HorizontalAlignment = HorizontalAlignment.Stretch;
+        HorizontalContentAlignment = HorizontalAlignment.Stretch;
         Rebuild();
     }
 

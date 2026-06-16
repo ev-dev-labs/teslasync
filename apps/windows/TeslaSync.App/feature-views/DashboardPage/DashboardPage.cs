@@ -168,6 +168,9 @@ public sealed partial class DashboardPage : UserControl, IDisposable
         _customizeHintBanner.ActionInvoked += OnCustomizeClick;
         _themeBanner.Dismissed += (_, _) => _themeDismissed = true;
         _customizeHintBanner.Dismissed += (_, _) => _customizeHintDismissed = true;
+        // Dashboard customization (widget layout) is not yet ported; suppress the customize hint so the page never
+        // prompts for an unreachable mode (the Customize entry point is omitted from the toolbar).
+        _customizeHintDismissed = true;
         _errorState.ActionInvoked += OnRetryInvoked;
 
         _viewModel.PropertyChanged += OnViewModelChanged;
@@ -294,9 +297,8 @@ public sealed partial class DashboardPage : UserControl, IDisposable
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
         row.Children.Add(_refreshButton);
-        row.Children.Add(_kioskButton);
-        row.Children.Add(_customizeButton);
-        row.Children.Add(_printButton);
+        // Customize / Kiosk / Print raise CommandRequested into widget-layout / kiosk / print subsystems that are
+        // not yet ported; omit them so the toolbar exposes no non-functional affordances (web parity tracked separately).
         return row;
     }
 

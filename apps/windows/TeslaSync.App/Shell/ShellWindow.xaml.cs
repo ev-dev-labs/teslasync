@@ -1043,8 +1043,13 @@ public sealed partial class ShellWindow : Window
 
         // ── Batch 2: more live-data wiring (admin, charging, vehicle-systems, analytics). ───────────────
         _viewModel.PageFactory.Register("PeriodCompare", () =>
-            new FeatureViews.Analytics.PeriodComparePage(
-                new FeatureViews.Analytics.PeriodCompareClientFeed(_data.Api), _data.Localizer));
+        {
+            var page = new FeatureViews.Analytics.PeriodComparePage(
+                new FeatureViews.Analytics.PeriodCompareClientFeed(_data.Api), _data.Localizer);
+            // The disambiguation banner's "Open Fleet comparison" affordance navigates to the FleetCompare route.
+            page.FleetComparisonRequested += (_, _) => NavigateTo("FleetCompare");
+            return page;
+        });
 
         _viewModel.PageFactory.Register("ChargingCurve", () =>
             new FeatureViews.Charging.ChargingCurvePage(
@@ -1313,6 +1318,8 @@ public sealed partial class ShellWindow : Window
                 FeatureViews.Settings.EmptySettingsFeed.Instance, _data.Localizer, surfaces);
             page.NavigationRequested += (_, route) => NavigateTo(route);
             page.TourLauncherRequested += (_, _) => NavigateTo("onboarding");
+            // "Restart checklist" re-opens the onboarding checklist (web restartChecklist → /onboarding).
+            page.ChecklistRestartRequested += (_, _) => NavigateTo("onboarding");
             return page;
         });
 
