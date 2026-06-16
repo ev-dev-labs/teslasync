@@ -13,6 +13,7 @@ public enum AppRouteParser {
         "/drive-score": .driving,
         "/statistics": .analytics,
         "/analytics/tco": .tco,
+        "/analytics/range": .projectedRange,
         "/tco": .tco,
         "/location": .maps,
         "/alerts": .notifications,

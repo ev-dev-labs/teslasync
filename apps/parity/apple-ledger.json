@@ -1045,6 +1045,24 @@
       "requiredCount": 9,
       "promptId": "p4-apple/P7/page:admin/SecurityAccess",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-admin-SecurityAccessPage.log"
+    },
+    {
+      "unitId": "page:battery/ProjectedRange",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 47,
+      "requiredCount": 47,
+      "promptId": "p4-apple/P7/page:battery/ProjectedRange",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-ProjectedRangePage.log"
+    },
+    {
+      "unitId": "page:battery/ProjectedRange",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 47,
+      "requiredCount": 47,
+      "promptId": "p4-apple/P7/page:battery/ProjectedRange",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-battery-ProjectedRangePage.log"
     }
   ]
 }

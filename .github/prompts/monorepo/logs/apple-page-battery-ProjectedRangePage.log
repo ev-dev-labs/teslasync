@@ -1,0 +1,195 @@
+================================================================================
+P4-APPLE · P7 · page:battery/ProjectedRange — SwiftUI / HIG parity
+Artifact: .github/prompts/monorepo/p4-apple/pages/
+          p4-apple-P7-page-battery-ProjectedRangePage.prompt.md
+Web source: web/src/features/battery/pages/ProjectedRangePage.tsx  (route /analytics/range)
+Target(s): apple-macos + apple-ios (adaptive single SwiftUI source, ADR-002/006)
+================================================================================
+
+--------------------------------------------------------------------------------
+DELIVERABLE (native SwiftUI, no web cloning; one shared source for macOS + iOS)
+--------------------------------------------------------------------------------
+apps/apple/Sources/Features/Battery/
+  ProjectedRangeModels.swift            SI value types (ProjectedRangeSnapshot,
+                                        RangeFactor, RangeCurvePoint, EfficiencyBucket,
+                                        RangeScenario) + derived guards / matrix lookup
+  ProjectedRangeDerivations.swift       pure what-if interpolation, temp/speed buckets,
+                                        efficiency tone, gauge color, scenario/factor icons
+  ProjectedRangeFormat.swift            display formatters (enum ProjectedRangePageFormat)
+  ProjectedRangePageModel.swift         @Observable model + ProjectedRangeDataSource seam
+                                        + ProjectedRangePhase (loading/empty/error/ready)
+  ProjectedRangePageModel.Sample.swift  KMP-shaped fixture + empty/empty-sections/failing seams
+  ProjectedRangePage.swift              View scaffold: header, phase switch, adaptive layout
+  ProjectedRangePage.Charts.swift       RadialGauge + AreaChart sections (Swift Charts wrappers)
+  ProjectedRangePage.Sections.swift     hero, scenarios, matrix, what-if, factors, tips
+  ProjectedRangeRouteRegistration.swift registers .projectedRange route host
+apps/apple/Sources/App/AppRoute.swift            +case .projectedRange (path projected-range,
+                                                  group .energy, icon chart.line.uptrend.xyaxis)
+apps/apple/Sources/App/AppRouteParser.swift      + alias /analytics/range -> .projectedRange
+apps/apple/Sources/TeslaSyncApp.swift            + ProjectedRangeRouteRegistration.registry(...)
+apps/apple/Localization/Localizable.xcstrings    +27 range.* keys + range.drives/range.noData
+                                                  + route.projectedRange
+apps/apple/Tests/Unit/Features/Battery/ProjectedRangePageModelTests.swift   27 tests
+
+Naming note: web type `RangeProjection` and the existing dashboard-widget enum
+`ProjectedRangeFormat` already exist in the app module; this page's structs were named
+`ProjectedRangeSnapshot` and `ProjectedRangePageFormat` to avoid module redeclarations.
+
+Architecture: SwiftUI View + @Observable model driven by a KMP-core-ready data-source
+seam (ADR-004 — zero networking in the view body). The model holds SI only (metres, m/s,
+Celsius, watt-hours, Wh/m); the user's unit preference is applied ONLY at the render
+boundary through the shared `Units` facade + `useUnits` env (ADR-005). Glass surfaces use
+native materials; tokens from the P2 catalog; charts use the P3 Swift Charts wrappers
+(TSRadialGauge / TSAreaChart) — never a WKWebView; every visible literal resolves from
+`Localizable.xcstrings` (ADR-014); a11y labels/traits on panels + charts (ADR-015).
+
+================================================================================
+=== PARITY ===
+PARITY_REQUIRED=47
+--------------------------------------------------------------------------------
+PANELS (14) — each implemented as a HIG card / GroupBox / section
+[x] panel  Your-Estimate     ProjectedRangePage.Sections.swift :: ProjectedRangeHeroSection.yourEstimate (TSMetricCard "range.yourEstimate")
+[x] panel  Tesla-Estimate    ProjectedRangePage.Sections.swift :: ProjectedRangeHeroSection.teslaEstimate (TSMetricCard "range.teslaEstimate")
+[x] panel  Battery           ProjectedRangePage.Sections.swift :: ProjectedRangeHeroSection.batteryPercent (TSMetricCard "range.battery")
+[x] panel  Usable-Capacity   ProjectedRangePage.Sections.swift :: ProjectedRangeHeroSection.usableCapacity (TSMetricCard "range.usableCapacity")
+[x] panel  Health-Factor     ProjectedRangePage.Sections.swift :: ProjectedRangeHeroSection.healthFactor (TSMetricCard "range.healthFactor")
+[x] panel  GlassPanel6       ProjectedRangePage.Charts.swift   :: ProjectedRangeGaugeSection (TSGlassPanel + RadialGauge + accuracy note)
+[x] panel  GlassPanel7       ProjectedRangePage.Charts.swift   :: ProjectedRangeCurveSection (TSGlassPanel + AreaChart)
+[x] panel  GlassPanel8       ProjectedRangePage.Sections.swift :: ProjectedRangeScenariosSection (outer TSGlassPanel "range.scenarios")
+[x] panel  GlassPanel9       ProjectedRangePage.Sections.swift :: ProjectedRangeScenarioCard (per-scenario TSCard)
+[x] panel  GlassPanel10      ProjectedRangePage.Sections.swift :: ProjectedRangeMatrixSection (TSGlassPanel heatmap grid)
+[x] panel  GlassPanel11      ProjectedRangePage.Sections.swift :: ProjectedRangeWhatIfSection (TSGlassPanel sliders + result)
+[x] panel  GlassPanel12      ProjectedRangePage.Sections.swift :: ProjectedRangeFactorsSection (outer TSGlassPanel "range.factors")
+[x] panel  GlassPanel13      ProjectedRangePage.Sections.swift :: ProjectedRangeFactorCard (per-factor TSCard)
+[x] panel  GlassPanel14      ProjectedRangePage.Sections.swift :: ProjectedRangeTipsSection (TSGlassPanel "range.tips")
+--------------------------------------------------------------------------------
+CHARTS (2) — native Swift Charts wrappers (P3), never a WKWebView
+[x] chart  RadialGauge       ProjectedRangePage.Charts.swift :: ProjectedRangeGaugeSection -> TSRadialGauge(value: efficiencyFactor, colorIndex: gaugeColorIndex)
+[x] chart  AreaChart         ProjectedRangePage.Charts.swift :: ProjectedRangeCurveSection -> TSAreaChart(series: [ratedSeries, projectedSeries])
+--------------------------------------------------------------------------------
+DATA STATES (4) — implemented for the projection source
+[x] state  loading           ProjectedRangePage.swift :: content case .loading -> TSPageLoader ; model ProjectedRangePhase.loading
+[x] state  empty             ProjectedRangePage.swift :: emptyState case .empty -> TSEmptyState("range.noData") ; phase .empty
+[x] state  error             ProjectedRangePage.swift :: errorState case .error -> TSQueryError + Retry ; phase .error
+[x] state  success           ProjectedRangePage.swift :: readyView case .ready ; phase .ready
+--------------------------------------------------------------------------------
+STRINGS (27) — Localizable.xcstrings (web key names preserved verbatim)
+[x] string range.battery           xcstrings + ProjectedRangeHeroSection
+[x] string range.current           xcstrings + ProjectedRangeCurveSection.legend / ProjectedRangeScenarioCard badge
+[x] string range.efficiency        xcstrings + ProjectedRangeGaugeSection (TSRadialGauge label)
+[x] string range.efficiencyMatrix  xcstrings + ProjectedRangeMatrixSection (TSSubhead)
+[x] string range.factors           xcstrings + ProjectedRangeFactorsSection (TSSubhead)
+[x] string range.healthFactor      xcstrings + ProjectedRangeHeroSection
+[x] string range.noMatrix          xcstrings + ProjectedRangeMatrixSection (TSEmptyState)
+[x] string range.noScenarios       xcstrings + ProjectedRangeScenariosSection (TSEmptyState)
+[x] string range.noWhatIf          xcstrings + ProjectedRangeWhatIfSection (TSEmptyState)
+[x] string range.projected         xcstrings + ProjectedRangeCurveSection (projectedSeries / legend)
+[x] string range.projectionCurve   xcstrings + ProjectedRangeCurveSection (TSSubhead)
+[x] string range.rated             xcstrings + ProjectedRangeCurveSection (ratedSeries / legend)
+[x] string range.scenarios         xcstrings + ProjectedRangeScenariosSection (TSSubhead)
+[x] string range.speed             xcstrings + ProjectedRangeWhatIfSection (TSSlider label)
+[x] string range.subtitle          xcstrings + ProjectedRangePage.titleBlock
+[x] string range.temperature       xcstrings + ProjectedRangeWhatIfSection (TSSlider label)
+[x] string range.teslaEstimate     xcstrings + ProjectedRangeHeroSection
+[x] string range.tip.elevation     xcstrings + ProjectedRangePageModel.tips + ProjectedRangeTipsSection
+[x] string range.tip.precondition  xcstrings + ProjectedRangePageModel.tips + ProjectedRangeTipsSection
+[x] string range.tip.seatHeaters   xcstrings + ProjectedRangePageModel.tips + ProjectedRangeTipsSection
+[x] string range.tip.speed         xcstrings + ProjectedRangePageModel.tips + ProjectedRangeTipsSection
+[x] string range.tips              xcstrings + ProjectedRangeTipsSection (TSSubhead)
+[x] string range.title             xcstrings + ProjectedRangePage.titleBlock + navigationTitle
+[x] string range.usableCapacity    xcstrings + ProjectedRangeHeroSection
+[x] string range.whatIf            xcstrings + ProjectedRangeWhatIfSection (TSSubhead)
+[x] string range.whatIfConditions  xcstrings + ProjectedRangeWhatIfSection.conditions (String(format:) %1$@ %2$@)
+[x] string range.yourEstimate      xcstrings + ProjectedRangeHeroSection
+--------------------------------------------------------------------------------
+PARITY_COVERED=47
+PARITY_REQUIRED=47
+PARITY_OK=true
+================================================================================
+
+--------------------------------------------------------------------------------
+GATE  (Apple triad: placeholder scan + build + lint + test)
+--------------------------------------------------------------------------------
+Runner: macOS (Darwin arm64), Xcode/xcodebuild present, swiftlint 0.x, xcodegen,
+        pwsh 7.x, iOS Simulator (iPhone 17 Pro) available. KMP Shared.xcframework
+        assembled via Gradle (BUILD SUCCESSFUL, staged to apps/apple/Frameworks).
+
+PLACEHOLDER  ./apps/tools/check-placeholders.ps1 -Path apps/apple/Sources/Features/Battery -Language swift
+             PLACEHOLDER_ALLOWED=4 (pre-existing siblings)  PLACEHOLDER_COUNT=0
+             PLACEHOLDER_EXIT=0
+
+BUILD        xcodebuild -project apps/apple/TeslaSync.xcodeproj -scheme TeslaSync \
+               -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+               CODE_SIGNING_ALLOWED=NO build
+             ** BUILD SUCCEEDED **   (full app target; all ProjectedRange* objects compiled)
+             BUILD_EXIT=0
+
+LINT         swiftlint --strict  (apps/apple, 6093 files; and the 13 changed files)
+             Done linting! Found 0 violations, 0 serious.
+             LINT_EXIT=0
+
+TEST         xcodebuild ... test
+             ProjectedRangePageModelTests: Executed 27 tests, 0 failures, 0 unexpected.
+             (4 data-state phases, vehicle select/reselect, what-if interpolation
+              [matched bucket / fallback / non-positive clamp], temp+speed buckets,
+              efficiency tone bands, gauge color bands, scenario+factor icon maps,
+              fmtNumber/percent/signed-impact/Wh-km formatters, route metadata +
+              /analytics/range alias + route registration.)
+             Full suite (see disclosure): Executed 25211 tests, 1 skipped, 1 failure.
+             The sole failure is the PRE-EXISTING, unrelated
+               ToastCenterMutationBridgeTests.testMutationFailedUsesLocalizedErrorDetail
+             in apps/apple/TeslaSync/shared-surfaces/Toast.Tests.swift (unmodified from
+             HEAD, zero references to this page / AppRoute / range.*). 0 failures are
+             attributable to this change. All UI tests passed.
+             TEST_EXIT(this page)=0
+
+--------------------------------------------------------------------------------
+PRE-EXISTING, OUT-OF-SCOPE BASELINE ISSUES (disclosed; NOT modified — allowed-files
+scope is Battery feature + nav registration + string catalog + this log)
+--------------------------------------------------------------------------------
+The literal unmodified `xcodebuild test` over the whole TeslaSyncTests bundle is blocked
+by THREE pre-existing Swift-6 strict-concurrency COMPILE errors in unrelated test files,
+each unmodified from HEAD (consistent with apps/macos-pending-verifications.md and the
+sibling logs, e.g. apple-page-battery-SleepEfficiencyPage.log which cites the same
+GDPRExport file):
+  1) apps/apple/Tests/Unit/Features/Admin/GDPRExportPageModelTests.swift:20
+     "call to main actor-isolated static method 'artifact' in a synchronous nonisolated context"
+  2) apps/apple/Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift:10
+     "main actor-isolated default value in a nonisolated context"
+  3) apps/apple/Tests/Unit/Features/Analytics/TimelinePageModelTests.swift:318
+     "call to main actor-isolated static method 'utcDayKey' in a synchronous nonisolated context"
+Plus one pre-existing, unrelated test FAILURE (Toast.Tests.swift, above).
+
+To exercise build+test for THIS page without editing out-of-scope files, the three
+compile-broken files were isolated via the command-line build override
+  EXCLUDED_SOURCE_FILE_NAMES='GDPRExportPageModelTests.swift VehicleCostPageModelTests.swift TimelinePageModelTests.swift'
+(a build setting, NO source edits). With them isolated the test target builds clean and
+the full suite runs (25211 tests) with the single pre-existing Toast failure above. This
+page's own 27 tests were ALSO verified in isolation (test target temporarily scoped to
+only ProjectedRangePageModelTests.swift, project.yml restored afterward): TEST SUCCEEDED,
+27/27. No ProjectedRange / AppRoute / AppRouteParser / TeslaSyncApp / xcstrings file
+produced any diagnostic. Fixing the pre-existing files would breach this artifact's
+allowed-files scope, so they are left untouched.
+
+--------------------------------------------------------------------------------
+LEDGER
+--------------------------------------------------------------------------------
+apps/parity/apple-ledger.json: page:battery/ProjectedRange set covered for both targets
+  apple-macos  status=done coveredCount=47 requiredCount=47
+  apple-ios    status=done coveredCount=47 requiredCount=47
+
+--------------------------------------------------------------------------------
+RESULT
+--------------------------------------------------------------------------------
+PARITY:      47/47 covered (panels 14, charts 2, states 4, strings 27)
+LINT:        0 violations (--strict)
+PLACEHOLDER: 0 (ADR-011)
+BUILD:       app SUCCEEDED; 0 diagnostics attributable to this change
+TEST:        27/27 passed for ProjectedRangePageModelTests; full suite green except one
+             PRE-EXISTING, unrelated, out-of-scope failure (Toast.Tests.swift)
+The page deliverable is complete and independently verified green. The only items short
+of a literal all-green `xcodebuild test` are PRE-EXISTING, unrelated, out-of-scope
+baseline files this artifact is not permitted to modify (disclosed above).
+
+EXIT=0
+STATUS=DONE
