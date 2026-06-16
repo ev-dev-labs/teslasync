@@ -1285,7 +1285,7 @@ public sealed partial class ShellWindow : Window
         _viewModel.PageFactory.Register("LiveSignalInspector", () =>
             new FeatureViews.Admin.LiveSignalInspectorPage(
                 new FeatureViews.Admin.LiveSignalInspectorClientFeed(_data.Api),
-                FeatureViews.Admin.EmptyLiveSignalsTableSource.Instance,
+                new FeatureViews.LiveSignalsTableSource(_data.Api, _data.Engine, _data.Options),
                 _data.Localizer));
 
         // Settings hub — mount the full Appearance / General / Advanced settings surfaces (each backed by the
