@@ -26,6 +26,7 @@ import io.teslasync.android.driving.regenefficiency.RegenEfficiencyPageHost
 import io.teslasync.android.driving.tripplanner.TripPlannerPageHost
 import io.teslasync.android.maps.geofences.GeofencesPageHost
 import io.teslasync.android.maps.temperatureimpact.TemperatureImpactPageHost
+import io.teslasync.android.vehiclesystems.climatecontrol.ClimateControlPageHost
 import io.teslasync.android.notifications.archived.ArchivedPageHost
 import io.teslasync.android.notifications.channels.ChannelsPageHost
 import io.teslasync.android.notifications.webhooks.WebhooksPageHost
@@ -218,6 +219,8 @@ class TeslaSyncApplication : Application() {
         GeofencesPageHost.register()
         // Register the native temperature-impact map screen for the /temperature-impact route (P3/A7). Idempotent.
         TemperatureImpactPageHost.register()
+        // Register the native climate-control screen for the /climate-control route (P3/A7). Idempotent.
+        ClimateControlPageHost.register()
         // Register the native archived-notifications screen for the /notifications/archived route (P3/A7). Idempotent.
         ArchivedPageHost.register()
         // Register the native notification-channels screen for the /notifications/channels route (P3/A7). Idempotent.
