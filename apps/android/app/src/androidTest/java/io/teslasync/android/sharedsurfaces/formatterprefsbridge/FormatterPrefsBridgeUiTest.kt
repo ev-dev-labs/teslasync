@@ -9,7 +9,6 @@ package io.teslasync.android.sharedsurfaces.formatterprefsbridge
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onChildren
 import androidx.compose.ui.test.onRoot
 import io.teslasync.shared.core.data.repo.Resource

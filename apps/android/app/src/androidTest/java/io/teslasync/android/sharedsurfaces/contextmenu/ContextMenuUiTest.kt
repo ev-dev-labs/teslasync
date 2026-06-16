@@ -1,6 +1,4 @@
 package io.teslasync.android.sharedsurfaces.contextmenu
-
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -10,8 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.platform.app.InstrumentationRegistry
 import io.teslasync.android.R
-import io.teslasync.android.data.NoopLogger
 import io.teslasync.android.ui.theme.TeslaSyncTheme
+import io.teslasync.shared.core.diagnostics.LogLevel
+import io.teslasync.shared.core.diagnostics.Logger
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -26,6 +25,14 @@ import org.junit.Test
 class ContextMenuUiTest {
     @get:Rule
     val compose = createComposeRule()
+
+    private object NoopLogger : Logger {
+        override fun log(
+            level: LogLevel,
+            event: String,
+            fields: Map<String, String>,
+        ) = Unit
+    }
 
     private fun menuLabel(): String =
         InstrumentationRegistry.getInstrumentation().targetContext.getString(R.string.translation_contextMenu_menuLabel)

@@ -84,7 +84,6 @@ class TreeSelectUiTest {
         compose.onNodeWithContentDescription(DISABLED_DESCRIPTION, useUnmergedTree = true).assertIsDisplayed()
     }
 
-    @Composable
     private fun setContent(uiModel: TreeSelectUiModel) {
         compose.setContent {
             TeslaSyncTheme(dynamicColor = false) {
