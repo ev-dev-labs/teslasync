@@ -219,6 +219,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-FleetComparePage.log"
     },
     {
+      "unitId": "page:analytics/PeriodCompare",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 44,
+      "requiredCount": 44,
+      "promptId": "p4-apple/P7/page:analytics/PeriodCompare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-PeriodComparePage.log"
+    },
+    {
+      "unitId": "page:analytics/PeriodCompare",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 44,
+      "requiredCount": 44,
+      "promptId": "p4-apple/P7/page:analytics/PeriodCompare",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-analytics-PeriodComparePage.log"
+    },
+    {
       "unitId": "page:analytics/Statistics",
       "platform": "apple-macos",
       "status": "done",

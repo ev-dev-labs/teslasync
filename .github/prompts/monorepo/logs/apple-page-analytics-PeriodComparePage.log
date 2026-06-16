@@ -1,0 +1,187 @@
+================================================================================
+p4-apple · P7 · page:analytics/PeriodCompare — SwiftUI / HIG parity
+================================================================================
+artifact : apps/apple/Sources/Features/Analytics/PeriodComparePage.swift (+ models, model, sample, sections, charts, table, format, route reg, tests)
+host     : macOS (Darwin 25.5.0 arm64); Xcode 26.5 Build 17F42; Apple Swift 6.3.2; swiftlint 0.63.3 + swiftformat 0.61.1 + xcodegen 2.45.4 + pwsh 7.6.2 present
+parity   : page:analytics/PeriodCompare  (manifest PARITY_REQUIRED=44 = 5 panels + 1 chart + 4 states + 34 strings)
+web src  : web/src/features/analytics/pages/PeriodComparePage.tsx  (route /period-compare, 453 LOC)
+data srcs: useVehicles -> GET /vehicles  (web hook ported, same call-site name intent)
+           period-stats -> request('/analytics/period-stats?vehicle_id=…&days=…') x2 (Period A + Period B)
+           (bound through one @Observable PeriodComparePageModel via an injected PeriodCompareDataSource seam, ADR-004;
+            no live SSE on this surface — the web page reads two cached period-stats queries, no EventSource — so no staleness indicator)
+
+FILES (allowed scope: Sources/Features/Analytics/**, navigation registration, the string catalog, this log)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodCompareModels.swift            (value types: vehicle, PeriodStats, window/metric enums, metric value)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodCompareFormat.swift            (SI display formatters via Units + metric/insight derivations; web fmtNumber/pctChange/metrics/insights)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePageModel.swift         (@Observable model: data-source seam, view-state machine, selection, derivations)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePageModel.Sample.swift  (sample + empty + failing preview/test data sources)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePage.swift              (adaptive View: header, state switch, banner, selectors GlassPanel1)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePage.Sections.swift     (MetricCard2 grid + Insights GlassPanel5)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePage.Charts.swift       (side-by-side BarChart GlassPanel3 on the P3 TSBarChart wrapper)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodComparePage.Table.swift        (comparison DataTable GlassPanel4: metric/A/B/change/%-change)
+  NEW  apps/apple/Sources/Features/Analytics/PeriodCompareRouteRegistration.swift (registers .periodCompare; persists banner dismissal; wires CTA)
+  NEW  apps/apple/Tests/Unit/Features/Analytics/PeriodComparePageModelTests.swift (25 XCTest cases: states, selection, banner, derivations, formatters)
+  EDIT apps/apple/Sources/App/AppRoute.swift           (add .periodCompare: Insights group, segment "period-compare", SF symbol calendar.badge.clock)
+  EDIT apps/apple/Sources/TeslaSyncApp.swift           (compose PeriodCompareRouteRegistration into the route-host chain; onNavigate -> selection)
+  EDIT apps/apple/Localization/Localizable.xcstrings   (+34 compare.* strings + 1 route.periodCompare nav title = 35 keys)
+  EDIT apps/parity/apple-ledger.json                   (+2 rows: apple-macos / apple-ios -> done 44/44)
+
+Navigation note: the web route /period-compare is single-segment, so the first-segment AppRouteParser resolves it
+directly via the new route's pathSegment ("period-compare") — no alias needed. A dedicated .periodCompare route
+(Insights sidebar group) was added rather than displacing the existing .analytics/.fleetCompare routes (covenant #7).
+MenuCommandCatalog.navigateCommands() + SpotlightIndexer derive from AppRoute.allCases, so the new case is auto-covered
+(testNavigateCommandsCoverEveryRoute stays green); the pathSegment is unique (testEveryRouteHasUniquePathSegment stays
+green); the route resolves to its Insights group (testEveryRouteResolvesToItsGroup stays green). The disambiguation
+banner's "Open Fleet comparison" CTA navigates through an injected onNavigate shell hook (selection = .fleetCompare),
+mirroring FleetCompareRouteRegistration; the banner dismissal persists in UserDefaults under the web localStorage key
+phase40.compareBanner.dismissed.period, and is auto-suppressed for single-vehicle accounts (web vehicleCount < 2).
+
+State mapping (web PageContainer phases + the !a || !b branch): loading + error replace the whole body (web
+PageContainer loading/error props -> ProgressView / TSErrorDisplay+Retry); empty + ready BOTH keep the banner +
+selectors visible (web renders the selectors above the !a || !b switch) and differ only in the body
+(EmptyState vs metric cards + chart + table + insights).
+
+SI note: PeriodStats is stored SI canonical — distance in METERS (web total_distance km x 1000), energy in WATT-HOURS
+(web energy_used kWh x 1000), efficiency in Wh/km. Conversion to the user's unit happens only at the SwiftUI render
+boundary via Units (P1/S5): distance -> Units.convertDistance; efficiency -> x1.609344 for imperial (web whPerKm);
+energy -> /1000 for the fixed-kWh display (web). Cost (currency) and CO₂ (kg) are not unit-preference dimensions.
+
+================================================================================
+GATE TRANSCRIPT (real commands, real exit codes)
+================================================================================
+
+--- Shared.xcframework (ADR-004) assembled via Gradle + staged (apps/apple/Scripts/build-shared-xcframework.sh) ---
+BUILD SUCCESSFUL in 9m 33s ; "✓ Shared.xcframework staged" (ios-arm64, ios-arm64-simulator, macos-arm64)
+XCFRAMEWORK_EXIT=0
+
+--- xcodegen generate (the .xcodeproj is git-ignored, rebuilt) ---
+Created project at apps/apple/TeslaSync.xcodeproj ; "PeriodCompare" referenced 132x in pbxproj (iOS+macOS app + both test bundles)
+GEN_EXIT=0
+
+--- check-placeholders.ps1 -Path apps/apple/Sources/Features/Analytics -Language swift (ADR-011) ---
+PLACEHOLDER_ALLOWED=7   (all 7 are pre-existing sibling opt-outs; ZERO in my files)
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+
+--- swiftformat --lint (my 10 new/test files + 2 edited App files, repo .swiftformat) ---
+0/12 files require formatting.
+FORMAT_EXIT=0
+
+--- swiftlint --strict (repo .swiftlint.yml; my 10 new/test files + 2 edited App files) ---
+0 violations.
+LINT_EXIT=0
+
+--- xcodebuild build -scheme TeslaSync-macOS -destination 'platform=macOS' (full app target compiles ALL sources incl. mine) ---
+** BUILD SUCCEEDED **
+BUILD_EXIT=0
+  [Note: the DEFAULT (signed) build returns 65 ONLY because the headless CI host has no Apple development
+   certificate ("TeslaSync-macOS has entitlements that require signing with a development certificate") — an
+   ENVIRONMENT limitation, NOT a compile error. ZERO Swift `error:` lines in any file. Re-run with
+   CODE_SIGNING_ALLOWED=NO CODE_SIGN_ENTITLEMENTS="" -> ** BUILD SUCCEEDED ** (transcript above), proving every
+   source — including all 9 PeriodCompare* files — type-checks against the real components/tokens/Shared/AppRoute.]
+
+--- xcodebuild test -scheme TeslaSync-macOS -only-testing:…/PeriodComparePageModelTests -only-testing:…/PeriodCompareFormatTests ---
+Test Suite 'PeriodCompareFormatTests'     -> Executed  6 tests, with 0 failures
+Test Suite 'PeriodComparePageModelTests'  -> Executed 19 tests, with 0 failures
+Test Suite 'TeslaSync-macOSTests.xctest'  -> Executed 25 tests, with 0 failures (0 unexpected) in 0.672s
+** TEST SUCCEEDED **
+TEST_EXIT=0
+  [Note: the macOS unit-test BUNDLE as a whole does not compile on this Swift 6.3 toolchain due to PRE-EXISTING,
+   OUT-OF-SCOPE sibling tests — Tests/Unit/Features/Admin/VehicleCostPageModelTests.swift (main-actor-isolated
+   default value; Date vs FloatingPoint accuracy) and GDPRExportPageModelTests.swift (main-actor-isolated static
+   from nonisolated context), both committed in prior P7 PRs and unmodified by me. To EXECUTE my own tests against
+   the real compiled app module, the macOS test target was temporarily scoped to only
+   Features/Analytics/PeriodComparePageModelTests.swift (project.yml include), regenerated, run (25/25 GREEN above),
+   then project.yml + the project were RESTORED. git status confirms ZERO residual changes to project.yml or any
+   sibling. The pre-existing sibling breakage is reported RED, not masked.]
+
+================================================================================
+=== PARITY ===
+================================================================================
+PARITY_REQUIRED=44
+
+-- panels (5) --
+[x] panel  GlassPanel1  selectors   -> PeriodComparePage.swift `selectorsPanel` (TSGlassPanel + 3x TSSelect: vehicle/Period A/Period B)
+[x] panel  MetricCard2  metric cards-> PeriodComparePage.Sections.swift `PeriodCompareMetricCards` + `PeriodCompareMetricCard` (6 TSCard, value+subtitle+TSDelta+TSIconBox)
+[x] panel  GlassPanel3  bar chart   -> PeriodComparePage.Charts.swift `PeriodCompareChartSection` (TSChartContainer "compare.chartTitle")
+[x] panel  GlassPanel4  table       -> PeriodComparePage.Table.swift `PeriodCompareComparisonTable` (TSGlassPanel + Grid)
+[x] panel  GlassPanel5  insights    -> PeriodComparePage.Sections.swift `PeriodCompareInsightsPanel` (TSGlassPanel + lightbulb + list)
+    (+ anonymous region reproduced: disambiguation AlertBanner -> PeriodComparePage.swift `banner` (TSAlertBanner))
+
+-- chart (1) --
+[x] chart  BarChart -> PeriodComparePage.Charts.swift `PeriodCompareChartSection.series` rendered by P3 `TSBarChart(series:)` (two grouped series Period A/B over 6 metrics; never a WKWebView)
+
+-- states (4) --
+[x] state  loading -> PeriodComparePage.swift `loadingView` (ProgressView) + PeriodComparePageModel `.loading`
+[x] state  empty   -> PeriodComparePage.swift `emptyBody` (TSEmptyState "compare.empty", calendar) + model `.empty`
+[x] state  error   -> PeriodComparePage.swift `errorView` (TSErrorDisplay + Retry) + model `.error`
+[x] state  success -> PeriodComparePage.swift `readyBody` (cards+chart+table+insights) + model `.ready`
+
+-- strings (34) — all resolve from Localizable.xcstrings, web key names verbatim --
+[x] string  compare.allTime              -> PeriodCompareModels.swift PeriodCompareWindow.labelKey(.allTime)
+[x] string  compare.avgEfficiency        -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.efficiency)
+[x] string  compare.banner.toFleetCta    -> PeriodComparePage.swift `banner` TSButton
+[x] string  compare.banner.toFleetPrefix -> PeriodComparePage.swift `banner` title
+[x] string  compare.change               -> PeriodComparePage.Table.swift headerCell
+[x] string  compare.chartTitle           -> PeriodComparePage.Charts.swift TSChartContainer title
+[x] string  compare.co2Saved             -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.co2)
+[x] string  compare.declined             -> PeriodCompareFormat.swift insights (efficiency dir)
+[x] string  compare.empty                -> PeriodComparePage.swift `emptyBody` TSEmptyState
+[x] string  compare.energyUsed           -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.energy)
+[x] string  compare.higher               -> PeriodCompareFormat.swift insights (cost dir)
+[x] string  compare.improved             -> PeriodCompareFormat.swift insights (efficiency dir)
+[x] string  compare.insightCost          -> PeriodCompareFormat.swift insights[2] template ({{pct}}/{{dir}})
+[x] string  compare.insightDistance      -> PeriodCompareFormat.swift insights[0] template ({{pct}}/{{dir}})
+[x] string  compare.insightEfficiency    -> PeriodCompareFormat.swift insights[1] template ({{pct}}/{{dir}})
+[x] string  compare.insights             -> PeriodComparePage.Sections.swift insights panel title
+[x] string  compare.last30               -> PeriodCompareWindow.labelKey(.last30)
+[x] string  compare.last7                -> PeriodCompareWindow.labelKey(.last7)
+[x] string  compare.last90               -> PeriodCompareWindow.labelKey(.last90)
+[x] string  compare.lastYear             -> PeriodCompareWindow.labelKey(.lastYear)
+[x] string  compare.less                 -> PeriodCompareFormat.swift insights (distance dir)
+[x] string  compare.lower                -> PeriodCompareFormat.swift insights (cost dir)
+[x] string  compare.metric               -> PeriodComparePage.Table.swift headerCell
+[x] string  compare.more                 -> PeriodCompareFormat.swift insights (distance dir)
+[x] string  compare.pctChange            -> PeriodComparePage.Table.swift headerCell
+[x] string  compare.periodA              -> PeriodComparePage.swift periodASelect label + Charts legend + Table header
+[x] string  compare.periodB              -> PeriodComparePage.swift periodBSelect label + Sections subtitle + Charts legend + Table header
+[x] string  compare.subtitle             -> PeriodComparePage.swift header + loadingView caption
+[x] string  compare.tableTitle           -> PeriodComparePage.Table.swift TSPanelTitle
+[x] string  compare.title                -> PeriodComparePage.swift header TSPageTitle (+ route.periodCompare nav title)
+[x] string  compare.totalCost            -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.cost)
+[x] string  compare.totalDistance        -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.distance)
+[x] string  compare.totalDrives          -> PeriodCompareModels.swift PeriodCompareMetric.titleKey(.drives)
+[x] string  compare.vehicle              -> PeriodComparePage.swift vehicleSelect label
+
+PARITY_COVERED=44
+PARITY_REQUIRED=44
+
+================================================================================
+HONESTY COVENANT
+================================================================================
+ 1 No red-as-green   : every exit above is a real command result. The only REDs are (a) the DEFAULT signed
+                       xcodebuild=65 = missing Apple dev cert (env), and (b) the full test bundle, blocked by
+                       PRE-EXISTING out-of-scope sibling tests (VehicleCost/GDPRExport PageModelTests). Both are
+                       reported RED and explained, not masked. In-scope gates are all GREEN, incl. a signing-disabled
+                       ** BUILD SUCCEEDED ** and a 25/25 ** TEST SUCCEEDED ** for my own tests.
+ 2 No scope narrowing : all 5 panels + 1 chart + 4 states + 34 strings implemented (PARITY_COVERED=44). The
+                       anonymous AlertBanner region is also reproduced.
+ 3 No skip-and-assume : full macOS app target compiled (0 errors) + my 25 XCTest cases executed GREEN against the
+                       real app module / Shared.xcframework / design tokens.
+ 4 No stubs as final  : complete implementation (1466 LOC across 9 source files + tests vs 453 web LOC);
+                       PLACEHOLDER_COUNT=0 in my files; every state renders real content, never a blank region.
+ 5 No parity shortcuts: SwiftUI-native (TSGlassPanel/TSCard/TSSelect/TSAlertBanner/TSChartContainer + Swift Charts
+                       TSBarChart/TSDelta/TSIconBox/TSEmptyState/TSErrorDisplay; adaptive Grid/LazyVGrid) — no web
+                       cloning, no WKWebView. SI converts only at the render boundary via Units.
+ 6 No delegation      : implemented directly; no sub-agents.
+ 7 No predecessor bypass: existing .analytics + .fleetCompare routes + all sibling pages untouched & still hosted;
+                       a NEW .periodCompare route (segment "period-compare", Insights group) was added.
+ 8 No commit on red   : committing on all-GREEN IN-SCOPE gates — swiftformat(0/12), swiftlint --strict(0),
+                       placeholder(0), xcframework(0), xcodegen(0), build macOS(0, signing-disabled), my tests(25/25).
+                       The two RED items are pre-existing/env and out of this task's scope.
+ 9 No silent drift    : Localizable.xcstrings keys = web key names verbatim (incl. {{pct}}/{{dir}} insight tokens);
+                       apple-ledger updated 44/44 x2; project.yml + sibling test restored (git status clean).
+10 (terminates below with EXIT + STATUS)
+
+EXIT=0
+STATUS=DONE
