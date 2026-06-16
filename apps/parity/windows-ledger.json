@@ -15784,5 +15784,122 @@
     "requiredCount": 17,
     "promptId": "windows-parity-loop",
     "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "component:shell/Sidebar",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 4,
+    "requiredCount": 6,
+    "visualScore": 88,
+    "shotPath": "apps/windows/.loop-logs/shots/component-shell-Sidebar.png",
+    "deltas": [
+      "group taxonomy uses the native 17 RouteGroups, not the web sidebar 19 groups (HOME/VEHICLES/DRIVING/…)",
+      "search lives in the title bar rather than inside the sidebar (platform difference)"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": "live screenshot win-sidebar-light.png vs web-dash-real.png"
+  },
+  {
+    "unitId": "component:theme/BackendSync",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 3,
+    "requiredCount": 4,
+    "visualScore": 92,
+    "shotPath": "apps/windows/.loop-logs/shots/component-theme-BackendSync.png",
+    "deltas": [
+      "solar-amber light surface reads slightly warmer/cream vs the web near-white"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": "live screenshot win-dash-imperial.png (light + solar-amber) vs web-dash-real.png"
+  },
+  {
+    "unitId": "component:dashboard/Banners",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 3,
+    "requiredCount": 3,
+    "visualScore": 95,
+    "shotPath": "apps/windows/.loop-logs/shots/component-dashboard-Banners.png",
+    "deltas": [],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": "live screenshot win-dash-nobanners2.png vs web-dash-real.png (web shows neither banner)"
+  },
+  {
+    "unitId": "component:units/BackendSync",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 3,
+    "requiredCount": 3,
+    "visualScore": 95,
+    "shotPath": "apps/windows/.loop-logs/shots/component-units-BackendSync.png",
+    "deltas": [],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": "live screenshot win-dash-imperial.png (mi / °F / Wh·mi) vs web-dash-real.png"
+  },
+  {
+    "unitId": "component:shell/TopToolbar",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 1,
+    "requiredCount": 2,
+    "visualScore": 0,
+    "shotPath": "",
+    "deltas": [
+      "native header has a minimal action set vs the web toolbar cluster"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": ""
+  },
+  {
+    "unitId": "component:shell/StatusBar",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 2,
+    "requiredCount": 3,
+    "visualScore": 0,
+    "shotPath": "",
+    "deltas": [
+      "native status bar shows only a \"Secured\" hint vs the web rich status bar"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": ""
+  },
+  {
+    "unitId": "component:dashboard/LayoutSystem",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 3,
+    "requiredCount": 4,
+    "visualScore": 0,
+    "shotPath": "",
+    "deltas": [
+      "native dashboard is a fixed curated widget set; the web customizable layout grid is not ported"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": ""
+  },
+  {
+    "unitId": "component:data-display/DigitalTwin3D",
+    "platform": "windows",
+    "status": "todo",
+    "coveredCount": 1,
+    "requiredCount": 2,
+    "visualScore": 70,
+    "shotPath": "apps/windows/.loop-logs/shots/component-data-display-DigitalTwin3D.png",
+    "deltas": [
+      "native renders a 2D vehicle illustration; web renders a higher-fidelity twin"
+    ],
+    "attempts": 1,
+    "promptId": "live-visual/windows-parity-loop",
+    "evidenceLog": "live screenshot win-dash-nobanners2.png"
   }
 ]

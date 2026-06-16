@@ -378,3 +378,5 @@ apps/apple/**/.swiftpm/
 
 # --- apps: generated OpenAPI clients (regenerated, not committed raw) keep specs only ---
 apps/**/generated/
+# --- windows parity loop scratch (screenshots, logs) ---
+apps/windows/.loop-logs/
