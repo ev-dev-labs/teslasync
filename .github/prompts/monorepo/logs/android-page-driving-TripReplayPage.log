@@ -1,0 +1,81 @@
+================================================================================
+A7 — page:driving/TripReplay — Android (Jetpack Compose / Material 3)
+Parity port of web/src/features/trips/pages/TripReplayPage.tsx
+  (re-exported from web/src/features/driving/pages/TripReplayPage.tsx).
+================================================================================
+
+ENVIRONMENT
+  java            : OpenJDK 21.0.9 (Android Studio JBR)
+  Android SDK     : C:\Users\AtulM\AppData\Local\Android\Sdk (platforms 34/35/36)
+  Gradle module   : :android  (root project teslasync-android; prompt :app: is the
+                    template placeholder, README gate contract addresses :android:)
+
+FILES (allowed scope: apps/android/.../com/teslasync/driving/**, NavHost reg, strings, log)
+  apps/android/app/src/main/kotlin/com/teslasync/driving/TripReplayPageModel.kt      (NEW)
+  apps/android/app/src/main/kotlin/com/teslasync/driving/TripReplayPageSource.kt     (NEW)
+  apps/android/app/src/main/kotlin/com/teslasync/driving/TripReplayPageViewModel.kt  (NEW)
+  apps/android/app/src/main/kotlin/com/teslasync/driving/TripReplayPage.kt           (NEW)
+  apps/android/app/src/main/kotlin/com/teslasync/driving/TripReplayPageHost.kt       (NEW)
+  apps/android/app/src/test/java/io/teslasync/android/driving/tripreplay/TripReplayPageModelTest.kt (NEW)
+  apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt        (NavHost host registration)
+  apps/parity/android-ledger.json                                                    (ledger row)
+  Strings: every translation_replay_* key already present in res/values*/strings.xml (reused; ADR-014).
+  Route: Destinations.kt already declares hidden("tripReplay","/drives/:id/replay",...,["id"]) — host wired only.
+
+=== PARITY ===
+PARITY_REQUIRED=0
+  The parity-manifest record for page:driving/TripReplay enumerated 0 binding items
+  (the generator parsed the thin re-export shim at the manifest web-source path, which
+  has no panels/charts/maps/strings/data-sources). Per the prompt the === PARITY ===
+  section must still reach PARITY_COVERED == PARITY_REQUIRED (0), AND acceptance #1
+  requires every anonymous region of the REAL web source to be reproduced. Both are
+  satisfied below.
+
+[x] Reproduce the web source region structure verbatim (no enumerable parity items extracted).
+    Real web source: web/src/features/trips/pages/TripReplayPage.tsx (605 lines, 6 regions)
+    + sub-components TripReplayMap.tsx / TripReplayCharts.tsx. Region-by-region evidence:
+
+    Data source  useDrive(id) GET /drives/{id}/  ->  TripReplayPageSource.drive(id)
+                 + framework-free decode parseDriveReplay() (position⋈nearest-telemetry merge)
+                 [TripReplayPageModel.kt]. loading/empty/error via UiState.
+    §1 Map       <TripReplayMap> speed-coloured polyline + start/end pins + playhead marker
+                 + layer switcher + stationary banner + click-to-seek
+                 ->  TripReplayMapSection() [TripReplayPage.kt]: TeslaMap + maps-compose
+                 Polyline (buildRouteSegments speed buckets) + MapDotMarker + AnimatedVehicleMarker
+                 + MapLayerSwitcher + AlertBanner(stationary) + onMapClick->nearestSampleIndex.
+    §2 Scrubber  <PlaybackControls> transport + speed + marker ticks
+                 ->  TripReplayScrubber() -> PlaybackControls(markers=computeReplayMarkers).
+    §3 Stats     6 <MetricCard> Speed/Power/Battery/Elevation/Range/Temperature (+marker highlight)
+                 ->  TripReplayCurrentStats() : 6 MetricCard, statSpeed/Power/Battery/Elevation/Range/Temp,
+                 nearestMarker() accent highlight.
+    §4 Elevation <ElevationProfile> cursor=currentIndex  ->  ElevationProfile(buildElevation, currentIndex).
+    §5 Timeline  <TripReplayCharts> speed+power area + cursor + click-to-seek
+                 ->  TripReplayTimelineSection() : AreaChartWrapper(2 series) + ChartVerticalMarker cursor
+                 + tap overlay seekTargetAt()->onSeekToIndex.
+    §6 Summary   5 <StatCard> Distance/Duration/Efficiency/ElevGain/ElevLoss
+                 ->  TripReplayDriveSummary() : 5 StatCard, summaryDistanceValue/DurationValue/EfficiencyValue.
+    Single source of truth: playback.index (TripReplayPageViewModel, MapsLogic PlaybackState clock);
+    scrubber/map-click/chart-tap all seek it (web handleSeekToIndex). SI->display only at boundary
+    (convert{Distance,Speed,Temp}FromSI via UnitPref). i18n: stringResource(translation_replay_*).
+    States: loading skeleton / empty (replay.noGps) / error+retry / content — none ever blank.
+PARITY_COVERED=0
+
+=== GATE (android triad: build + lint + test + placeholder scan) ===
+PLACEHOLDER_EXIT=0   (& ./apps/tools/check-placeholders.ps1 -Path .../com/teslasync/driving -Language kotlin -> PLACEHOLDER_COUNT=0)
+BUILD_EXIT=0         (./gradlew :android:assembleDebug  -> BUILD SUCCESSFUL)
+LINT_EXIT=0          (./gradlew :android:lintDebug      -> BUILD SUCCESSFUL, abortOnError=true)
+TEST_EXIT=0          (./gradlew :android:testDebugUnitTest -> BUILD SUCCESSFUL)
+                     TripReplayPageModelTest: tests=22 failures=0 errors=0 skipped=0
+
+ACCEPTANCE
+  [x] Every named/anonymous region of the real web source reproduced (6 regions, see PARITY).
+  [x] All state rendered from the bound StateFlow holder (driveState/playback/totalMs/displayPrefs).
+  [x] loading / empty / error implemented for the drive data source.
+  [x] All visible strings from strings.xml; zero hardcoded literals; web key names preserved.
+  [x] Dark/dynamic theme (MaterialTheme tokens) + a11y (semantics/contentDescription/48dp) +
+      SI units honored; Compose-native only (TeslaMap/Vico wrappers, no webview).
+  [x] build + lint + test + placeholder green; PARITY_COVERED==PARITY_REQUIRED (0).
+  [x] android ledger row page:driving/TripReplay set covered (status=done).
+
+EXIT=0
+STATUS=DONE
