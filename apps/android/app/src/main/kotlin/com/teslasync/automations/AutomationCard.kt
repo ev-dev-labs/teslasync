@@ -29,6 +29,39 @@ import io.teslasync.android.featureviews.automationcard.AutomationConflictView
 import io.teslasync.android.featureviews.automationcard.AutomationView
 import io.teslasync.android.ui.theme.TeslaSyncTheme
 import io.teslasync.shared.core.diagnostics.Logger
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.core.os.ConfigurationCompat
+import io.teslasync.android.R
+import io.teslasync.android.components.ui.Badge
+import io.teslasync.android.components.ui.BadgeVariant
+import io.teslasync.android.components.ui.BodyText
+import io.teslasync.android.components.ui.Button
+import io.teslasync.android.components.ui.ButtonSize
+import io.teslasync.android.components.ui.ButtonVariant
+import io.teslasync.android.components.ui.Caption
+import io.teslasync.android.components.ui.GlassPanel
+import io.teslasync.android.components.ui.Icon
+import io.teslasync.android.components.ui.IconButton
+import io.teslasync.android.components.ui.IconSize
+import io.teslasync.android.components.ui.PanelAccent
+import io.teslasync.android.components.ui.PanelPadding
+import io.teslasync.android.components.ui.PanelTitle
+import io.teslasync.android.components.ui.Toggle
+import io.teslasync.android.ui.theme.generated.Spacing
+import io.teslasync.shared.core.presentation.automations.Automation
+import java.text.NumberFormat
+import java.util.Locale
 
 /**
  * Stateful entry for the AutomationCard page surface. Builds the [AutomationCardPageViewModel] from the
@@ -176,3 +209,13 @@ private fun AutomationCardScreenEmptyPreview() {
         )
     }
 }
+    val locale = ConfigurationCompat.getLocales(LocalConfiguration.current).get(0) ?: Locale.ROOT
+    val numbers = remember(locale) { NumberFormat.getIntegerInstance(locale) }
+    val accent = if (automation.autoDisabled) PanelAccent.Danger else PanelAccent.None
+    val toggleLabel = stringResource(R.string.translation_automations_toggleLabel)
+            val interactive = !busy && !automation.autoDisabled
+    val runsLabel = stringResource(R.string.translation_automations_runs)
+    val failsLabel = stringResource(R.string.translation_automations_fails)
+    val lastLabel = stringResource(R.string.translation_automations_lastRun)
+    val neverRun = stringResource(R.string.translation_automations_neverRun)
+    val lastFired = formatAutomationTimestamp(automation.lastTriggeredAt, locale)

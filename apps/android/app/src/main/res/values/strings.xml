@@ -1280,6 +1280,7 @@
   <string name="translation_automationList_subtitle">Bulk-manage automations. Click an automation to edit it in the builder.</string>
   <string name="translation_automationList_title">Automations (list)</string>
   <string name="translation_automations_allVehicles">All vehicles</string>
+  <string name="translation_automations_autoDisabledWarning">%1$d automation(s) have been auto-disabled due to repeated failures.</string>
   <string name="translation_automations_avgDuration">avg</string>
   <string name="translation_automations_builder_actionType">Action Type</string>
   <string name="translation_automations_builder_addAction">Add Action</string>
@@ -1418,11 +1419,15 @@
   <string name="translation_automations_deleteTitle">Delete Automation</string>
   <string name="translation_automations_duplicate">Duplicate</string>
   <string name="translation_automations_empty">No automations yet. Create a typed automation to get started!</string>
+  <string name="translation_automations_empty_cta">Create automation</string>
   <string name="translation_automations_export">Export</string>
   <string name="translation_automations_fails">Fails</string>
   <string name="translation_automations_filterStatus">Filter by status</string>
+  <string name="translation_automations_filters_all">All</string>
   <string name="translation_automations_firing">Firing</string>
   <string name="translation_automations_import">Import</string>
+  <string name="translation_automations_importFailedWithReason">Typed automation import failed: %1$s</string>
+  <string name="translation_automations_importTypedEnvelopeRequired">Import a typed TeslaSync CTI automation export file. Legacy automation exports are rejected rather than translated.</string>
   <string name="translation_automations_importUnknownError">Unknown error</string>
   <string name="translation_automations_lastRun">Last</string>
   <string name="translation_automations_live">Live</string>
@@ -1431,6 +1436,7 @@
   <string name="translation_automations_nextFire">Next</string>
   <string name="translation_automations_noHistory">No execution history yet</string>
   <string name="translation_automations_noMatch">No automations match your filters</string>
+  <string name="translation_automations_noMatch_cta">Reset filters</string>
   <string name="translation_automations_presets_actionCount">%1$s actions</string>
   <string name="translation_automations_presets_collapse">Click to collapse</string>
   <string name="translation_automations_presets_empty">No preset templates available</string>

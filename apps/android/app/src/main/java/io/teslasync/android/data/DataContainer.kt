@@ -96,6 +96,7 @@ class DataContainer(
     // S7 repositories — HTTP-backed, cache-then-network, over the shared resilient client + offline cache.
     private val vehiclesRepository = HttpVehiclesRepository(api, cacheStore, clock)
     private val analyticsRepository = HttpAnalyticsRepository(api, cacheStore, clock)
+    private val automationsRepository = HttpAutomationsRepository(api, cacheStore, clock)
     private val energyRepository = HttpEnergyRepository(api, cacheStore, clock)
     private val dashboardRepository = HttpDashboardRepository(api, cacheStore, clock)
     private val settingsRepository = HttpSettingsRepository(api, cacheStore, clock)
@@ -105,7 +106,6 @@ class DataContainer(
     private val ingestXRayRepository = HttpIngestXRayRepository(api, cacheStore, clock)
     private val operatorConfidenceRepository = HttpOperatorConfidenceRepository(api, cacheStore, clock)
     private val userRepository = HttpUserRepository(api, cacheStore, clock)
-    private val automationsRepository = HttpAutomationsRepository(api, cacheStore, clock)
 
     // S8 shared state holders — the single source of truth each page ViewModel binds to.
 
@@ -118,6 +118,13 @@ class DataContainer(
      * surface binds to.
      */
     val analyticsStore = AnalyticsStore(analyticsRepository, scope)
+
+    /**
+     * Shared Automations control-plane state holder (web `useAutomations` port) — the memoized, multi-observer
+     * list + history + preset feeds (`/automations`, `/automations/history`, `/automations/presets`) plus the
+     * toggle / re-enable / delete / test-run mutations the A7 AutomationsListPage surface binds to.
+     */
+    val automationsStore = AutomationsStore(automationsRepository, scope)
 
     /**
      * Shared Energy/battery read-model state holder (web `useEnergy` port) — the memoized, multi-observer raw-JSON
@@ -198,7 +205,6 @@ class DataContainer(
      * automation list feed (`GET /automations`) + the allowlisted bulk enable/disable/delete mutation
      * (`POST /automations/bulk`) the A7 AutomationListPage surface binds to.
      */
-    val automationsStore = AutomationsStore(automationsRepository, scope)
 
     /**
      * Shared Automations control-plane state holder (web `useAutomations` port) — the cache-then-network reads

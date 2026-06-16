@@ -1,0 +1,102 @@
+P3-ANDROID A7 — page:automations/AutomationsList — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/AutomationsListPage.tsx  (route /automations)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (AutomationsListPage + ViewModel + Source + Model + Icons + Host + AutomationCard + AutomationPresetGallery + AutomationActivityFeed)
+Wiring     : DataContainer.automationsStore (S8 AutomationsStore over HttpAutomationsRepository) + vehiclesStore + pinnedStore + api;
+             TeslaSyncApplication -> AutomationsListPageHost.register("automations")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the shared :core composite build (incl. the P1/S2 generated client
+io.teslasync.shared.core.api.generated.*) was already materialized on this branch (sibling A7 admin/analytics
+pages depend on it); it compiled green as-is — nothing was stubbed or regenerated for this page.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module. No Kotlin-daemon heap bump was needed — assembleDebug/lintDebug/
+testDebugUnitTest all completed with the default JVM settings.
+
+DATA-SOURCE NOTE: the 8 manifest hooks are all bound through the S8 holders via AutomationsListPageSource:
+useAutomations -> automationsStore.automations(); useAutomationHistory -> automationsStore.automationHistory(20);
+useVehicles -> vehiclesStore.vehicles(); usePinned -> pinnedStore.pinned(Automation); useToggle/ReEnable/Delete/
+TestRunAutomation -> the AutomationsStore suspend mutations; the inline web request('/automations/import') ->
+ApiHttpClient.safeRequest(POST,'/automations/import') through the source seam (the view performs no HTTP). The
+presets feed (useAutomationPresets) is additionally bound best-effort so GlassPanel6 renders real data. The web
+live SSE source (useAutomationEvents) is NOT one of this unit's manifest data sources and is omitted (no live
+indicator required).
+
+=== GATE ===
+PLACEHOLDER_ALLOWED=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 4m 53s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 13m 9s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 2m 14s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=33
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/automations/ (AutomationsListPage.kt screen,
+AutomationsListPageViewModel.kt, AutomationsListPageModel.kt, AutomationCard.kt, AutomationPresetGallery.kt,
+AutomationActivityFeed.kt)
+
+# panels (7) — Material 3 Card/Surface (StatCard / GlassPanel)
+[COVERED] panel  Total         -> AutomationsListPage.kt:AutomationsStatsSection()  StatCard(label=translation_automations_stats_total, icon=ListFilter) (L336)
+[COVERED] panel  Active        -> AutomationsListPage.kt:AutomationsStatsSection()  StatCard(label=translation_automations_stats_active, icon=Power) (L343)
+[COVERED] panel  Disabled      -> AutomationsListPage.kt:AutomationsStatsSection()  StatCard(label=translation_automations_stats_disabled, icon=Pause) (L355)
+[COVERED] panel  Auto-Disabled -> AutomationsListPage.kt:AutomationsStatsSection()  StatCard(label=translation_automations_stats_autoDisabled, icon=ShieldOff) (L362)
+[COVERED] panel  GlassPanel5   -> AutomationsListPage.kt:AutomationsFiltersPanel()  GlassPanel(PanelPadding.Md) status Select + search Input + count Badge (L383)
+[COVERED] panel  GlassPanel6   -> AutomationsListPage.kt:AutomationsPresetsPanel()  GlassPanel(PanelPadding.Md) collapsible Quick-Start templates -> AutomationPresetGallery.kt (L437)
+[COVERED] panel  GlassPanel7   -> AutomationsListPage.kt:AutomationsListSection()   GlassPanel(PanelPadding.Lg) empty/no-match state; cards via StaggerContainer -> AutomationCard.kt (L512)
+
+# data states (3) — bound to AutomationsListPageViewModel.state: StateFlow<UiState<AutomationsData>> (+ historyState, presetsState)
+[COVERED] state  loading -> AutomationsListPageViewModel.asUiState -> UiPhase.Loading; AutomationsListPage.kt StatCard(loading=state.isLoading) (L241) + PresetGallery/ActivityFeed Spinner
+[COVERED] state  empty   -> AutomationsListPageViewModel.asUiState(isEmpty={it.isEmpty}); AutomationsListPage.kt:AutomationsListSection() EmptyState (empty L513 / noMatch L525); ActivityFeed EmptyState(noHistory)
+[COVERED] state  success -> AutomationsListPageViewModel.combineResources -> Resource.Success; AutomationsListPage.kt:AutomationsListSection() cards branch (filtered.isNotEmpty L489)
+
+# strings (23) — every visible literal via stringResource(R.string.translation_automations_*); web key names preserved
+[COVERED] string automations.autoDisabledWarning         -> AutomationsListPage.kt:255 (auto-disabled AlertBanner)
+[COVERED] string automations.create                      -> AutomationsListPage.kt:314 (header Create Button)
+[COVERED] string automations.empty                       -> AutomationsListPage.kt:515 (EmptyState message)
+[COVERED] string automations.empty.cta                   -> AutomationsListPage.kt:519 (EmptyState action -> /automations/new)
+[COVERED] string automations.filterStatus                -> AutomationsListPage.kt:382 (Select semantics contentDescription)
+[COVERED] string automations.import                      -> AutomationsListPage.kt:305 (header Import Button)
+[COVERED] string automations.importFailedWithReason      -> AutomationsListPage.kt:234 (import-error AlertBanner wrapper)
+[COVERED] string automations.importTypedEnvelopeRequired -> AutomationsListPage.kt:544 (importErrorReason: not-typed-envelope)
+[COVERED] string automations.importUnknownError          -> AutomationsListPage.kt:546 (importErrorReason: no-message fallback)
+[COVERED] string automations.noMatch                     -> AutomationsListPage.kt:525 (EmptyState message)
+[COVERED] string automations.noMatch.cta                 -> AutomationsListPage.kt:529 (EmptyState action -> clearFilters)
+[COVERED] string automations.presets.collapse            -> AutomationsListPage.kt:465 (presets header, expanded)
+[COVERED] string automations.presets.expand              -> AutomationsListPage.kt:467 (presets header, collapsed)
+[COVERED] string automations.presets.hint                -> AutomationsListPage.kt:460 (presets header)
+[COVERED] string automations.presets.title               -> AutomationsListPage.kt:459 (presets header PanelTitle)
+[COVERED] string automations.presets.toggleAria          -> AutomationsListPage.kt:436 (presets header semantics)
+[COVERED] string automations.search                      -> AutomationsListPage.kt:410 (search Input hint)
+[COVERED] string automations.stats.active                -> AutomationsListPage.kt (StatCard + filter option) + AutomationCard.kt:125 (status Badge)
+[COVERED] string automations.stats.autoDisabled          -> AutomationsListPage.kt (StatCard + filter option) + AutomationCard.kt:123 (status Badge)
+[COVERED] string automations.stats.disabled              -> AutomationsListPage.kt (StatCard + filter option) + AutomationCard.kt:127 (status Badge)
+[COVERED] string automations.stats.total                 -> AutomationsListPage.kt:337 (StatCard)
+[COVERED] string automations.subtitle                    -> AutomationsListPage.kt:295 (header BodyText)
+[COVERED] string automations.title                       -> AutomationsListPage.kt:293 (header PageTitle)
+
+PARITY_COVERED=33
+
+=== SUMMARY ===
+data sources : AutomationsListPageViewModel binds the shared S8 AutomationsStore (list + history + presets feeds +
+               toggle/re-enable/delete/test-run mutations) + VehiclesStore (id->name) + PinnedStore (pin order)
+               via automationsListSource(); the /automations/import write goes through ApiHttpClient.safeRequest
+               in the same source seam. No HTTP in the view. Strings: zero hardcoded literals; 6 catalog keys
+               added (translation_automations_{autoDisabledWarning,empty_cta,filters_all,importFailedWithReason,
+               importTypedEnvelopeRequired,noMatch_cta}) in res/values{,-ar,-he}; the other 17 already existed.
+nav          : Destination 'automations' -> /automations (pre-existing, Destinations.kt L110) wired to
+               AutomationsListRoute() via PageHosts.register in AutomationsListPageHost.register(); registered at
+               process start by TeslaSyncApplication. Create / empty-CTA navigate via LocalDeepLinkRouter.request(
+               "teslasync://app/automations/new"); deep link auto-registered by TeslaSyncNavHost.
+a11y/units   : icon buttons + toggle carry contentDescription; >=48dp Material targets; design-token theme
+               (no hardcoded colors/typography); dynamic/dark theme via MaterialTheme. No unit-bearing values on
+               this surface (counts/flags only) — locale number/date formatting at the render boundary.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(33) == PARITY_REQUIRED(33)
+[PASS] all android triad gates green; parity 33/33; android ledger row page:automations/AutomationsList status=done.
+EXIT=0
+STATUS=DONE
