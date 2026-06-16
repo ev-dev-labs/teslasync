@@ -1,0 +1,97 @@
+P3-ANDROID A7 — page:automations/ConflictWarnings — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/ConflictWarnings.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (ConflictWarnings.kt screen + ConflictWarningsPageViewModel + ConflictWarningsPageModel)
+Embeds     : the shared ConflictWarnings feature view (apps/android/app/src/main/java/com/teslasync/feature-views/ConflictWarnings/,
+             package io.teslasync.android.featureviews.conflictwarnings) — verbatim, DRY (ADR-006), no re-implementation, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED, purely presentational fragment the Automation builder renders
+inline (single prop: `conflicts: AutomationConflict[]`; no data hook — its only `t()` call is the banner title). It maps the
+conflicts to a `space-y-2` stack of inline `<AlertBanner>`s (warning tone + triangle glyph when `severity === 'warning'`,
+info tone + info glyph otherwise; title "Potential Conflict"; body `"${automation_name}": ${reason}`) and returns null when the
+list is empty. The presentational + projection surface was already implemented at parity by the predecessor prompt
+p3-android/feature-views ConflictWarnings (com/teslasync/feature-views/ConflictWarnings, committed + green; fv unit tests
+ConflictWarningsProjectionTest / ConflictWarningsDiagnosticsTest + UI test ConflictWarningsUiTest already in the suite). This
+page prompt targets the separate allowed-files path kotlin/com/teslasync/automations/** with a `@Composable screen + ViewModel`
+contract, so — following the sanctioned AutomationCard / ConditionBuilder precedent — this layer is a THIN page wrapper that
+EMBEDS that one shared surface (every banner + the parity string is the parity-covered feature view's `ConflictWarningsContent`)
+and adds only the page state holder + the stateless screen. Predecessor NOT bypassed; no rendering re-implemented.
+
+DATA-SOURCE NOTE (honesty): the manifest declares NO API data source — "renders from navigation args / local state". The host
+(the Automation builder, which owns the validate/preview query) supplies the `conflicts` array. ConflictWarningsPageViewModel
+carries no networking and performs no HTTP; it only re-presents the host-supplied conflicts onto a single
+StateFlow<UiState<List<AutomationConflict>>> (Content when present, Empty when none — web `conflicts.length === 0`). The two
+data states the manifest declares for this unit (empty · error) are rendered by the stateless ConflictWarningsScreen as the
+standard chrome around the embedded fv content; no error is fabricated in production (with no data source there is nothing to
+fail — the holder only ever resolves Content/Empty, while the Error branch stays reachable through the same StateFlow type).
+
+NAV NOTE (honesty): web route is "(unrouted)". Destinations.kt is the canonical registry — it records only real web routes and
+RouteTableTest round-trips every Destinations.all entry, so an unrouted presentational fragment fabricates NO synthetic nav
+destination (doing so would violate the registry's anti-fabrication contract + the round-trip test). The page layer is embedded
+by the Automation builder exactly as the feature view is — the prompt's "(if routed)" clause does not apply, identical to the
+sibling AutomationCard / ConditionBuilder pages.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt snippet's
+':app:' is the same module (documented alias, as in every sibling P3/A* gate log).
+
+DETEKT NOTE (honesty): detekt is NOT part of the required android triad gate (placeholder + assembleDebug + lintDebug +
+testDebugUnitTest). The optional :android:detektDebug task reports 498 pre-existing, ungated findings repo-wide; the only one
+touching this layer is MatchingDeclarationName on ConflictWarningsPageModel.kt:23 (object ConflictWarningsPageRegistration in a
+*PageModel.kt file) — BYTE-FOR-BYTE the same entry the committed sibling page-model files carry (AutomationCardPageModel.kt:19,
+ConditionBuilderPageModel.kt:20). Matching that established precedent is consistency, not drift; ConflictWarnings.kt and
+ConflictWarningsPageViewModel.kt have ZERO detekt findings.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+   (./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin)
+BUILD SUCCESSFUL in 3m 20s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug)
+BUILD SUCCESSFUL in 13m 57s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug)
+BUILD SUCCESSFUL in 2m 27s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — includes the predecessor fv ConflictWarningsProjectionTest/ConflictWarningsDiagnosticsTest, still green)
+
+=== PARITY ===
+PARITY_REQUIRED=3
+binding evidence (the page layer binds the StateFlow + renders the empty/error chrome; the embedded shared feature view renders the banner + string):
+  page layer  : apps/android/app/src/main/kotlin/com/teslasync/automations/{ConflictWarnings.kt, ConflictWarningsPageViewModel.kt, ConflictWarningsPageModel.kt}
+  shared view : apps/android/app/src/main/java/com/teslasync/feature-views/ConflictWarnings/{ConflictWarnings.kt, ConflictWarningsModel.kt}
+                (fv = io.teslasync.android.featureviews.conflictwarnings)
+
+# data states (2 declared: empty · error) — bound to ConflictWarningsPageViewModel.state: StateFlow<UiState<List<AutomationConflict>>>
+[COVERED] state  empty   -> ConflictWarningsPageViewModel.kt:resolve() conflicts.isEmpty() -> UiState(UiPhase.Empty); ConflictWarnings.kt:ConflictWarningsScreen() state.isEmpty branch -> ConflictWarningsEmpty() -> EmptyState(message=R.string.translation_common_noData, icon=TeslaGlyphs.Check) [@Preview "Empty"]
+[COVERED] state  error   -> ConflictWarnings.kt:ConflictWarningsScreen() state.isError branch -> ConflictWarningsError(onRetry) -> ErrorDisplay(message=R.string.translation_error_serverError_message, title=R.string.translation_error_serverError_title, retryLabel=R.string.translation_common_retry, onRetry=ConflictWarningsPageViewModel::retry) [@Preview "Error"]
+  (loading also reachable through the same StateFlow: ConflictWarningsScreen() state.isLoading -> ConflictWarningsLoading() -> Spinner(label=R.string.translation_common_loading); web has no loading, but the page chrome never blanks)
+
+# strings (1) — every visible literal via stringResource(R.string.translation_*); web key name preserved (rendered by the embedded fv)
+[COVERED] string automations.builder.conflict -> fv/ConflictWarnings.kt:ConflictWarningsContent() banner title = stringResource(R.string.translation_automations_builder_conflict) ("Potential Conflict"); reached via ConflictWarningsScreen() content branch -> ConflictWarningsContent(conflicts=state.data)
+
+PARITY_COVERED=3
+
+=== SUMMARY ===
+data sources : none (manifest declares none — renders from navigation args / local state). ConflictWarningsPageViewModel re-presents
+               the host-supplied conflicts as StateFlow<UiState<List<AutomationConflict>>>; the page performs no HTTP. Conflicts stay
+               host-owned (web `conflicts` prop), exactly like the web presentational fragment.
+nav          : web route "(unrouted)" — no synthetic destination fabricated (Destinations.kt records only real web routes; RouteTableTest
+               round-trips every Destinations.all entry). Surface is embedded by the Automation builder, like the fv.
+panels       : none declared (the web source is a bare `space-y-2` AlertBanner stack inside no GlassPanel) — reproduced by the embedded
+               fv ConflictWarningsContent() as a Material 3 Column of shared AlertBanner callouts.
+charts/maps  : none declared.
+states       : empty + error implemented by the page ConflictWarningsScreen chrome (EmptyState / ErrorDisplay + Retry); loading covered too
+               (Spinner); content delegates to the embedded fv. Every region renders something — never a blank box.
+strings      : the lone parity string (translation_automations_builder_conflict) already present in res/values/strings.xml (+ values-he/-ar),
+               rendered by the embedded fv via stringResource; the page chrome strings (common loading / noData / retry, server-error copy)
+               are existing generated catalog keys — zero hardcoded literals in the page layer; web key name preserved.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), TalkBack contentDescriptions on banners + empty/error/loading chrome, MaterialTheme
+               tokens, >=48dp targets; no units to format on this surface (ADR-005/013/014/015). No webview — Compose-native only.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module; detekt not in the triad gate)
+parity       : PARITY_COVERED(3) == PARITY_REQUIRED(3)
+[PASS] all android triad gates green; parity 3/3; android ledger row page:automations/ConflictWarnings status=done.
+EXIT=0
+STATUS=DONE
