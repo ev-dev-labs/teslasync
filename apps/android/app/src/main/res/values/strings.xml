@@ -6262,13 +6262,16 @@
   <string name="translation_sleep_noSentryData">No sentry comparison data available</string>
   <string name="translation_sleep_noStateData">No state distribution data available</string>
   <string name="translation_sleep_recentDrainEvents">Recent Drain Events</string>
+  <string name="translation_sleep_selectVehicle">Select vehicle</string>
   <string name="translation_sleep_sentry">Sentry</string>
   <string name="translation_sleep_sentryComparison">Sentry vs No-Sentry</string>
+  <string name="translation_sleep_sentryComparison_aria">Sentry on versus sentry off drain comparison bar chart</string>
   <string name="translation_sleep_sentryDrainRate">Sentry Drain Rate</string>
   <string name="translation_sleep_sentryMonthlyCost">Sentry Monthly Cost</string>
   <string name="translation_sleep_sentryOff">Sentry Off</string>
   <string name="translation_sleep_sentryOn">Sentry On</string>
   <string name="translation_sleep_stateDistribution">State Distribution</string>
+  <string name="translation_sleep_stateDistribution_aria">State distribution donut chart with per-state hours in the legend</string>
   <string name="translation_sleep_subtitle">Analyze vehicle sleep patterns, vampire drain, and sentry mode costs</string>
   <string name="translation_sleep_temp">Temp</string>
   <string name="translation_sleep_title">Sleep Efficiency</string>

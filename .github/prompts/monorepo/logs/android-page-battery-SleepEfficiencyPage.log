@@ -1,0 +1,132 @@
+================================================================================
+P3-ANDROID A7 — page:battery/SleepEfficiency  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/battery/pages/SleepEfficiencyPage.tsx
+promptId: p3-android/pages/battery/SleepEfficiencyPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present; local.properties sdk.dir set)
+JDK         : OpenJDK 21.0.9 (Android Studio JBR; JAVA_HOME=C:\Program Files\Android\Android Studio\jbr)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPageModel.kt      (322 lines) — framework-free decode + prefs + registration + recordOpened + mapData
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPageSource.kt     ( 97 lines) — SleepExtrasRepository (GET /analytics/sleep) + seam + production binding
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPageViewModel.kt  ( 95 lines) — StateFlow<UiState<SleepEfficiency>> + displayPrefs + refresh/retry/recordViewOpened
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPageIcons.kt      (102 lines) — Moon/Eye/DollarSign/Thermometer glyphs + Clock/Bolt re-export
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPage.kt           (607 lines) — @Composable screen: entry/content/chrome/states/8 panels/2 charts/donut/table
+apps/android/app/src/main/kotlin/com/teslasync/battery/SleepEfficiencyPageHost.kt       ( 49 lines) — PageHosts.register("sleepEfficiency")
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt              (NavHost reg) — import + SleepEfficiencyPageHost.register() (1 line each)
+apps/android/app/src/main/res/values/strings.xml                                        (+3 strings) — translation_sleep_selectVehicle/_sentryComparison_aria/_stateDistribution_aria
+apps/android/app/src/main/res/values-he/strings.xml + values-ar/strings.xml             (+3 each)    — same keys mirrored (catalog consistency; English fallback like every sleep key there)
+apps/parity/android-ledger.json                                                         (+1 row)     — page:battery/SleepEfficiency status=done 48/48
+Total new page source: 1272 lines across 6 files (web SleepEfficiencyPage.tsx is 377 lines; decomposed model/source/vm/icons/page/host >> 70%).
+
+architecture : mirrors the sibling com/teslasync/battery/BatteryHealthPage + com/teslasync/analytics/StatisticsPage A7 precedent —
+               framework-free Model (decode/derive/prefs, off-device testable), Source seam (cache-then-network Resource feeds +
+               production binding over shared S8 SettingsStore + app-scoped SelectedVehicleStore + page-local SleepExtrasRepository
+               CachingRepository on CacheDomain.Analytics over the shared ApiHttpClient + CacheStore), ViewModel (BaseFeedViewModel
+               projecting Resource -> UiState via asUiState, displayPrefs StateFlow), stateless Page (entry constructs the VM,
+               records the one-shot view.opened diagnostic, collects the feed + prefs; content draws the panels). The view performs
+               NO HTTP. package io.teslasync.android.battery.sleepefficiency (dir com/teslasync/battery; InvalidPackageDeclaration
+               suppressed exactly as the sibling surfaces).
+data sources : useSleepEfficiency -> GET /analytics/sleep [vehicle_id, days] (web hook name kept at the call site; default window
+               SLEEP_DEFAULT_DAYS=30 = web useRangeState '30d' preset). Settings (useUnits/useFormatting) + selected vehicle
+               (useSelectedVehicle) from the shared holders.
+si/units     : SI read off the wire; event outside temperatures are SI Celsius -> display via convertTempFromSI (prefs.fromCelsius)
+               at the render boundary only; sentry energy (kWh) + costs render verbatim (web parity). No °F stored or computed.
+states       : the sleep feed is the gate — loading (PageLoader) / error (ErrorDisplay+retry) / empty (EmptyState, hasData=false on a
+               no-object / no-vehicle payload, web `sleep ? … : <noData>`) / success (the 8 panels). The two charts each render their
+               own Ready/Empty surface (noStateData / noSentryData) and the table its own empty (noDrainEvents) so no section is hidden.
+a11y/theme   : both charts carry accessibleDescription (the web aria-labels); the scope picker carries the sleep.selectVehicle
+               contentDescription; the impact + table icons are decorative (contentDescription=null); colors via ChartPalette
+               (paletteColor) + TeslaTokens.status/chart (A2 tokens) + MaterialTheme — dynamic color + dark theme; typography via the
+               role components (PageTitle/SectionTitle/BodyText/Caption + MetricCard's MetricValue/MetricLabel). Compose-native donut
+               (Canvas drawArc) + Vico BarChartWrapper — never a webview.
+nav          : Destinations 'sleepEfficiency' -> /sleep-efficiency pre-existing (Destinations.kt L87, count unchanged); host wired via
+               PageHosts.register("sleepEfficiency"); deep link auto-registered by the NavHost. DataContainer untouched.
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=48
+Each item below cites its binding evidence (file + symbol). Files under
+apps/android/app/src/main/kotlin/com/teslasync/battery/ unless noted.
+
+panel  [1/8]  Sleep-Efficiency        -> SleepEfficiencyPage.kt KeyMetricsGrid MetricCard(label=R.string.translation_sleep_efficiency, value=prefs.percent(sleepEfficiencyPct))
+panel  [2/8]  Avg-Time-to-Sleep       -> SleepEfficiencyPage.kt KeyMetricsGrid MetricCard(label=translation_sleep_avgTimeToSleep, value=prefs.integer(timeToSleepAvgMin)+min)
+panel  [3/8]  Sentry-Drain-Rate       -> SleepEfficiencyPage.kt KeyMetricsGrid MetricCard(label=translation_sleep_sentryDrainRate, value=prefs.number(sentryOnDrainRate)+%/hr)
+panel  [4/8]  Sentry-Monthly-Cost     -> SleepEfficiencyPage.kt KeyMetricsGrid MetricCard(label=translation_sleep_sentryMonthlyCost, value=prefs.currency(sentryMonthlyCost))
+panel  [5/8]  State-Distribution      -> SleepEfficiencyPage.kt StateDistributionPanel ChartContainer(title=translation_sleep_stateDistribution)
+panel  [6/8]  Sentry-vs-No-Sentry     -> SleepEfficiencyPage.kt SentryComparisonPanel ChartContainer(title=translation_sleep_sentryComparison)
+panel  [7/8]  GlassPanel7             -> SleepEfficiencyPage.kt MonthlySentryImpactPanel GlassPanel(accent=Warning, header=translation_sleep_monthlySentryImpact) — extraDrainHr/extraMonthly/extraCostMo stats
+panel  [8/8]  GlassPanel8             -> SleepEfficiencyPage.kt RecentDrainEventsPanel GlassPanel(header=translation_sleep_recentDrainEvents) + DataTable
+chart  [1/4]  ChartContainer          -> SleepEfficiencyPage.kt StateDistributionPanel ChartContainer(accessibleDescription=translation_sleep_stateDistribution_aria, status Ready/Empty)
+chart  [2/4]  PieChart                -> SleepEfficiencyPage.kt StateDistributionChart Canvas drawArc donut + LegendRow (A3 ships no pie wrapper; web chart-a11y:no-table)
+chart  [3/4]  ChartContainer          -> SleepEfficiencyPage.kt SentryComparisonPanel ChartContainer(accessibleDescription=translation_sleep_sentryComparison_aria, status Ready/Empty)
+chart  [4/4]  BarChart                -> SleepEfficiencyPage.kt SentryComparisonPanel BarChartWrapper(series sentry_on/sentry_off, xLabels drainRate/avgBatteryLost)
+state  [1/4]  loading                 -> SleepEfficiencyPage.kt SleepEfficiencyPageContent `sleep.isLoading -> SleepLoading()` (PageLoader)
+state  [2/4]  empty                   -> SleepEfficiencyPage.kt `sleep.isEmpty -> SleepNoData()` (EmptyState) backed by SleepEfficiency.hasData / parseSleepEfficiency
+state  [3/4]  error                   -> SleepEfficiencyPage.kt `sleep.isError -> SleepError(onRetry)` (ErrorDisplay + retry -> ViewModel.retry)
+state  [4/4]  success                 -> SleepEfficiencyPage.kt `else -> SleepBody(...)` (the 8 panels)
+string [01/32] common.off                  -> SleepEfficiencyPage.kt SentryBadge Badge(text=R.string.translation_common_off)
+string [02/32] common.on                   -> SleepEfficiencyPage.kt SentryBadge Badge(text=R.string.translation_common_on)
+string [03/32] sleep.avgBatteryLost        -> SleepEfficiencyPage.kt SentryComparisonPanel lostLabel = R.string.translation_sleep_avgBatteryLost (bar xLabel)
+string [04/32] sleep.avgTimeToSleep        -> SleepEfficiencyPage.kt KeyMetricsGrid R.string.translation_sleep_avgTimeToSleep
+string [05/32] sleep.batteryLost           -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_batteryLost
+string [06/32] sleep.date                  -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_date
+string [07/32] sleep.drainRate             -> SleepEfficiencyPage.kt SentryComparisonPanel drainLabel = R.string.translation_sleep_drainRate (bar xLabel)
+string [08/32] sleep.drainRateCol          -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_drainRateCol
+string [09/32] sleep.duration              -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_duration
+string [10/32] sleep.efficiency            -> SleepEfficiencyPage.kt KeyMetricsGrid R.string.translation_sleep_efficiency
+string [11/32] sleep.extraCostMo           -> SleepEfficiencyPage.kt MonthlySentryImpactPanel R.string.translation_sleep_extraCostMo
+string [12/32] sleep.extraDrainHr          -> SleepEfficiencyPage.kt MonthlySentryImpactPanel R.string.translation_sleep_extraDrainHr
+string [13/32] sleep.extraMonthly          -> SleepEfficiencyPage.kt MonthlySentryImpactPanel R.string.translation_sleep_extraMonthly
+string [14/32] sleep.monthlySentryImpact   -> SleepEfficiencyPage.kt MonthlySentryImpactPanel header R.string.translation_sleep_monthlySentryImpact
+string [15/32] sleep.noData                -> SleepEfficiencyPage.kt SleepNoData message R.string.translation_sleep_noData
+string [16/32] sleep.noDrainEvents         -> SleepEfficiencyPage.kt RecentDrainEventsPanel DataTable emptyText + EmptyState R.string.translation_sleep_noDrainEvents
+string [17/32] sleep.noSentryData          -> SleepEfficiencyPage.kt SentryComparisonPanel emptyMessage R.string.translation_sleep_noSentryData
+string [18/32] sleep.noStateData           -> SleepEfficiencyPage.kt StateDistributionPanel emptyMessage R.string.translation_sleep_noStateData
+string [19/32] sleep.recentDrainEvents     -> SleepEfficiencyPage.kt RecentDrainEventsPanel header R.string.translation_sleep_recentDrainEvents
+string [20/32] sleep.selectVehicle         -> SleepEfficiencyPage.kt SleepChrome selectVehicleLabel = R.string.translation_sleep_selectVehicle (scope-picker contentDescription)
+string [21/32] sleep.sentry                -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_sentry
+string [22/32] sleep.sentryComparison      -> SleepEfficiencyPage.kt SentryComparisonPanel title R.string.translation_sleep_sentryComparison
+string [23/32] sleep.sentryComparison.aria -> SleepEfficiencyPage.kt SentryComparisonPanel accessibleDescription R.string.translation_sleep_sentryComparison_aria
+string [24/32] sleep.sentryDrainRate       -> SleepEfficiencyPage.kt KeyMetricsGrid R.string.translation_sleep_sentryDrainRate
+string [25/32] sleep.sentryMonthlyCost     -> SleepEfficiencyPage.kt KeyMetricsGrid R.string.translation_sleep_sentryMonthlyCost
+string [26/32] sleep.sentryOff             -> SleepEfficiencyPage.kt SentryComparisonPanel offLabel = R.string.translation_sleep_sentryOff (bar series)
+string [27/32] sleep.sentryOn              -> SleepEfficiencyPage.kt SentryComparisonPanel onLabel = R.string.translation_sleep_sentryOn (bar series)
+string [28/32] sleep.stateDistribution     -> SleepEfficiencyPage.kt StateDistributionPanel title R.string.translation_sleep_stateDistribution
+string [29/32] sleep.stateDistribution.aria-> SleepEfficiencyPage.kt StateDistributionPanel accessibleDescription R.string.translation_sleep_stateDistribution_aria
+string [30/32] sleep.subtitle              -> SleepEfficiencyPage.kt SleepChrome subtitle R.string.translation_sleep_subtitle
+string [31/32] sleep.temp                  -> SleepEfficiencyPage.kt drainColumns header R.string.translation_sleep_temp
+string [32/32] sleep.title                 -> SleepEfficiencyPage.kt SleepChrome PageTitle R.string.translation_sleep_title
+PARITY_COVERED=48
+(every visible literal resolves from res/values/strings.xml; the 3 keys absent there before — sleep.selectVehicle +
+ the two .aria keys, which the web supplies as t() defaults — were added to values/ + values-he/ + values-ar/.)
+
+--------------------------------------------------------------------------------
+GATE (android triad: build + lint + test + placeholder scan)
+--------------------------------------------------------------------------------
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0  BUILD_EXIT=0  LINT_EXIT=0  TEST_EXIT=0   (Gradle path :android, app/ module)
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/battery -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 4m 57s
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 9m 39s
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 7s
+parity       : PARITY_COVERED(48) == PARITY_REQUIRED(48)
+[PASS] all android triad gates green; parity 48/48; android ledger row page:battery/SleepEfficiency status=done.
+EXIT=0
+STATUS=DONE
