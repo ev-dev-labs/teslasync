@@ -561,6 +561,24 @@
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-PowersharePage.log"
     },
     {
+      "unitId": "page:charging/ChargingHeatmap",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 24,
+      "requiredCount": 24,
+      "promptId": "p4-apple/P7/page:charging/ChargingHeatmap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-ChargingHeatmapPage.log"
+    },
+    {
+      "unitId": "page:charging/ChargingHeatmap",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 24,
+      "requiredCount": 24,
+      "promptId": "p4-apple/P7/page:charging/ChargingHeatmap",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-charging-ChargingHeatmapPage.log"
+    },
+    {
       "unitId": "page:admin/ApiLogs",
       "platform": "apple-macos",
       "status": "done",
