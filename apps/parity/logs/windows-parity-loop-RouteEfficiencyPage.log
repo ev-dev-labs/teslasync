@@ -1,0 +1,11 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/driving/pages/RouteEfficiencyPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/RouteEfficiencyPage/*
+Units: 8 (api=1 chart=2 panel=4 + page/route/string-group).
+Verification (automated, verification-only — no code change; gates green from prior commit):
+  strings: 19 required, ALL referenced in native .cs (dotted keys + GetString fallbacks); 0 missing.
+  charts:  2 required, 6 native chart-component refs (>=required).
+  api:     Operations.* refs + registered endpoints in Generated/Api/ApiEndpoints.cs.
+  native:  full 4-file feature-view present.
+Gates green: build=0 / format=clean / placeholder=0 / test=31537 passed.
+=== PARITY === platform=windows file=RouteEfficiencyPage.tsx units=8 status=done (string-complete + charts>=required)
