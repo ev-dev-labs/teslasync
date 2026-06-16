@@ -6663,6 +6663,7 @@
   <string name="translation_teslaAccount_title">Tesla Account</string>
   <string name="translation_tesla_charging_allVehicles">All Vehicles</string>
   <string name="translation_tesla_charging_col_cost">Cost</string>
+  <string name="translation_tesla_charging_col_cost_decimal">Cost</string>
   <string name="translation_tesla_charging_col_date">Date</string>
   <string name="translation_tesla_charging_col_duration">Duration</string>
   <string name="translation_tesla_charging_col_energy">Energy (kWh)</string>
@@ -6675,12 +6676,14 @@
   <string name="translation_tesla_charging_filterLabel_search">Search</string>
   <string name="translation_tesla_charging_lastSync">Last synced</string>
   <string name="translation_tesla_charging_monthlySpending">Monthly Spending</string>
+  <string name="translation_tesla_charging_monthlySpending_aria">Monthly Tesla charging spending bar chart</string>
   <string name="translation_tesla_charging_noChartData">No spending data yet. Click \"Refresh from Tesla\" to sync.</string>
   <string name="translation_tesla_charging_noData">No Tesla charging history yet. Click \"Refresh from Tesla\" to import your Supercharger sessions.</string>
   <string name="translation_tesla_charging_noMatches">No sessions match your search.</string>
   <string name="translation_tesla_charging_refresh">Refresh from Tesla</string>
   <string name="translation_tesla_charging_refreshing">Syncing...</string>
   <string name="translation_tesla_charging_searchPlaceholder">Search by location…</string>
+  <string name="translation_tesla_charging_selectVehicle">Select vehicle</string>
   <string name="translation_tesla_charging_sessions">Charging Sessions</string>
   <string name="translation_tesla_charging_stats_avgCost">Avg Cost/kWh</string>
   <string name="translation_tesla_charging_stats_energy">Total Energy</string>
