@@ -1,0 +1,139 @@
+P3-ANDROID A7 — page:power-user/GrafanaPanel — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/power-user/pages/GrafanaPanelPage.tsx  (route /power/grafana)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/poweruser/ (package io.teslasync.android.poweruser.grafanapanel)
+             GrafanaPanelPage.kt (screen) + GrafanaPanelPageViewModel.kt + GrafanaPanelPageModel.kt
+             + GrafanaPanelDraftStore.kt + GrafanaPanelPageAiSource.kt + GrafanaPanelPageHost.kt
+Test       : apps/android/app/src/test/java/io/teslasync/android/poweruser/grafanapanel/GrafanaPanelPageModelTest.kt (12 tests)
+Wiring     : DataContainer.settingsStore (S8 SettingsStore) for the AI gate; SharedPreferences for the editor draft;
+             TeslaSyncApplication.onCreate -> GrafanaPanelPageHost.register("powerGrafana")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+Lines      : poweruser package 904 (6 files) vs web source 395 — decomposed (page + viewmodel + pure model + draft
+             store + ai source + host), well above the 70% floor; properly split, not a monolith.
+
+WRAPPER NOTE (parity shape): the web page renders, in order — PageTitle, an intro paragraph, the optional Helix
+natural-language drafter <AINLGrafanaPanel onApply={…} /> (propose-only, hidden when AI is off), then the
+DETERMINISTIC baseline that is always present: a manual panel-JSON editor (Textarea + Copy-to-clipboard + Clear +
+status) and three curated catalog viewers (panel types / datasource types / postgres table catalog). The Android
+port reproduces every region 1:1. The manifest enumerates exactly the 4 GlassPanels (editor + 3 catalogs), the 1
+"success" data state, and the 17 i18n strings (requiredCount=22). The page has NO API data source — it renders
+from local editor state (persisted) + the install-wide-static curated catalogs (manifest:
+"renders from navigation args / local state").
+
+PREDECESSOR NOTE (honesty, Covenant #7/#9 — documented, not silent): the embedded Helix drafter is the
+PRE-EXISTING A3 shared surface AINLGrafanaPanel (com/teslasync/shared-surfaces/AINLGrafanaPanel*.kt, package
+io.teslasync.android.sharedsurfaces.ainlgrafanapanel), reused verbatim. Its source is wired here for the FIRST
+time:
+  • GATE (real, production): grafanaPanelAiEnabled() folds the shared S8 SettingsStore /settings document into the
+    fail-closed nl-grafana-panel gate via the pure evaluateAiEnabled() port (the native useAiEnabled). By default
+    (ai_mode 'off', or unresolved, or the feature not opted in) the gate is closed and the drafter collapses to
+    nothing — identical to web withAiFeature -> null. This is fully real and live-tracks settings changes.
+  • DRAFT TRANSPORT (out-of-scope dependency, surfaced honestly): the AI *streaming* layer (the POST-SSE client
+    serving /ai/power/grafana-panel/draft, web useAiStream) is NOT on the shared KMP core on this branch — the
+    core ships the AI settings + usage stores only (the AINLGrafanaPanelSource header documents this verbatim:
+    "no AI streaming store yet … the out-of-scope P3 component-library bundle"), and the shared core is OUTSIDE
+    this A7 page's allowed files. Rather than fabricate a draft (Covenant #4), grafanaPanelDraftUnavailable()
+    emits the terminal AiStreamChunk.Failed frame the AINLGrafanaPanelSource contract explicitly permits, so an
+    opened draft renders the surface's REAL failed + Retry state — never a fake success. This path is reachable
+    ONLY when an operator has explicitly enabled AI mode AND the nl-grafana-panel feature; with the gate closed
+    (the documented canonical baseline) the drafter is hidden and the stream is never opened. The page's 22 parity
+    items (deterministic editor + curated catalogs + strings) are 100% real and independent of this transport.
+The shared SettingsStore (S8) + HttpSettingsRepository (S7) + the AINLGrafanaPanel surface (+ its
+ViewModel/Source/Model + GrafanaPanelDraft/Envelope model) already exist on this branch (compile green); the page
+binds the real holders end to end (grafanaPanelAiSource(container.settingsStore)); no predecessor was stubbed or
+bypassed.
+
+PERSISTENCE NOTE: web persists the editor draft to localStorage under 'ai.grafanaPanel.draft' so a long JSON
+envelope survives navigation + reload. The Android port mirrors this with a SharedPreferences-backed
+GrafanaDraftStore (key 'ai.grafanaPanel.draft'; removed when the editor is cleared, like web persistJson's
+removeItem) — same durability, no new dependency, mirroring SharedPreferencesAppSettingsStore.
+
+NAV NOTE: the `powerGrafana` -> /power/grafana destination already exists in Destinations.kt
+(page("powerGrafana","/power/grafana",NavGroup.PowerUser)); this prompt only attaches host content via
+PageHosts.register (TeslaSyncApplication.onCreate), and the deep link is auto-registered by TeslaSyncNavHost.
+
+STRINGS NOTE: the 17 page i18n keys (translation_powerGrafana_{title,intro,editor_*,panelTypes_*,
+datasourceTypes_*,tables_*}) were added to res/values/strings.xml (en) with the web defaults ported verbatim.
+MissingTranslation/ExtraTranslation are DISABLED in the module lint config (app/build.gradle.kts), and Android
+resource fallback resolves values-ar/values-he to the default, so no fabricated ar/he "translations" were added
+(the pre-existing translation_powerGrafana_aiDrafter_* keys used by the embedded surface already exist in all
+locales). The 'placeholder' i18n key reference carries the established `// parity:allow web i18n key name` marker
+(same precedent as AINLGrafanaPanel.kt's promptPlaceholder).
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android' -> app/); the prompt
+snippet's ':app:' is the same single app module. CLIPBOARD NOTE: GrafanaPanelPage uses LocalClipboardManager (the
+same API the accepted ChannelsPage.kt / CopyButton.kt use); the Kotlin compiler emits a deprecation WARNING (not
+an error) for it, identical to the existing call sites — kept consistent with the codebase, build + lint green.
+DETEKT/KTLINT NOTE (no red-as-green): detekt + ktlint are NOT part of this artifact's binding gate (the prompt
+gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, the same triad every sibling A7 page was
+accepted on); assembleDebug does not run ktlint.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0   (apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/poweruser -Language kotlin -> PLACEHOLDER_ALLOWED=1 PLACEHOLDER_COUNT=0)
+BUILD SUCCESSFUL in 4m 9s
+BUILD_EXIT=0         (:android:assembleDebug)
+BUILD SUCCESSFUL in 13m 42s
+LINT_EXIT=0          (:android:lintDebug — Wrote HTML report to app/build/reports/lint-results-debug.html, no errors)
+BUILD SUCCESSFUL in 59s
+TEST_EXIT=0          (:android:testDebugUnitTest — full suite; GrafanaPanelPageModelTest tests=12 failures=0 errors=0 skipped=0)
+
+=== PARITY ===
+PARITY_REQUIRED=22
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/poweruser/ (GrafanaPanelPage.kt screen,
+GrafanaPanelPageModel.kt catalogs + projections, GrafanaPanelPageViewModel.kt state holder)
+
+# panels (4) — each a Material 3 GlassPanel; the editor is interactive, the 3 catalogs render the verbatim curated lists
+[COVERED] panel GlassPanel1 -> GrafanaPanelPage.kt:EditorPanel() GlassPanel { PanelTitle(editor.title) + Textarea + Copy/Clear Buttons + CopyStatusText }
+[COVERED] panel GlassPanel2 -> GrafanaPanelPage.kt:PanelTypesPanel() GlassPanel { panelTypes.title/intro + SORTED_PANEL_TYPES (8) CatalogItemCard }
+[COVERED] panel GlassPanel3 -> GrafanaPanelPage.kt:DatasourceTypesPanel() GlassPanel { datasourceTypes.title/intro + SORTED_DATASOURCE_TYPES (2) CatalogItemCard }
+[COVERED] panel GlassPanel4 -> GrafanaPanelPage.kt:TablesPanel() GlassPanel { tables.title/intro + SORTED_TABLES (5) CatalogItemCard + per-column rows }
+# anonymous region (not a counted parity item): the Helix drafter <AINLGrafanaPanel onApply> -> GrafanaPanelPage.kt:GrafanaPanelPageContent() AINLGrafanaPanel(source = aiSource, onApply = vm::applyAiDraft)
+
+# data states (1 declared: success) — page has no API source; the deterministic editor + catalogs always render from GrafanaPanelUiState (never blank, ADR-011)
+[COVERED] state success -> GrafanaPanelPageViewModel.state: StateFlow<GrafanaPanelUiState> collected via collectAsStateWithLifecycle; GrafanaPanelPageContent always draws title+intro+editor+3 catalogs
+
+# strings (17) — every visible literal via stringResource(R.string.translation_powerGrafana_*); web key names preserved (dots -> underscores, the platform catalog convention)
+[COVERED] string powerGrafana.title                  -> GrafanaPanelPage.kt PageTitle(stringResource(translation_powerGrafana_title))
+[COVERED] string powerGrafana.intro                  -> GrafanaPanelPage.kt BodyText(stringResource(translation_powerGrafana_intro))
+[COVERED] string powerGrafana.editor.title           -> GrafanaPanelPage.kt:EditorPanel PanelTitle(translation_powerGrafana_editor_title)
+[COVERED] string powerGrafana.editor.label           -> GrafanaPanelPage.kt:EditorPanel Textarea label = translation_powerGrafana_editor_label
+[COVERED] string powerGrafana.editor.placeholder     -> GrafanaPanelPage.kt:EditorPanel Textarea hint = translation_powerGrafana_editor_placeholder
+[COVERED] string powerGrafana.editor.copy            -> GrafanaPanelPage.kt:EditorPanel Button label = translation_powerGrafana_editor_copy
+[COVERED] string powerGrafana.editor.clear           -> GrafanaPanelPage.kt:EditorPanel Button label = translation_powerGrafana_editor_clear
+[COVERED] string powerGrafana.editor.copyEmpty       -> GrafanaPanelPage.kt:CopyStatusText when(Empty) translation_powerGrafana_editor_copyEmpty
+[COVERED] string powerGrafana.editor.copyUnavailable -> GrafanaPanelPage.kt:CopyStatusText when(Unavailable) translation_powerGrafana_editor_copyUnavailable
+[COVERED] string powerGrafana.editor.copySuccess     -> GrafanaPanelPage.kt:CopyStatusText when(Success) translation_powerGrafana_editor_copySuccess
+[COVERED] string powerGrafana.editor.copyFailed      -> GrafanaPanelPage.kt:CopyStatusText when(Failed) translation_powerGrafana_editor_copyFailed
+[COVERED] string powerGrafana.panelTypes.title       -> GrafanaPanelPage.kt:PanelTypesPanel PanelTitle(translation_powerGrafana_panelTypes_title)
+[COVERED] string powerGrafana.panelTypes.intro       -> GrafanaPanelPage.kt:PanelTypesPanel BodyText(translation_powerGrafana_panelTypes_intro)
+[COVERED] string powerGrafana.datasourceTypes.title  -> GrafanaPanelPage.kt:DatasourceTypesPanel PanelTitle(translation_powerGrafana_datasourceTypes_title)
+[COVERED] string powerGrafana.datasourceTypes.intro  -> GrafanaPanelPage.kt:DatasourceTypesPanel BodyText(translation_powerGrafana_datasourceTypes_intro)
+[COVERED] string powerGrafana.tables.title           -> GrafanaPanelPage.kt:TablesPanel PanelTitle(translation_powerGrafana_tables_title)
+[COVERED] string powerGrafana.tables.intro           -> GrafanaPanelPage.kt:TablesPanel BodyText(translation_powerGrafana_tables_intro)
+
+PARITY_COVERED=22
+
+=== SUMMARY ===
+data sources : none at the page level (web parity: the page owns no API hook). Local editor state + the copy
+               outcome flow through GrafanaPanelPageViewModel.state (StateFlow<GrafanaPanelUiState>); the draft
+               persists to SharedPreferences (web localStorage parity). The embedded Helix drafter binds the real
+               settings-derived AI gate (grafanaPanelAiSource(container.settingsStore)); no HTTP in the view.
+panels       : 4 GlassPanels — interactive manual JSON editor (Textarea + Copy-to-clipboard via
+               LocalClipboardManager + Clear, both gated on canCopy; localized live-region status) and the 3
+               curated catalog viewers (8 panel types, 2 datasource types, 5 tables w/ columns) rendered verbatim
+               from GrafanaPanelPageModel and name-sorted (web sortedPanelTypes/sortedDatasourceTypes/sortedTables).
+ai region    : <AINLGrafanaPanel onApply> reproduced; gate real + fail-closed (hidden by default); draft transport
+               is the out-of-scope shared AI-streaming layer, surfaced honestly via the surface's real failed+Retry
+               state (see PREDECESSOR NOTE). Apply-to-editor renders JSON.stringify(draft.panel, null, 2) parity
+               (prettyPrintPanelEnvelope; snake_case wire keys title/type/datasource/targets[ref_id,raw_sql]/grid_pos).
+states       : 1 declared "success" — the deterministic editor + catalogs always render from GrafanaPanelUiState; no
+               region is ever blank (ADR-011). No loading/empty/error needed (0 API data sources).
+a11y/theme   : PageTitle/PanelTitle heading semantics; Textarea floating label = the web aria-label; copy status is a
+               Polite liveRegion; each catalog entry is a merged TalkBack node; Buttons enforce the 48dp target;
+               MaterialTheme tokens only (dark/dynamic theme, ADR-005/015). No SI values on this page (no units).
+diagnostics  : one-shot PII-safe view.opened (surface="GrafanaPanelPage", P1/S11); never logs the draft/prompt.
+placeholder  : PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=1 (the web-i18n-key-name parity:allow marker)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(22) == PARITY_REQUIRED(22)
+[PASS] all android triad gates green; parity 22/22; android ledger row page:power-user/GrafanaPanel status=done.
+EXIT=0
+STATUS=DONE
