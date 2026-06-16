@@ -9678,4 +9678,33 @@
   <!-- Sort-toolbar option labels the web resolves via t('Category') / t('Due Date'); not in the parity-30 but rendered for fidelity. -->
   <string name="translation_Category">Category</string>
   <string name="translation_Due_Date">Due Date</string>
+  <!-- P3-android A7 vehicle-systems/SafetySettings parity strings (literal-as-key, web defaults verbatim). -->
+  <string name="translation_ADAS_Features">ADAS Features</string>
+  <string name="translation_ADAS_features__safety_score__and_driving_stats">ADAS features, safety score, and driving stats</string>
+  <string name="translation_Adaptive_cruise_headway_setting">Adaptive cruise headway setting</string>
+  <string name="translation_Alerts_for_blind_spot_hazards">Alerts for blind-spot hazards</string>
+  <string name="translation_Alerts_when_exceeding_speed_limit">Alerts when exceeding speed limit</string>
+  <string name="translation_Auto_Emergency_Braking">Auto Emergency Braking</string>
+  <string name="translation_Automatic_collision_mitigation">Automatic collision mitigation</string>
+  <string name="translation_Blind_Spot_Camera">Blind Spot Camera</string>
+  <string name="translation_Blind_Spot_Collision_Warning">Blind Spot Collision Warning</string>
+  <string name="translation_Camera_view_when_signaling">Camera view when signaling</string>
+  <string name="translation_Cruise_Follow_Distance">Cruise Follow Distance</string>
+  <string name="translation_Emergency_Lane_Departure_Avoidance">Emergency Lane Departure Avoidance</string>
+  <string name="translation_Forward_Collision_Warning">Forward Collision Warning</string>
+  <string name="translation_Lane_Departure_Avoidance">Lane Departure Avoidance</string>
+  <string name="translation_No_history_records_found_">No history records found.</string>
+  <string name="translation_No_safety_data_available_for_this_vehicle_">No safety data available for this vehicle.</string>
+  <string name="translation_No_safety_state_history_to_chart_yet_">No safety state history to chart yet.</string>
+  <string name="translation_Pin_to_Drive">Pin to Drive</string>
+  <string name="translation_Prevents_unintentional_lane_changes">Prevents unintentional lane changes</string>
+  <string name="translation_Requires_PIN_before_driving">Requires PIN before driving</string>
+  <string name="translation_Safety_Score">Safety Score</string>
+  <string name="translation_Safety_Settings">Safety Settings</string>
+  <string name="translation_Safety_Settings_History">Safety Settings History</string>
+  <string name="translation_Safety_States_Over_Time">Safety States Over Time</string>
+  <string name="translation_Speed_Limit_Warning">Speed Limit Warning</string>
+  <string name="translation_Steers_back_on_unintentional_departure">Steers back on unintentional departure</string>
+  <string name="translation_Total_Features">Total Features</string>
+  <string name="translation_Warns_of_potential_frontal_collisions">Warns of potential frontal collisions</string>
 </resources>

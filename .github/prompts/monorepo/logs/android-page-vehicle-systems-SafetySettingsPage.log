@@ -1,0 +1,200 @@
+================================================================================
+P3-ANDROID · A7 · page:vehicle-systems/SafetySettings — evidence log
+Native Jetpack Compose / Material 3 port of web SafetySettingsPage
+Source: web/src/features/vehicle-systems/pages/SafetySettingsPage.tsx
+Output: apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems/**
+Package: io.teslasync.android.vehiclesystems.safetysettings
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR, JAVA_HOME = C:\Program Files\Android\Android Studio\jbr)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L31-36;
+                 the prompt's literal ":app:" is the generic placeholder — this
+                 single-module build addresses ":android:" per the README gate contract).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 StatisticsPage / DrivetrainHealthPage precedents)
+  SafetySettingsPageModel.kt      framework-free: registration ids (safetySettings / /safety-settings / SLUG);
+                                  SafetySnapshot + SecurityLatest + SafetyFeature decode; the safety-enum
+                                  normalization choke point (cleanSafetyEnum / isSafetyEnumActive — web
+                                  lib/safetyEnum.ts, incl. the SpeedAssistLevelNone⇒Off + AEB inverted cases);
+                                  the 0..9 score + the nine feature cards; toSafetyChartData (ascending step
+                                  series) + sortedSafetyHistory (newest-first); SafetyDisplayPrefs (web useUnits —
+                                  SI metres → display distance via the shared convertDistanceFromSI); Resource.mapData;
+                                  recordSafetySettingsOpened (PII-safe view.opened).
+  SafetySettingsPageSource.kt     seam over a page-local SafetyExtrasRepository (CachingRepository<JsonElement>,
+                                  CacheDomain.VehicleSystems) for the three reads the shared stores have no method
+                                  for — /security/latest (web useSecurityLatest), /safety/latest (web useQuery) and
+                                  /safety?limit=100 (web useQuery) — plus SettingsStore.settings (web useUnits) +
+                                  SelectedVehicleStore (web useSelectedVehicle). Same resilient client + offline
+                                  cache as every other feed; the StatisticsExtrasRepository precedent.
+  SafetySettingsPageViewModel.kt  BaseFeedViewModel; state: StateFlow<UiState<SafetySnapshot>> (primary, isEmpty=!hasData),
+                                  history: StateFlow<UiState<List<SafetySnapshot>>>, security: StateFlow<SecurityLatest>
+                                  (the panel always renders, em dash on missing), displayPrefs: StateFlow<SafetyDisplayPrefs>;
+                                  scoped to the active vehicle, refresh()/retry()/recordViewOpened().
+  SafetySettingsPage.kt           stateless Compose render layer — chrome (title/subtitle/freshness/VehicleSelect) +
+                                  the loading/error/empty/loaded body; every panel drawn from the decoded models.
+  SafetySettingsPageIcons.kt      web lucide glyphs: Lock/Shield re-exported from the shared catalogs; UserCheck/
+                                  Armchair/Navigation/Cpu/AlertCircle authored as 24×24 stroked vectors.
+  SafetySettingsPageHost.kt       binds the source for the `safetySettings` route via safetySettingsPageSourceOf;
+                                  registered once at process start (TeslaSyncApplication L333).
+
+  Manifest-declared data source = useSecurityLatest only; the page ALSO reads /safety/latest + /safety (bare web
+  useQuery, not named hooks, so the generator missed them). All three are implemented — the score / feature cards /
+  driving-stats panels and the chart + history table cannot render at parity without them (no scope narrowing).
+
+=== PARITY ===
+PARITY_REQUIRED=79
+
+PANELS (14) — every Material 3 Card/Surface (GlassPanel) the web source renders
+  [01] panel  GlassPanel1            SafetySettingsPage.kt:287  ScoreGaugePanel — GlassPanel + RadialGauge + score Badge
+  [02] panel  Safety-Score           SafetySettingsPage.kt:318  MetricCard(label=translation_Safety_Score L320, value=score%)
+  [03] panel  Total-Features         SafetySettingsPage.kt:324  MetricCard(label=translation_Total_Features L326, value=9)
+  [04] panel  Enabled                SafetySettingsPage.kt:332  MetricCard(label=translation_Enabled L334, value=enabledCount)
+  [05] panel  Disabled               SafetySettingsPage.kt:338  MetricCard(label=translation_Disabled L340, value=disabledCount)
+  [06] panel  GlassPanel2            SafetySettingsPage.kt:401  SignalCard — GlassPanel per live signal (web SignalCard)
+  [07] panel  GlassPanel3            SafetySettingsPage.kt:472  SafetyFeatureCard — GlassPanel per ADAS feature (web SafetyCard)
+  [08] panel  GlassPanel8            SafetySettingsPage.kt:352  LiveSignalsPanel — GlassPanel(translation_safety_liveSignals)
+  [09] panel  GlassPanel9            SafetySettingsPage.kt:426  DrivingStatsPanel — GlassPanel(translation_safety_drivingStats)
+  [10] panel  Distance-Since-Reset   SafetySettingsPage.kt:434  MetricCard(label=translation_safety_distanceSinceReset L437)
+  [11] panel  Self-Driving-Distance  SafetySettingsPage.kt:442  MetricCard(label=translation_safety_selfDrivingDistance L445)
+  [12] panel  GlassPanel12           SafetySettingsPage.kt:458  AdasFeaturesPanel — GlassPanel(translation_ADAS_Features L460)
+  [13] panel  GlassPanel13           SafetySettingsPage.kt:502  SafetyStatesChartPanel — GlassPanel via ChartContainer
+  [14] panel  GlassPanel14           SafetySettingsPage.kt:547  SafetyHistoryPanel — GlassPanel + DataTable / EmptyState
+
+CHARTS (2) — A3 native chart wrappers (Compose canvas / Vico), never a webview
+  [15] chart  RadialGauge            SafetySettingsPage.kt:295  RadialGauge(value=scorePercent,max=100,color=scoreColor) (A3 canvas gauge)
+  [16] chart  LineChart              SafetySettingsPage.kt:523  LineChartWrapper(3 step series aeb/bscw/elda) (A3 Vico, no webview)
+
+DATA STATES (4) — for the bound feeds (loading / empty / error / success; the holder also carries stale/offline)
+  [17] state  loading                SafetySettingsPage.kt:179  state.isLoading||history.isLoading → SafetyLoading()→PageLoader (L223)
+  [18] state  empty                  SafetySettingsPage.kt:181  state.isEmpty → SafetyEmpty()→EmptyState(translation_No_safety_data… L241);
+                                                                chart-empty L516 (ChartStatus.Empty); history-empty L553/560
+  [19] state  error                  SafetySettingsPage.kt:180  state.isError → SafetyErrorSurface→ErrorDisplay(retry) (L230); offline AlertBanner L249
+  [20] state  success                SafetySettingsPage.kt:184  SafetyBody(snapshot,history,security,prefs) (the loaded panels)
+
+STRINGS (59) — every visible literal resolves from res/values/strings.xml; key names match web
+  [21] string ADAS Features                                   SafetySettingsPage.kt:460  translation_ADAS_Features
+  [22] string ADAS features, safety score, and driving stats  SafetySettingsPage.kt:207  translation_ADAS_features__safety_score__and_driving_stats
+  [23] string AEB                                             SafetySettingsPage.kt:508  translation_AEB
+  [24] string Adaptive cruise headway setting                 SafetySettingsPage.kt:715  translation_Adaptive_cruise_headway_setting
+  [25] string Alerts for blind-spot hazards                   SafetySettingsPage.kt:718  translation_Alerts_for_blind_spot_hazards
+  [26] string Alerts when exceeding speed limit               SafetySettingsPage.kt:716  translation_Alerts_when_exceeding_speed_limit
+  [27] string Auto Emergency Braking                          SafetySettingsPage.kt:696  translation_Auto_Emergency_Braking
+  [28] string Automatic collision mitigation                  SafetySettingsPage.kt:711  translation_Automatic_collision_mitigation
+  [29] string BSC                                             SafetySettingsPage.kt:578  translation_BSC
+  [30] string BSCW                                            SafetySettingsPage.kt:509  translation_BSCW
+  [31] string Blind Spot Camera                               SafetySettingsPage.kt:697  translation_Blind_Spot_Camera
+  [32] string Blind Spot Collision Warning                    SafetySettingsPage.kt:703  translation_Blind_Spot_Collision_Warning
+  [33] string CFD                                             SafetySettingsPage.kt:593  translation_CFD
+  [34] string Camera view when signaling                      SafetySettingsPage.kt:712  translation_Camera_view_when_signaling
+  [35] string Cruise Follow Distance                          SafetySettingsPage.kt:700  translation_Cruise_Follow_Distance
+  [36] string Disabled                                        SafetySettingsPage.kt:340  translation_Disabled
+  [37] string ELDA                                            SafetySettingsPage.kt:590  translation_ELDA
+  [38] string Emergency Lane Departure Avoidance              SafetySettingsPage.kt:704  translation_Emergency_Lane_Departure_Avoidance
+  [39] string Enabled                                         SafetySettingsPage.kt:334  translation_Enabled
+  [40] string FCW                                             SafetySettingsPage.kt:584  translation_FCW
+  [41] string Forward Collision Warning                       SafetySettingsPage.kt:698  translation_Forward_Collision_Warning
+  [42] string LDA                                             SafetySettingsPage.kt:587  translation_LDA
+  [43] string Lane Departure Avoidance                        SafetySettingsPage.kt:699  translation_Lane_Departure_Avoidance
+  [44] string No history records found.                       SafetySettingsPage.kt:560  translation_No_history_records_found_
+  [45] string No safety data available for this vehicle.      SafetySettingsPage.kt:241  translation_No_safety_data_available_for_this_vehicle_
+  [46] string No safety state history to chart yet.           SafetySettingsPage.kt:516  translation_No_safety_state_history_to_chart_yet_
+  [47] string Off                                             SafetySettingsPage.kt:570  translation_Off
+  [48] string On                                              SafetySettingsPage.kt:569  translation_On
+  [49] string PIN                                             SafetySettingsPage.kt:599  translation_PIN
+  [50] string Pin to Drive                                    SafetySettingsPage.kt:702  translation_Pin_to_Drive
+  [51] string Prevents unintentional lane changes             SafetySettingsPage.kt:714  translation_Prevents_unintentional_lane_changes
+  [52] string Requires PIN before driving                     SafetySettingsPage.kt:717  translation_Requires_PIN_before_driving
+  [53] string SLW                                             SafetySettingsPage.kt:596  translation_SLW
+  [54] string Safety Score                                    SafetySettingsPage.kt:320  translation_Safety_Score
+  [55] string Safety Settings                                 SafetySettingsPage.kt:205  translation_Safety_Settings
+  [56] string Safety Settings History                         SafetySettingsPage.kt:550  translation_Safety_Settings_History
+  [57] string Safety States Over Time                         SafetySettingsPage.kt:513  translation_Safety_States_Over_Time
+  [58] string Speed Limit Warning                             SafetySettingsPage.kt:701  translation_Speed_Limit_Warning
+  [59] string Steers back on unintentional departure          SafetySettingsPage.kt:719  translation_Steers_back_on_unintentional_departure
+  [60] string Time                                            SafetySettingsPage.kt:572  translation_Time
+  [61] string Total Features                                  SafetySettingsPage.kt:326  translation_Total_Features
+  [62] string Warns of potential frontal collisions           SafetySettingsPage.kt:713  translation_Warns_of_potential_frontal_collisions
+  [63] string enabled                                         SafetySettingsPage.kt:304  translation_enabled
+  [64] string error.loadFailed                                SafetySettingsPage.kt:232  translation_error_loadFailed
+  [65] string safety.buckled                                  SafetySettingsPage.kt:356  translation_safety_buckled
+  [66] string safety.distanceAutopilot                        SafetySettingsPage.kt:447  translation_safety_distanceAutopilot (%1$s (autopilot))
+  [67] string safety.distanceSinceReset                       SafetySettingsPage.kt:437  translation_safety_distanceSinceReset
+  [68] string safety.driverBelt                               SafetySettingsPage.kt:368  translation_safety_driverBelt
+  [69] string safety.driverSeat                               SafetySettingsPage.kt:384  translation_safety_driverSeat
+  [70] string safety.drivingStats                             SafetySettingsPage.kt:431  translation_safety_drivingStats
+  [71] string safety.empty                                    SafetySettingsPage.kt:359  translation_safety_empty
+  [72] string safety.liveSignals                              SafetySettingsPage.kt:354  translation_safety_liveSignals
+  [73] string safety.locked                                   SafetySettingsPage.kt:360  translation_safety_locked
+  [74] string safety.occupied                                 SafetySettingsPage.kt:358  translation_safety_occupied
+  [75] string safety.passengerBelt                            SafetySettingsPage.kt:375  translation_safety_passengerBelt
+  [76] string safety.selfDrivingDistance                      SafetySettingsPage.kt:445  translation_safety_selfDrivingDistance
+  [77] string safety.unbuckled                                SafetySettingsPage.kt:357  translation_safety_unbuckled
+  [78] string safety.unlocked                                 SafetySettingsPage.kt:361  translation_safety_unlocked
+  [79] string safety.vehicleLock                              SafetySettingsPage.kt:391  translation_safety_vehicleLock
+
+PARITY_COVERED=79
+
+STRING CATALOG
+  31 of the 59 keys already existed in res/values/strings.xml (translation_safety_*, translation_On/Off/Enabled/
+  Disabled/AEB/BSC/…/error_loadFailed/enabled — generated from the shared i18n catalog with the verbatim web
+  default values). The remaining 28 (the literal-as-key ADAS labels/descriptions, the section titles, the three
+  empty/error messages) were absent from the web i18n source, so they were added to res/values/strings.xml (an
+  allowed file) with the verbatim web default text and the canonical generator key transform
+  ("translation." + key, every non-[A-Za-z0-9_] char → '_'; e.g. "ADAS features, safety score, and driving stats"
+  → translation_ADAS_features__safety_score__and_driving_stats, "No history records found." →
+  translation_No_history_records_found_). The default values/ catalog is the only string source touched: the build
+  runs no i18n generation, and MissingTranslation/ExtraTranslation are disabled (app/build.gradle.kts L114) because
+  ar/he ship as full English fallback, so the ar/he mirrors are not required. The "%" percent unit (gauge + score
+  card) is the web's own non-internationalized literal.
+
+A11Y / THEME / UNITS (ADR-015)
+  - Each live SignalCard carries a merged TalkBack content description ("<label>: <value>") via clearAndSetSemantics
+    (L378); the RadialGauge exposes one screen-reader description (A3 component); the safety-states ChartContainer
+    exposes the accessible data-table fallback ([Time, AEB, BSCW, ELDA] rows, L517-520) for the opaque canvas.
+  - Colours/typography come from MaterialTheme + the per-theme TeslaTokens.status palette (P1/S9); dark + dynamic
+    colour honoured. The score gauge/badge colour is the web scoreColor (≥80 success / ≥50 warning / else danger),
+    a dynamic value, not a static literal — the DarkStatusColors hexes (#10B981/#F59E0B/#EF4444) are the SAME the
+    web scoreColor uses. Touch targets use the shared component sizing.
+  - SI metres (the misnamed *_miles_since_reset fields — content is metres) are converted only at the display
+    boundary (SafetyDisplayPrefs.distance → shared convertDistanceFromSI); the page is Compose-native — the line
+    chart uses the A3 LineChartWrapper (no webview). The web page has no map (0 maps).
+
+NAV / REGISTRATION
+  Destinations.kt L107 already declares page("safetySettings", "/safety-settings", NavGroup.VehicleSystems);
+  SafetySettingsPageHost.register() is wired at process start (TeslaSyncApplication.kt L333), idempotent — the
+  same seam every A7 page uses (PageHosts). No new destination needed.
+
+GATE (android triad: placeholder + build + lint + test)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/vehiclesystems -Language kotlin
+    PLACEHOLDER_ALLOWED=0
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL in 4m 34s (only pre-existing LocalClipboardManager
+                                          deprecation warnings in unrelated files; none in the new surface)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL in 14m 34s (lint-results-debug.html written;
+                                          abortOnError=true; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL in 58s (full suite; SafetySettingsPageModelTest = 19/19)
+  TEST_EXIT=0
+
+ACCEPTANCE
+  [x] Every named panel implemented (the score gauge, the four score stat cards, the four live SignalCards, the two
+      driving-distance MetricCards, the nine ADAS SafetyFeatureCards, the safety-states chart, the history table);
+      every anonymous GlassPanel region of the web source reproduced.
+  [x] All 79 parity items render from the bound StateFlow state holders (state + history + security + displayPrefs),
+      decoded/derived by the framework-free model.
+  [x] loading / empty / error / success implemented for the bound feeds (the page body switches on the primary
+      /safety/latest feed — web isLoading/!latest/error — plus per-section chart + history empty surfaces).
+  [x] All visible strings sourced from strings.xml; key names match web; zero hardcoded UI copy (the "%" unit is the
+      web's own non-internationalized literal).
+  [x] Dark/dynamic theme via MaterialTheme; merged signal/chart semantics + accessible data table (a11y); SI metres
+      converted at the display boundary; Compose-native only (no webview cloning).
+  [x] placeholder + build + lint + test gates green; PARITY_COVERED==PARITY_REQUIRED (79).
+  [x] android ledger row for page:vehicle-systems/SafetySettings set covered (apps/parity/android-ledger.json, 79/79 done).
+
+EXIT=0
+STATUS=DONE

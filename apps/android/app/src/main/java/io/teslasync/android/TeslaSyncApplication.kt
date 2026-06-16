@@ -140,6 +140,7 @@ import io.teslasync.android.watch.watchface.WatchFacePageHost
 import io.teslasync.android.vehicles.digitaltwin.DigitalTwinPageHost
 import io.teslasync.android.admin.backuprestore.BackupRestorePageHost
 import io.teslasync.android.vehiclesystems.GuardModePageHost
+import io.teslasync.android.vehiclesystems.safetysettings.SafetySettingsPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -353,6 +354,7 @@ class TeslaSyncApplication : Application() {
         WatchFacePageHost.register()
         BackupRestorePageHost.register()
         GuardModePageHost.register()
+        SafetySettingsPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
