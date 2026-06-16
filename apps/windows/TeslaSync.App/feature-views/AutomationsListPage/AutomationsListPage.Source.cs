@@ -26,6 +26,8 @@ public sealed class AutomationsListClientFeed : IAutomationsListFeed
     private const string DeleteOperation = "delete_api_v1_automations_id";
     private const string TestRunOperation = "post_api_v1_automations_id_test_run";
     private const string ImportOperation = "post_api_v1_automations_import";
+    private const string PinOperation = "post_api_v1_pinned";
+    private const string UnpinOperation = "delete_api_v1_pinned_id";
 
     private readonly IApiClient _api;
 
@@ -102,6 +104,22 @@ public sealed class AutomationsListClientFeed : IAutomationsListFeed
 
         return _api.SendAsync<JsonElement>(new ApiRequest(ImportOperation, Body: body), cancellationToken);
     }
+
+    /// <inheritdoc />
+    public Task PinAsync(string automationId, CancellationToken cancellationToken) =>
+        _api.SendAsync<JsonElement>(
+            new ApiRequest(PinOperation, Body: new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["item_type"] = "automation",
+                ["item_id"] = automationId,
+            }),
+            cancellationToken);
+
+    /// <inheritdoc />
+    public Task UnpinAsync(string pinId, CancellationToken cancellationToken) =>
+        _api.SendAsync<JsonElement>(
+            new ApiRequest(UnpinOperation, PathParams: new Dictionary<string, string>(StringComparer.Ordinal) { ["id"] = pinId }),
+            cancellationToken);
 
     private static Dictionary<string, string> PathId(long id) => new(StringComparer.Ordinal)
     {

@@ -182,7 +182,7 @@ public sealed record AutomationVehicleRef(long Id, string DisplayName)
 /// One pin row — the native mirror of the web <c>PinnedItem</c> fields the list reads to float pinned automations
 /// to the top in pin order (web <c>usePinned('automation')</c> → <c>sortedItems</c>). Pure data; null-tolerant.
 /// </summary>
-public sealed record AutomationPin(string ItemId, int Position)
+public sealed record AutomationPin(string ItemId, int Position, string Id = "")
 {
     /// <summary>Parse a pinned JSON array into a tolerant list, preserving order.</summary>
     public static IReadOnlyList<AutomationPin> ParseList(JsonElement element)
@@ -202,10 +202,27 @@ public sealed record AutomationPin(string ItemId, int Position)
 
             list.Add(new AutomationPin(
                 ItemId: AutomationsJson.Str(item, "item_id") ?? string.Empty,
-                Position: AutomationsJson.Int(item, "position") ?? 0));
+                Position: AutomationsJson.Int(item, "position") ?? 0,
+                Id: PinRowId(item)));
         }
 
         return list;
+    }
+
+    /// <summary>Read the pin row id (web <c>PinnedItem.id</c>) used to unpin, tolerating a string or numeric JSON id.</summary>
+    private static string PinRowId(JsonElement item)
+    {
+        if (!item.TryGetProperty("id", out var v))
+        {
+            return string.Empty;
+        }
+
+        return v.ValueKind switch
+        {
+            JsonValueKind.String => v.GetString() ?? string.Empty,
+            JsonValueKind.Number => v.GetRawText(),
+            _ => string.Empty,
+        };
     }
 }
 
@@ -290,6 +307,12 @@ public interface IAutomationsListFeed
 
     /// <summary>Import a typed automation export (web import handler, <c>POST /automations/import</c>).</summary>
     Task ImportAsync(string envelopeJson, CancellationToken cancellationToken);
+
+    /// <summary>Pin an automation (web <c>useTogglePin('automation')</c> pin, <c>POST /pinned</c>). Default no-op.</summary>
+    Task PinAsync(string automationId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>Unpin an automation by its pin-row id (web unpin, <c>DELETE /pinned/{id}</c>). Default no-op.</summary>
+    Task UnpinAsync(string pinId, CancellationToken cancellationToken) => Task.CompletedTask;
 }
 
 /// <summary>The default feed — resolves every load to the empty snapshot and no-ops the writes (the empty data state).</summary>

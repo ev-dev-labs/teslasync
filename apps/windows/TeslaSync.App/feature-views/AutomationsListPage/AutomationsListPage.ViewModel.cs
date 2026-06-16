@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using TeslaSync.App.Core.Notifications;
 
@@ -190,6 +191,16 @@ public sealed class AutomationsListPageViewModel : INotifyPropertyChanged, IDisp
     /// <summary>Queue a test run (web <c>onTestRun</c>); reloads on success.</summary>
     public Task TestRunAsync(long id, CancellationToken cancellationToken = default) =>
         MutateThenReloadAsync(ct => _feed.TestRunAsync(id, ct), cancellationToken);
+
+    /// <summary>Toggle the automation's pin (web <c>PinButton</c> → <c>useTogglePin('automation')</c>); reloads on success.</summary>
+    public Task TogglePinAsync(long id, CancellationToken cancellationToken = default)
+    {
+        string itemId = id.ToString(CultureInfo.InvariantCulture);
+        var pin = _pins.FirstOrDefault(p => string.Equals(p.ItemId, itemId, StringComparison.Ordinal));
+        return MutateThenReloadAsync(
+            ct => pin is not null ? _feed.UnpinAsync(pin.Id, ct) : _feed.PinAsync(itemId, ct),
+            cancellationToken);
+    }
 
     /// <summary>
     /// Import a typed automation export (web import handler): rejects an untyped / legacy envelope with the

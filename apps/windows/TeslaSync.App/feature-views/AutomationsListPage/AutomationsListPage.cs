@@ -395,6 +395,7 @@ public sealed partial class AutomationsListPage : UserControl, IDisposable
         card.ReEnableRequested += (_, _) => _ = _viewModel.ReEnableAsync(id);
         card.DeleteRequested += (_, _) => _ = _viewModel.DeleteAsync(id);
         card.TestRunRequested += (_, _) => _ = _viewModel.TestRunAsync(id);
+        card.PinToggleRequested += (_, _) => _ = _viewModel.TogglePinAsync(id);
         return card;
     }
 

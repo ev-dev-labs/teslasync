@@ -344,6 +344,38 @@ public sealed class AutomationsListPageTests
     }
 
     [Fact]
+    public async Task ViewModel_togglePin_when_not_pinned_posts_pin()
+    {
+        var feed = new FakeFeed(SnapshotWith(SampleAutomation(3)));
+        using var vm = new AutomationsListPageViewModel(feed, Localizer, () => Now);
+        await vm.LoadAsync();
+
+        await vm.TogglePinAsync(3);
+
+        Assert.Equal("3", feed.LastPin);
+        Assert.Null(feed.LastUnpin);
+        Assert.Equal(2, feed.FetchCount); // initial load + reload after pin
+    }
+
+    [Fact]
+    public async Task ViewModel_togglePin_when_already_pinned_deletes_by_row_id()
+    {
+        var feed = new FakeFeed(new AutomationsListSnapshot(
+            new[] { SampleAutomation(9) },
+            Array.Empty<AutomationVehicleRef>(),
+            new[] { new AutomationPin("9", 0, "pin-42") },
+            Array.Empty<AutomationHistoryEntry>(),
+            null));
+        using var vm = new AutomationsListPageViewModel(feed, Localizer, () => Now);
+        await vm.LoadAsync();
+
+        await vm.TogglePinAsync(9);
+
+        Assert.Equal("pin-42", feed.LastUnpin);
+        Assert.Null(feed.LastPin);
+    }
+
+    [Fact]
     public async Task ViewModel_reEnable_delete_testRun_each_write_then_reload()
     {
         var feed = new FakeFeed(SnapshotWith(SampleAutomation(9)));
@@ -603,6 +635,22 @@ public sealed class AutomationsListPageTests
         public Task ImportAsync(string envelopeJson, CancellationToken cancellationToken)
         {
             LastImport = envelopeJson;
+            return Task.CompletedTask;
+        }
+
+        public string? LastPin { get; private set; }
+
+        public string? LastUnpin { get; private set; }
+
+        public Task PinAsync(string automationId, CancellationToken cancellationToken)
+        {
+            LastPin = automationId;
+            return Task.CompletedTask;
+        }
+
+        public Task UnpinAsync(string pinId, CancellationToken cancellationToken)
+        {
+            LastUnpin = pinId;
             return Task.CompletedTask;
         }
     }
