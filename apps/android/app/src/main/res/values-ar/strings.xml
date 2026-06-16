@@ -2714,6 +2714,9 @@
   <string name="translation_days">days</string>
   <string name="translation_dbHealth_autoRefresh">Auto-refresh 30s</string>
   <string name="translation_dbHealth_chartTitle">Table Sizes (Top 15)</string>
+  <string name="translation_dbHealth_chartTitle_aria">Top fifteen database table sizes horizontal bar chart</string>
+  <string name="translation_dbHealth_noMigrationData">Migration data unavailable</string>
+  <string name="translation_dbHealth_noPoolData">Connection pool data unavailable</string>
   <string name="translation_dbHealth_clean">✓ Clean</string>
   <string name="translation_dbHealth_col_rows">Rows</string>
   <string name="translation_dbHealth_col_table">Table</string>
