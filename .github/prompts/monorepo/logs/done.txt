@@ -992,3 +992,4 @@ p3-android/pages/system/NotFoundPage.prompt.md
 p3-android/pages/trips/TripListPage.prompt.md
 p3-android/pages/vehicle-systems/MediaPlayerPage.prompt.md
 p3-android/pages/vehicles/DigitalTwinPage.prompt.md
+p3-android/pages/watch/WatchFacePage.prompt.md
