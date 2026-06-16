@@ -87,15 +87,4 @@ public static class UnitConverters
         PowerUnit.Kw => watts / 1000.0,
         _ => watts,
     };
-
-    /// <summary>
-    /// Convert an energy-efficiency value from the backend-native Wh-per-kilometre (<c>efficiency_wh_km</c>)
-    /// to the user's display distance unit. Efficiency per mile is larger than per km because a mile is
-    /// longer: Wh/mi = Wh/km * (metres per mile / metres per km). Mirrors the web efficiency unit handling.
-    /// </summary>
-    public static double EfficiencyFromWhPerKm(double whPerKm, DistanceUnit to) => to switch
-    {
-        DistanceUnit.Mi => whPerKm * (MetersPerMile / MetersPerKm),
-        _ => whPerKm,
-    };
 }

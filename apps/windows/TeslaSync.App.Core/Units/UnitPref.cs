@@ -128,9 +128,6 @@ public static class UnitLabels
         _ => "W",
     };
 
-    /// <summary>The energy-efficiency unit label for a display distance unit (Wh/mi imperial, else Wh/km).</summary>
-    public static string EfficiencyLabel(DistanceUnit u) => u == DistanceUnit.Mi ? "Wh/mi" : "Wh/km";
-
     public static DistanceUnit DistanceFromLabel(string label) => label switch
     {
         "km" => DistanceUnit.Km,
