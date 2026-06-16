@@ -29,6 +29,8 @@ for (const { f, us } of files.slice(0, limit)) {
   const native = new Set();
   for (const m of txt.matchAll(/"([a-zA-Z][a-zA-Z0-9_]*\.[a-zA-Z0-9_.]+)"/g)) native.add(m[1]);
   for (const m of txt.matchAll(/GetString\([^,]+,\s*"([^"]+)"/g)) native.add(m[1]);
+  // Robust: capture EVERY C# string literal (handles multi-line GetString + commas/escapes inside the string).
+  for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) native.add(m[1].replace(/\\"/g, '"'));
   const sg = us.find(u => u.kind === 'string-group');
   const reqStr = sg ? (sg.strings || []) : [];
   const missStr = reqStr.filter(k => !native.has(k));

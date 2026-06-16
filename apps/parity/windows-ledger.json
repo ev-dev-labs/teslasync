@@ -13021,5 +13021,968 @@
     "requiredCount": 4,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-LiveSignalMonitorPage.log"
+  },
+  {
+    "unitId": "api:battery/BatteryDegradation#useBatteryDegradation",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "api:battery/BatteryDegradation#useBatteryHealthAnalytics",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "chart:battery/BatteryDegradation#AreaChart-4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "chart:battery/BatteryDegradation#ChartContainer-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "chart:battery/BatteryDegradation#ComposedChart-3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "chart:battery/BatteryDegradation#RadialGauge-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "page:battery/BatteryDegradation",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 89,
+    "requiredCount": 89,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Avg-Depth-of-Discharge",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Battery-Age",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Current-SOH",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Degradation-Rate",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Degradation-Rate-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Estimated-Capacity",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel12",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel13",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel14",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel15",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel16",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel17",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel18",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel19",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel20",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel21",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Health-Trend-Projection",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Stress-Level",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "panel:battery/BatteryDegradation#Total-Cycles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "string-group:battery/BatteryDegradation",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 60,
+    "requiredCount": 60,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-BatteryDegradationPage.log"
+  },
+  {
+    "unitId": "api:vehicle-systems/SafetySettings#useSecurityLatest",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/SafetySettings#LineChart-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/SafetySettings#RadialGauge-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/SafetySettings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Disabled",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Distance-Since-Reset",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Enabled",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel12",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel13",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel14",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel8",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#GlassPanel9",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Safety-Score",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Self-Driving-Distance",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/SafetySettings#Total-Features",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "string-group:vehicle-systems/SafetySettings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 59,
+    "requiredCount": 59,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "api:maps/Geofences#useBulkGeofencesDelete",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "api:maps/Geofences#usePinned",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "api:maps/Geofences#useVehicles",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "map:maps/Geofences#GeofenceDrawer-3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "map:maps/Geofences#MapContainer-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "map:maps/Geofences#MapTileLayer-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "page:maps/Geofences",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#Active",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#Entry-Alerts",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#Exit-Alerts",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#GlassPanel7",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#GlassPanel8",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "panel:maps/Geofences#Total-Geofences",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "string-group:maps/Geofences",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 66,
+    "requiredCount": 66,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-GeofencesPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/MediaPlayer#AreaChart-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/MediaPlayer#PieChart-3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/MediaPlayer#RadialGauge-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/MediaPlayer",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 42,
+    "requiredCount": 42,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#Avg-Volume",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#GlassPanel7",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#GlassPanel8",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#GlassPanel9",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#Top-Source",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#Unique-Tracks",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/MediaPlayer#Volume-Step",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "string-group:vehicle-systems/MediaPlayer",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 26,
+    "requiredCount": 26,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MediaPlayerPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Annual-Est",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Avg-Service",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Completed",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Due-Soon",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#GlassPanel10",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#GlassPanel11",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Overdue",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Total-Items",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/Maintenance#Total-Spent",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "string-group:vehicle-systems/Maintenance",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-MaintenancePage.log"
+  },
+  {
+    "unitId": "api:admin/APIKeys#useApiKeys",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "api:admin/APIKeys#useCreateApiKey",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "api:admin/APIKeys#useDeleteApiKey",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "api:admin/APIKeys#useRevokeApiKey",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "page:admin/APIKeys",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "panel:admin/APIKeys#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "panel:admin/APIKeys#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "string-group:admin/APIKeys",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 27,
+    "requiredCount": 27,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-APIKeysPage.log"
+  },
+  {
+    "unitId": "api:settings/Settings#useSettings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SettingsPage.log"
+  },
+  {
+    "unitId": "panel:settings/Settings#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SettingsPage.log"
+  },
+  {
+    "unitId": "panel:settings/Settings#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SettingsPage.log"
+  },
+  {
+    "unitId": "panel:settings/Settings#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SettingsPage.log"
+  },
+  {
+    "unitId": "string-group:settings/Settings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SettingsPage.log"
+  },
+  {
+    "unitId": "api:telemetry/SignalLogViewer#useSignals",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalLogViewerPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalLogViewer",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalLogViewerPage.log"
+  },
+  {
+    "unitId": "panel:telemetry/SignalLogViewer#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalLogViewerPage.log"
+  },
+  {
+    "unitId": "string-group:telemetry/SignalLogViewer",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalLogViewerPage.log"
   }
 ]
