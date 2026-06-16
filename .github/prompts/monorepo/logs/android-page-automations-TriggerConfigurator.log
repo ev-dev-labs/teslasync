@@ -1,0 +1,129 @@
+P3-ANDROID A7 — page:automations/TriggerConfigurator — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/automations/pages/TriggerConfigurator.tsx  (route (unrouted))
+Output     : apps/android/app/src/main/kotlin/com/teslasync/automations/ (TriggerConfigurator.kt screen + page entry, TriggerConfiguratorPageModel.kt)
+Embeds     : the shared TriggerConfigurator feature view (apps/android/app/src/main/java/com/teslasync/feature-views/TriggerConfigurator/,
+             package io.teslasync.android.featureviews.triggerconfigurator) — verbatim, DRY (ADR-006), no re-implementation, no revert.
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+ARCHITECTURE NOTE (honesty): the web source is an UNROUTED, controlled form sub-component the Automation builder embeds
+(props: `trigger` + `onChange`; one data hook, `useGeofences` -> GET /geofences for the geofence dropdown). The
+presentational + logic surface was already implemented at full parity by the predecessor feature-views prompt
+(com/teslasync/feature-views/TriggerConfigurator, committed + green; fv unit tests TriggerConfiguratorModelTest /
+TriggerConfiguratorViewModelTest / TriggerConfiguratorDiagnosticsTest + UI test TriggerConfiguratorUiTest already in the
+suite). This page prompt targets the separate allowed-files path kotlin/com/teslasync/automations/** with a
+`@Composable screen + ViewModel` contract, so — following the sanctioned AutomationCard / ConditionBuilder precedent —
+this layer is a THIN page wrapper that EMBEDS that one shared surface (every panel/string/data state is the parity-covered
+feature view's `TriggerConfiguratorContent`) and adds only the page state holder + the stateless screen. Predecessor NOT
+bypassed; the four kind bodies (schedule / event / geofence / signal) are rendered verbatim by the embedded fv.
+
+DRY NOTE (honesty): unlike the sibling ConditionBuilder/AutomationCard page surfaces — whose shared feature views ship NO
+state holder, so each page had to ADD its own *PageViewModel — the shared TriggerConfigurator feature view ALREADY ships a
+lifecycle-aware state holder, TriggerConfiguratorViewModel (the geofence cache-then-network feed: useGeofences ->
+StateFlow<UiState<List<Geofence>>>, refresh/retry, view.opened). Re-declaring an identical page-layer holder would be a
+verbatim duplicate (a DRY violation the engineering guidelines explicitly reject). So this surface REUSES that shared
+holder via its public `factory(source, logger)` AS the page state holder the prompt mandates, and keeps only the
+page-scoped registration/diagnostics local (TriggerConfiguratorPageModel.kt). No third "PageViewModel.kt" file is added
+because it would duplicate the existing one; the contract (state holder exposing a StateFlow consumed by a stateless
+screen) is fully met. TriggerConfigurator.kt:TriggerConfiguratorPage builds the holder, collects geofences, and hands the
+projection to the stateless TriggerConfigurator.kt:TriggerConfiguratorScreen.
+
+DATA-SOURCE NOTE (honesty): the surface declares one source — `useGeofences GET /geofences`. It is bound through the
+shared S8 LocationsStore.geofences() via the shared TriggerConfiguratorSource seam (locationsStore.asTriggerConfiguratorSource());
+the page only re-shares that cache-then-network feed onto UiState through the shared BaseFeedViewModel.asUiState helper
+(isEmpty = it.isEmpty()). No HTTP, no business logic, no re-implementation of the geofence fetch is added by this layer.
+The trigger value stays caller-owned (web `trigger`/`onChange`).
+
+NAV NOTE (honesty): web route is "(unrouted)". A controlled form sub-component that requires `trigger` + `onChange` from a
+parent is not a standalone NavHost destination — exactly like the sibling unrouted automations sub-components
+(AutomationCard, ConditionBuilder), which add NO synthetic destination. Fabricating a route here would diverge from that
+green precedent and from the canonical Destinations registry's anti-fabrication contract. The prompt's "(if routed)" clause
+does not apply; the page-layer is embedded by the Automation builder exactly as the feature view is.
+
+LINT NOTE (honesty): the first lint run failed on LocalContextGetResourceValueCall (Error, androidx.compose.ui) at the
+page resolver — `context.getString()` queried directly inside a @Composable. Fixed by mirroring the shared feature view's
+pattern: the catalog read was extracted into a NON-@Composable `Context.optionalString()` extension, so the resolve-by-name
+lookup is no longer a LocalContext.current resource query inside a composable. Re-run: LINT_EXIT=0. (No revert — the fix
+keeps the shared architecture; it adopts the predecessor fv's exact, lint-clean resolver shape.)
+
+STRINGS NOTE (honesty): 20 of the 21 required keys were already present in res/values/strings.xml from the predecessor; the
+21st — automations.builder.cronHint (translation_automations_builder_cronHint, "minute hour day-of-month month
+day-of-week") — was MISSING from every catalog (values / values-ar / values-he) and was ADDED to res/values/strings.xml so
+all 21 visible literals resolve from the catalog. MissingTranslation/ExtraTranslation are disabled in app lint
+(build.gradle.kts:114), so the default-catalog entry is sufficient and lint stays green.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts:33-36 maps ':android' -> app/); the prompt
+snippet's ':app:' is the same module (documented alias, as in every sibling P3/A* gate log). Tasks run: :android:assembleDebug,
+:android:lintDebug, :android:testDebugUnitTest.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_ALLOWED=0
+   (./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/automations -Language kotlin)
+BUILD SUCCESSFUL in 5m 16s
+BUILD_EXIT=0
+   (./gradlew :android:assembleDebug)
+BUILD SUCCESSFUL in 9m 12s
+LINT_EXIT=0
+   (./gradlew :android:lintDebug — after the LocalContextGetResourceValueCall fix above)
+BUILD SUCCESSFUL in 1m 16s
+TEST_EXIT=0
+   (./gradlew :android:testDebugUnitTest — includes the embedded fv suite, all green:
+    TriggerConfiguratorModelTest tests=38, TriggerConfiguratorViewModelTest tests=8, TriggerConfiguratorDiagnosticsTest tests=3; failures=0 errors=0 skipped=0)
+
+=== PARITY ===
+PARITY_REQUIRED=23
+binding evidence (page layer binds + collects the StateFlow; the embedded shared feature view renders every item):
+  page layer  : apps/android/app/src/main/kotlin/com/teslasync/automations/{TriggerConfigurator.kt, TriggerConfiguratorPageModel.kt}
+                (TriggerConfiguratorPage builds TriggerConfiguratorViewModel via factory(source,logger), collects
+                 viewModel.geofences, passes UiState into TriggerConfiguratorScreen -> TriggerConfiguratorContent)
+  shared view : apps/android/app/src/main/java/com/teslasync/feature-views/TriggerConfigurator/{TriggerConfigurator.kt, TriggerConfiguratorModel.kt, TriggerConfiguratorSource.kt, TriggerConfiguratorViewModel.kt}
+                (fv = io.teslasync.android.featureviews.triggerconfigurator; resolver = buildTriggerConfiguratorStrings(resolve))
+
+# data states (2 declared: empty, success) — bound to TriggerConfiguratorViewModel.geofences: StateFlow<UiState<List<Geofence>>>
+[COVERED] state  empty    -> fv/TriggerConfiguratorViewModel.kt:geofences (refreshTrigger.flatMapLatest{source.geofences()}.asUiState{ isEmpty=it.isEmpty() }) -> UiState(UiPhase.Empty); fv/TriggerConfigurator.kt:GeofenceStatusRow() state.isEmpty -> HelperText(strings.noGeofences) L360-361; page collects in TriggerConfigurator.kt:TriggerConfiguratorPage -> TriggerConfiguratorScreen(state) -> TriggerConfiguratorContent(geofenceState); preview TriggerConfigurator.kt:TriggerConfiguratorScreenEmptyPreview UiState(UiPhase.Empty)
+[COVERED] state  success  -> UiState(UiPhase.Content) -> fv/TriggerConfigurator.kt:GeofenceFields() Select options populated L304-310; preview TriggerConfigurator.kt:TriggerConfiguratorScreenContentPreview UiState(UiPhase.Content, data=PREVIEW_GEOFENCES)
+  (loading + stale/offline + error also reachable through the same StateFlow: fv GeofenceStatusRow() Spinner / RetryRow(offline) / RetryRow(error) L350-364, onRetry = TriggerConfiguratorViewModel.retry(); the rest of the form never blanks — web `geofences ?? []`)
+
+# strings (21) — every visible literal resolved via buildTriggerConfiguratorStrings(resolve) (web key names preserved) and rendered by the embedded fv
+[COVERED] string automations.builder.advancedCron     -> fv/TriggerConfiguratorModel.kt:buildTriggerConfiguratorStrings L542 (advancedCron) -> fv/TriggerConfigurator.kt:ScheduleFields() Button label L195-196   (R.string.translation_automations_builder_advancedCron)
+[COVERED] string automations.builder.changedOnly      -> fv/TriggerConfiguratorModel.kt:L555 (changedOnly)   -> fv/TriggerConfigurator.kt:SignalFields() Toggle label L444-445                              (R.string.translation_automations_builder_changedOnly)
+[COVERED] string automations.builder.cronExpr         -> fv/TriggerConfiguratorModel.kt:L538 (cronExpr)      -> fv/TriggerConfigurator.kt:ScheduleFields() LabeledFieldHeader L187                          (R.string.translation_automations_builder_cronExpr)
+[COVERED] string automations.builder.cronHint         -> fv/TriggerConfiguratorModel.kt:L539 (cronHint)      -> fv/TriggerConfigurator.kt:ScheduleFields() Input hint L191                                 (R.string.translation_automations_builder_cronHint)  [ADDED to res/values/strings.xml this prompt]
+[COVERED] string automations.builder.cronPlaceholder  -> fv/TriggerConfiguratorModel.kt:L540 (cronExample, CRON_EXAMPLE_KEY) -> fv/TriggerConfigurator.kt:ScheduleFields() Input hint (blank branch) L191      (R.string.translation_automations_builder_cronPlaceholder)
+[COVERED] string automations.builder.days             -> fv/TriggerConfiguratorModel.kt:L537 (days)          -> fv/TriggerConfigurator.kt:ScheduleFields() DayPicker L180-181 / DayPicker FieldLabelText L220 (R.string.translation_automations_builder_days)
+[COVERED] string automations.builder.dwellHint        -> fv/TriggerConfiguratorModel.kt:L549 (dwellHint)     -> fv/TriggerConfigurator.kt:GeofenceFields() Input hint L332                                (R.string.translation_automations_builder_dwellHint)
+[COVERED] string automations.builder.dwellMinutes     -> fv/TriggerConfiguratorModel.kt:L548 (dwellMinutes)  -> fv/TriggerConfigurator.kt:GeofenceFields() LabeledFieldHeader L328                        (R.string.translation_automations_builder_dwellMinutes)
+[COVERED] string automations.builder.event            -> fv/TriggerConfiguratorModel.kt:L545 (event)         -> fv/TriggerConfigurator.kt:EventFields() Select label L282-283                            (R.string.translation_automations_builder_event)
+[COVERED] string automations.builder.geofence         -> fv/TriggerConfiguratorModel.kt:L546 (geofence)      -> fv/TriggerConfigurator.kt:GeofenceFields() Select label L305                             (R.string.translation_automations_builder_geofence)
+[COVERED] string automations.builder.geofenceEvent    -> fv/TriggerConfiguratorModel.kt:L547 (geofenceEvent) -> fv/TriggerConfigurator.kt:GeofenceFields() Select label L314                             (R.string.translation_automations_builder_geofenceEvent)
+[COVERED] string automations.builder.operator         -> fv/TriggerConfiguratorModel.kt:L552 (operator)      -> fv/TriggerConfigurator.kt:SignalFields() Select label L407-408                          (R.string.translation_automations_builder_operator)
+[COVERED] string automations.builder.selectGeofence   -> fv/TriggerConfiguratorModel.kt:L558 (selectGeofence)-> fv/TriggerConfigurator.kt:GeofenceFields() Select emptyLabel L308 + options sentinel L302 (R.string.translation_automations_builder_selectGeofence)
+[COVERED] string automations.builder.signal           -> fv/TriggerConfiguratorModel.kt:L551 (signal)        -> fv/TriggerConfigurator.kt:SignalFields() Select label L400-401                          (R.string.translation_automations_builder_signal)
+[COVERED] string automations.builder.simpleCron       -> fv/TriggerConfiguratorModel.kt:L543 (simpleCron)    -> fv/TriggerConfigurator.kt:ScheduleFields() Button label L195-196                         (R.string.translation_automations_builder_simpleCron)
+[COVERED] string automations.builder.statePlaceholder -> fv/TriggerConfiguratorModel.kt:L554 (stateExample, STATE_EXAMPLE_KEY) -> fv/TriggerConfigurator.kt:SignalFields() Input hint L438                  (R.string.translation_automations_builder_statePlaceholder)
+[COVERED] string automations.builder.time             -> fv/TriggerConfiguratorModel.kt:L536 (time)          -> fv/TriggerConfigurator.kt:ScheduleFields() Input label L177                             (R.string.translation_automations_builder_time)
+[COVERED] string automations.builder.timezone         -> fv/TriggerConfiguratorModel.kt:L544 (timezone)      -> fv/TriggerConfigurator.kt:ScheduleFields() Select label L205                            (R.string.translation_automations_builder_timezone)
+[COVERED] string automations.builder.value            -> fv/TriggerConfiguratorModel.kt:L553 (value)         -> fv/TriggerConfigurator.kt:SignalFields() value Select label L423 / Input label L437     (R.string.translation_automations_builder_value)
+[COVERED] string common.false                         -> fv/TriggerConfiguratorModel.kt:L557 (falseLabel)    -> fv/TriggerConfigurator.kt:SignalFields() SelectOption L427                              (R.string.translation_common_false)
+[COVERED] string common.true                          -> fv/TriggerConfiguratorModel.kt:L556 (trueLabel)     -> fv/TriggerConfigurator.kt:SignalFields() SelectOption L426                              (R.string.translation_common_true)
+
+PARITY_COVERED=23
+
+=== SUMMARY ===
+data sources : useGeofences (GET /geofences). TriggerConfiguratorPage binds the shared S8 LocationsStore.geofences() feed via
+               the shared TriggerConfiguratorSource seam and re-uses the shared TriggerConfiguratorViewModel
+               (StateFlow<UiState<List<Geofence>>>, BaseFeedViewModel.asUiState); the page performs no HTTP. Trigger stays
+               caller-owned (web trigger/onChange).
+nav          : web route "(unrouted)" — no synthetic destination fabricated; surface is embedded by the Automation builder, like the fv and the sibling AutomationCard/ConditionBuilder pages.
+panels       : none named in the manifest; the four kind bodies (schedule / event / geofence / signal) are rendered by the embedded fv as Material 3 Inputs/Selects/Toggle/day chips.
+charts/maps  : none declared.
+states       : empty + success bound to the geofence StateFlow (loading/stale/offline/error also reachable via the same flow + retry); previews exercise success + empty.
+strings      : all 21 resolve from res/values/strings.xml (translation_automations_builder_* + translation_common_true/false); the missing automations.builder.cronHint was added this prompt; rendered by the embedded fv; zero hardcoded literals in the page layer; web key names preserved.
+a11y/theme/SI: dark + dynamic color (TeslaSyncTheme), TalkBack contentDescriptions (day chips + help icons), MaterialTheme tokens, >=48dp chip targets (CHIP_MIN_TOUCH), JS-parity numeric handling — all from the embedded fv (ADR-005/013/014/015).
+placeholder  : PLACEHOLDER_COUNT=0 (page layer contains none of the reserved stub markers)
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(23) == PARITY_REQUIRED(23)
+[PASS] all android triad gates green; parity 23/23; android ledger row page:automations/TriggerConfigurator status=done.
+EXIT=0
+STATUS=DONE

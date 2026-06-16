@@ -1315,6 +1315,7 @@
   <string name="translation_automations_builder_create">Create</string>
   <string name="translation_automations_builder_createTitle">Create Automation</string>
   <string name="translation_automations_builder_cronExpr">Cron Expression</string>
+  <string name="translation_automations_builder_cronHint">minute hour day-of-month month day-of-week</string>
   <string name="translation_automations_builder_cronPlaceholder">0 8 * * 1-5</string>
   <string name="translation_automations_builder_days">Days</string>
   <string name="translation_automations_builder_description">Description</string>
