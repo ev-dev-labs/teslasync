@@ -1,0 +1,169 @@
+================================================================================
+P3-ANDROID A7 — page:charging/ChargingDetail  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/charging/pages/ChargingDetailPage.tsx
+promptId: p3-android/pages/charging/ChargingDetailPage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present; platforms android-34/35/36, build-tools 34/35/36)
+JDK         : OpenJDK 21.0.9
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts L44-48).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the prompt's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L35-36: include(":android"); project(":android").projectDir = file("app")),
+              matching every sibling A7 page log. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPage.kt          (@Composable screen: ChargingDetailPage + ChargingDetailPageContent + 22 panels; 5 RadialGauge + 1 AreaChartWrapper + 3 ComboChart; loading/empty/error/success)
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPageViewModel.kt (AndroidX ViewModel; StateFlow<UiState<…>> x4 (session/telemetry/vehicle/live) + displayPrefs; refresh()/retry()/recordViewOpened(); vehicle+live derived from session vehicle_id)
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPageSource.kt    (data seam over page-local ChargingDetailRepository (CachingRepository, CacheDomain.Charging) + shared SettingsStore; 4 reads: /charging/{id}, /charging/{id}/telemetry, /vehicles/{id}, /charging-telemetry/latest)
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPageModel.kt     (framework-free: parse* decoders, isDc/durationMinutes/distanceAddedM/kwhPerHour/costPerKwh/synthesizeCurve, build* chart series, ChargingDisplayPrefs SI converters, Resource.mapData, recordChargingDetailOpened)
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPageIcons.kt     (ChargingGlyphs: 5 re-exported shared glyphs (Zap=Bolt/Battery/Clock/Gauge/MapPin) + 3 authored lucide glyphs (ArrowLeft/DollarSign/Activity))
+apps/android/app/src/main/kotlin/com/teslasync/charging/ChargingDetailPageHost.kt      (PageHosts.register("chargeDetail"); reads route arg id; binds source over container.api/cacheStore/settingsStore)
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt             (NavHost registration seam: + ChargingDetailPageHost.register())
+apps/android/app/src/main/res/values/strings.xml + values-ar + values-he               (+2 strings each: translation_help_charging_chargeCurve_aria, translation_help_charging_socRange_aria — the web inline ariaLabel defaultValues; all other 54 keys pre-existed)
+apps/parity/android-ledger.json                                                        (+ row page:charging/ChargingDetail status=done 90/90)
+
+--------------------------------------------------------------------------------
+ARCHITECTURE / NOTES
+--------------------------------------------------------------------------------
+data flow    : web useChargingSessionDetail (GET /charging/{id}) -> session (primary, gates the page; empty when no session, web !session);
+               useChargeTelemetry (GET /charging/{id}/telemetry) -> telemetry; useVehicle (GET /vehicles/{id}) and useChargingTelemetryLatest
+               (GET /charging-telemetry/latest?vehicle_id) are scoped to the loaded session's vehicle_id (web session?.vehicle_id), each its own
+               lifecycle-aware UiState so no section is hidden. ViewModel keyed by ROUTE_ID:sessionId (route arg, web useParams().id).
+SI boundary  : reads SI from API (Phase-42 already stores SI); converts only at the render boundary via ChargingDisplayPrefs (web useUnits/useFormatting):
+               energy Wh->kWh (convertEnergyFromSI), power W->kW (convertPowerFromSI), rated_range + live distance fields m->display (convertDistanceFromSI),
+               temps C->display (convertTempFromSI). Cost from settings base_cost_per_kwh + currency_symbol. No miles/°F/psi stored or computed.
+states       : loading -> PageLoader; error -> ErrorDisplay + Retry; empty -> EmptyState; success -> Body. Each secondary feed renders content-or-empty.
+a11y/theme   : charts carry accessibleDescription (web aria-labels: chargeCurve.aria on the curve, socRange.aria on the battery-progress panel via semantics);
+               gauges expose a merged contentDescription (RadialGauge); the back glyph is decorative (contentDescription=null). All color via
+               MaterialTheme.colorScheme + ChartPalette (TeslaTokens.chart) + TeslaTokens.status (A2 tokens) — dynamic color + dark theme. Typography via the
+               role components (PageTitle/PanelTitle/Subhead/BodyText/Caption/HelperText). Compose-native charts (A3 Vico/Canvas wrappers); no webview.
+nav          : Destinations 'chargeDetail' -> /charging/:id pre-existing (Destinations.kt L57, count unchanged); host wired via PageHosts.register("chargeDetail");
+               deep link auto-registered by TeslaSyncNavHost; the host extracts the {id} arg from the NavBackStackEntry. DataContainer untouched.
+units note   : Range-Gained / Miles-Added / Charge-Rate / batteryRange / chargerPowerKw / chargeEnergyAdded reproduce the web's exact display-boundary
+               computations + literal unit labels verbatim (parity, including the web's odometer/1000 + legacy *_mi/*_w-as-display quirks).
+
+=== PARITY ===
+PARITY_REQUIRED=90   (22 panels + 9 charts + 3 states + 56 strings)
+--------------------------------------------------------------------------------
+[COVERED] panel  GlassPanel1               -> ChargingDetailPage.kt:340 HeroGauges GaugeCell (Energy Added gauge, GlassPanel accent=Info)
+[COVERED] panel  GlassPanel2               -> ChargingDetailPage.kt:350 HeroGauges GaugeCell (End SoC gauge, GlassPanel accent=Success)
+[COVERED] panel  GlassPanel3               -> ChargingDetailPage.kt:362 HeroGauges GaugeCell (Peak Power gauge, GlassPanel accent=Primary)
+[COVERED] panel  GlassPanel4               -> ChargingDetailPage.kt:372 HeroGauges GaugeCell (Duration gauge, GlassPanel)
+[COVERED] panel  GlassPanel5               -> ChargingDetailPage.kt:384 HeroGauges GaugeCell (Avg Power gauge, GlassPanel)
+[COVERED] panel  GlassPanel6               -> ChargingDetailPage.kt:422 BatteryProgressPanel GlassPanel (2 MetricBars + SoC/range/energy MiniStats; socRange.aria semantics)
+[COVERED] panel  Energy                    -> ChargingDetailPage.kt:511 StatCardsGrid StatCard (energyKwh total_energy_added_wh, translation_charging_detail_energy)
+[COVERED] panel  Duration                  -> ChargingDetailPage.kt:518 StatCardsGrid StatCard (durationMinutes, translation_charging_detail_duration)
+[COVERED] panel  Peak-Power                -> ChargingDetailPage.kt:527 StatCardsGrid StatCard (powerKw peak_power_w, translation_charging_detail_peakPower)
+[COVERED] panel  SoC-Range                 -> ChargingDetailPage.kt:534 StatCardsGrid StatCard (start_soc_pct–end_soc_pct, translation_charging_detail_socRange)
+[COVERED] panel  StatCard11                -> ChargingDetailPage.kt:543 StatCardsGrid StatCard (cost_decimal totalCost / estCost+atRate, translation_charging_detail_totalCost/estCost)
+[COVERED] panel  Per-kWh                   -> ChargingDetailPage.kt:565 StatCardsGrid StatCard (costPerKwh / settings fromSettings, translation_charging_detail_perKwh)
+[COVERED] panel  Miles-Added               -> ChargingDetailPage.kt:575 StatCardsGrid StatCard (distanceAddedM->display, translation_charging_detail_milesAdded)
+[COVERED] panel  kWh-h-Avg                 -> ChargingDetailPage.kt:582 StatCardsGrid StatCard (kwhPerHour, translation_charging_detail_avgRate)
+[COVERED] panel  GlassPanel15              -> ChargingDetailPage.kt:597 MoreDetailsPanel GlassPanel (4 InlineMetrics avgPower/milesAdded/status/currency + KVList chargerType/location/vehicle)
+[COVERED] panel  GlassPanel16              -> ChargingDetailPage.kt:656 LocationPanel GlassPanel (start_place, always shown; em-dash fallback, translation_charging_detail_location)
+[COVERED] panel  GlassPanel17              -> ChargingDetailPage.kt:668 ChargeCurvePanel ChartContainer (translation_charging_detail_chargeCurve L677 + estimated subtitle)
+[COVERED] panel  GlassPanel18              -> ChargingDetailPage.kt:707 SocEnergyRangePanel ChartContainer (translation_charging_detail_socOverTime L714)
+[COVERED] panel  GlassPanel19              -> ChargingDetailPage.kt:759 TemperaturePanel ChartContainer (translation_charging_detail_temperature L766)
+[COVERED] panel  GlassPanel20              -> ChargingDetailPage.kt:811 VoltageCurrentPanel ChartContainer (translation_charging_detail_voltageCurrent L818)
+[COVERED] panel  GlassPanel21              -> ChargingDetailPage.kt:854 AdvancedParamsPanel GlassPanel (advanced L859 + advancedHint L860 + 10-row live KVList or noLiveData)
+[COVERED] panel  GlassPanel22              -> ChargingDetailPage.kt:928 TimestampsPanel GlassPanel (started L935 + ended L939 timestamp labels)
+[COVERED] chart  RadialGauge (1/5)         -> ChargingDetailPage.kt:413 GaugeCell RadialGauge <- :340 (Energy Added, max=max(kWh,80), unit=kWh) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (2/5)         -> ChargingDetailPage.kt:413 GaugeCell RadialGauge <- :350 (End SoC, max=100, unit=%) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (3/5)         -> ChargingDetailPage.kt:413 GaugeCell RadialGauge <- :362 (Peak Power, max=dc?250:22, unit=kW) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (4/5)         -> ChargingDetailPage.kt:413 GaugeCell RadialGauge <- :372 (Duration, max=max(min,120), unit=min) (A3 components.charts.RadialGauge)
+[COVERED] chart  RadialGauge (5/5)         -> ChargingDetailPage.kt:413 GaugeCell RadialGauge <- :384 (Avg Power, max=dc?250:22, unit=kW) (A3 components.charts.RadialGauge)
+[COVERED] chart  AreaChart                 -> ChargingDetailPage.kt:684 ChargeCurvePanel AreaChartWrapper (power-vs-SoC, buildChargeCurve telemetry-or-synth) (A3 components.charts.AreaChartWrapper, Vico; web AreaChart)
+[COVERED] chart  ComposedChart (1/3)       -> ChargingDetailPage.kt:720 SocEnergyRangePanel ComboChart (soc Area + energy Line + range Line) (A3 components.charts.ComboChart, Vico; web ComposedChart)
+[COVERED] chart  ComposedChart (2/3)       -> ChargingDetailPage.kt:772 TemperaturePanel ComboChart (battery/inside/outside temp Lines) (A3 components.charts.ComboChart, Vico; web ComposedChart)
+[COVERED] chart  ComposedChart (3/3)       -> ChargingDetailPage.kt:823 VoltageCurrentPanel ComboChart (voltage + current Lines) (A3 components.charts.ComboChart, Vico; web ComposedChart)
+[COVERED] state  loading                   -> ChargingDetailPage.kt:227 Loading() PageLoader L228 (session.isLoading; web LoadingSkeleton)
+[COVERED] state  empty                     -> ChargingDetailPage.kt:247 NoSession() EmptyState L248 (session.isEmpty, !ChargingSessionDetail.hasData; web !session) [+error :236 Failure ErrorDisplay+Retry]
+[COVERED] state  success                   -> ChargingDetailPage.kt:256 Body() loaded panels (session content; secondary feeds content-or-empty)
+[COVERED] string charging.detail.advanced              -> ChargingDetailPage.kt:859 stringResource(R.string.translation_charging_detail_advanced)
+[COVERED] string charging.detail.advancedHint          -> ChargingDetailPage.kt:860 stringResource(R.string.translation_charging_detail_advancedHint)
+[COVERED] string charging.detail.atRate                -> ChargingDetailPage.kt:557 stringResource(R.string.translation_charging_detail_atRate, currencySymbol, costPerKwh)
+[COVERED] string charging.detail.avgPower              -> ChargingDetailPage.kt:388 stringResource(R.string.translation_charging_detail_avgPower) (+L610)
+[COVERED] string charging.detail.avgRate               -> ChargingDetailPage.kt:585 stringResource(R.string.translation_charging_detail_avgRate)
+[COVERED] string charging.detail.batteryProgress       -> ChargingDetailPage.kt:437 stringResource(R.string.translation_charging_detail_batteryProgress)
+[COVERED] string charging.detail.batteryRange          -> ChargingDetailPage.kt:902 stringResource(R.string.translation_charging_detail_batteryRange)
+[COVERED] string charging.detail.batteryTemp           -> ChargingDetailPage.kt:777 stringResource(R.string.translation_charging_detail_batteryTemp)
+[COVERED] string charging.detail.chargeCurve           -> ChargingDetailPage.kt:677 stringResource(R.string.translation_charging_detail_chargeCurve)
+[COVERED] string charging.detail.chargeEnergyAdded     -> ChargingDetailPage.kt:913 stringResource(R.string.translation_charging_detail_chargeEnergyAdded)
+[COVERED] string charging.detail.chargeMilesAdded      -> ChargingDetailPage.kt:917 stringResource(R.string.translation_charging_detail_chargeMilesAdded)
+[COVERED] string charging.detail.chargeRate            -> ChargingDetailPage.kt:907 stringResource(R.string.translation_charging_detail_chargeRate)
+[COVERED] string charging.detail.chargerActualCurrent  -> ChargingDetailPage.kt:886 stringResource(R.string.translation_charging_detail_chargerActualCurrent)
+[COVERED] string charging.detail.chargerPhases         -> ChargingDetailPage.kt:898 stringResource(R.string.translation_charging_detail_chargerPhases)
+[COVERED] string charging.detail.chargerPilotCurrent   -> ChargingDetailPage.kt:890 stringResource(R.string.translation_charging_detail_chargerPilotCurrent)
+[COVERED] string charging.detail.chargerPowerKw        -> ChargingDetailPage.kt:894 stringResource(R.string.translation_charging_detail_chargerPowerKw)
+[COVERED] string charging.detail.chargerType           -> ChargingDetailPage.kt:636 stringResource(R.string.translation_charging_detail_chargerType)
+[COVERED] string charging.detail.chargerVoltage        -> ChargingDetailPage.kt:882 stringResource(R.string.translation_charging_detail_chargerVoltage)
+[COVERED] string charging.detail.chargingState         -> ChargingDetailPage.kt:878 stringResource(R.string.translation_charging_detail_chargingState)
+[COVERED] string charging.detail.currency              -> ChargingDetailPage.kt:627 stringResource(R.string.translation_charging_detail_currency)
+[COVERED] string charging.detail.current               -> ChargingDetailPage.kt:836 stringResource(R.string.translation_charging_detail_current)
+[COVERED] string charging.detail.duration              -> ChargingDetailPage.kt:376 stringResource(R.string.translation_charging_detail_duration) (+L521)
+[COVERED] string charging.detail.endSoc                -> ChargingDetailPage.kt:354 stringResource(R.string.translation_charging_detail_endSoc) (+L450)
+[COVERED] string charging.detail.ended                 -> ChargingDetailPage.kt:939 stringResource(R.string.translation_charging_detail_ended)
+[COVERED] string charging.detail.energy                -> ChargingDetailPage.kt:514 stringResource(R.string.translation_charging_detail_energy) (+L733)
+[COVERED] string charging.detail.energyAdded           -> ChargingDetailPage.kt:344 stringResource(R.string.translation_charging_detail_energyAdded) (+L469)
+[COVERED] string charging.detail.estCost               -> ChargingDetailPage.kt:550 stringResource(R.string.translation_charging_detail_estCost)
+[COVERED] string charging.detail.estimated             -> ChargingDetailPage.kt:678 stringResource(R.string.translation_charging_detail_estimated)
+[COVERED] string charging.detail.fromSettings          -> ChargingDetailPage.kt:571 stringResource(R.string.translation_charging_detail_fromSettings)
+[COVERED] string charging.detail.insideTemp            -> ChargingDetailPage.kt:785 stringResource(R.string.translation_charging_detail_insideTemp)
+[COVERED] string charging.detail.location              -> ChargingDetailPage.kt:640 stringResource(R.string.translation_charging_detail_location) (+L658)
+[COVERED] string charging.detail.milesAdded            -> ChargingDetailPage.kt:578 stringResource(R.string.translation_charging_detail_milesAdded) (+L617)
+[COVERED] string charging.detail.moreDetails           -> ChargingDetailPage.kt:605 stringResource(R.string.translation_charging_detail_moreDetails)
+[COVERED] string charging.detail.noLiveData            -> ChargingDetailPage.kt:865 stringResource(R.string.translation_charging_detail_noLiveData)
+[COVERED] string charging.detail.outsideTemp           -> ChargingDetailPage.kt:793 stringResource(R.string.translation_charging_detail_outsideTemp)
+[COVERED] string charging.detail.peakPower             -> ChargingDetailPage.kt:366 stringResource(R.string.translation_charging_detail_peakPower) (+L530)
+[COVERED] string charging.detail.perKwh                -> ChargingDetailPage.kt:568 stringResource(R.string.translation_charging_detail_perKwh)
+[COVERED] string charging.detail.power                 -> ChargingDetailPage.kt:689 stringResource(R.string.translation_charging_detail_power)
+[COVERED] string charging.detail.range                 -> ChargingDetailPage.kt:741 stringResource(R.string.translation_charging_detail_range)
+[COVERED] string charging.detail.rangeGained           -> ChargingDetailPage.kt:464 stringResource(R.string.translation_charging_detail_rangeGained)
+[COVERED] string charging.detail.soc                   -> ChargingDetailPage.kt:725 stringResource(R.string.translation_charging_detail_soc)
+[COVERED] string charging.detail.socGained             -> ChargingDetailPage.kt:459 stringResource(R.string.translation_charging_detail_socGained)
+[COVERED] string charging.detail.socOverTime           -> ChargingDetailPage.kt:714 stringResource(R.string.translation_charging_detail_socOverTime)
+[COVERED] string charging.detail.socRange              -> ChargingDetailPage.kt:537 stringResource(R.string.translation_charging_detail_socRange)
+[COVERED] string charging.detail.startSoc              -> ChargingDetailPage.kt:443 stringResource(R.string.translation_charging_detail_startSoc)
+[COVERED] string charging.detail.started               -> ChargingDetailPage.kt:935 stringResource(R.string.translation_charging_detail_started)
+[COVERED] string charging.detail.status                -> ChargingDetailPage.kt:622 stringResource(R.string.translation_charging_detail_status)
+[COVERED] string charging.detail.temperature           -> ChargingDetailPage.kt:766 stringResource(R.string.translation_charging_detail_temperature)
+[COVERED] string charging.detail.title                 -> ChargingDetailPage.kt:210 stringResource(R.string.translation_charging_detail_title)
+[COVERED] string charging.detail.totalCost             -> ChargingDetailPage.kt:548 stringResource(R.string.translation_charging_detail_totalCost)
+[COVERED] string charging.detail.vehicle               -> ChargingDetailPage.kt:644 stringResource(R.string.translation_charging_detail_vehicle)
+[COVERED] string charging.detail.voltage               -> ChargingDetailPage.kt:828 stringResource(R.string.translation_charging_detail_voltage)
+[COVERED] string charging.detail.voltageCurrent        -> ChargingDetailPage.kt:818 stringResource(R.string.translation_charging_detail_voltageCurrent)
+[COVERED] string common.noData                         -> ChargingDetailPage.kt:249 stringResource(R.string.translation_common_noData) (+chart empty L682/L718/L770/L821)
+[COVERED] string help.charging.chargeCurve.aria        -> ChargingDetailPage.kt:679 stringResource(R.string.translation_help_charging_chargeCurve_aria) (ChartContainer accessibleDescription; +strings.xml values/ar/he)
+[COVERED] string help.charging.socRange.aria           -> ChargingDetailPage.kt:429 stringResource(R.string.translation_help_charging_socRange_aria) (BatteryProgressPanel semantics contentDescription; +strings.xml values/ar/he)
+--------------------------------------------------------------------------------
+PARITY_COVERED=90
+PARITY_REQUIRED=90
+parity       : PARITY_COVERED(90) == PARITY_REQUIRED(90)
+
+--------------------------------------------------------------------------------
+GATE
+--------------------------------------------------------------------------------
+placeholder  : PLACEHOLDER_ALLOWED=0  PLACEHOLDER_COUNT=0
+   $ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin  -> PLACEHOLDER_COUNT=0 EXIT=0
+PLACEHOLDER_EXIT=0
+   $ ./gradlew :android:assembleDebug      -> BUILD SUCCESSFUL in 3m 05s
+BUILD_EXIT=0
+   $ ./gradlew :android:lintDebug          -> BUILD SUCCESSFUL in 14m 14s
+LINT_EXIT=0
+   $ ./gradlew :android:testDebugUnitTest  -> BUILD SUCCESSFUL in 1m 21s
+TEST_EXIT=0
+
+[PASS] all android triad gates green; parity 90/90; android ledger row page:charging/ChargingDetail status=done.
+EXIT=0
+STATUS=DONE

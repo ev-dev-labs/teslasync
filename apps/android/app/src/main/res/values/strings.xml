@@ -4160,9 +4160,11 @@
   <string name="translation_help_battery_totalCycles">Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).</string>
   <string name="translation_help_charging_avgPower">Time-averaged charging power across the session. Always lower than peak when the session includes a taper or initial ramp.</string>
   <string name="translation_help_charging_chargeCurve">Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.</string>
+  <string name="translation_help_charging_chargeCurve_aria">More info about taper and derating</string>
   <string name="translation_help_charging_kwhPerHour">Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger.</string>
   <string name="translation_help_charging_peakPower">Maximum charging power observed during this session, in kW. DC fast-charging tapers above ~80% SoC; AC charging stays roughly flat.</string>
   <string name="translation_help_charging_socRange">The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.</string>
+  <string name="translation_help_charging_socRange_aria">More info about state-of-charge range</string>
   <string name="translation_help_cooldownMin_body">Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold.</string>
   <string name="translation_help_driveScore_body">0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.</string>
   <string name="translation_help_driveScore_iconLabel">More info about Drive Score</string>
