@@ -1750,6 +1750,7 @@
   <string name="translation_chargePlanner_chargeNowCost">Charge Now</string>
   <string name="translation_chargePlanner_chargeWindow">Charge Window</string>
   <string name="translation_chargePlanner_cost">Cost</string>
+  <string name="translation_chargePlanner_cost_decimal">Cost</string>
   <string name="translation_chargePlanner_currentRate">At current rates</string>
   <string name="translation_chargePlanner_currentSoc">Current SOC</string>
   <string name="translation_chargePlanner_date">Date</string>

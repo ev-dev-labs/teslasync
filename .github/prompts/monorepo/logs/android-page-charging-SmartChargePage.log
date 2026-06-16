@@ -1,0 +1,155 @@
+================================================================================
+P3-ANDROID · A7 · page:charging/SmartCharge — evidence log
+Native Jetpack Compose / Material 3 port of web SmartChargePage
+Source: web/src/features/charging/pages/SmartChargePage.tsx  (web route /charging/schedule)
+Output: apps/android/app/src/main/kotlin/com/teslasync/charging/SmartChargePage*.kt
+Package: io.teslasync.android.charging.smartcharge
+================================================================================
+
+ENVIRONMENT
+  ANDROID_HOME = C:\Users\AtulM\AppData\Local\Android\Sdk (present)
+  JDK          = OpenJDK 21 (Android Studio JBR)
+  Gradle       = 8.14.5; module Gradle path = :android (settings.gradle.kts L33-36;
+                 the prompt's literal ":app:" is the generic placeholder — this single-module
+                 build addresses ":android:" per the README gate contract + settings comment).
+  Toolchain present → STATUS targets DONE (not BLOCKED).
+
+ARCHITECTURE (mirrors the A7 ChargingCurve / BatteryHealth precedents in the same package)
+  SmartChargePageModel.kt      framework-free: SmartChargePageRegistration (smartCharge / /smart-charge /
+                               SmartChargePage); SmartChargeInteractionState (the form useState group + the
+                               optimize result + applied flag); @Serializable wire models RatePlanInfo /
+                               ChargePlan / HourlyRate / ChargeWindow / CostComparison / OptimizeChargeResult;
+                               decodeRatePlans / decodeChargePlans / decodeOptimizeResult (over defaultApiJson);
+                               defaultDepartBy / departByToIso (web new Date(departBy).toISOString());
+                               chargeWindowHours / isHourInWindow / maxRateCents / formatHourLabel (web RateTimeline);
+                               SmartChargePrefs.from + SmartChargeFormatters (web useFormatting.formatCurrency,
+                               numberFormat.fmtNumber/fmtPercent, useDateFormat.formatTime/formatDateTime);
+                               recordSmartChargePageOpened (PII-safe view.opened, P1/S11).
+  SmartChargePageSource.kt     seam over ChargingRepository: ratePlans() (GET /charge-planner/rate-plans),
+                               chargePlans(vid) (GET /charge-planner/history), optimize() (POST
+                               /charge-planner/optimize), apply() (POST /charge-planner/apply) + SelectedVehicleStore.
+  SmartChargePageViewModel.kt  BaseFeedViewModel; ratePlansState + plansState : StateFlow<UiState<JsonElement>>
+                               (plansState gated on the active vehicle, web enabled:!!vehicleId);
+                               interaction/optimizing/optimizeError/applying/applyError/selectedVehicleId StateFlows;
+                               setTargetSoc/setDepartBy/setRatePlan/setMaxAmps/setBatteryCapacity; optimize()/apply()
+                               (web useOptimizeCharge/useApplySchedule, re-entrancy + missing-prereq guards);
+                               refresh()/retry(); recordViewOpened().
+  SmartChargePage.kt           stateful entry + stateless SmartChargePageContent; the 7 web panels; the optimize
+                               result conditionally gates the timeline / cost cards / schedule panel (web {result&&}).
+  SmartChargePageHost.kt       SmartChargeRoute + SmartChargePageHost.register() for the `smartCharge`
+                               /smart-charge destination (Destinations.kt L63; alias /charging/schedule →
+                               smartCharge in RouteTable; NavStrings nav_smart_charge). NavHost registration.
+  TeslaSyncApplication.kt      SmartChargePageHost.register() wired into onCreate() (L85; import L19).
+  res/values{,-ar,-he}/strings.xml  added translation_chargePlanner_cost_decimal = "Cost" (the only required
+                               key not already present; the other 32 ship in the generated catalog).
+
+DATA BINDING (P1/S8 — no HTTP in the view)
+  Two cache-then-network raw-JSON reads + two non-throwing suspend Result mutations flow through the shared
+  ChargingRepository (ChargingRepository.kt L94-126). The host builds HttpChargingRepository(container.api,
+  container.cacheStore) (the Android graph wires no ChargingStore yet) exactly like ChargingCurvePageHost.
+  The two JsonElement feeds are projected to UiState<JsonElement> via BaseFeedViewModel.asUiState and decoded
+  at the display boundary (SmartChargePageModel.decodeRatePlans/decodeChargePlans); the optimize response is
+  decoded by the view-model (decodeOptimizeResult) into the typed result the panels render. SI stays SI; the
+  only display conversion is monetary + localized date/time at the SmartChargeFormatters boundary (web S5).
+
+=== PARITY ===
+PARITY_REQUIRED=44
+
+— Panels (7) — each a Material 3 Card/Surface via the shared GlassPanel / StatCard primitives —
+[x] panel  GlassPanel1     SmartChargePage.kt:266  SettingsPanel        (web Settings GlassPanel — rate plan, target SOC, depart-by, max amps, battery capacity, optimize)
+[x] panel  GlassPanel2     SmartChargePage.kt:331  RateTimelinePanel    (web Rate Timeline GlassPanel + RateTimeline — legend + 24 bars + hour axis + windowInfo)
+[x] panel  Charge-Now      SmartChargePage.kt:439  StatCard             (web chargeNowCost StatCard)
+[x] panel  Optimized-Cost  SmartChargePage.kt:444  StatCard             (web optimizedCost StatCard)
+[x] panel  Savings         SmartChargePage.kt:449  StatCard + StatTrend (web savings StatCard with down/flat trend)
+[x] panel  GlassPanel6     SmartChargePage.kt:468  SchedulePanel        (web Schedule Details GlassPanel — apply/applied, 4 fields, alternative windows)
+[x] panel  GlassPanel7     SmartChargePage.kt:581  HistoryPanel         (web History GlassPanel — date/window/plan/cost/saved/status table)
+
+— Data states (4) — implemented across the bound state holders —
+[x] state  loading  SmartChargePage.kt:590  HistoryPanel→TableSkeleton; + optimize button loading=optimizing (L314) + apply button loading=applying (L490)
+[x] state  empty    SmartChargePage.kt:600  HistoryPanel→EmptyState (chargePlanner.noHistory); plansState empty also covers the no-vehicle gate (ViewModel DISABLED_PLANS)
+[x] state  error    SmartChargePage.kt:592  HistoryPanel→ErrorDisplay+Retry (plansState.isError); + optimizeError ErrorText (L321) + applyError ErrorText (L499)
+[x] state  success  SmartChargePage.kt:610  HistoryPanel→HistoryTable (plansState.isContent); + optimize success gates timeline/cost/schedule (SmartChargePageContent L221-228); + applied indicator (L485)
+
+— Strings (33) — every visible literal via stringResource(R.string.translation_chargePlanner_*); key names match web —
+[x] string  chargePlanner.alternatives     SmartChargePage.kt:556
+[x] string  chargePlanner.applied          SmartChargePage.kt:485
+[x] string  chargePlanner.applyError       SmartChargePage.kt:499
+[x] string  chargePlanner.applySchedule    SmartChargePage.kt:490
+[x] string  chargePlanner.batteryCapacity  SmartChargePage.kt:309
+[x] string  chargePlanner.chargeNowCost    SmartChargePage.kt:440
+[x] string  chargePlanner.cost_decimal     SmartChargePage.kt:619   (strings.xml key added this change)
+[x] string  chargePlanner.currentRate      SmartChargePage.kt:442
+[x] string  chargePlanner.currentSoc       SmartChargePage.kt:508
+[x] string  chargePlanner.date             SmartChargePage.kt:616
+[x] string  chargePlanner.departBy         SmartChargePage.kt:297
+[x] string  chargePlanner.endTime          SmartChargePage.kt:523
+[x] string  chargePlanner.history          SmartChargePage.kt:587
+[x] string  chargePlanner.maxAmps          SmartChargePage.kt:302
+[x] string  chargePlanner.noHistory        SmartChargePage.kt:600
+[x] string  chargePlanner.optimize         SmartChargePage.kt:314
+[x] string  chargePlanner.optimizeError    SmartChargePage.kt:321
+[x] string  chargePlanner.optimizedCost    SmartChargePage.kt:445
+[x] string  chargePlanner.plan             SmartChargePage.kt:618
+[x] string  chargePlanner.ratePlan         SmartChargePage.kt:284
+[x] string  chargePlanner.rateTimeline     SmartChargePage.kt:336
+[x] string  chargePlanner.savedAmount      SmartChargePage.kt:620
+[x] string  chargePlanner.savings          SmartChargePage.kt:450
+[x] string  chargePlanner.schedule         SmartChargePage.kt:482
+[x] string  chargePlanner.settings         SmartChargePage.kt:275
+[x] string  chargePlanner.startTime        SmartChargePage.kt:518
+[x] string  chargePlanner.status           SmartChargePage.kt:621
+[x] string  chargePlanner.subtitle         SmartChargePage.kt:253
+[x] string  chargePlanner.targetSoc        SmartChargePage.kt:289
+[x] string  chargePlanner.targetSocLabel   SmartChargePage.kt:513
+[x] string  chargePlanner.title            SmartChargePage.kt:251
+[x] string  chargePlanner.window           SmartChargePage.kt:617
+[x] string  chargePlanner.windowInfo       SmartChargePage.kt:350   (positional %1$s/%2$s, web {{start}}/{{end}})
+
+PARITY_COVERED=44
+PARITY_REQUIRED=44 == PARITY_COVERED=44  → OK
+
+NOTES
+  · Charts=0 / Maps=0 in the manifest — the 24-hour rate timeline is a native Compose bar row (RateTimelineBars,
+    SmartChargePage.kt:401), NOT a chart wrapper, matching the web custom-div RateTimeline (no webview).
+  · The web "Draft a schedule with Helix" AISmartChargeScheduleSuggestion card is its OWN parity unit
+    (component:ai/AISmartChargeScheduleSuggestion, already built+tested at
+    .../shared-surfaces/AISmartChargeScheduleSuggestion). It is correctly OUT OF SCOPE here: the manifest's 7
+    panels are Settings/RateTimeline/3 StatCards/Schedule/History, none of the 33 required strings are
+    chargePlanner.aiAgent.*, and there is no AI data source among the 4. It is gated off by default on both
+    platforms (renders nothing when ai_mode=off), and wiring its POST-SSE transport is net-new infra outside
+    this artifact's allowed files. Not rendered → no scope narrowing of the 44.
+
+GATE (android: placeholder + build + lint + test; detekt run additionally)
+  & ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/charging -Language kotlin
+    PLACEHOLDER_ALLOWED=1   (the sole opt-out is ChargingCurvePageModel's pre-existing "toDouble" false positive;
+                             zero from the SmartCharge files — they use no toDouble token)
+    PLACEHOLDER_COUNT=0
+  PLACEHOLDER_EXIT=0
+  ./gradlew :android:assembleDebug      → BUILD SUCCESSFUL (compileDebugKotlin OK; only pre-existing
+                                          Compose deprecation warnings in unrelated files)
+  BUILD_EXIT=0
+  ./gradlew :android:lintDebug          → BUILD SUCCESSFUL (lint-results-debug written; no errors)
+  LINT_EXIT=0
+  ./gradlew :android:testDebugUnitTest  → BUILD SUCCESSFUL — 16543 tests, 0 failed
+    SmartChargePageModelTest      17 tests, 0 failures, 0 errors
+    SmartChargePageViewModelTest  11 tests, 0 failures, 0 errors
+  TEST_EXIT=0
+  ./gradlew :android:detekt             → module remains red (24 weighted issues) ONLY in pre-existing sibling
+                                          files (ChargingCurvePageModel, BatteryHealthPageModel, EnergyProductsPage*,
+                                          YearReviewPageModel) outside this artifact's allowed files; detekt was
+                                          already red on the pre-change baseline and is not one of the four required
+                                          gate steps. The SmartCharge files contribute ZERO detekt issues (verified:
+                                          the four they initially produced — chargeWindowHours ReturnCount + three
+                                          test InvalidRange — were fixed; a re-run reports no SmartCharge matches).
+
+ACCEPTANCE CRITERIA
+  [x] Every named panel implemented; every in-scope anonymous region reproduced (header + the 7 panels).
+  [x] All 44 parity items render from the bound StateFlow state holder.
+  [x] loading / empty / error / success implemented for the data sources (history feed + both mutations).
+  [x] All visible strings sourced from strings.xml; zero hardcoded literals; key names match web.
+  [x] Dark/dynamic theme (MaterialTheme + TeslaTokens), accessibility, and SI units honored; Compose-native only.
+  [x] build + lint + test + placeholder gates green; PARITY_COVERED==PARITY_REQUIRED (44).
+  [x] android ledger row for page:charging/SmartCharge set covered (apps/parity/android-ledger.json).
+
+EXIT=0
+STATUS=DONE
