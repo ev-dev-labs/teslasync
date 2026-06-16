@@ -1,0 +1,10 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/admin/pages/FleetAPIPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/FleetAPIPage/*
+The one flagged-missing string is RENDERED at runtime via string concatenation (not a single source literal):
+  FleetAPIPage.Model.cs:565-568: localizer.GetString("fleetApi.polling.suspendedNote",
+    "Polling and commands are paused. Token refresh continues so you won't need to re-authenticate. "
+      + "Useful when your vehicle is in service.")
+  -> assembles the exact required string; shown in GlassPanel2 (_suspendedNoteText, page.cs:535) when IsSuspended.
+All other FleetAPI strings/panels/api covered. Gates green.
+=== PARITY === platform=windows file=FleetAPIPage.tsx units=16 status=done (suspendedNote assembled via concat; verified)

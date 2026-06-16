@@ -915,7 +915,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
   },
   {
     "unitId": "route:/climate-control",
@@ -924,7 +924,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
   },
   {
     "unitId": "route:/command-history",
@@ -1122,7 +1122,7 @@
     "coveredCount": 1,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
   },
   {
     "unitId": "route:/gas-price",
@@ -1379,11 +1379,11 @@
   {
     "unitId": "route:/power/grafana",
     "platform": "windows",
-    "status": "done",
-    "coveredCount": 1,
+    "status": "blocked",
+    "coveredCount": 0,
     "requiredCount": 1,
     "promptId": "windows-parity-loop",
-    "evidenceLog": "apps/parity/logs/windows-parity-loop-App-routes.log"
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
   },
   {
     "unitId": "route:/power/sql",
@@ -15172,5 +15172,617 @@
     "requiredCount": 15,
     "promptId": "windows-parity-loop",
     "evidenceLog": "apps/parity/logs/windows-parity-loop-SignalExplorerPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#useCaptureStats",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#usePollingConfig",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#useSettings",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#useToggleAPISuspend",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#useUpdatePollingConfig",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:admin/FleetAPI#useVersionInfo",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "page:admin/FleetAPI",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel7",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "panel:admin/FleetAPI#GlassPanel8",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "string-group:admin/FleetAPI",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 70,
+    "requiredCount": 70,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-FleetAPIPage.log"
+  },
+  {
+    "unitId": "api:vehicle-systems/ClimateControl#useChargingTelemetryLatest",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "api:vehicle-systems/ClimateControl#useClimate",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "api:vehicle-systems/ClimateControl#useClimateHistory",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/ClimateControl#AreaChart-5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/ClimateControl#LineChart-4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/ClimateControl#RadialGauge-1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/ClimateControl#RadialGauge-2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "chart:vehicle-systems/ClimateControl#RadialGauge-3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/ClimateControl",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 129,
+    "requiredCount": 129,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#AC-On-Time",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Auto-Conditioning",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Avg-Fan-Speed",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Battery-Heater",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Climate-Keeper",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Comfort-Score",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Defrost-Mode",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Defrost-for-Preconditioning",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Fan-Speed",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Fan-Status",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel1",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel2",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel24",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel25",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel26",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel27",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel28",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel3",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel33",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel34",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel35",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel36",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel4",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel5",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#GlassPanel6",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#HVAC-Power",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Overheat-Protection",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Overheat-Temp-Limit",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Passenger-Setting",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Peak-Fan-Speed",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Rear-Defrost",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Rear-Display-HVAC",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Steering-Wheel-Heat-Auto",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Steering-Wheel-Heat-Level",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Steering-Wheel-Heater",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "panel:vehicle-systems/ClimateControl#Wiper-Heater",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 1,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "string-group:vehicle-systems/ClimateControl",
+    "platform": "windows",
+    "status": "done",
+    "coveredCount": 84,
+    "requiredCount": 84,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "apps/parity/logs/windows-parity-loop-ClimateControlPage.log"
+  },
+  {
+    "unitId": "page:power-user/GrafanaPanel",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 22,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "panel:power-user/GrafanaPanel#GlassPanel1",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "panel:power-user/GrafanaPanel#GlassPanel2",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "panel:power-user/GrafanaPanel#GlassPanel3",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "panel:power-user/GrafanaPanel#GlassPanel4",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 1,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
+  },
+  {
+    "unitId": "string-group:power-user/GrafanaPanel",
+    "platform": "windows",
+    "status": "blocked",
+    "coveredCount": 0,
+    "requiredCount": 17,
+    "promptId": "windows-parity-loop",
+    "evidenceLog": "user-deferred: GrafanaPanelPage explicitly skipped by user (no native page; PowerGrafanaPanel route intentionally unregistered)"
   }
 ]

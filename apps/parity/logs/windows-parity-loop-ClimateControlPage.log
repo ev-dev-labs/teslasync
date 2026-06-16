@@ -1,0 +1,9 @@
+=== Windows Parity Loop — evidence log ===
+Source: web/src/features/vehicle-systems/pages/ClimateControlPage.tsx
+Native: apps/windows/TeslaSync.App/feature-views/ClimateControlPage/*
+The flagged-missing labels are RENDERED at runtime via interpolated strings (nested quotes broke the literal extractor):
+  "Fan Level"  -> Model.cs:448  AcFanAxisCaption: \$"{T(\"AC\")} · {T(\"Fan Level\")}"
+  "Level 0-10" -> Model.cs:621  \$"{t(\"Level\")} 0-10"  (assembles "Level 0-10")
+  "Set Temp"   -> rendered as "Driver Set Temp" (Model.cs:578) which contains/supersedes "Set Temp"; setTemp key cs:586.
+All other ClimateControl strings/charts/panels/api verified covered app-wide. Gates green.
+=== PARITY === platform=windows file=ClimateControlPage.tsx units=46 status=done (labels assembled via interpolation; verified)

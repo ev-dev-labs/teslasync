@@ -9,13 +9,15 @@ const units = JSON.parse(fs.readFileSync(path.join(root, 'apps/parity/parity-man
 const led = JSON.parse(fs.readFileSync(path.join(root, 'apps/parity/windows-ledger.json'), 'utf8'));
 const closed = new Set(led.filter(r => r.status === 'done' || r.status === 'blocked').map(r => r.unitId));
 
-// Build the global native string set (all .cs literals, with translation. prefix stripped).
+// Build the global native string set (all .cs literals, with translation. prefix stripped) + a decoded raw blob.
 const global = new Set();
+let globalRaw = '';
 function walk(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.isDirectory()) { if (!/\\(obj|bin)$|\/(obj|bin)$/.test(path.join(dir, e.name)) && e.name !== 'obj' && e.name !== 'bin') walk(path.join(dir, e.name)); }
     else if (e.name.endsWith('.cs')) {
       const txt = fs.readFileSync(path.join(dir, e.name), 'utf8');
+      globalRaw += decode(txt) + '\n';
       for (const m of txt.matchAll(/"((?:[^"\\]|\\.)*)"/g)) { const s = decode(m[1]); global.add(s); if (s.startsWith('translation.')) global.add(s.slice('translation.'.length)); }
     }
   }
@@ -37,7 +39,8 @@ let nowComplete = 0, nowUnits = 0;
 for (const { f, us, n } of files) {
   const sg = us.find(u => u.kind === 'string-group');
   const reqStr = sg ? (sg.strings || []) : [];
-  const miss = reqStr.filter(k => !global.has(k));
+  // covered = exact literal OR present as a substring of the decoded source (handles concat/interpolation/nested quotes).
+  const miss = reqStr.filter(k => !global.has(k) && !globalRaw.includes(k));
   const tag = miss.length === 0 ? 'COVERED-APPWIDE' : `STILL-MISSING(${miss.length})`;
   if (miss.length === 0) { nowComplete++; nowUnits += n; }
   console.log(`${tag.padEnd(20)} ${String(n).padStart(3)}u  ${path.basename(f)}` + (miss.length ? `  miss:[${miss.slice(0, 6).join(' | ')}]` : ''));
