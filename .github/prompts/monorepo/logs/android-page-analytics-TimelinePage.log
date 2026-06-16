@@ -1,0 +1,146 @@
+================================================================================
+P3-ANDROID A7 — page:analytics/Timeline  (Jetpack Compose / Material 3 / Kotlin)
+Native parity port of web/src/features/analytics/pages/TimelinePage.tsx
+promptId: p3-android/pages/analytics/TimelinePage
+================================================================================
+
+Honesty Covenant (binding): 1 No red-as-green  2 No scope narrowing  3 No skip-and-assume
+4 No stubs as final  5 No parity shortcuts  6 No delegation  7 No predecessor bypass
+8 No commit on red  9 No silent drift  10 Log ends with EXIT=<int> and STATUS=<DONE|BLOCKED>
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+Android SDK : C:\Users\AtulM\AppData\Local\Android\Sdk (ANDROID_HOME + ANDROID_SDK_ROOT present)
+JDK         : 21.0.9 (Android Studio jbr, JAVA_HOME set)
+Gradle      : 8.14.5 wrapper; root project teslasync-android; app module Gradle path = :android (sources under app/);
+              shared KMP core consumed via composite build includeBuild("../shared") -> :core (settings.gradle.kts).
+SDK present => gate executed (not BLOCKED).
+Gate note   : the README gate contract's `:app:` target resolves to this module's Gradle path `:android:`
+              (settings.gradle.kts L33-36: include(":android"); projectDir = file("app")), matching the
+              sibling analytics/admin-page logs. Invocations below use `:android:` accordingly.
+
+--------------------------------------------------------------------------------
+OUTPUT (allowed files only)
+--------------------------------------------------------------------------------
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePage.kt           (@Composable screen: TimelinePage + TimelinePageContent + chrome + 7 panels + BarChart + table + 4 @Preview)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePageViewModel.kt  (AndroidX ViewModel; StateFlow<UiState<TimelineData>> + vehicles + selectedVehicleId; select()/refresh()/retry(); reconcile)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePageSource.kt     (S8 data seam over VehiclesStore + AnalyticsStore + SelectedVehicleStore)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePageModel.kt      (framework-free: decodeTransitions/buildTimelineData(JsonElement), daily-breakdown + per-state-stat derivation, h/m/s + %/date formatters, Resource.mapData)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePageIcons.kt      (3 authored lucide glyphs ArrowRightLeft/Moon/BarChart3 + 4 re-exported Car/Clock/BatteryCharging/Refresh)
+apps/android/app/src/main/kotlin/com/teslasync/analytics/TimelinePageHost.kt       (PageHosts.register(timeline){ TimelineRoute() })
+apps/android/app/src/main/java/io/teslasync/android/TeslaSyncApplication.kt        (NavHost wiring: + import + TimelinePageHost.register())
+apps/android/app/src/main/res/values/strings.xml                                   (+ translation_timeline_noStateData, + translation_timeline_trigger)
+apps/android/app/src/main/res/values-ar/strings.xml                                (+ same 2 keys, English fallback per the shared catalog convention)
+apps/android/app/src/main/res/values-he/strings.xml                                (+ same 2 keys, English fallback)
+apps/parity/android-ledger.json                                                     (ledger row page:analytics/Timeline, 35/35)
+.github/prompts/monorepo/logs/android-page-analytics-TimelinePage.log               (this log)
+
+Strings: 21 of the 23 page keys already present as translation_timeline_* / translation_error_loadFailed; the 2 missing
+         (timeline.noStateData, timeline.trigger) were added to res/values + values-ar + values-he.
+Nav    : Destinations 'timeline' -> /timeline pre-existing (Destinations.kt L94, count unchanged); host wired via
+         PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+Data   : useVehicles -> VehiclesStore.vehicles() (the vehicle-scope picker + the useSelectedVehicle default-to-first
+         reconcile); body -> AnalyticsStore.timeline(vehicleId) (web useTimeline; the unwrapped transitions array).
+         JsonElement->TimelineData decode in TimelinePageModel.buildTimelineData; no HTTP in the view.
+SI     : no SI unit values on this surface (only durations rendered h/m/s and integer counts) — nothing is converted;
+         the SI-canonical rule (Phase-48) is satisfied vacuously. Documented in TimelinePageModel.kt header.
+Divergence (Honesty #9): the web reads /vehicle-states/summary for the 4 stat cards + the distribution bar. That
+         endpoint is @deprecated/404 post Phase-42 (Prompt-0077 dropped vehicle_states) AND the shared
+         AnalyticsStore.stateSummary applies safeArray, which collapses the summary OBJECT to []. So the native port
+         derives the per-state dwell durations + transition counts from the surviving transitions feed (duration in a
+         to_state = next ts (or now) - this ts, summed per destination state) — the same aggregation, from the one
+         live feed. Both FSM endpoints 404 at runtime, so the first load hard-errors with no cache and the page shows
+         its error surface + retry; success/empty are reachable from cached/mock data (see the 4 @Preview branches).
+         Documented in the TimelinePageModel.kt + TimelinePage.kt headers.
+
+--------------------------------------------------------------------------------
+GATE  (Gradle path :android; app/ module)
+--------------------------------------------------------------------------------
+$ ./apps/tools/check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/analytics -Language kotlin
+  PLACEHOLDER_ALLOWED=0
+  PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+$ ./gradlew :android:compileDebugKotlin   => BUILD SUCCESSFUL in 2m 41s (pre-validation of the Kotlin sources)
+$ ./gradlew :android:assembleDebug        => BUILD SUCCESSFUL in 2m 6s
+BUILD_EXIT=0
+$ ./gradlew :android:lintDebug            => 1st run BUILD FAILED (4 errors, all TimelinePage.kt:631 — LocalContextGetResourceValueCall
+                                             + StringFormatMatches x3 on the pagination "showing" line). Fixed by pre-resolving the
+                                             "showing X-Y of Z" text via stringResource(...) with String args (the same page window the
+                                             Pagination component derives internally), removing the LocalContext.getString call.
+                                             re-run => BUILD SUCCESSFUL in 12m 39s (lint-results-debug.html: 0 errors, 3478 warnings; warningsAsErrors=false)
+LINT_EXIT=0
+$ ./gradlew :android:testDebugUnitTest    => BUILD SUCCESSFUL in 2m 2s
+TEST_EXIT=0
+
+--------------------------------------------------------------------------------
+=== PARITY ===
+PARITY_REQUIRED=35
+--------------------------------------------------------------------------------
+# panels (7) — each a Material 3 GlassPanel/Card (Surface) ; bound state holder = TimelinePageViewModel.state : StateFlow<UiState<TimelineData>>
+[COVERED] panel  Total-Transitions -> TimelinePage.kt:346 SummaryCards() MetricCard(label totalTransitions L348, value formatInt(totalTransitions), icon ArrowRightLeft)  (web <MetricCard icon={ArrowRightLeft}>)
+[COVERED] panel  Driving-Time      -> TimelinePage.kt:352 SummaryCards() MetricCard(label drivingTime L354, value formatHoursFromSeconds(drivingSeconds), icon Car, accent status.success)
+[COVERED] panel  Charging-Time     -> TimelinePage.kt:361 SummaryCards() MetricCard(label chargingTime L363, value formatHoursFromSeconds(chargingSeconds), icon BatteryCharging, accent chart.regen)
+[COVERED] panel  Idle-Sleep-Time   -> TimelinePage.kt:368 SummaryCards() MetricCard(label idleSleepTime L370, value formatHoursFromSeconds(idleSeconds+sleepingSeconds), icon Moon)
+[COVERED] panel  GlassPanel5       -> TimelinePage.kt:382 DistributionPanel() GlassPanel{ PanelTitle(stateTimeline L387) + DistributionBar(weighted state segments, web flex h-8) + DistributionLegend(8 STATE_ORDER swatches) | EmptyState(noStateData L391) }
+[COVERED] panel  GlassPanel6       -> TimelinePage.kt:460 DailyBreakdownPanel() GlassPanel{ BarChart3 icon + PanelTitle(dailyBreakdown L467) + BarChartWrapper(L492) + ChartLegend | EmptyState(noDailyData L472) }
+[COVERED] panel  GlassPanel7       -> TimelinePage.kt:518 TransitionsPanel() GlassPanel{ PanelTitle(stateTransitions L524) + DataTable(L555, sortable Time/From/To/Trigger + pagination, emptyText noTransitions L561) }
+
+# charts (1) — A3 native Vico wrapper (never a webview)
+[COVERED] chart  BarChart          -> TimelinePage.kt:492 DailyBreakdownPanel() BarChartWrapper(series = 4x ChartSeries driving/charging/idle/sleeping (ChartSeriesKind.Bar), xLabels = day buckets, yValueFormatter = formatInt)  (web Recharts stacked <BarChart>)
+
+# data states (4 required) — bound to TimelinePageViewModel.state : StateFlow<UiState<TimelineData>> (the useVehicles picker mirrors loading/content)
+[COVERED] state  loading           -> TimelinePage.kt:211 state.isLoading -> TimelineLoading() (L293 PageLoader) ; UiState.loading() from BaseFeedViewModel.asUiState on a first load with no cache (the vehicle picker shows a select skeleton, L274)
+[COVERED] state  empty             -> reachable via TimelineData.isEmpty -> UiPhase.Empty (no transitions in window): per-panel EmptyState — Distribution L391 (noStateData), DailyBreakdown L472 (noDailyData), Transitions DataTable emptyText L561 (noTransitions); the 4 cards still render their zero totals (never blank)
+[COVERED] state  error             -> TimelinePage.kt:212 state.isError -> TimelineError() (L302 ErrorDisplay + Retry, onRetry=viewModel::retry, message error.loadFailed L304) ; ResourceUiState maps Resource.Error(no cache — the 404 FSM endpoints) -> UiPhase.Error ; the offline/last-known tier also surfaces AlertBanner(danger) L323
+[COVERED] state  success           -> TimelinePage.kt:213 else -> TimelineBody(state.data) renders all 7 panels' content from the decoded TimelineData ; cache/refresh/stale/offline surfaced via the DataFreshness chip (L247)
+
+# strings (23) — every visible literal via stringResource(R.string.translation_timeline_* / translation_error_loadFailed); web key names preserved
+[COVERED] string error.loadFailed          -> TimelinePage.kt:304 TimelineError ErrorDisplay (translation_error_loadFailed) [+ L324 AlertBanner offline]
+[COVERED] string timeline.charging         -> TimelinePage.kt:481 DailyBreakdownPanel chart series + legend (translation_timeline_charging)
+[COVERED] string timeline.chargingTime     -> TimelinePage.kt:363 SummaryCards MetricCard label (translation_timeline_chargingTime)
+[COVERED] string timeline.dailyBreakdown   -> TimelinePage.kt:467 DailyBreakdownPanel PanelTitle (translation_timeline_dailyBreakdown)
+[COVERED] string timeline.driving          -> TimelinePage.kt:480 DailyBreakdownPanel chart series + legend (translation_timeline_driving)
+[COVERED] string timeline.drivingTime      -> TimelinePage.kt:354 SummaryCards MetricCard label (translation_timeline_drivingTime)
+[COVERED] string timeline.duration         -> TimelinePage.kt:581 transitionColumns header (translation_timeline_duration)
+[COVERED] string timeline.fromState        -> TimelinePage.kt:579 transitionColumns header (translation_timeline_fromState)
+[COVERED] string timeline.idle             -> TimelinePage.kt:482 DailyBreakdownPanel chart series + legend (translation_timeline_idle)
+[COVERED] string timeline.idleSleepTime    -> TimelinePage.kt:370 SummaryCards MetricCard label (translation_timeline_idleSleepTime)
+[COVERED] string timeline.noDailyData      -> TimelinePage.kt:472 DailyBreakdownPanel EmptyState (translation_timeline_noDailyData) [+ L497 BarChartWrapper emptyMessage]
+[COVERED] string timeline.noStateData      -> TimelinePage.kt:391 DistributionPanel EmptyState (translation_timeline_noStateData) [added to res/values*]
+[COVERED] string timeline.noTransitions    -> TimelinePage.kt:561 TransitionsTable DataTable emptyText (translation_timeline_noTransitions)
+[COVERED] string timeline.selectVehicle    -> TimelinePage.kt:285 TimelineVehiclePicker Select emptyLabel (translation_timeline_selectVehicle)
+[COVERED] string timeline.sleeping         -> TimelinePage.kt:483 DailyBreakdownPanel chart series + legend (translation_timeline_sleeping)
+[COVERED] string timeline.stateTimeline    -> TimelinePage.kt:387 DistributionPanel PanelTitle (translation_timeline_stateTimeline)
+[COVERED] string timeline.stateTransitions -> TimelinePage.kt:524 TransitionsPanel PanelTitle (translation_timeline_stateTransitions)
+[COVERED] string timeline.subtitle         -> TimelinePage.kt:236 TimelineChrome BodyText (translation_timeline_subtitle)
+[COVERED] string timeline.time             -> TimelinePage.kt:578 transitionColumns header (translation_timeline_time)
+[COVERED] string timeline.title            -> TimelinePage.kt:234 TimelineChrome PageTitle (translation_timeline_title)
+[COVERED] string timeline.toState          -> TimelinePage.kt:580 transitionColumns header (translation_timeline_toState)
+[COVERED] string timeline.totalTransitions -> TimelinePage.kt:348 SummaryCards MetricCard label (translation_timeline_totalTransitions)
+[COVERED] string timeline.trigger          -> TimelinePage.kt:582 transitionColumns header (translation_timeline_trigger) [added to res/values*]
+
+PARITY_COVERED=35
+
+--------------------------------------------------------------------------------
+=== SUMMARY ===
+--------------------------------------------------------------------------------
+data sources : TimelinePageViewModel binds shared S8 VehiclesStore.vehicles() (web useVehicles — the vehicle-scope picker + the
+               useSelectedVehicle default-to-first reconcile, scoped to SelectedVehicleStore) and AnalyticsStore.timeline(vehicleId)
+               (web useTimeline) via timelinePageSourceOf(); JsonElement->TimelineData decode in TimelinePageModel.buildTimelineData;
+               no HTTP in the view. The web's /vehicle-states/summary read is not bound — it is @deprecated/404 post Phase-42 and the
+               shared stateSummary's safeArray collapses the object to [] — so the cards + distribution derive from the transitions feed
+               (documented divergence, Honesty #9).
+charts/maps  : 1 BarChart via the A3 BarChartWrapper (Vico columns); no map declared; Compose-native (no webview).
+si/units     : none — only durations (h/m/s) + integer counts are rendered; nothing stored/computed in non-SI; conversion is N/A.
+a11y/theme   : icons decorative (contentDescription=null); the distribution segments carry per-state contentDescription; all color via
+               MaterialTheme.colorScheme + TeslaTokens.chart/status (A2 tokens, no raw hex in render) — dynamic color + dark theme;
+               typography via the role components (PageTitle/PanelTitle/BodyText/Caption); >=48dp targets via the shared IconButton/Select.
+nav          : Destinations 'timeline' -> /timeline (pre-existing, Destinations.kt L94) wired to TimelineRoute() via PageHosts.register;
+               deep link auto-registered by TeslaSyncNavHost.
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(35) == PARITY_REQUIRED(35)
+[PASS] all android triad gates green; parity 35/35; android ledger row page:analytics/Timeline status=done.
+EXIT=0
+STATUS=DONE

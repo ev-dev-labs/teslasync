@@ -6704,6 +6704,7 @@
   <string name="translation_timeline_idle">Idle</string>
   <string name="translation_timeline_idleSleepTime">Idle / Sleep Time</string>
   <string name="translation_timeline_noDailyData">No daily data available yet</string>
+  <string name="translation_timeline_noStateData">No state distribution available yet</string>
   <string name="translation_timeline_noTransitions">No state transitions recorded</string>
   <string name="translation_timeline_selectVehicle">Select Vehicle</string>
   <string name="translation_timeline_sleeping">Sleeping</string>
@@ -6714,6 +6715,7 @@
   <string name="translation_timeline_title">Timeline</string>
   <string name="translation_timeline_toState">To State</string>
   <string name="translation_timeline_totalTransitions">Total Transitions</string>
+  <string name="translation_timeline_trigger">Trigger</string>
   <string name="translation_tirePressure_aiTrendReasoning_badge">Helix</string>
   <string name="translation_tirePressure_aiTrendReasoning_description">Ask Helix to explain the recent 30-day trend in this vehicle\'s four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.</string>
   <string name="translation_tirePressure_aiTrendReasoning_generateButton">Narrate trend</string>
