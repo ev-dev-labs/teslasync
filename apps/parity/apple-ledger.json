@@ -1207,6 +1207,24 @@
       "requiredCount": 41,
       "promptId": "p4-apple/P7/page:dashboard/Dashboard",
       "evidenceLog": ".github/prompts/monorepo/logs/apple-page-dashboard-DashboardPage.log"
+    },
+    {
+      "unitId": "page:driving/DriveDetail",
+      "platform": "apple-macos",
+      "status": "done",
+      "coveredCount": 25,
+      "requiredCount": 25,
+      "promptId": "p4-apple/P7/page:driving/DriveDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-DriveDetailPage.log"
+    },
+    {
+      "unitId": "page:driving/DriveDetail",
+      "platform": "apple-ios",
+      "status": "done",
+      "coveredCount": 25,
+      "requiredCount": 25,
+      "promptId": "p4-apple/P7/page:driving/DriveDetail",
+      "evidenceLog": ".github/prompts/monorepo/logs/apple-page-driving-DriveDetailPage.log"
     }
   ]
 }
