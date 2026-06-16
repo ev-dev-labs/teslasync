@@ -1,0 +1,113 @@
+P3-ANDROID A7 — page:admin/GDPRExport — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/GDPRExportPage.tsx  (route /admin/gdpr-exports)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (GDPRExportPage + ViewModel + Source + Model + Icons + Host)
+Wiring     : DataContainer.operatorConfidenceStore (S8 OperatorConfidenceStore), TeslaSyncApplication -> GDPRExportPageHost.register("adminGdprExports")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+PREDECESSOR NOTE (honesty): the P1/S8 shared OperatorConfidenceStore
+(io.teslasync.shared.core.presentation.operatorconfidence.OperatorConfidenceStore,
+the KMP port of the web `useOperatorConfidence` hook domain, which owns the typed
+`gdprExport(id): StateFlow<Resource<GDPRExportArtifact>>` feed = web `useGDPRExport`)
+already existed in the shared core but was NOT yet wired into the Android DI graph
+(DataContainer). It was wired in the same documented A7 widening seam the sibling
+FeedbackQueuePage used for `feedbackStore` ("This is the single seam A7 page prompts
+widen (register their store + ViewModel)") — over the existing HttpOperatorConfidenceRepository
+on the same resilient ApiHttpClient + CacheStore. NOT a new endpoint, NOT a bypass of
+the shared core, NOT a stub. The view performs no HTTP; it binds the typed cache-then-network
+Resource feed via OperatorConfidenceStore.asGdprExportSource().
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps
+':android' -> app/); the prompt snippet's ':app:' is the same module. Kotlin daemon
+heap raised to 6g via -Pkotlin.daemon.jvmargs=-Xmx6g (CLI only, no file edits) per the
+sibling ApiLogsPage gate note. Baseline ':android:assembleDebug' was GREEN before edits.
+
+STRINGS NOTE: the platform string catalog (res/values/strings.xml) is generated from
+web/src/i18n/en.json (apps/shared/i18n/generators/gen-i18n.ts). The 31 web parity keys
+were added to BOTH the en.json source (top-level `admin.gdprExport.*` + `admin.subsystem.unavailableTitle`)
+AND the generated res/values/strings.xml (translation_admin_gdprExport_* / translation_admin_subsystem_unavailableTitle),
+so the catalog stays consistent with its source (no silent drift) and a later regeneration
+will not wipe the keys. en.json validated parseable; strings.xml validated well-formed.
+
+=== GATE ===
+# check-placeholders.ps1 -Path apps/android/app/src/main/kotlin/com/teslasync/admin -Language kotlin
+PLACEHOLDER_ALLOWED=1
+PLACEHOLDER_COUNT=0
+PLACEHOLDER_EXIT=0
+# the one PLACEHOLDER_ALLOWED is the web i18n key `admin.gdprExport.idPlaceholder` reference,
+# opted out with `// parity:allow ...` (the gate's own self-test sanctions "translation key
+# literally named X" opt-outs); it is a field-prompt string, not a code stub.
+# :android:assembleDebug  -> BUILD SUCCESSFUL in 9m
+BUILD_EXIT=0
+# :android:lintDebug  (run together with the test task) -> BUILD SUCCESSFUL in 15m 11s
+#   lintReportDebug wrote app/build/reports/lint-results-debug.html with no errors (abortOnError honored)
+LINT_EXIT=0
+# :android:testDebugUnitTest  (same invocation) -> passed, BUILD SUCCESSFUL in 15m 11s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=42
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (GDPRExportPage.kt screen, GDPRExportPageViewModel.kt, GDPRExportPageModel.kt, GDPRExportPageSource.kt, GDPRExportPageIcons.kt, GDPRExportPageHost.kt)
+
+# panels (8) — Material 3 Card/Surface (GlassPanel) / StatCard, web GlassPanel/StatCard DOM order
+[COVERED] panel  GlassPanel1   -> GDPRExportPage.kt:GDPRExportLookupPanel() GlassPanel(PanelPadding.Md) Input(idLabel/idPlaceholder)+Button(lookupButton, Search glyph)+Caption(lookupHint)
+[COVERED] panel  GlassPanel2   -> GDPRExportPage.kt:GDPRExportEmptyPanel() GlassPanel(PanelPadding.Md) EmptyState(HardDriveDownload, emptyTitle, emptyMessage)  [web `{!activeId && <GlassPanel><EmptyState/></GlassPanel>}`]
+[COVERED] panel  GlassPanel3   -> GDPRExportPage.kt:GDPRExportStatusPanel() GlassPanel(PanelPadding.Md) Caption(statusLabel)+Badge(status, statusTone().badgeVariant())
+[COVERED] panel  Format        -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(label=formatLabel, value=artifact.format ?: EM_DASH)
+[COVERED] panel  Size          -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(label=bytesLabel, value=formatBytes(artifact.bytes))  [GDPRExportPageModel.formatBytes = web formatBytes]
+[COVERED] panel  Storage       -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(label=storageLabel, value=artifact.storage ?: EM_DASH)
+[COVERED] panel  GlassPanel7   -> GDPRExportPage.kt:GDPRExportDetailsPanel() GlassPanel(PanelPadding.Md) PanelTitle(metaTitle) + GDPRExportCopyRow(metaId)+metaUser+GDPRExportDateRow(metaCreated/metaCompleted/metaExpires)+GDPRExportCopyRow(metaSha256)
+[COVERED] panel  GlassPanel8   -> GDPRExportPage.kt:GDPRExportDownloadPanel() GlassPanel(PanelPadding.Md) PanelTitle(downloadTitle) + downloadAvailability() branch (button+hint / wait / expired / failed)
+
+# data states (3) — bound to GDPRExportPageViewModel.state: StateFlow<UiState<GDPRExportArtifact>> (web useGDPRExport)
+[COVERED] state  empty         -> GDPRExportPage.kt:GDPRExportPageContent() `activeId.isBlank()` branch -> GDPRExportEmptyPanel(); GDPRExportPageViewModel.feedFor() opens no feed for a blank id (web `enabled: Boolean(id)`)
+[COVERED] state  error         -> GDPRExportPage.kt:GDPRExportPageContent() subsystem AlertBanner(httpStatus==503, web `error.status===503`) + GDPRExportNotFoundBanner(httpStatus==404, web `error.status===404`) + GDPRExportErrorBanner(state.hasError, retry); UiState.httpStatus/hasError via ResourceUiState.toUiState(Resource.Error)
+[COVERED] state  success       -> GDPRExportPage.kt:GDPRExportArtifactSection() (artifact != null / UiState.Content); also polls while queued/running (web refetchInterval FAST) via LaunchedEffect + GDPRExportPageModel.isPolling()
+
+# strings (31) — every visible literal via stringResource(R.string.translation_*); web key names preserved (admin.gdprExport.* / admin.subsystem.unavailableTitle)
+[COVERED] string admin.gdprExport.bytesLabel       -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(Size)
+[COVERED] string admin.gdprExport.downloadButton    -> GDPRExportPage.kt:GDPRExportDownloadPanel() Button (Available)
+[COVERED] string admin.gdprExport.downloadExpired   -> GDPRExportPage.kt:GDPRExportDownloadPanel() Caption (Expired)
+[COVERED] string admin.gdprExport.downloadFailed    -> GDPRExportPage.kt:GDPRExportDownloadPanel() Caption (Failed)
+[COVERED] string admin.gdprExport.downloadHint      -> GDPRExportPage.kt:GDPRExportDownloadPanel() BodyText (Available)
+[COVERED] string admin.gdprExport.downloadTitle     -> GDPRExportPage.kt:GDPRExportDownloadPanel() PanelTitle
+[COVERED] string admin.gdprExport.downloadWait      -> GDPRExportPage.kt:GDPRExportDownloadPanel() Caption (Wait)
+[COVERED] string admin.gdprExport.emptyMessage      -> GDPRExportPage.kt:GDPRExportEmptyPanel() EmptyState message
+[COVERED] string admin.gdprExport.emptyTitle        -> GDPRExportPage.kt:GDPRExportEmptyPanel() EmptyState title
+[COVERED] string admin.gdprExport.errorTitle        -> GDPRExportPage.kt:GDPRExportArtifactSection() AlertBanner (artifact.error)
+[COVERED] string admin.gdprExport.formatLabel       -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(Format)
+[COVERED] string admin.gdprExport.idLabel           -> GDPRExportPage.kt:GDPRExportLookupPanel() Input label
+[COVERED] string admin.gdprExport.idPlaceholder     -> GDPRExportPage.kt:GDPRExportLookupPanel() Input hint (// parity:allow)
+[COVERED] string admin.gdprExport.lookupButton      -> GDPRExportPage.kt:GDPRExportLookupPanel() Button
+[COVERED] string admin.gdprExport.lookupHint        -> GDPRExportPage.kt:GDPRExportLookupPanel() Caption
+[COVERED] string admin.gdprExport.lookupTitle       -> GDPRExportPage.kt:GDPRExportLookupPanel() PanelTitle
+[COVERED] string admin.gdprExport.metaCompleted     -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportDateRow (completed_at)
+[COVERED] string admin.gdprExport.metaCreated       -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportDateRow (created_at)
+[COVERED] string admin.gdprExport.metaExpires       -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportDateRow (expires_at)
+[COVERED] string admin.gdprExport.metaId            -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportCopyRow (id)
+[COVERED] string admin.gdprExport.metaSha256        -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportCopyRow (sha256)
+[COVERED] string admin.gdprExport.metaTitle         -> GDPRExportPage.kt:GDPRExportDetailsPanel() PanelTitle
+[COVERED] string admin.gdprExport.metaUser          -> GDPRExportPage.kt:GDPRExportDetailsPanel() GDPRExportMetaRow (user_id)
+[COVERED] string admin.gdprExport.notConfigured     -> GDPRExportPage.kt:GDPRExportPageContent() subsystem AlertBanner body (503)
+[COVERED] string admin.gdprExport.notFoundMessage   -> GDPRExportPage.kt:GDPRExportNotFoundBanner() body (404)
+[COVERED] string admin.gdprExport.notFoundTitle     -> GDPRExportPage.kt:GDPRExportNotFoundBanner() title (404)
+[COVERED] string admin.gdprExport.pageTitle         -> GDPRExportPage.kt:GDPRExportHeader() PageTitle
+[COVERED] string admin.gdprExport.statusLabel       -> GDPRExportPage.kt:GDPRExportStatusPanel() Caption
+[COVERED] string admin.gdprExport.storageLabel      -> GDPRExportPage.kt:GDPRExportStatusGrid() StatCard(Storage)
+[COVERED] string admin.gdprExport.subtitle          -> GDPRExportPage.kt:GDPRExportHeader() BodyText
+[COVERED] string admin.subsystem.unavailableTitle   -> GDPRExportPage.kt:GDPRExportPageContent() subsystem AlertBanner title (503)
+
+PARITY_COVERED=42
+
+=== SUMMARY ===
+data sources : GDPRExportPageViewModel binds shared S8 OperatorConfidenceStore.gdprExport(id) (typed GDPRExportArtifact) via asGdprExportSource(); feed opened only after a lookup (web `enabled: Boolean(id)`); polls queued/running (web refetchInterval FAST); no HTTP in the view.
+nav          : Destinations 'adminGdprExports' -> /admin/gdpr-exports (pre-existing) wired to GDPRExportRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost; host registered in TeslaSyncApplication.onCreate (idempotent).
+DI wiring    : DataContainer now exposes operatorConfidenceStore = OperatorConfidenceStore(HttpOperatorConfidenceRepository(api, cacheStore, clock), scope) — the documented A7 widening seam (same pattern as feedbackStore).
+strings      : 31 web parity keys added to web/src/i18n/en.json (source) + apps/android/.../res/values/strings.xml (generated); zero hardcoded literals; key names match web.
+units        : only unit-bearing value is the byte count (already SI/bytes on the wire); formatted at the display boundary by GDPRExportPageModel.formatBytes (web formatBytes), never converted/stored.
+a11y/theme   : Material3 tokens (MaterialTheme) throughout, no hardcoded colors/typography; EmptyState/Spinner/AlertBanner carry semantics; CopyButton iconOnly carries an accessible name; >=48dp targets via shared Button/Input; dynamic color + dark theme inherited from the A2 theme.
+placeholder  : PLACEHOLDER_COUNT=0  PLACEHOLDER_ALLOWED=1
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(42) == PARITY_REQUIRED(42)
+[PASS] all android triad gates green; parity 42/42; android ledger row page:admin/GDPRExport status=done.
+EXIT=0
+STATUS=DONE

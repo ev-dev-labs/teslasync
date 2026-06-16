@@ -2922,6 +2922,41 @@
     "endpointCount": "{{count}} endpoints available"
   },
   "admin": {
+    "gdprExport": {
+      "pageTitle": "GDPR Export",
+      "subtitle": "Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.",
+      "lookupTitle": "Lookup artifact",
+      "idLabel": "Artifact ID",
+      "idPlaceholder": "e.g. 8f4c…",
+      "lookupButton": "Look up",
+      "lookupHint": "IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running.",
+      "emptyTitle": "No artifact selected",
+      "emptyMessage": "Enter an artifact ID above to look up its status. The page will keep refreshing until the export completes.",
+      "notFoundTitle": "Artifact not found",
+      "notFoundMessage": "No artifact with that id exists, or it has been purged. Check the id and try again.",
+      "notConfigured": "GDPR export subsystem is not configured on this deployment.",
+      "statusLabel": "Status",
+      "formatLabel": "Format",
+      "bytesLabel": "Size",
+      "storageLabel": "Storage",
+      "metaTitle": "Artifact details",
+      "metaId": "ID",
+      "metaUser": "User",
+      "metaCreated": "Created",
+      "metaCompleted": "Completed",
+      "metaExpires": "Expires",
+      "metaSha256": "SHA-256",
+      "errorTitle": "Export failed",
+      "downloadTitle": "Download",
+      "downloadHint": "The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.",
+      "downloadButton": "Download bundle",
+      "downloadWait": "Download becomes available once the export completes.",
+      "downloadExpired": "This artifact has expired and is no longer downloadable.",
+      "downloadFailed": "No bundle available — see the error above."
+    },
+    "subsystem": {
+      "unavailableTitle": "Subsystem unavailable"
+    },
     "systemStatus": {
       "clientPerformance": {
         "title": "Client Performance",

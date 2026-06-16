@@ -39,6 +39,7 @@ import io.teslasync.android.system.teslaaccount.TeslaAccountPageHost
 import io.teslasync.android.telemetry.signalgapdetector.SignalGapDetectorPageHost
 import io.teslasync.android.telemetry.signallogviewer.SignalLogViewerPageHost
 import io.teslasync.android.admin.dlq.DLQInspectorPageHost
+import io.teslasync.android.admin.gdpr.GDPRExportPageHost
 
 /**
  * Process [Application] owning the [AuthContainer] (the auth + networking + data dependency graph) and
@@ -141,6 +142,7 @@ class TeslaSyncApplication : Application() {
         // Register the native signal-log-viewer telemetry screen for the /signal-log route (P3/A7). Idempotent.
         SignalLogViewerPageHost.register()
         DLQInspectorPageHost.register()
+        GDPRExportPageHost.register()
         ShortcutPublisher(this).publish()
     }
 }
