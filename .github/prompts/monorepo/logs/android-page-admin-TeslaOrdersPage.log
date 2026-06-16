@@ -1,0 +1,101 @@
+P3-ANDROID A7 — page:admin/TeslaOrders — native Jetpack Compose / Material 3 / Kotlin parity port
+Web source : web/src/features/admin/pages/TeslaOrdersPage.tsx  (route /tesla-orders)
+Output     : apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaOrdersPage + Host + Model)
+Wiring     : DataContainer.userStore (S8 UserStore over HttpUserRepository), TeslaSyncApplication -> TeslaOrdersPageHost.register("teslaOrders")
+ADRs       : ADR-002/004/005/006/011/013/014/015
+
+WRAPPER NOTE (honesty): the web page is a THIN PROMOTION WRAPPER — it sets the page
+title/subtitle (PageContainer) and embeds the shared <ActiveOrdersSection /> component;
+it owns no data of its own (manifest: 0 data sources, 0 panels, 0 charts, 0 maps,
+2 strings, requiredCount=2 — "renders from navigation args / local state"). The Android
+port is faithful to that shape: TeslaOrdersPage renders the title/subtitle header and
+composes the PRE-EXISTING ActiveOrdersSection feature view
+(apps/android/app/src/main/java/com/teslasync/feature-views/ActiveOrdersSection, package
+io.teslasync.android.featureviews.activeorderssection) VERBATIM — the order grid, the per-
+order model/status-badge/Order-ID/VIN/Delivery-Date/Upgradable rows, the "Refresh" action,
+the sync stamp, the two empty states (fetched vs never-fetched), and the full cache-then-
+network loading/stale/error/content state matrix all come from that one shared surface
+(DRY, ADR-006). It is NOT re-implemented or stubbed here.
+
+DUPLICATE-KEY NOTE (honesty): the web renders orders.title / orders.subtitle TWICE — once
+as the OUTER PageContainer header (TeslaOrdersPage.tsx L26-27) and once again inside the
+ActiveOrdersSection panel header (ActiveOrdersSection.tsx L46-47). The Android port mirrors
+this exactly: TeslaOrdersHeader() renders the OUTER page-level header (the parity evidence
+below points there), and the embedded ActiveOrdersSection independently renders its own
+panel header. This is faithful web behaviour, not duplication added by the port.
+
+PREDECESSOR NOTE (honesty): the P1/S7 HttpUserRepository + the P1/S8 shared UserStore
+(teslaUserOrders() cache-then-network feed + refreshTeslaOrders() mutation) and the
+ActiveOrdersSection feature view (+ its Model/projection + unit/UI tests) already exist on
+this branch (shared :core + :android compile green). The shared UserStore was NOT yet wired
+into the Android DI graph, so this prompt registered it on the documented A7 seam:
+DataContainer ("the single seam A7 page prompts widen — register their store") gains
+`val userStore = UserStore(HttpUserRepository(api, cacheStore, clock), scope)`. The page
+binds the real shared holder end to end via container.userStore; no predecessor was stubbed
+or bypassed.
+
+NAV NOTE: the `teslaOrders` -> /tesla-orders destination already exists in Destinations.kt
+(pre-existing metadata row; RouteTableTest asserts "/tesla-orders" -> "teslaOrders"); this
+prompt only attaches host content via PageHosts.register("teslaOrders") from
+TeslaSyncApplication.onCreate, and the deep link is auto-registered by TeslaSyncNavHost.
+
+ALLOWED-FILES NOTE (honesty, no silent drift): besides the three surface files under
+com/teslasync/admin/ (the prompt's primary allowed path) and the apps/parity ledger + this
+log, two wiring seams were touched, both sanctioned by the prompt's "NavHost registration"
+allowance + the DataContainer doc-comment that names itself the A7 store-registration seam:
+  1. io/teslasync/android/data/DataContainer.kt  — added userRepository + userStore (S8).
+  2. io/teslasync/android/TeslaSyncApplication.kt — TeslaOrdersPageHost.register() (idempotent).
+No feature page or shared-core file was modified.
+
+GATE PATH NOTE: the project Gradle path is ':android' (settings.gradle.kts maps ':android'
+-> app/, and every P3/A* gate addresses ':android:'); the prompt snippet's ':app:' is the
+same single app module. The 2 visible strings (translation_orders_title /
+translation_orders_subtitle) already exist in res/values/strings.xml (generated i18n
+catalog) and across the values-*/ locales, so no string-catalog edit was required.
+
+DETEKT NOTE (honesty, no red-as-green): detekt is NOT part of this artifact's binding gate
+(the prompt gate = placeholder + assembleDebug + lintDebug + testDebugUnitTest, and the
+sibling A7 pages were accepted on that same triad). For full transparency: running
+:android:detekt reports 4 PRE-EXISTING issues, ALL in sibling files
+(ApiLogsPage.kt x3 — MatchingDeclarationName, ReturnCount, MaxLineLength; FeedbackQueuePage.kt
+x1 — MatchingDeclarationName) — ZERO in the three new TeslaOrders files, which are detekt-
+clean (the InvalidPackageDeclaration + MatchingDeclarationName suppressions on the Host/Model
+mirror the sibling surfaces). Those sibling issues are out of scope for this prompt and were
+left untouched.
+
+=== GATE ===
+PLACEHOLDER_EXIT=0
+BUILD SUCCESSFUL in 6m 4s
+BUILD_EXIT=0
+BUILD SUCCESSFUL in 10m 6s
+LINT_EXIT=0
+BUILD SUCCESSFUL in 1m 25s
+TEST_EXIT=0
+
+=== PARITY ===
+PARITY_REQUIRED=2
+all evidence in apps/android/app/src/main/kotlin/com/teslasync/admin/ (TeslaOrdersPage.kt screen, TeslaOrdersPageModel.kt registration, TeslaOrdersPageHost.kt host)
+
+# data sources (0) — page renders no data of its own (web wrapper); embedded ActiveOrdersSection owns the Tesla-orders feed (UserStore.teslaUserOrders()) bound via DataContainer.userStore
+# panels (0) — page file declares no GlassPanel directly; the web <ActiveOrdersSection/> panel is reproduced by the composed feature view
+# charts (0) — none
+# maps (0) — none
+
+# strings (2) — every visible literal via stringResource(R.string.translation_orders_*); web key names preserved
+[COVERED] string orders.title    -> TeslaOrdersPage.kt:TeslaOrdersHeader() PageTitle(stringResource(R.string.translation_orders_title))
+[COVERED] string orders.subtitle -> TeslaOrdersPage.kt:TeslaOrdersHeader() BodyText(stringResource(R.string.translation_orders_subtitle))
+
+PARITY_COVERED=2
+
+=== SUMMARY ===
+data sources : none at the page level (web parity: TeslaOrdersPage owns no hook). The composed ActiveOrdersSection feature view binds the shared S8 UserStore (teslaUserOrders() cache-then-network StateFlow + refreshTeslaOrders() mutation) via container.userStore; no HTTP in the view.
+nav          : Destinations 'teslaOrders' -> /tesla-orders (pre-existing) wired to TeslaOrdersRoute() via PageHosts.register; deep link auto-registered by TeslaSyncNavHost.
+states       : the 3 data states (loading skeleton / stale-offline cached + Offline chip / hard-error + Retry) plus the two empty states and the populated order grid are all rendered by the composed ActiveOrdersSection feature view's UiState<TeslaOrdersEnvelope> projection; the wrapper adds no separate data region, so no region is ever blank (ADR-011).
+a11y/theme   : header uses PageTitle (heading semantics) + BodyText on MaterialTheme.colorScheme tokens (dark/dynamic theme, ADR-005/ADR-015); the feature view carries its order-card content/state descriptions (Loading/Offline/Retry). SI is formatted at the display boundary inside the feature view (ADR-013), never stored/computed non-SI.
+diagnostics  : page records the one-shot PII-safe view.opened (surface="TeslaOrdersPage", P1/S11) distinct from the feature view's own (surface="ActiveOrdersSection").
+placeholder  : PLACEHOLDER_COUNT=0
+gate         : PLACEHOLDER_EXIT=0 BUILD_EXIT=0 LINT_EXIT=0 TEST_EXIT=0  (Gradle path :android, app/ module)
+parity       : PARITY_COVERED(2) == PARITY_REQUIRED(2)
+[PASS] all android triad gates green; parity 2/2; android ledger row page:admin/TeslaOrders status=done.
+EXIT=0
+STATUS=DONE
