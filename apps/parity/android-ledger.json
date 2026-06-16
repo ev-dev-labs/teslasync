@@ -1,5 +1,14 @@
 [
   {
+    "unitId": "page:admin/APIKeys",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p3-android/pages/admin/APIKeysPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-APIKeysPage.log"
+  },
+  {
     "unitId": "page:admin/ApiLogs",
     "platform": "android",
     "status": "done",
@@ -9,67 +18,22 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-ApiLogsPage.log"
   },
   {
-    "unitId": "page:admin/DiskForecast",
+    "unitId": "page:admin/ApiPlayground",
     "platform": "android",
     "status": "done",
-    "coveredCount": 32,
-    "requiredCount": 32,
-    "promptId": "p3-android/pages/admin/DiskForecastPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-DiskForecastPage.log"
+    "coveredCount": 10,
+    "requiredCount": 10,
+    "promptId": "p3-android/pages/admin/ApiPlaygroundPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-ApiPlaygroundPage.log"
   },
   {
-    "unitId": "page:admin/FeedbackQueue",
+    "unitId": "page:admin/AuditLog",
     "platform": "android",
     "status": "done",
-    "coveredCount": 43,
-    "requiredCount": 43,
-    "promptId": "p3-android/pages/admin/FeedbackQueuePage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FeedbackQueuePage.log"
-  },
-  {
-    "unitId": "page:admin/GasPriceAutoPoll",
-    "platform": "android",
-    "status": "done",
-    "coveredCount": 2,
-    "requiredCount": 2,
-    "promptId": "p3-android/pages/admin/GasPriceAutoPollPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-GasPriceAutoPollPage.log"
-  },
-  {
-    "unitId": "page:admin/IngestXRay",
-    "platform": "android",
-    "status": "done",
-    "coveredCount": 12,
-    "requiredCount": 12,
-    "promptId": "p3-android/pages/admin/IngestXRayPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-IngestXRayPage.log"
-  },
-  {
-    "unitId": "page:admin/SchemaDrift",
-    "platform": "android",
-    "status": "done",
-    "coveredCount": 32,
-    "requiredCount": 32,
-    "promptId": "p3-android/pages/admin/SchemaDriftPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SchemaDriftPage.log"
-  },
-  {
-    "unitId": "page:admin/SlowQueries",
-    "platform": "android",
-    "status": "done",
-    "coveredCount": 22,
-    "requiredCount": 22,
-    "promptId": "p3-android/pages/admin/SlowQueriesPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SlowQueriesPage.log"
-  },
-  {
-    "unitId": "page:admin/TeslaRegion",
-    "platform": "android",
-    "status": "done",
-    "coveredCount": 2,
-    "requiredCount": 2,
-    "promptId": "p3-android/pages/admin/TeslaRegionPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaRegionPage.log"
+    "coveredCount": 57,
+    "requiredCount": 57,
+    "promptId": "p3-android/pages/admin/AuditLog",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-AuditLogPage.log"
   },
   {
     "unitId": "page:admin/BackupRestore",
@@ -81,6 +45,240 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-BackupRestorePage.log"
   },
   {
+    "unitId": "page:admin/DevTools",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android-page-admin-DevToolsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-DevToolsPage.log"
+  },
+  {
+    "unitId": "page:admin/DiskForecast",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p3-android/pages/admin/DiskForecastPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-DiskForecastPage.log"
+  },
+  {
+    "unitId": "page:admin/DLQInspector",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "p3-android/pages/admin/DLQInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-DLQInspectorPage.log"
+  },
+  {
+    "unitId": "page:admin/FeatureFlags",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "p3-android/pages/admin/FeatureFlagsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FeatureFlagsPage.log"
+  },
+  {
+    "unitId": "page:admin/FeedbackQueue",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p3-android/pages/admin/FeedbackQueuePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FeedbackQueuePage.log"
+  },
+  {
+    "unitId": "page:admin/FleetAPI",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "p3-android/pages/admin/FleetAPIPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FleetAPIPage.log"
+  },
+  {
+    "unitId": "page:admin/FleetTelemetryCoverage",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p3-android/pages/admin/FleetTelemetryCoveragePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-FleetTelemetryCoveragePage.log"
+  },
+  {
+    "unitId": "page:admin/GasPriceAutoPoll",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/GasPriceAutoPollPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-GasPriceAutoPollPage.log"
+  },
+  {
+    "unitId": "page:admin/GDPRExport",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 42,
+    "requiredCount": 42,
+    "promptId": "p3-android/pages/admin/GDPRExportPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-GDPRExportPage.log"
+  },
+  {
+    "unitId": "page:admin/IngestXRay",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "p3-android/pages/admin/IngestXRayPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-IngestXRayPage.log"
+  },
+  {
+    "unitId": "page:admin/LiveLogs",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 37,
+    "requiredCount": 37,
+    "promptId": "p3-android/pages/admin/LiveLogsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-LiveLogsPage.log"
+  },
+  {
+    "unitId": "page:admin/LiveSignalInspector",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 13,
+    "requiredCount": 13,
+    "promptId": "p3-android/pages/admin/LiveSignalInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-LiveSignalInspectorPage.log"
+  },
+  {
+    "unitId": "page:admin/RbacMatrix",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p3-android/pages/admin/RbacMatrixPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-RbacMatrixPage.log"
+  },
+  {
+    "unitId": "page:admin/RedisSignalViewer",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p3-android/pages/admin/RedisSignalViewerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-RedisSignalViewerPage.log"
+  },
+  {
+    "unitId": "page:admin/SchemaDrift",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p3-android/pages/admin/SchemaDriftPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SchemaDriftPage.log"
+  },
+  {
+    "unitId": "page:admin/SecretRotation",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p3-android/pages/admin/SecretRotationPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SecretRotationPage.log"
+  },
+  {
+    "unitId": "page:admin/SecurityAccess",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p3-android/pages/admin/SecurityAccessPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SecurityAccessPage.log"
+  },
+  {
+    "unitId": "page:admin/SlowQueries",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 22,
+    "requiredCount": 22,
+    "promptId": "p3-android/pages/admin/SlowQueriesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SlowQueriesPage.log"
+  },
+  {
+    "unitId": "page:admin/System",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/SystemPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-SystemPage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaFeatureFlags",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/TeslaFeatureFlagsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaFeatureFlagsPage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaOrders",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/TeslaOrdersPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaOrdersPage.log"
+  },
+  {
+    "unitId": "page:admin/TeslaRegion",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/admin/TeslaRegionPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-TeslaRegionPage.log"
+  },
+  {
+    "unitId": "page:admin/Users",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 10,
+    "requiredCount": 10,
+    "promptId": "p3-android/pages/admin/UsersPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-UsersPage.log"
+  },
+  {
+    "unitId": "page:admin/VehicleCost",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 33,
+    "requiredCount": 33,
+    "promptId": "p3-android/pages/admin/VehicleCostPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-admin-VehicleCostPage.log"
+  },
+  {
+    "unitId": "page:analytics/Analytics",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 9,
+    "requiredCount": 9,
+    "promptId": "p3-android/pages/analytics/AnalyticsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-AnalyticsPage.log"
+  },
+  {
+    "unitId": "page:analytics/FleetCompare",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 63,
+    "requiredCount": 63,
+    "promptId": "p3-android/pages/analytics/FleetComparePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-FleetComparePage.log"
+  },
+  {
     "unitId": "page:analytics/LifetimeStats",
     "platform": "android",
     "status": "done",
@@ -88,6 +286,24 @@
     "requiredCount": 56,
     "promptId": "p3-android/pages/analytics/LifetimeStatsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-LifetimeStatsPage.log"
+  },
+  {
+    "unitId": "page:analytics/Mileage",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 29,
+    "requiredCount": 29,
+    "promptId": "p3-android/pages/analytics/MileagePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-MileagePage.log"
+  },
+  {
+    "unitId": "page:analytics/PeriodCompare",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 44,
+    "requiredCount": 44,
+    "promptId": "p3-android/pages/analytics/PeriodComparePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-PeriodComparePage.log"
   },
   {
     "unitId": "page:analytics/Statistics",
@@ -99,6 +315,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-StatisticsPage.log"
   },
   {
+    "unitId": "page:analytics/Timeline",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 35,
+    "requiredCount": 35,
+    "promptId": "p3-android/pages/analytics/TimelinePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-TimelinePage.log"
+  },
+  {
+    "unitId": "page:analytics/TrueCost",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 51,
+    "requiredCount": 51,
+    "promptId": "p3-android/pages/analytics/TrueCostPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-TrueCostPage.log"
+  },
+  {
+    "unitId": "page:analytics/WeeklyDigest",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 8,
+    "requiredCount": 8,
+    "promptId": "p3-android/pages/analytics/WeeklyDigestPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-WeeklyDigestPage.log"
+  },
+  {
     "unitId": "page:analytics/YearReview",
     "platform": "android",
     "status": "done",
@@ -106,6 +349,33 @@
     "requiredCount": 12,
     "promptId": "p3-android/pages/analytics/YearReviewPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-analytics-YearReviewPage.log"
+  },
+  {
+    "unitId": "page:automations/ActionBuilder",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 30,
+    "requiredCount": 30,
+    "promptId": "p3-android/pages/automations/ActionBuilder",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-ActionBuilder.log"
+  },
+  {
+    "unitId": "page:automations/AutomationActivityFeed",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 11,
+    "requiredCount": 11,
+    "promptId": "p3-android/pages/automations/AutomationActivityFeed",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationActivityFeed.log"
+  },
+  {
+    "unitId": "page:automations/AutomationBuilder",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p3-android/pages/automations/AutomationBuilderPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationBuilderPage.log"
   },
   {
     "unitId": "page:automations/AutomationCard",
@@ -117,6 +387,24 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationCard.log"
   },
   {
+    "unitId": "page:automations/AutomationList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 27,
+    "requiredCount": 27,
+    "promptId": "p3-android/pages/automations/AutomationListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationListPage.log"
+  },
+  {
+    "unitId": "page:automations/AutomationsList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 33,
+    "requiredCount": 33,
+    "promptId": "p3-android/pages/automations/AutomationsListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-AutomationsListPage.log"
+  },
+  {
     "unitId": "page:automations/ConditionBuilder",
     "platform": "android",
     "status": "done",
@@ -124,6 +412,15 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/automations/ConditionBuilder",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-ConditionBuilder.log"
+  },
+  {
+    "unitId": "page:automations/ConflictWarnings",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 3,
+    "requiredCount": 3,
+    "promptId": "p3-android/pages/automations/ConflictWarnings",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-ConflictWarnings.log"
   },
   {
     "unitId": "page:automations/PresetGallery",
@@ -135,6 +432,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-PresetGallery.log"
   },
   {
+    "unitId": "page:automations/TriggerConfigurator",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "p3-android/pages/automations/TriggerConfigurator",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-automations-TriggerConfigurator.log"
+  },
+  {
+    "unitId": "page:battery/BatteryCells",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 110,
+    "requiredCount": 110,
+    "promptId": "p3-android/pages/battery/BatteryCellsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-BatteryCellsPage.log"
+  },
+  {
+    "unitId": "page:battery/BatteryDegradation",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 89,
+    "requiredCount": 89,
+    "promptId": "p3-android/pages/battery/BatteryDegradationPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-BatteryDegradationPage.log"
+  },
+  {
     "unitId": "page:battery/BatteryHealth",
     "platform": "android",
     "status": "done",
@@ -142,6 +466,24 @@
     "requiredCount": 147,
     "promptId": "p3-android/pages/battery/BatteryHealthPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-BatteryHealthPage.log"
+  },
+  {
+    "unitId": "page:battery/Energy",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 81,
+    "requiredCount": 81,
+    "promptId": "p3-android/pages/battery/EnergyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-EnergyPage.log"
+  },
+  {
+    "unitId": "page:battery/EnergyFlow",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 74,
+    "requiredCount": 74,
+    "promptId": "p3-android/pages/battery/EnergyFlowPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-EnergyFlowPage.log"
   },
   {
     "unitId": "page:battery/EnergyProducts",
@@ -153,6 +495,42 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-EnergyProductsPage.log"
   },
   {
+    "unitId": "page:battery/PowerFlowDashboard",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p3-android/pages/battery/PowerFlowDashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-PowerFlowDashboardPage.log"
+  },
+  {
+    "unitId": "page:battery/ProjectedRange",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 47,
+    "requiredCount": 47,
+    "promptId": "p3-android/pages/battery/ProjectedRangePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-ProjectedRangePage.log"
+  },
+  {
+    "unitId": "page:battery/SleepEfficiency",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p3-android/pages/battery/SleepEfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-SleepEfficiencyPage.log"
+  },
+  {
+    "unitId": "page:battery/VampireDrain",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 45,
+    "requiredCount": 45,
+    "promptId": "p3-android/pages/battery/VampireDrainPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-battery-VampireDrainPage.log"
+  },
+  {
     "unitId": "page:charging/ChargingCurve",
     "platform": "android",
     "status": "done",
@@ -162,22 +540,31 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingCurvePage.log"
   },
   {
-    "unitId": "page:charging/Powershare",
+    "unitId": "page:charging/ChargingDetail",
     "platform": "android",
     "status": "done",
-    "coveredCount": 21,
-    "requiredCount": 21,
-    "promptId": "p3-android/pages/charging/PowersharePage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-PowersharePage.log"
+    "coveredCount": 90,
+    "requiredCount": 90,
+    "promptId": "p3-android/pages/charging/ChargingDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingDetailPage.log"
   },
   {
-    "unitId": "page:charging/TeslaChargingSessionsMap",
+    "unitId": "page:charging/ChargingHeatmap",
     "platform": "android",
     "status": "done",
-    "coveredCount": 7,
-    "requiredCount": 7,
-    "promptId": "p3-android/pages/charging/TeslaChargingSessionsMap",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsMap.log"
+    "coveredCount": 24,
+    "requiredCount": 24,
+    "promptId": "p3-android/pages/charging/ChargingHeatmapPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingHeatmapPage.log"
+  },
+  {
+    "unitId": "page:charging/ChargingList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "p3-android/pages/charging/ChargingListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-ChargingListPage.log"
   },
   {
     "unitId": "page:charging/CostAnalysis",
@@ -189,6 +576,60 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-CostAnalysisPage.log"
   },
   {
+    "unitId": "page:charging/Powershare",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p3-android/pages/charging/PowersharePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-PowersharePage.log"
+  },
+  {
+    "unitId": "page:charging/SmartCharge",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 44,
+    "requiredCount": 44,
+    "promptId": "p3-android/pages/charging/SmartChargePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-SmartChargePage.log"
+  },
+  {
+    "unitId": "page:charging/TeslaChargingHistory",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 43,
+    "requiredCount": 43,
+    "promptId": "p3-android/pages/charging/TeslaChargingHistoryPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingHistoryPage.log"
+  },
+  {
+    "unitId": "page:charging/TeslaChargingSessions",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 48,
+    "requiredCount": 48,
+    "promptId": "p3-android/pages/charging/TeslaChargingSessionsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsPage.log"
+  },
+  {
+    "unitId": "page:charging/TeslaChargingSessionsMap",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "p3-android/pages/charging/TeslaChargingSessionsMap",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-charging-TeslaChargingSessionsMap.log"
+  },
+  {
+    "unitId": "page:dashboard/Dashboard",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 41,
+    "requiredCount": 41,
+    "promptId": "p3-android/pages/dashboard/DashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-dashboard-DashboardPage.log"
+  },
+  {
     "unitId": "page:dashboard/Glance",
     "platform": "android",
     "status": "done",
@@ -196,6 +637,42 @@
     "requiredCount": 30,
     "promptId": "p3-android/pages/dashboard/GlancePage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-dashboard-GlancePage.log"
+  },
+  {
+    "unitId": "page:dashboard/QuickStats",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 18,
+    "requiredCount": 18,
+    "promptId": "p3-android/pages/dashboard/QuickStatsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-dashboard-QuickStatsPage.log"
+  },
+  {
+    "unitId": "page:diagnostics/AnomalyDashboard",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 27,
+    "requiredCount": 27,
+    "promptId": "p3-android/pages/diagnostics/AnomalyDashboardPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-diagnostics-AnomalyDashboardPage.log"
+  },
+  {
+    "unitId": "page:driving/DriveDetail",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 25,
+    "requiredCount": 25,
+    "promptId": "p3-android/pages/driving/DriveDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DriveDetailPage.log"
+  },
+  {
+    "unitId": "page:driving/DriveScore",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 160,
+    "requiredCount": 160,
+    "promptId": "p3-android/pages/driving/DriveScorePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DriveScorePage.log"
   },
   {
     "unitId": "page:driving/DrivesList",
@@ -207,6 +684,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DrivesListPage.log"
   },
   {
+    "unitId": "page:driving/DrivetrainHealth",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 7,
+    "requiredCount": 7,
+    "promptId": "p3-android/pages/driving/DrivetrainHealthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DrivetrainHealthPage.log"
+  },
+  {
+    "unitId": "page:driving/DrivingDynamics",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p3-android/pages/driving/DrivingDynamicsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-DrivingDynamicsPage.log"
+  },
+  {
+    "unitId": "page:driving/Efficiency",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 67,
+    "requiredCount": 67,
+    "promptId": "p3-android/pages/driving/EfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-EfficiencyPage.log"
+  },
+  {
     "unitId": "page:driving/RegenEfficiency",
     "platform": "android",
     "status": "done",
@@ -214,6 +718,24 @@
     "requiredCount": 47,
     "promptId": "p3-android/pages/driving/RegenEfficiencyPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-RegenEfficiencyPage.log"
+  },
+  {
+    "unitId": "page:driving/RouteEfficiency",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 29,
+    "requiredCount": 29,
+    "promptId": "p3-android/pages/driving/RouteEfficiencyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-RouteEfficiencyPage.log"
+  },
+  {
+    "unitId": "page:driving/SpeedProfile",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 37,
+    "requiredCount": 37,
+    "promptId": "p3-android/pages/driving/SpeedProfilePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-SpeedProfilePage.log"
   },
   {
     "unitId": "page:driving/TripPlanner",
@@ -225,6 +747,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-TripPlannerPage.log"
   },
   {
+    "unitId": "page:driving/TripReplay",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 0,
+    "requiredCount": 0,
+    "promptId": "p3-android/pages/driving/TripReplayPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-driving-TripReplayPage.log"
+  },
+  {
+    "unitId": "page:explore/Explore",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "p3-android/pages/explore/ExplorePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-explore-ExplorePage.log"
+  },
+  {
+    "unitId": "page:exports/Exports",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 24,
+    "requiredCount": 24,
+    "promptId": "p3-android/pages/exports/ExportsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-exports-ExportsPage.log"
+  },
+  {
     "unitId": "page:maps/Geofences",
     "platform": "android",
     "status": "done",
@@ -232,6 +781,33 @@
     "requiredCount": 81,
     "promptId": "p3-android/pages/maps/GeofencesPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-GeofencesPage.log"
+  },
+  {
+    "unitId": "page:maps/Locations",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 44,
+    "requiredCount": 44,
+    "promptId": "p3-android/pages/maps/LocationsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-LocationsPage.log"
+  },
+  {
+    "unitId": "page:maps/MapOverview",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 55,
+    "requiredCount": 55,
+    "promptId": "p3-android/pages/maps/MapOverviewPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-MapOverviewPage.log"
+  },
+  {
+    "unitId": "page:maps/NavigationRoute",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "p3-android/pages/maps/NavigationRoutePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-NavigationRoutePage.log"
   },
   {
     "unitId": "page:maps/TemperatureImpact",
@@ -243,6 +819,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-maps-TemperatureImpactPage.log"
   },
   {
+    "unitId": "page:notifications/AlertRules",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 31,
+    "requiredCount": 31,
+    "promptId": "p3-android/pages/notifications/AlertRulesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-AlertRulesPage.log"
+  },
+  {
+    "unitId": "page:notifications/AlertsList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 52,
+    "requiredCount": 52,
+    "promptId": "p3-android/pages/notifications/AlertsListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-AlertsListPage.log"
+  },
+  {
+    "unitId": "page:notifications/AlertStudio",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 137,
+    "requiredCount": 137,
+    "promptId": "p3-android/pages/notifications/AlertStudioPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-AlertStudioPage.log"
+  },
+  {
     "unitId": "page:notifications/Archived",
     "platform": "android",
     "status": "done",
@@ -252,13 +855,22 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-ArchivedPage.log"
   },
   {
-    "unitId": "page:settings/Settings",
+    "unitId": "page:notifications/AuditLog",
     "platform": "android",
     "status": "done",
-    "coveredCount": 17,
-    "requiredCount": 17,
-    "promptId": "p3-android/pages/settings/SettingsPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-SettingsPage.log"
+    "coveredCount": 15,
+    "requiredCount": 15,
+    "promptId": "p3-android/pages/notifications/AuditLogPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-AuditLogPage.log"
+  },
+  {
+    "unitId": "page:notifications/BrowserNotifications",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/notifications/BrowserNotificationsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-BrowserNotificationsPage.log"
   },
   {
     "unitId": "page:notifications/Channels",
@@ -270,6 +882,24 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-ChannelsPage.log"
   },
   {
+    "unitId": "page:notifications/Inbox",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p3-android/pages/notifications/InboxPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-InboxPage.log"
+  },
+  {
+    "unitId": "page:notifications/QuietHours",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/notifications/QuietHoursPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-QuietHoursPage.log"
+  },
+  {
     "unitId": "page:notifications/Webhooks",
     "platform": "android",
     "status": "done",
@@ -277,6 +907,33 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/notifications/WebhooksPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-notifications-WebhooksPage.log"
+  },
+  {
+    "unitId": "page:onboarding/Onboarding",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 28,
+    "requiredCount": 28,
+    "promptId": "p3-android/pages/onboarding/OnboardingPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-onboarding-OnboardingPage.log"
+  },
+  {
+    "unitId": "page:power-user/Dashboards",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 16,
+    "requiredCount": 16,
+    "promptId": "p3-android/pages/power-user/DashboardsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-power-user-DashboardsPage.log"
+  },
+  {
+    "unitId": "page:power-user/GrafanaPanel",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 22,
+    "requiredCount": 22,
+    "promptId": "p3-android/pages/power-user/GrafanaPanelPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-power-user-GrafanaPanelPage.log"
   },
   {
     "unitId": "page:power-user/SqlPlayground",
@@ -288,6 +945,24 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-power-user-SqlPlaygroundPage.log"
   },
   {
+    "unitId": "page:settings/ActiveSessions",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/settings/ActiveSessionsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-ActiveSessionsPage.log"
+  },
+  {
+    "unitId": "page:settings/Helix",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p3-android/pages/settings/HelixPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-HelixPage.log"
+  },
+  {
     "unitId": "page:settings/Privacy",
     "platform": "android",
     "status": "done",
@@ -295,6 +970,33 @@
     "requiredCount": 2,
     "promptId": "p3-android/pages/settings/PrivacyPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-PrivacyPage.log"
+  },
+  {
+    "unitId": "page:settings/Safety",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 8,
+    "requiredCount": 8,
+    "promptId": "p3-android/pages/settings/SafetyPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-SafetyPage.log"
+  },
+  {
+    "unitId": "page:settings/Settings",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 17,
+    "requiredCount": 17,
+    "promptId": "p3-android/pages/settings/SettingsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-SettingsPage.log"
+  },
+  {
+    "unitId": "page:settings/TwoFactorAuth",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 2,
+    "requiredCount": 2,
+    "promptId": "p3-android/pages/settings/TwoFactorAuthPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-settings-TwoFactorAuthPage.log"
   },
   {
     "unitId": "page:sharing/SharedDrive",
@@ -306,6 +1008,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-sharing-SharedDrivePage.log"
   },
   {
+    "unitId": "page:sharing/SharingTrips",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 13,
+    "requiredCount": 13,
+    "promptId": "p3-android/pages/sharing/SharingTripsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-sharing-SharingTripsPage.log"
+  },
+  {
+    "unitId": "page:system/Chatbot",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 18,
+    "requiredCount": 18,
+    "promptId": "p3-android/pages/system/ChatbotPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-ChatbotPage.log"
+  },
+  {
+    "unitId": "page:system/CommandHistory",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 28,
+    "requiredCount": 28,
+    "promptId": "p3-android/pages/system/CommandHistoryPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-CommandHistoryPage.log"
+  },
+  {
     "unitId": "page:system/Commands",
     "platform": "android",
     "status": "done",
@@ -313,6 +1042,24 @@
     "requiredCount": 21,
     "promptId": "p3-android/pages/system/CommandsPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-CommandsPage.log"
+  },
+  {
+    "unitId": "page:system/DataExport",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 75,
+    "requiredCount": 75,
+    "promptId": "p3-android/pages/system/DataExportPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DataExportPage.log"
+  },
+  {
+    "unitId": "page:system/DataRepair",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 53,
+    "requiredCount": 53,
+    "promptId": "p3-android/pages/system/DataRepairPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DataRepairPage.log"
   },
   {
     "unitId": "page:system/DBHealth",
@@ -333,6 +1080,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-DiagnosticPage.log"
   },
   {
+    "unitId": "page:system/Help",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 5,
+    "requiredCount": 5,
+    "promptId": "p3-android/pages/system/HelpPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-HelpPage.log"
+  },
+  {
+    "unitId": "page:system/IncidentTimeline",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 6,
+    "requiredCount": 6,
+    "promptId": "p3-android/pages/system/IncidentTimelinePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-IncidentTimelinePage.log"
+  },
+  {
+    "unitId": "page:system/MyActivity",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 12,
+    "requiredCount": 12,
+    "promptId": "p3-android/pages/system/MyActivityPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-MyActivityPage.log"
+  },
+  {
     "unitId": "page:system/NotFound",
     "platform": "android",
     "status": "done",
@@ -340,6 +1114,24 @@
     "requiredCount": 9,
     "promptId": "p3-android/pages/system/NotFoundPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-NotFoundPage.log"
+  },
+  {
+    "unitId": "page:system/Roadmap",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 6,
+    "requiredCount": 6,
+    "promptId": "p3-android/pages/system/RoadmapPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-RoadmapPage.log"
+  },
+  {
+    "unitId": "page:system/ScheduledExportsPanel",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 40,
+    "requiredCount": 40,
+    "promptId": "p3-android/pages/system/ScheduledExportsPanel",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-ScheduledExportsPanel.log"
   },
   {
     "unitId": "page:system/Search",
@@ -351,6 +1143,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-SearchPage.log"
   },
   {
+    "unitId": "page:system/StateMachineDebugger",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 63,
+    "requiredCount": 63,
+    "promptId": "p3-android/pages/system/StateMachineDebuggerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-StateMachineDebuggerPage.log"
+  },
+  {
+    "unitId": "page:system/StatusApiDocs",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p3-android/pages/system/StatusApiDocsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-StatusApiDocsPage.log"
+  },
+  {
+    "unitId": "page:system/SystemStatus",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 82,
+    "requiredCount": 82,
+    "promptId": "p3-android/pages/system/SystemStatusPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-SystemStatusPage.log"
+  },
+  {
     "unitId": "page:system/TeslaAccount",
     "platform": "android",
     "status": "done",
@@ -360,13 +1179,40 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-TeslaAccountPage.log"
   },
   {
-    "unitId": "page:system/MyActivity",
+    "unitId": "page:telemetry/LiveSignalMonitor",
     "platform": "android",
     "status": "done",
-    "coveredCount": 12,
-    "requiredCount": 12,
-    "promptId": "p3-android/pages/system/MyActivityPage",
-    "evidenceLog": ".github/prompts/monorepo/logs/android-page-system-MyActivityPage.log"
+    "coveredCount": 4,
+    "requiredCount": 4,
+    "promptId": "p3-android/pages/telemetry/LiveSignalMonitorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-LiveSignalMonitorPage.log"
+  },
+  {
+    "unitId": "page:telemetry/MQTTInspector",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 41,
+    "requiredCount": 41,
+    "promptId": "p3-android/pages/telemetry/MQTTInspectorPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-MQTTInspectorPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalDiff",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "p3-android/pages/telemetry/SignalDiffPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalDiffPage.log"
+  },
+  {
+    "unitId": "page:telemetry/SignalExplorer",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 20,
+    "requiredCount": 20,
+    "promptId": "p3-android/pages/telemetry/SignalExplorerPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalExplorerPage.log"
   },
   {
     "unitId": "page:telemetry/SignalGapDetector",
@@ -387,6 +1233,24 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalLogViewerPage.log"
   },
   {
+    "unitId": "page:telemetry/SignalsWorkspace",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 58,
+    "requiredCount": 58,
+    "promptId": "p3-android/pages/telemetry/SignalsWorkspacePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-telemetry-SignalsWorkspacePage.log"
+  },
+  {
+    "unitId": "page:trips/TripDetail",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 21,
+    "requiredCount": 21,
+    "promptId": "p3-android/pages/trips/TripDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-trips-TripDetailPage.log"
+  },
+  {
     "unitId": "page:trips/TripList",
     "platform": "android",
     "status": "done",
@@ -394,6 +1258,33 @@
     "requiredCount": 34,
     "promptId": "p3-android/pages/trips/TripListPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-trips-TripListPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/ClimateControl",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 129,
+    "requiredCount": 129,
+    "promptId": "p3-android/pages/vehicle-systems/ClimateControlPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-ClimateControlPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/GuardMode",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 54,
+    "requiredCount": 54,
+    "promptId": "p3-android/pages/vehicle-systems/GuardModePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-GuardModePage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/Maintenance",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 45,
+    "requiredCount": 45,
+    "promptId": "p3-android/pages/vehicle-systems/MaintenancePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-MaintenancePage.log"
   },
   {
     "unitId": "page:vehicle-systems/MediaPlayer",
@@ -405,6 +1296,33 @@
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-MediaPlayerPage.log"
   },
   {
+    "unitId": "page:vehicle-systems/SafetySettings",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 79,
+    "requiredCount": 79,
+    "promptId": "p3-android/pages/vehicle-systems/SafetySettingsPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-SafetySettingsPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/SoftwareUpdates",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "p3-android/pages/vehicle-systems/SoftwareUpdatesPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-SoftwareUpdatesPage.log"
+  },
+  {
+    "unitId": "page:vehicle-systems/TirePressure",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 34,
+    "requiredCount": 34,
+    "promptId": "p3-android/pages/vehicle-systems/TirePressurePage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicle-systems-TirePressurePage.log"
+  },
+  {
     "unitId": "page:vehicles/DigitalTwin",
     "platform": "android",
     "status": "done",
@@ -412,6 +1330,33 @@
     "requiredCount": 45,
     "promptId": "p3-android/pages/vehicles/DigitalTwinPage",
     "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicles-DigitalTwinPage.log"
+  },
+  {
+    "unitId": "page:vehicles/VehicleAccess",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 32,
+    "requiredCount": 32,
+    "promptId": "p3-android/pages/vehicles/VehicleAccessPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicles-VehicleAccessPage.log"
+  },
+  {
+    "unitId": "page:vehicles/VehicleDetail",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 23,
+    "requiredCount": 23,
+    "promptId": "p3-android/pages/vehicles/VehicleDetailPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicles-VehicleDetailPage.log"
+  },
+  {
+    "unitId": "page:vehicles/VehicleList",
+    "platform": "android",
+    "status": "done",
+    "coveredCount": 37,
+    "requiredCount": 37,
+    "promptId": "p3-android/pages/vehicles/VehicleListPage",
+    "evidenceLog": ".github/prompts/monorepo/logs/android-page-vehicles-VehicleListPage.log"
   },
   {
     "unitId": "page:watch/WatchFace",
