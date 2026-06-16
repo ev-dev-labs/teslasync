@@ -26,7 +26,8 @@ public enum AppRouteGroup: String, CaseIterable, Identifiable, Sendable {
 /// drives the sidebar, the iPhone tabs, and the deep-link parser.
 public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
     case dashboard, glance, vehicles, charging, powershare, trips, energy, driving, analytics, maps
-    case fleetCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation, sleepEfficiency, tco, yearReview
+    case fleetCompare, periodCompare, lifetimeStats, mileage, timeline, batteryCells, batteryDegradation,
+         sleepEfficiency, tco, yearReview
     case vehicleSystems, automations, automationsList, notifications, telemetry, diagnostics
     case admin, apiKeys, apiPlayground, apiLogs, liveLogs, auditLog, featureFlags, fleetAPI, fleetTelemetryCoverage
     case gdprExport, rbacMatrix, users, dlqInspector, devTools, ingestXRay, feedbackQueue
@@ -44,6 +45,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .vehicleSystems: "vehicle-systems"
         case .automationsList: "automations-list"
         case .fleetCompare: "vehicle-comparison"
+        case .periodCompare: "period-compare"
         case .lifetimeStats: "lifetime-stats"
         case .yearReview: "year-review"
         case .batteryCells: "battery-cells"
@@ -103,6 +105,7 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .analytics: "chart.bar.fill"
         case .tco: "dollarsign.circle.fill"
         case .fleetCompare: "arrow.left.arrow.right.circle.fill"
+        case .periodCompare: "calendar.badge.clock"
         case .timeline: "clock.arrow.circlepath"
         case .lifetimeStats: "trophy.fill"
         case .yearReview: "sparkles"
@@ -159,7 +162,8 @@ public enum AppRoute: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .energy: .energy
         case .batteryCells, .batteryDegradation: .energy
         case .sleepEfficiency: .energy
-        case .analytics, .telemetry, .fleetCompare, .tco, .lifetimeStats, .mileage, .timeline, .yearReview: .insights
+        case .analytics, .telemetry, .fleetCompare, .periodCompare, .tco, .lifetimeStats, .mileage, .timeline,
+             .yearReview: .insights
         case .automations, .automationsList, .notifications, .diagnostics, .sharing, .watch: .operations
         case .admin, .apiKeys, .apiPlayground, .apiLogs, .liveLogs, .auditLog, .featureFlags, .dlqInspector, .fleetAPI,
              .fleetTelemetryCoverage, .gdprExport, .rbacMatrix, .users, .devTools, .liveSignals, .redisSignals,

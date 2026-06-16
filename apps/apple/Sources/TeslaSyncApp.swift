@@ -113,6 +113,7 @@ struct TeslaSyncApp: App {
         registry = TeslaOrdersRouteRegistration.registry(base: registry)
         registry = TeslaRegionRouteRegistration.registry(base: registry)
         registry = FleetCompareRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
+        registry = PeriodCompareRouteRegistration.registry(base: registry, onNavigate: { selection = $0 })
         registry = StatisticsRouteRegistration.registry(base: registry)
         // Fleet Analytics is the canonical `.analytics` owner (its `pathSegment` is `/analytics` and
         // it is a primary tab); registered after Statistics — which aliases onto the route via
