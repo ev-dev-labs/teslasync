@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "notifications.channels.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notification channels"
+          }
+        }
+      }
+    },
+    "notifications.channels.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook."
+          }
+        }
+      }
+    },
     "translation.speedProfile.distribution.aria" : {
       "extractionState" : "manual",
       "localizations" : {
